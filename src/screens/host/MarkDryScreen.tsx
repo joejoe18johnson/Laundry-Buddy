@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../../context/AppContext'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
-import { colors, radius } from '../../theme'
+import { colors, radius, spacing } from '../../theme'
 
 export function MarkDryScreen() {
   const { activeLoads, navigate, markDry } = useApp()
