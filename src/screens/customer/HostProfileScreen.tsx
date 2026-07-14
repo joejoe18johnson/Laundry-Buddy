@@ -158,7 +158,7 @@ export function HostProfileScreen() {
           <View style={styles.detailChip}>
             <AppIcon name="calendar" size={16} />
             <Text style={styles.detailText}>
-              Drop-off: {formatDropOffAvailability(settings.dropOffAvailability)}
+              Drop-off hours: {formatDropOffAvailability(settings.dropOffAvailability)}
             </Text>
           </View>
           {host.hasGenerator && (

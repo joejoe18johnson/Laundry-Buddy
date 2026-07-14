@@ -1,4 +1,4 @@
-import type { DropOffHour } from '../lib/dropOffAvailability'
+import type { DropOffHour } from './lib/dropOffAvailability'
 
 export type { DropOffHour }
 export type SheetsOption = 'own' | 'buy' | 'none'
