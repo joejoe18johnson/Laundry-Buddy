@@ -17,9 +17,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray100,
     borderRadius: radius.md,
-    padding: 14,
-    marginBottom: spacing.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
   },
-  headline: { fontSize: 14, fontWeight: '600', color: colors.black, marginBottom: 2 },
-  detail: { fontSize: 13, color: colors.gray500 },
+  headline: { fontSize: 14, fontWeight: '600', color: colors.black, marginBottom: spacing.sm, lineHeight: 20 },
+  detail: { fontSize: 13, color: colors.gray500, lineHeight: 20 },
 })

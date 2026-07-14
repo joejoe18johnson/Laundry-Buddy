@@ -13,7 +13,7 @@ import { WelcomeScreen } from './src/screens/auth/WelcomeScreen'
 import { LoginScreen } from './src/screens/auth/LoginScreen'
 import { SignupScreen } from './src/screens/auth/SignupScreen'
 import { HostVerificationScreen } from './src/screens/auth/HostVerificationScreen'
-import { colors } from './src/theme'
+import { colors, spacing } from './src/theme'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
@@ -105,13 +105,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: spacing.screen,
+    paddingVertical: 18,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
   },
   logo: { fontSize: 17, fontWeight: '700', color: colors.accent },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   greeting: { fontSize: 13, color: colors.gray600 },
   logout: {
     backgroundColor: colors.gray50,
@@ -128,11 +128,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingHorizontal: spacing.screen,
+    paddingTop: spacing.sm,
     backgroundColor: colors.white,
   },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center' },
+  tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
   tabActive: {},
   tabText: { fontSize: 13, fontWeight: '600', color: colors.gray500 },
   tabTextActive: { color: colors.black },

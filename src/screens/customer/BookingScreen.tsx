@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useApp } from '../../context/AppContext'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
-import { colors, radius } from '../../theme'
+import { colors, radius, spacing } from '../../theme'
 import type { DropOffTime, SheetsOption } from '../../types'
 
 export function BookingScreen() {
@@ -86,7 +86,7 @@ export function BookingScreen() {
           onChangeText={setNotes}
           placeholder="Any special instructions..."
         />
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </Screen>
 
       <View style={styles.footer}>
@@ -105,24 +105,24 @@ export function BookingScreen() {
 
 const styles = StyleSheet.create({
   wrapper: { flex: 1, backgroundColor: colors.white },
-  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', marginTop: 8 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 20 },
-  section: { fontSize: 16, fontWeight: '600', marginTop: 16, marginBottom: 12 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', marginTop: spacing.sm, letterSpacing: 0.4 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.lg, lineHeight: 30 },
+  section: { fontSize: 16, fontWeight: '600', marginTop: spacing.lg, marginBottom: spacing.md },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     borderWidth: 1,
     borderColor: colors.gray200,
     borderRadius: radius.pill,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
   },
   chipSelected: { backgroundColor: colors.black, borderColor: colors.black },
   chipText: { fontSize: 14, fontWeight: '500' },
   chipTextSelected: { color: colors.white },
-  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', maxWidth: 280 },
+  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', maxWidth: 280, marginVertical: spacing.sm },
   stepBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.gray200,
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   stepValue: { alignItems: 'center' },
   stepCount: { fontSize: 24, fontWeight: '700' },
   stepLabel: { fontSize: 13, color: colors.gray500 },
-  optionRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  optionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   radio: {
     width: 22,
     height: 22,
@@ -148,10 +148,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray200,
     borderRadius: radius.md,
-    padding: 14,
+    padding: spacing.md,
     fontSize: 16,
-    minHeight: 90,
+    minHeight: 100,
     textAlignVertical: 'top',
+    lineHeight: 22,
   },
   footer: {
     position: 'absolute',
@@ -161,11 +162,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
+    padding: spacing.screen,
+    paddingVertical: spacing.md,
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
   },
-  price: { fontSize: 18, fontWeight: '700' },
-  priceSub: { fontSize: 12, color: colors.gray500 },
+  price: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
+  priceSub: { fontSize: 12, color: colors.gray500, lineHeight: 18 },
 })

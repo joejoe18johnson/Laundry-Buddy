@@ -1,17 +1,23 @@
-import { Image, Platform, StyleSheet, Text, View } from 'react-native'
+import { useState } from 'react'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { TRAINING_ACCOUNTS, TRAINING_PASSWORD, ACTIVE_REGION_LABEL } from '../../data/seedData'
 import { OutlineButton, PrimaryButton, Screen } from '../../components/ui'
-import { colors } from '../../theme'
+import { colors, spacing } from '../../theme'
 
 export function WelcomeScreen() {
-  const { navigateAuth } = useAuth()
+  const { navigateAuth, login } = useAuth()
+  const [signingIn, setSigningIn] = useState<string | null>(null)
+
+  const handleTrainingLogin = async (loginId: string, type: 'phone' | 'email') => {
+    setSigningIn(loginId)
+    await login(type, loginId, TRAINING_PASSWORD)
+    setSigningIn(null)
+  }
 
   return (
     <Screen style={styles.container}>
       <View style={styles.hero}>
-        <Image source={require('../../../assets/splash-icon.png')} style={styles.logoMark} accessibilityLabel="Laundry Buddy logo" />
-        <Text style={styles.logo}>Laundry Buddy</Text>
         <Text style={styles.title}>Dry laundry, rain or shine</Text>
         <Text style={styles.tagline}>
           Book a neighbor's dryer in the {ACTIVE_REGION_LABEL} — free for the community.
@@ -26,10 +32,16 @@ export function WelcomeScreen() {
       <View style={styles.training}>
         <Text style={styles.trainingTitle}>Training accounts · password {TRAINING_PASSWORD}</Text>
         {TRAINING_ACCOUNTS.map((a) => (
-          <View key={a.label} style={styles.trainingRow}>
+          <Pressable
+            key={a.label}
+            style={({ pressed }) => [styles.trainingRow, pressed && styles.trainingRowPressed]}
+            onPress={() => handleTrainingLogin(a.login, a.type)}
+            disabled={signingIn !== null}
+          >
             <Text style={styles.trainingName}>{a.label}</Text>
-            <Text style={styles.trainingLogin}>{a.login}</Text>
-          </View>
+            <Text style={[styles.trainingLogin, signingIn === a.login && styles.trainingLoginBusy]}>
+              {signingIn === a.login ? 'Signing in…' : a.login}
+            </Text></Pressable>
         ))}
       </View>
     </Screen>
@@ -38,16 +50,14 @@ export function WelcomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1 },
-  hero: { flex: 1, justifyContent: 'center', paddingVertical: 40 },
-  logoMark: { width: 88, height: 88, marginBottom: 16 },
-  logo: { fontSize: 18, fontWeight: '700', color: colors.accent, marginBottom: 24 },
-  title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, marginBottom: 12 },
-  tagline: { fontSize: 16, color: colors.gray500, lineHeight: 24 },
-  regionNote: { fontSize: 13, color: colors.gray400, marginTop: 8, fontStyle: 'italic' },
-  gap: { height: 12 },
+  hero: { flex: 1, justifyContent: 'center', paddingVertical: spacing.xxl },
+  title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, marginBottom: spacing.md, lineHeight: 40 },
+  tagline: { fontSize: 16, color: colors.gray500, lineHeight: 26 },
+  regionNote: { fontSize: 13, color: colors.gray400, marginTop: spacing.sm, fontStyle: 'italic' },
+  gap: { height: spacing.md },
   training: {
-    marginTop: 24,
-    padding: 16,
+    marginTop: spacing.xl,
+    padding: spacing.md,
     backgroundColor: colors.gray50,
     borderRadius: 12,
     borderWidth: 1,
@@ -58,13 +68,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.gray600,
     textTransform: 'uppercase',
-    marginBottom: 12,
+    marginBottom: spacing.md,
+    letterSpacing: 0.4,
   },
-  trainingRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  trainingName: { fontSize: 13, fontWeight: '500', flex: 1 },
+  trainingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    marginHorizontal: -4,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+  },
+  trainingRowPressed: { backgroundColor: colors.gray100 },
+  trainingName: {
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
+    color: colors.accent,
+    textDecorationLine: 'underline',
+  },
   trainingLogin: {
     fontSize: 12,
     color: colors.gray500,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
+  trainingLoginBusy: { color: colors.gray500, textDecorationLine: 'none' },
 })

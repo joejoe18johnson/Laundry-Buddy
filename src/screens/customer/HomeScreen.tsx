@@ -4,7 +4,7 @@ import { HostCard } from '../../components/HostCard'
 import { Screen } from '../../components/ui'
 import { getAvailableHosts, ACTIVE_REGION_LABEL } from '../../data/mockData'
 import { useApp } from '../../context/AppContext'
-import { colors, radius } from '../../theme'
+import { colors, radius, spacing } from '../../theme'
 
 export function HomeScreen() {
   const { showMap, setShowMap } = useApp()
@@ -51,16 +51,16 @@ const pinPositions = [
 ]
 
 const styles = StyleSheet.create({
-  title: { fontSize: 26, fontWeight: '700', marginBottom: 6 },
-  subtitle: { fontSize: 15, color: colors.gray500, marginBottom: 4 },
-  regionHint: { fontSize: 13, color: colors.gray400, marginBottom: 16 },
-  toolbar: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 32 },
+  subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.sm, lineHeight: 22 },
+  regionHint: { fontSize: 13, color: colors.gray400, marginBottom: spacing.lg, lineHeight: 20 },
+  toolbar: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   toolBtn: {
     borderWidth: 1,
     borderColor: colors.gray200,
     borderRadius: radius.pill,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
   },
   toolText: { fontSize: 13, fontWeight: '600' },
   map: {
@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
   pin: {
     position: 'absolute',
     backgroundColor: colors.white,
-    padding: 10,
+    padding: spacing.sm,
     borderRadius: radius.md,
     shadowColor: '#000',
     shadowOpacity: 0.1,

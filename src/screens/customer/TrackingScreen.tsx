@@ -2,7 +2,7 @@ import { Linking, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../../context/AppContext'
 import { SEED_HOSTS } from '../../data/seedData'
 import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
-import { colors, radius } from '../../theme'
+import { colors, radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
 
 const STAGES: { key: BookingStage; label: string; desc: string }[] = [
@@ -86,9 +86,9 @@ export function TrackingScreen() {
         <Text style={styles.pickupTitle}>Pickup details</Text>
         <Text style={styles.pickupLabel}>Address</Text>
         <Text style={styles.pickupValue}>{booking.address}</Text>
-        <Text style={[styles.pickupLabel, { marginTop: 12 }]}>Gate code</Text>
+        <Text style={[styles.pickupLabel, { marginTop: spacing.md }]}>Gate code</Text>
         <Text style={styles.pickupValue}>{booking.gateCode}</Text>
-        <View style={{ height: 16 }} />
+        <View style={{ height: spacing.md }} />
         <OutlineButton
           title="Message host"
           full
@@ -104,16 +104,16 @@ export function TrackingScreen() {
 }
 
 const styles = StyleSheet.create({
-  empty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: 8 },
-  emptySub: { fontSize: 14, color: colors.gray500, marginBottom: 20 },
+  empty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
+  emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: spacing.sm },
+  emptySub: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 20 },
   success: {
     flexDirection: 'row',
-    gap: 14,
+    gap: spacing.md,
     backgroundColor: colors.greenBg,
-    padding: 16,
+    padding: spacing.md,
     borderRadius: radius.md,
-    marginBottom: 20,
+    marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: 'rgba(0,138,5,0.15)',
   },
@@ -127,13 +127,13 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontWeight: '700',
   },
-  successTitle: { fontWeight: '600', fontSize: 15 },
-  successSub: { fontSize: 13, color: colors.gray600, marginTop: 2 },
-  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase' },
-  statusTitle: { fontSize: 32, fontWeight: '700', marginVertical: 6 },
-  statusSub: { fontSize: 15, color: colors.gray500, marginBottom: 24 },
-  timeline: { marginBottom: 24 },
-  timelineRow: { flexDirection: 'row', minHeight: 48 },
+  successTitle: { fontWeight: '600', fontSize: 15, lineHeight: 20 },
+  successSub: { fontSize: 13, color: colors.gray600, marginTop: spacing.sm, lineHeight: 18 },
+  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', letterSpacing: 0.4 },
+  statusTitle: { fontSize: 32, fontWeight: '700', marginVertical: spacing.sm, lineHeight: 38 },
+  statusSub: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
+  timeline: { marginBottom: spacing.lg },
+  timelineRow: { flexDirection: 'row', minHeight: 56 },
   timelineLeft: { width: 24, alignItems: 'center' },
   dot: {
     width: 12,
@@ -154,25 +154,25 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingBottom: 16,
-    paddingLeft: 12,
+    paddingBottom: spacing.md,
+    paddingLeft: spacing.md,
   },
   timelineLabel: { fontSize: 15, color: colors.gray400, fontWeight: '500' },
   timelineLabelActive: { color: colors.black, fontWeight: '600' },
   timelineTime: { fontSize: 13, color: colors.gray500 },
   infoCard: {
     backgroundColor: colors.gray50,
-    padding: 16,
+    padding: spacing.md,
     borderRadius: radius.md,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
-  infoText: { fontSize: 14, color: colors.gray600 },
+  infoText: { fontSize: 14, color: colors.gray600, lineHeight: 22 },
   pickupCard: {
     backgroundColor: colors.gray50,
-    padding: 18,
+    padding: spacing.lg,
     borderRadius: radius.md,
   },
-  pickupTitle: { fontSize: 16, fontWeight: '600', marginBottom: 14 },
+  pickupTitle: { fontSize: 16, fontWeight: '600', marginBottom: spacing.md },
   pickupLabel: {
     fontSize: 11,
     fontWeight: '600',
@@ -180,5 +180,5 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  pickupValue: { fontSize: 16, fontWeight: '500', marginTop: 2 },
+  pickupValue: { fontSize: 16, fontWeight: '500', marginTop: spacing.sm, lineHeight: 22 },
 })

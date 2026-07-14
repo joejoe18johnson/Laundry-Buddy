@@ -23,10 +23,12 @@ export const coverColors: Record<string, [string, string]> = {
 }
 
 export const spacing = {
-  screen: 20,
-  sm: 8,
-  md: 16,
-  lg: 24,
+  screen: 24,
+  sm: 12,
+  md: 20,
+  lg: 32,
+  xl: 40,
+  xxl: 56,
 }
 
 export const radius = {
