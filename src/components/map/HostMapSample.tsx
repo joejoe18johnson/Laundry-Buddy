@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   remoteMap: { ...StyleSheet.absoluteFillObject, opacity: 0.92 },
   markerLayer: {
     position: 'absolute',
-    transform: [{ translateX: -20 }, { translateY: -28 }],
+    transform: [{ translateX: -28 }, { translateY: -28 }],
   },
   legend: {
     position: 'absolute',

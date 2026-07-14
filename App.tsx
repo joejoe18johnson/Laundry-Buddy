@@ -1,9 +1,10 @@
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
+import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, needsHostVerification, useAuth } from './src/context/AuthContext'
 import { NotificationProvider, useUserNotifications } from './src/context/NotificationContext'
@@ -28,35 +29,108 @@ import { colors, spacing } from './src/theme'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
 import { SplashLoading } from './src/components/SplashLoading'
 import { ToastProvider } from './src/context/ToastContext'
+import type { Screen } from './src/types'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
+const HIDE_BOTTOM_NAV: Screen[] = [
+  'customer-booking',
+  'customer-host-profile',
+  'host-mark-dry',
+  'notifications',
+  'help',
+]
+
 function AppShell() {
   const { user, logout } = useAuth()
-  const { screen, booking, navigate, hostSettings } = useApp()
+  const {
+    screen,
+    booking,
+    navigate,
+    hostSettings,
+    userLocationLabel,
+    searchRadiusKm,
+    locationLoading,
+    requestUserLocation,
+    setLocationPreset,
+    setSearchRadiusKm,
+  } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
   const [menuOpen, setMenuOpen] = useState(false)
 
   const isCustomer = user!.role === 'customer'
   const firstName = user!.name.split(' ')[0]
   const isHome = screen === 'customer-home'
-  const hideTabBarScreens = new Set([
-    'customer-tracking',
-    'customer-host-profile',
-    'history',
-    'account',
-    'help',
-    'notifications',
-  ])
-  const showTabBar = isCustomer && booking && !hideTabBarScreens.has(screen)
-  const exploreActive =
-    screen === 'customer-home' || screen === 'customer-booking' || screen === 'customer-host-profile'
 
-  const loadTabActive = screen === 'customer-tracking'
   const loadNeedsAttention =
     booking &&
     (booking.requestStatus === 'pending' ||
       (booking.requestStatus !== 'declined' && booking.stage !== 'ready'))
+
+  const customerTabs: NavTab[] = useMemo(
+    () => [
+      {
+        id: 'home',
+        label: 'Home',
+        icon: 'home',
+        screen: 'customer-home',
+        matchScreens: ['customer-home'],
+      },
+      {
+        id: 'load',
+        label: 'My load',
+        icon: 'package',
+        screen: 'customer-tracking',
+        matchScreens: ['customer-tracking'],
+        badge: !!loadNeedsAttention,
+      },
+      {
+        id: 'history',
+        label: 'History',
+        icon: 'clock',
+        screen: 'history',
+        matchScreens: ['history'],
+      },
+      {
+        id: 'profile',
+        label: 'Profile',
+        icon: 'user',
+        screen: 'account',
+        matchScreens: ['account'],
+      },
+    ],
+    [loadNeedsAttention],
+  )
+
+  const hostTabs: NavTab[] = useMemo(
+    () => [
+      {
+        id: 'dashboard',
+        label: 'Dashboard',
+        icon: 'home',
+        screen: 'host-dashboard',
+        matchScreens: ['host-dashboard'],
+      },
+      {
+        id: 'history',
+        label: 'History',
+        icon: 'clock',
+        screen: 'history',
+        matchScreens: ['history'],
+      },
+      {
+        id: 'profile',
+        label: 'Profile',
+        icon: 'user',
+        screen: 'account',
+        matchScreens: ['account'],
+      },
+    ],
+    [],
+  )
+
+  const tabs = isCustomer ? customerTabs : hostTabs
+  const showBottomNav = !HIDE_BOTTOM_NAV.includes(screen)
 
   return (
     <SafeAreaView style={styles.app} edges={['top']}>
@@ -72,9 +146,6 @@ function AppShell() {
               </View>
             )}
           </Pressable>
-          <Pressable onPress={() => navigate('account')} style={styles.avatar} hitSlop={4}>
-            <AppIcon name="user" size={18} color={colors.gray600} />
-          </Pressable>
           <Pressable onPress={() => setMenuOpen(true)} style={styles.menuBtn} hitSlop={8}>
             <AppIcon name="menu" size={22} />
           </Pressable>
@@ -85,6 +156,12 @@ function AppShell() {
         visible={menuOpen}
         user={user!}
         onClose={() => setMenuOpen(false)}
+        locationLabel={userLocationLabel}
+        radiusKm={searchRadiusKm}
+        locationLoading={locationLoading}
+        onUseGps={requestUserLocation}
+        onSelectPreset={setLocationPreset}
+        onSelectRadius={setSearchRadiusKm}
         hasActiveLoad={!!booking}
         isHostOnline={hostSettings?.isOnline}
         notificationCount={unreadCount}
@@ -92,13 +169,12 @@ function AppShell() {
         onMyLoad={isCustomer ? () => navigate('customer-tracking') : undefined}
         onPastLoads={() => navigate('history')}
         onDashboard={!isCustomer ? () => navigate('host-dashboard') : undefined}
-        onAccount={() => navigate('account')}
         onHelp={() => navigate('help')}
         onNotifications={() => navigate('notifications')}
         onLogout={logout}
       />
 
-      <View style={[styles.main, showTabBar && styles.mainWithTab]}>
+      <View style={styles.main}>
         {screen === 'customer-home' && <HomeScreen />}
         {screen === 'customer-host-profile' && <HostProfileScreen />}
         {screen === 'customer-booking' && <BookingScreen />}
@@ -111,27 +187,9 @@ function AppShell() {
         {screen === 'notifications' && <NotificationsScreen />}
       </View>
 
-      {showTabBar && (
-        <SafeAreaView edges={['bottom']} style={styles.tabBar}>
-          <Pressable style={styles.tab} onPress={() => navigate('customer-home')}>
-            <AppIcon
-              name="home"
-              size={20}
-              color={exploreActive ? colors.black : colors.gray500}
-            />
-            <Text style={[styles.tabText, exploreActive && styles.tabTextActive]}>Home</Text>
-          </Pressable>
-          <Pressable style={styles.tab} onPress={() => navigate('customer-tracking')}>
-            <View>
-              <AppIcon
-                name="package"
-                size={20}
-                color={loadTabActive ? colors.black : colors.gray500}
-              />
-              {loadNeedsAttention && !loadTabActive && <View style={styles.tabDot} />}
-            </View>
-            <Text style={[styles.tabText, loadTabActive && styles.tabTextActive]}>My load</Text>
-          </Pressable>
+      {showBottomNav && (
+        <SafeAreaView edges={['bottom']} style={styles.bottomNavWrap}>
+          <BottomNav tabs={tabs} currentScreen={screen} onNavigate={navigate} />
         </SafeAreaView>
       )}
     </SafeAreaView>
@@ -253,14 +311,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   bellBadgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.gray75,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   menuBtn: {
     width: 40,
     height: 40,
@@ -269,27 +319,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   main: { flex: 1 },
-  mainWithTab: { marginBottom: 0 },
-  tabBar: {
-    flexDirection: 'row',
+  bottomNavWrap: {
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
-    paddingHorizontal: spacing.screen,
-    paddingTop: spacing.sm,
     backgroundColor: colors.white,
-  },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', gap: 4 },
-  tabText: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
-  tabTextActive: { color: colors.black },
-  tabDot: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.black,
-    borderWidth: 1.5,
-    borderColor: colors.white,
   },
 })

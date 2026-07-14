@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
+import { LocationPreferencesCard } from './LocationPreferencesCard'
+import type { RadiusOptionKm } from '../lib/locationPreferences'
 import { colors, radius, spacing } from '../theme'
 import type { User } from '../types'
 
@@ -17,7 +19,12 @@ type Props = {
   user: User
   onClose: () => void
   onLogout: () => void
-  /** Customer: active booking in progress */
+  locationLabel: string
+  radiusKm: number
+  locationLoading: boolean
+  onUseGps: () => void
+  onSelectPreset: (label: string, latitude: number, longitude: number) => void
+  onSelectRadius: (km: RadiusOptionKm) => void
   hasActiveLoad?: boolean
   onExplore?: () => void
   onMyLoad?: () => void
@@ -62,6 +69,12 @@ export function HeaderMenu({
   user,
   onClose,
   onLogout,
+  locationLabel,
+  radiusKm,
+  locationLoading,
+  onUseGps,
+  onSelectPreset,
+  onSelectRadius,
   hasActiveLoad,
   onExplore,
   onMyLoad,
@@ -106,6 +119,15 @@ export function HeaderMenu({
             </View>
 
             <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
+              <LocationPreferencesCard
+                locationLabel={locationLabel}
+                radiusKm={radiusKm}
+                locating={locationLoading}
+                onUseGps={onUseGps}
+                onSelectPreset={onSelectPreset}
+                onSelectRadius={onSelectRadius}
+              />
+
               <MenuSection title={isCustomer ? 'Browse' : 'Hosting'}>
                 {isCustomer && onExplore ? (
                   <MenuItem icon="search" label="Explore dryers" onPress={() => go(onExplore)} />
@@ -131,13 +153,6 @@ export function HeaderMenu({
               </MenuSection>
 
               <MenuSection title="Account">
-                {onAccount ? (
-                  <MenuItem
-                    icon="user"
-                    label={isCustomer ? 'Profile & account' : 'Host profile & settings'}
-                    onPress={() => go(onAccount)}
-                  />
-                ) : null}
                 {onNotifications ? (
                   <MenuItem
                     icon="bell"
@@ -154,11 +169,11 @@ export function HeaderMenu({
 
             <View style={styles.footer}>
               <Pressable
-                style={({ pressed }) => [styles.logoutItem, pressed && styles.menuItemPressed]}
+                style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
                 onPress={() => go(onLogout)}
               >
-                <AppIcon name="log-out" size={20} />
-                <Text style={styles.logoutLabel}>Log out</Text>
+                <AppIcon name="log-out" size={20} color={colors.white} />
+                <Text style={styles.logoutBtnText}>Log out</Text>
               </Pressable>
             </View>
           </SafeAreaView>
@@ -175,8 +190,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   panel: {
-    width: '82%',
-    maxWidth: 320,
+    width: '88%',
+    maxWidth: 360,
     height: '100%',
     backgroundColor: colors.white,
     borderLeftWidth: 1,
@@ -244,13 +259,20 @@ const styles = StyleSheet.create({
     borderTopColor: colors.gray100,
     padding: spacing.md,
   },
-  logoutItem: {
+  logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm,
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.danger,
+    borderRadius: radius.lg,
+    paddingVertical: 16,
+    shadowColor: colors.danger,
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
-  logoutLabel: { fontSize: 16, fontWeight: '600', color: colors.danger },
+  logoutBtnPressed: { opacity: 0.92 },
+  logoutBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
 })

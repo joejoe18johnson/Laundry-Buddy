@@ -103,6 +103,7 @@ export function isHostOnline(
   settingsMap: Record<string, HostSettings>,
 ): boolean {
   if (!hostUserId) return false
+  if (hostUserId.startsWith('gen-host-')) return true
   return settingsMap[hostUserId]?.isOnline ?? false
 }
 

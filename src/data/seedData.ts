@@ -1,7 +1,8 @@
 import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User } from '../types'
+import { GENERATED_SEED_HOSTS } from './generatedHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '12'
+export const SEED_DATA_VERSION = '13'
 
 export const TRAINING_PASSWORD = 'demo1234'
 
@@ -540,7 +541,7 @@ export const SEED_HOST_SETTINGS: Record<string, Partial<HostSettings>> = {
     pricing: { dryPrice: 3, foldingPrice: 0, sheetsPrice: 1 },
   },
   'user-rupert': {
-    isOnline: false,
+    isOnline: true,
     acceptCash: true,
     acceptBankTransfer: true,
     bankDetails: {
@@ -552,6 +553,63 @@ export const SEED_HOST_SETTINGS: Record<string, Partial<HostSettings>> = {
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: true,
     pricing: { dryPrice: 4, foldingPrice: 4, sheetsPrice: 2 },
+    dropOffAvailability: [10, 11, 12, 13, 14, 15, 16, 17, 18],
+  },
+  'user-carmen': {
+    isOnline: true,
+    acceptCash: true,
+    acceptBankTransfer: true,
+    bankDetails: {
+      bankName: 'Belize Bank',
+      accountName: 'Carmen Reyes',
+      accountNumber: '2223334444',
+    },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: true,
+    pricing: { dryPrice: 3, foldingPrice: 2, sheetsPrice: 1 },
+    dropOffAvailability: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+  },
+  'user-pedro': {
+    isOnline: true,
+    acceptCash: true,
+    acceptBankTransfer: false,
+    bankDetails: { bankName: '', accountName: '', accountNumber: '' },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: true,
+    pricing: { dryPrice: 4, foldingPrice: 3, sheetsPrice: 1 },
+    dropOffAvailability: [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+  },
+  'user-lucia': {
+    isOnline: true,
+    acceptCash: true,
+    acceptBankTransfer: true,
+    bankDetails: {
+      bankName: 'Heritage Bank',
+      accountName: 'Lucía Vásquez',
+      accountNumber: '3334445555',
+    },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: true,
+    pricing: { dryPrice: 0, foldingPrice: 2, sheetsPrice: 1 },
+    dropOffAvailability: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+  },
+  'user-miguel': {
+    isOnline: true,
+    acceptCash: true,
+    acceptBankTransfer: true,
+    bankDetails: {
+      bankName: 'Atlantic Bank',
+      accountName: 'Miguel Paz',
+      accountNumber: '6667778888',
+    },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: true,
+    pricing: { dryPrice: 5, foldingPrice: 4, sheetsPrice: 2 },
+    dropOffAvailability: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
   },
   'user-elena': {
     isOnline: true,
@@ -685,6 +743,66 @@ export const SEED_HOST_PROFILES: Record<string, HostProfileDetails> = {
     loadsHosted: 0,
     responseTime: '—',
     reviews: [],
+  },
+  carmen: {
+    bio: 'Cristo Rey neighbor with a reliable home dryer. Great for quick weekday drop-offs.',
+    memberSince: 'Jun 2025',
+    loadsHosted: 41,
+    responseTime: 'Under 1 hr',
+    reviews: [
+      {
+        id: 'rev-c1',
+        author: 'Rosa',
+        rating: 5,
+        comment: 'Very close to me — dropped off and picked up same afternoon.',
+        date: 'Jul 5, 2026',
+      },
+    ],
+  },
+  pedro: {
+    bio: 'Bullet Tree host with generator backup. Handles heavier loads on weekends.',
+    memberSince: 'Jun 2025',
+    loadsHosted: 29,
+    responseTime: 'About 1 hr',
+    reviews: [
+      {
+        id: 'rev-p1',
+        author: 'Keisha',
+        rating: 5,
+        comment: 'Pedro was flexible with my schedule and the dryer is fast.',
+        date: 'Jul 2, 2026',
+      },
+    ],
+  },
+  lucia: {
+    bio: 'Esperanza host offering free drying — perfect for students on a budget.',
+    memberSince: 'Jul 2025',
+    loadsHosted: 18,
+    responseTime: 'Under 2 hr',
+    reviews: [
+      {
+        id: 'rev-l1',
+        author: 'Ana',
+        rating: 5,
+        comment: 'Free drying and Lucía folded everything neatly!',
+        date: 'Jul 9, 2026',
+      },
+    ],
+  },
+  miguel: {
+    bio: 'Georgeville host on the river road. Gas dryer with folding service available.',
+    memberSince: 'Jul 2025',
+    loadsHosted: 15,
+    responseTime: 'About 2 hr',
+    reviews: [
+      {
+        id: 'rev-mg1',
+        author: 'Carlos',
+        rating: 4,
+        comment: 'A bit farther out but worth it for heavy loads.',
+        date: 'Jul 4, 2026',
+      },
+    ],
   },
   elena: {
     bio: 'Orange Walk Town host with evening drop-off hours. Handy if you are visiting or passing through the north.',
@@ -1056,9 +1174,11 @@ export function getAvailableHosts(): Host[] {
   const verifiedUserIds = new Set(
     SEED_USERS.filter((u) => u.hostVerification?.status === 'verified').map((u) => u.id),
   )
-  return SEED_HOSTS.filter(
+  const handPicked = SEED_HOSTS.filter(
     (h) => h.hostUserId && verifiedUserIds.has(h.hostUserId) && h.slotsLeft > 0,
   )
+  const generated = GENERATED_SEED_HOSTS.filter((h) => h.slotsLeft > 0)
+  return [...handPicked, ...generated]
 }
 
 export function getHostByUserId(userId: string): Host | undefined {
@@ -1066,7 +1186,7 @@ export function getHostByUserId(userId: string): Host | undefined {
 }
 
 export function getHostById(hostId: string): Host | undefined {
-  return SEED_HOSTS.find((h) => h.id === hostId)
+  return SEED_HOSTS.find((h) => h.id === hostId) ?? GENERATED_SEED_HOSTS.find((h) => h.id === hostId)
 }
 
 export function getHostProfileDetails(hostId: string): HostProfileDetails {

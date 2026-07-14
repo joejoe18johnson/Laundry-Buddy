@@ -6,7 +6,6 @@ import { circleRing } from '../../lib/geo'
 import {
   getMapRegionForRadius,
   OPENFREEMAP_STYLE_URL,
-  regionToBounds,
 } from '../../lib/mapRegion'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
 import type { HostMapProps } from '../HostMap'
@@ -22,7 +21,7 @@ export function HostMapLibre({
     () => getMapRegionForRadius(userLocation, radiusKm),
     [userLocation, radiusKm],
   )
-  const bounds = regionToBounds(region)
+  void region
   const circleGeo = useMemo(
     () => ({
       type: 'Feature' as const,
@@ -48,11 +47,8 @@ export function HostMapLibre({
       >
         <Camera
           defaultSettings={{
-            bounds: { ne: bounds.ne, sw: bounds.sw },
-            paddingTop: 24,
-            paddingBottom: 24,
-            paddingLeft: 24,
-            paddingRight: 24,
+            centerCoordinate: [userLocation.longitude, userLocation.latitude],
+            zoomLevel: 12,
           }}
         />
         <ShapeSource id="radius-circle" shape={circleGeo}>

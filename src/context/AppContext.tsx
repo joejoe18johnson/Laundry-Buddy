@@ -41,10 +41,14 @@ import {
 import {
   enrichHostsWithDistance,
   filterHostsWithinRadius,
-  SEARCH_RADIUS_KM,
   type Coordinates,
 } from '../lib/geo'
 import { USER_LOCATION } from '../lib/mapRegion'
+import {
+  loadLocationPreferences,
+  saveLocationPreferences,
+  type RadiusOptionKm,
+} from '../lib/locationPreferences'
 import * as Location from 'expo-location'
 import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
 import {
@@ -73,6 +77,8 @@ interface AppState {
   locationLoading: boolean
   searchRadiusKm: number
   requestUserLocation: () => Promise<void>
+  setLocationPreset: (label: string, latitude: number, longitude: number) => void
+  setSearchRadiusKm: (km: RadiusOptionKm) => void
   showMap: boolean
   refreshHostData: () => Promise<void>
   navigate: (screen: Screen) => void
@@ -147,6 +153,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userLocation, setUserLocation] = useState<Coordinates>(USER_LOCATION)
   const [userLocationLabel, setUserLocationLabel] = useState('San Ignacio')
   const [locationLoading, setLocationLoading] = useState(false)
+  const [searchRadiusKm, setSearchRadiusKmState] = useState(5)
+
+  useEffect(() => {
+    loadLocationPreferences().then((prefs) => {
+      setUserLocation(prefs.userLocation)
+      setUserLocationLabel(prefs.userLocationLabel)
+      setSearchRadiusKmState(prefs.searchRadiusKm)
+    })
+  }, [])
+
+  const persistLocationPrefs = useCallback(
+    (location: Coordinates, label: string, radiusKm: number) => {
+      void saveLocationPreferences({ userLocation: location, userLocationLabel: label, searchRadiusKm: radiusKm })
+    },
+    [],
+  )
 
   useEffect(() => {
     getAllHostSettings().then((map) => {
@@ -188,8 +210,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         applyHostSettings(h, h.hostUserId ? hostSettingsMap[h.hostUserId] : undefined),
       )
     const withDistance = enrichHostsWithDistance(available, userLocation)
-    return filterHostsWithinRadius(withDistance, userLocation, SEARCH_RADIUS_KM)
-  }, [hostSettingsMap, userLocation])
+    return filterHostsWithinRadius(withDistance, userLocation, searchRadiusKm)
+  }, [hostSettingsMap, userLocation, searchRadiusKm])
+
+  const setLocationPreset = useCallback(
+    (label: string, latitude: number, longitude: number) => {
+      const coords = { latitude, longitude }
+      setUserLocation(coords)
+      setUserLocationLabel(label)
+      persistLocationPrefs(coords, label, searchRadiusKm)
+      showToast(`Searching near ${label}`, { icon: 'map-pin' })
+    },
+    [persistLocationPrefs, searchRadiusKm, showToast],
+  )
+
+  const setSearchRadiusKm = useCallback(
+    (km: RadiusOptionKm) => {
+      setSearchRadiusKmState(km)
+      persistLocationPrefs(userLocation, userLocationLabel, km)
+      showToast(`Showing hosts within ${km} km`, { icon: 'target' })
+    },
+    [persistLocationPrefs, userLocation, userLocationLabel, showToast],
+  )
 
   const requestUserLocation = useCallback(async () => {
     setLocationLoading(true)
@@ -207,6 +249,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         longitude: position.coords.longitude,
       })
       setUserLocationLabel('Your location')
+      persistLocationPrefs(
+        { latitude: position.coords.latitude, longitude: position.coords.longitude },
+        'Your location',
+        searchRadiusKm,
+      )
       showToast('Showing hosts near you', { icon: 'navigation' })
     } catch {
       showToast('Could not get your location', { icon: 'map-pin' })
@@ -602,8 +649,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userLocation,
       userLocationLabel,
       locationLoading,
-      searchRadiusKm: SEARCH_RADIUS_KM,
+      searchRadiusKm,
       requestUserLocation,
+      setLocationPreset,
+      setSearchRadiusKm,
       showMap,
       refreshHostData,
       navigate,
@@ -632,7 +681,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userLocation,
       userLocationLabel,
       locationLoading,
+      searchRadiusKm,
       requestUserLocation,
+      setLocationPreset,
+      setSearchRadiusKm,
       showMap,
       refreshHostData,
       navigate,

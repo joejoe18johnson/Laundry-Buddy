@@ -44,6 +44,12 @@
           "cameraPermission": "Allow Laundry Buddy to use your camera to photograph your load for the host."
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Laundry Buddy to use your location to show dryers within 5 km of you."
+        }
+      ],
       "@maplibre/maplibre-react-native"
     ]
   }
