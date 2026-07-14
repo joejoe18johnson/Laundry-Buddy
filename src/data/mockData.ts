@@ -5,6 +5,7 @@ export {
   ACTIVE_REGION_LABEL,
   getAvailableHosts,
   getHostByUserId,
+  getHostProfileDetails,
   getHostDashboardSeed,
   getCustomerSeedBooking,
   getCustomerHistory,

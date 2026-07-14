@@ -32,6 +32,7 @@ interface AppState {
   hostStats: { loadsToday: number; maxLoads: number; accepting: boolean }
   showMap: boolean
   navigate: (screen: Screen) => void
+  viewHostProfile: (host: Host) => void
   selectHost: (host: Host) => void
   setShowMap: (show: boolean) => void
   confirmBooking: (details: {
@@ -100,6 +101,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [role, user!.id])
 
   const navigate = useCallback((next: Screen) => setScreen(next), [])
+
+  const viewHostProfile = useCallback((host: Host) => {
+    setSelectedHost(host)
+    setScreen('customer-host-profile')
+  }, [])
 
   const selectHost = useCallback((host: Host) => {
     setSelectedHost(host)
@@ -204,6 +210,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostStats,
       showMap,
       navigate,
+      viewHostProfile,
       selectHost,
       setShowMap,
       confirmBooking,
@@ -221,6 +228,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostStats,
       showMap,
       navigate,
+      viewHostProfile,
       selectHost,
       confirmBooking,
       acceptRequest,

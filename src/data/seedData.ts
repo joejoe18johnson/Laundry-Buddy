@@ -1,4 +1,4 @@
-import type { Booking, Host, HostRequest, User } from '../types'
+import type { Booking, Host, HostProfileDetails, HostRequest, User } from '../types'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
 export const SEED_DATA_VERSION = '5'
@@ -245,6 +245,111 @@ export const SEED_HOSTS: Host[] = [
     rules: ['Verification in progress'],
   },
 ]
+
+export const SEED_HOST_PROFILES: Record<string, HostProfileDetails> = {
+  maria: {
+    bio: 'UB student sharing my home dryer with neighbors. Usually home afternoons and weekends — happy to help during rainy season.',
+    memberSince: 'Jun 2025',
+    loadsHosted: 124,
+    responseTime: 'Under 1 hr',
+    reviews: [
+      {
+        id: 'rev-m1',
+        author: 'Ana',
+        rating: 5,
+        comment: 'Super friendly and my clothes came back smelling great. Drop-off was easy.',
+        date: 'Jul 8, 2026',
+      },
+      {
+        id: 'rev-m2',
+        author: 'Carlos',
+        rating: 5,
+        comment: 'Fast turnaround even with rain. Maria texted when my load was ready.',
+        date: 'Jul 1, 2026',
+      },
+      {
+        id: 'rev-m3',
+        author: 'Keisha',
+        rating: 4,
+        comment: 'Clean setup and fair house rules. Would book again.',
+        date: 'Jun 22, 2026',
+      },
+    ],
+  },
+  lopez: {
+    bio: 'Retired teacher with a generator-backed setup near UB. Offering optional folding for busy students.',
+    memberSince: 'Apr 2025',
+    loadsHosted: 89,
+    responseTime: 'Under 30 min',
+    reviews: [
+      {
+        id: 'rev-l1',
+        author: 'Rosa',
+        rating: 5,
+        comment: 'Generator saved my load during the outage. Mr. Lopez is the best.',
+        date: 'Jul 10, 2026',
+      },
+      {
+        id: 'rev-l2',
+        author: 'James',
+        rating: 5,
+        comment: 'Folding service was worth every dollar. Very organized host.',
+        date: 'Jun 18, 2026',
+      },
+    ],
+  },
+  castillo: {
+    bio: 'Gas dryer runs hot and fast — great for big family loads. Quiet Hattieville neighborhood.',
+    memberSince: 'May 2025',
+    loadsHosted: 56,
+    responseTime: 'About 1 hr',
+    reviews: [
+      {
+        id: 'rev-c1',
+        author: 'Carlos',
+        rating: 5,
+        comment: 'Done in under 3 hours. Mrs. Castillo keeps everything spotless.',
+        date: 'Jul 1, 2026',
+      },
+      {
+        id: 'rev-c2',
+        author: 'Ana',
+        rating: 4,
+        comment: 'Good experience. Remember to separate colors — she asks nicely.',
+        date: 'May 30, 2026',
+      },
+    ],
+  },
+  rupert: {
+    bio: 'Country porch drop-off in Roaring Creek. Large-capacity dryer and generator for BEL outages.',
+    memberSince: 'Jul 2025',
+    loadsHosted: 41,
+    responseTime: 'About 2 hr',
+    reviews: [
+      {
+        id: 'rev-r1',
+        author: 'James',
+        rating: 5,
+        comment: 'Heavy loads no problem. Don Rupert is patient and kind.',
+        date: 'Jul 6, 2026',
+      },
+      {
+        id: 'rev-r2',
+        author: 'Keisha',
+        rating: 4,
+        comment: 'Worth the drive from Belmopan. Dryer works great.',
+        date: 'Jun 12, 2026',
+      },
+    ],
+  },
+  sandra: {
+    bio: 'New host in Salvapan — finishing verification and setting up my laundry space.',
+    memberSince: 'Jul 2026',
+    loadsHosted: 0,
+    responseTime: '—',
+    reviews: [],
+  },
+}
 
 export interface HostDashboardSeed {
   loadsToday: number
@@ -548,6 +653,18 @@ export function getAvailableHosts(): Host[] {
 
 export function getHostByUserId(userId: string): Host | undefined {
   return SEED_HOSTS.find((h) => h.hostUserId === userId)
+}
+
+export function getHostProfileDetails(hostId: string): HostProfileDetails {
+  return (
+    SEED_HOST_PROFILES[hostId] ?? {
+      bio: 'Community host in the Cayo Area.',
+      memberSince: '2025',
+      loadsHosted: 0,
+      responseTime: '—',
+      reviews: [],
+    }
+  )
 }
 
 export function getHostDashboardSeed(userId: string): HostDashboardSeed {

@@ -10,6 +10,7 @@ export type AuthScreen = 'welcome' | 'login' | 'signup'
 export type Screen =
   | 'customer-home'
   | 'customer-booking'
+  | 'customer-host-profile'
   | 'customer-tracking'
   | 'host-dashboard'
   | 'host-mark-dry'
@@ -52,6 +53,22 @@ export interface Host {
   photos: string[]
   rules: string[]
   whatsapp: string
+}
+
+export interface HostReview {
+  id: string
+  author: string
+  rating: number
+  comment: string
+  date: string
+}
+
+export interface HostProfileDetails {
+  bio: string
+  memberSince: string
+  loadsHosted: number
+  responseTime: string
+  reviews: HostReview[]
 }
 
 export interface Booking {

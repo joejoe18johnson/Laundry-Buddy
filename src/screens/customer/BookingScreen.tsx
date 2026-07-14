@@ -29,7 +29,7 @@ export function BookingScreen() {
   return (
     <View style={styles.wrapper}>
       <Screen>
-        <BackButton onPress={() => navigate('customer-home')} />
+        <BackButton onPress={() => navigate('customer-host-profile')} />
         <Text style={styles.eyebrow}>{selectedHost.location}</Text>
         <Text style={styles.title}>Book with {selectedHost.name}</Text>
 
