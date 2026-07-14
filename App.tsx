@@ -105,11 +105,11 @@ function AppShell() {
         <SafeAreaView edges={['bottom']} style={styles.tabBar}>
           <Pressable style={styles.tab} onPress={() => navigate('customer-home')}>
             <AppIcon
-              name="search"
+              name="home"
               size={20}
               color={exploreActive ? colors.black : colors.gray500}
             />
-            <Text style={[styles.tabText, exploreActive && styles.tabTextActive]}>Explore</Text>
+            <Text style={[styles.tabText, exploreActive && styles.tabTextActive]}>Home</Text>
           </Pressable>
           <Pressable style={styles.tab} onPress={() => navigate('customer-tracking')}>
             <AppIcon name="package" size={20} color={colors.gray500} />

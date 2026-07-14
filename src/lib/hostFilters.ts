@@ -86,7 +86,6 @@ export function matchesHostSearch(host: Host, query: string): boolean {
     host.location,
     host.district,
     host.address,
-    host.dryerType,
   ]
     .filter(Boolean)
     .join(' ')

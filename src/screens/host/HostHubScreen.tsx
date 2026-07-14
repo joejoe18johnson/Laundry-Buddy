@@ -2,21 +2,97 @@ import { useEffect, useState, type ReactNode } from 'react'
 import {
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
 } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { BackButton, PrimaryButton, Screen } from '../../components/ui'
+import { BackButton, BrandSwitch, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId, getHostProfileDetails } from '../../data/mockData'
 import { formatHostPrice } from '../../lib/hostFilters'
 import { getHostPaymentMethods, normalizeHostSettings, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
+import { DropOffHourGrid } from '../../components/DropOffHourGrid'
+import { parseListingInt } from '../../lib/hostListing'
 import { parsePriceInput } from '../../lib/hostPricing'
+import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { colors, radius, spacing } from '../../theme'
-import type { HostSettings } from '../../types'
+import type { DropOffHour, HostListing, HostSettings } from '../../types'
+
+function EditableLineList({
+  label,
+  hint,
+  items,
+  placeholder,
+  onChange,
+  onAdd,
+  onRemove,
+}: {
+  label: string
+  hint?: string
+  items: string[]
+  placeholder: string
+  onChange: (index: number, value: string) => void
+  onAdd: () => void
+  onRemove: (index: number) => void
+}) {
+  return (
+    <View style={styles.lineList}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+      {items.map((item, index) => (
+        <View key={`${label}-${index}`} style={styles.lineRow}>
+          <TextInput
+            style={[styles.input, styles.lineInput]}
+            value={item}
+            onChangeText={(v) => onChange(index, v)}
+            placeholder={placeholder}
+          />
+          <Pressable onPress={() => onRemove(index)} hitSlop={8} style={styles.removeBtn}>
+            <AppIcon name="x" size={18} color={colors.gray500} />
+          </Pressable>
+        </View>
+      ))}
+      <Pressable onPress={onAdd} style={styles.addLineBtn}>
+        <AppIcon name="plus" size={16} />
+        <Text style={styles.addLineText}>Add line</Text>
+      </Pressable>
+    </View>
+  )
+}
+
+function Field({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType,
+  multiline,
+}: {
+  label: string
+  value: string
+  onChangeText: (v: string) => void
+  placeholder?: string
+  keyboardType?: 'default' | 'number-pad' | 'phone-pad'
+  multiline?: boolean
+}) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        style={[styles.input, multiline && styles.inputMultiline]}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        keyboardType={keyboardType}
+        multiline={multiline}
+        numberOfLines={multiline ? 4 : 1}
+        textAlignVertical={multiline ? 'top' : 'center'}
+      />
+    </View>
+  )
+}
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -64,11 +140,10 @@ function ToggleRow({
         <Text style={styles.toggleLabel}>{label}</Text>
         {sub ? <Text style={styles.toggleSub}>{sub}</Text> : null}
       </View>
-      <Switch
+      <BrandSwitch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: colors.gray200, true: colors.green }}
-        thumbColor={colors.white}
+        accent="black"
       />
     </View>
   )
@@ -103,7 +178,45 @@ export function HostHubScreen() {
   const profile = host ? getHostProfileDetails(host.id) : null
   const verification = user.hostVerification
   const pricing = draft.pricing
+  const listing = draft.listing
 
+  const patchListing = (partial: Partial<HostListing>) => {
+    setDraft((prev) => {
+      const base = normalizeHostSettings(prev, host)
+      return normalizeHostSettings({ ...base, listing: { ...base.listing, ...partial } }, host)
+    })
+    setSaved(false)
+  }
+
+  const patchListingList = (key: 'setup' | 'rules', index: number, value: string) => {
+    setDraft((prev) => {
+      const base = normalizeHostSettings(prev, host)
+      const next = [...base.listing[key]]
+      next[index] = value
+      return normalizeHostSettings({ ...base, listing: { ...base.listing, [key]: next } }, host)
+    })
+    setSaved(false)
+  }
+
+  const addListingLine = (key: 'setup' | 'rules') => {
+    setDraft((prev) => {
+      const base = normalizeHostSettings(prev, host)
+      return normalizeHostSettings(
+        { ...base, listing: { ...base.listing, [key]: [...base.listing[key], ''] } },
+        host,
+      )
+    })
+    setSaved(false)
+  }
+
+  const removeListingLine = (key: 'setup' | 'rules', index: number) => {
+    setDraft((prev) => {
+      const base = normalizeHostSettings(prev, host)
+      const next = base.listing[key].filter((_, i) => i !== index)
+      return normalizeHostSettings({ ...base, listing: { ...base.listing, [key]: next } }, host)
+    })
+    setSaved(false)
+  }
   const patch = (partial: Partial<HostSettings>) => {
     setDraft((prev) => normalizeHostSettings({ ...prev, ...partial }, host))
     setSaved(false)
@@ -125,6 +238,14 @@ export function HostHubScreen() {
     setSaved(false)
   }
 
+  const toggleDropOff = (hours: DropOffHour[]) => {
+    setDraft((prev) => {
+      const base = normalizeHostSettings(prev, host)
+      return normalizeHostSettings({ ...base, dropOffAvailability: hours }, host)
+    })
+    setSaved(false)
+  }
+
   const handleOnlineToggle = async (online: boolean) => {
     const next = { ...draft, isOnline: online }
     setDraft(next)
@@ -132,7 +253,16 @@ export function HostHubScreen() {
   }
 
   const handleSave = async () => {
-    await updateHostSettings(draft)
+    const cleaned: HostSettings = {
+      ...draft,
+      listing: {
+        ...draft.listing,
+        setup: draft.listing.setup.map((s) => s.trim()).filter(Boolean),
+        rules: draft.listing.rules.map((s) => s.trim()).filter(Boolean),
+      },
+    }
+    setDraft(cleaned)
+    await updateHostSettings(cleaned)
     setSaved(true)
   }
 
@@ -150,7 +280,7 @@ export function HostHubScreen() {
         <AppIcon name="user" size={22} />
         <Text style={styles.title}>Host profile</Text>
       </View>
-      <Text style={styles.subtitle}>Everything about your listing in one place</Text>
+      <Text style={styles.subtitle}>Edit your listing — guests see this when they browse and book</Text>
 
       <View style={[styles.onlineCard, draft.isOnline ? styles.onlineCardLive : styles.onlineCardOff]}>
         <View style={styles.onlineHeader}>
@@ -163,11 +293,10 @@ export function HostHubScreen() {
                 : 'Go online when you are ready to accept loads.'}
             </Text>
           </View>
-          <Switch
+          <BrandSwitch
             value={draft.isOnline}
             onValueChange={handleOnlineToggle}
-            trackColor={{ false: colors.gray200, true: colors.green }}
-            thumbColor={colors.white}
+            accent="green"
           />
         </View>
       </View>
@@ -187,19 +316,130 @@ export function HostHubScreen() {
         </View>
       </View>
 
-      {host && (
-        <Section title="Listing">
-          <Row icon="map-pin" label="Location" value={`${host.location}${host.district ? ` · ${host.district}` : ''}`} />
-          <Row icon="wind" label="Dryer" value={`${host.dryerType} · ~${host.turnaroundHours} hr · ${host.slotsLeft} slots`} />
-          {profile ? (
-            <Row icon="shield" label="Rating" value={`${host.rating > 0 ? host.rating.toFixed(1) : 'New'} · ${profile.loadsHosted} loads hosted`} />
-          ) : null}
-          <Text style={styles.rulesTitle}>House rules</Text>
-          {host.rules.map((rule) => (
-            <Text key={rule} style={styles.ruleItem}>· {rule}</Text>
-          ))}
+      {host && profile ? (
+        <Section title="Stats">
+          <Row
+            icon="shield"
+            label="Rating"
+            value={`${host.rating > 0 ? host.rating.toFixed(1) : 'New'} · ${profile.loadsHosted} loads hosted`}
+          />
         </Section>
-      )}
+      ) : null}
+
+      <Section title="Drop-off availability">
+        <Text style={styles.sectionHint}>
+          Tap the hours between 8am and 8pm when guests can drop off laundry.
+        </Text>
+        <DropOffHourGrid
+          mode="toggle"
+          value={draft.dropOffAvailability}
+          onChange={toggleDropOff}
+        />
+        <Text style={styles.paymentSummary}>
+          Guests can book: {formatDropOffAvailability(draft.dropOffAvailability)}
+        </Text>
+        {draft.dropOffAvailability.length === 1 && (
+          <Text style={styles.availabilityNote}>At least one hour must stay on.</Text>
+        )}
+      </Section>
+
+      <Section title="About you">
+        <Text style={styles.sectionHint}>Tell guests about yourself and your laundry setup.</Text>
+        <Field
+          label="Bio"
+          value={listing.bio}
+          onChangeText={(v) => patchListing({ bio: v })}
+          placeholder="Share a short intro guests will see on your profile"
+          multiline
+        />
+      </Section>
+
+      <Section title="Listing details">
+        <Text style={styles.sectionHint}>Location and contact info guests need for drop-off.</Text>
+        <Field
+          label="Area / neighborhood"
+          value={listing.location}
+          onChangeText={(v) => patchListing({ location: v })}
+          placeholder="e.g. Las Flores"
+        />
+        <Field
+          label="District / region"
+          value={listing.district}
+          onChangeText={(v) => patchListing({ district: v })}
+          placeholder="e.g. Cayo"
+        />
+        <Field
+          label="Street address"
+          value={listing.address}
+          onChangeText={(v) => patchListing({ address: v })}
+          placeholder="Full address for booked guests"
+        />
+        <Field
+          label="Gate code or directions"
+          value={listing.gateCode}
+          onChangeText={(v) => patchListing({ gateCode: v })}
+          placeholder="Gate code, buzzer, or landmark"
+        />
+        <Field
+          label="WhatsApp number"
+          value={listing.whatsapp}
+          onChangeText={(v) => patchListing({ whatsapp: v })}
+          placeholder="5016001234"
+          keyboardType="phone-pad"
+        />
+        <View style={styles.twoCol}>
+          <View style={styles.col}>
+            <Field
+              label="Dry time (hours)"
+              value={String(listing.turnaroundHours)}
+              onChangeText={(v) =>
+                patchListing({ turnaroundHours: parseListingInt(v, listing.turnaroundHours) })
+              }
+              keyboardType="number-pad"
+            />
+          </View>
+          <View style={styles.col}>
+            <Field
+              label="Open slots"
+              value={String(listing.slotsLeft)}
+              onChangeText={(v) =>
+                patchListing({ slotsLeft: parseListingInt(v, listing.slotsLeft) })
+              }
+              keyboardType="number-pad"
+            />
+          </View>
+        </View>
+        <ToggleRow
+          label="Generator backup"
+          sub="Show guests you can run during power outages"
+          value={listing.hasGenerator}
+          onChange={(v) => patchListing({ hasGenerator: v })}
+        />
+      </Section>
+
+      <Section title="Your setup">
+        <EditableLineList
+          label="Setup highlights"
+          hint="Describe your laundry space — guests see these on your profile."
+          items={listing.setup}
+          placeholder="e.g. Covered porch drop-off"
+          onChange={(i, v) => patchListingList('setup', i, v)}
+          onAdd={() => addListingLine('setup')}
+          onRemove={(i) => removeListingLine('setup', i)}
+        />
+      </Section>
+
+      <Section title="House rules">
+        <EditableLineList
+          label="Rules for guests"
+          hint="Set expectations for drop-off, pickup, and care of laundry."
+          items={listing.rules}
+          placeholder="e.g. Pick up within 24 hrs"
+          onChange={(i, v) => patchListingList('rules', i, v)}
+          onAdd={() => addListingLine('rules')}
+          onRemove={(i) => removeListingLine('rules', i)}
+        />
+      </Section>
 
       <Section title="Your prices">
         <Text style={styles.sectionHint}>
@@ -391,8 +631,31 @@ const styles = StyleSheet.create({
   rowText: { flex: 1, gap: 2 },
   rowLabel: { fontSize: 12, color: colors.gray500, fontWeight: '500' },
   rowValue: { fontSize: 15, color: colors.black, lineHeight: 21 },
-  rulesTitle: { fontSize: 12, color: colors.gray500, fontWeight: '600', marginTop: spacing.sm },
-  ruleItem: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+  field: { gap: spacing.sm },
+  fieldLabel: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
+  inputMultiline: { minHeight: 100, paddingTop: 12 },
+  twoCol: { flexDirection: 'row', gap: spacing.sm },
+  col: { flex: 1 },
+  lineList: { gap: spacing.sm },
+  lineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  lineInput: { flex: 1 },
+  removeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.gray50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addLineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  addLineText: { fontSize: 14, fontWeight: '600', color: colors.black },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -417,6 +680,7 @@ const styles = StyleSheet.create({
   priceLabel: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
   paymentSummary: { fontSize: 13, color: colors.green, fontWeight: '600' },
   paymentWarning: { fontSize: 13, color: colors.danger, fontWeight: '500' },
+  availabilityNote: { fontSize: 13, color: colors.gray500, fontStyle: 'italic', marginTop: spacing.sm },
   reputationCard: {
     flexDirection: 'row',
     alignItems: 'center',

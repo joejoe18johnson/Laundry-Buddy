@@ -1,4 +1,6 @@
-export type DropOffTime = 'before-10' | '2pm-4pm' | 'after-4'
+import type { DropOffHour } from '../lib/dropOffAvailability'
+
+export type { DropOffHour }
 export type SheetsOption = 'own' | 'buy' | 'none'
 export type BookingStage = 'got-bag' | 'waiting' | 'drying' | 'ready'
 export type AppRole = 'customer' | 'host'
@@ -33,6 +35,20 @@ export interface HostPricing {
   sheetsPrice: number
 }
 
+export interface HostListing {
+  bio: string
+  location: string
+  district: string
+  address: string
+  gateCode: string
+  whatsapp: string
+  turnaroundHours: number
+  slotsLeft: number
+  hasGenerator: boolean
+  setup: string[]
+  rules: string[]
+}
+
 export interface HostSettings {
   isOnline: boolean
   acceptCash: boolean
@@ -42,6 +58,8 @@ export interface HostSettings {
   notifyBookingUpdates: boolean
   notifyGuestsWhenOnline: boolean
   pricing: HostPricing
+  listing: HostListing
+  dropOffAvailability: DropOffHour[]
 }
 
 export interface AppNotification {
@@ -118,7 +136,7 @@ export interface Booking {
   customerName: string
   location: string
   loads: number
-  dropOffTime: DropOffTime
+  dropOffTime: DropOffHour
   sheetsOption: SheetsOption
   notes: string
   stage: BookingStage
@@ -143,21 +161,14 @@ export interface HostRequest {
   customerName: string
   location: string
   loads: number
-  dropOffTime: DropOffTime
+  dropOffTime: DropOffHour
   sheetsOption: SheetsOption
+  notes?: string
+  paymentMethod?: PaymentMethod
+  foldingService?: boolean
+  totalAmount?: number
   status: 'pending' | 'accepted' | 'declined'
-}
-
-export const DROP_OFF_LABELS: Record<DropOffTime, string> = {
-  'before-10': 'Before 10am',
-  '2pm-4pm': '2pm–4pm',
-  'after-4': 'After 4pm',
-}
-
-export const SHEETS_LABELS: Record<SheetsOption, string> = {
-  own: 'Brings own sheets ✓',
-  buy: 'Wants to buy sheets from host',
-  none: 'No sheets please',
+  createdAt?: string
 }
 
 export function sheetsOptionLabel(option: SheetsOption, sheetsPrice: number): string {
@@ -165,4 +176,10 @@ export function sheetsOptionLabel(option: SheetsOption, sheetsPrice: number): st
     return sheetsPrice <= 0 ? 'Buy sheets from host (Free)' : `Buy sheets from host ($${sheetsPrice}/load)`
   }
   return SHEETS_LABELS[option]
+}
+
+export const SHEETS_LABELS: Record<SheetsOption, string> = {
+  own: 'Brings own sheets ✓',
+  buy: 'Wants to buy sheets from host',
+  none: 'No sheets please',
 }

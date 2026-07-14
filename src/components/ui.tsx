@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, type ComponentProps } from 'react'
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
   ViewStyle,
@@ -130,27 +131,119 @@ export function MethodTabs<T extends string>({
 }) {
   return (
     <View style={styles.methodTabs}>
-      {options.map((opt) => (
-        <Pressable
-          key={opt.value}
-          onPress={() => onChange(opt.value)}
-          style={[styles.methodTab, value === opt.value && styles.methodTabActive]}
-        >
-          <View style={styles.methodTabContent}>
-            {opt.icon && (
-              <AppIcon
-                name={opt.icon}
-                size={16}
-                color={value === opt.value ? colors.black : colors.gray500}
-              />
-            )}
-            <Text style={[styles.methodTabText, value === opt.value && styles.methodTabTextActive]}>
-              {opt.label}
-            </Text>
-          </View>
-        </Pressable>
-      ))}
+      {options.map((opt) => {
+        const active = value === opt.value
+        return (
+          <Pressable
+            key={opt.value}
+            onPress={() => onChange(opt.value)}
+            style={[styles.methodTab, active && styles.methodTabActive]}
+          >
+            <View style={styles.methodTabContent}>
+              {opt.icon && (
+                <AppIcon
+                  name={opt.icon}
+                  size={18}
+                  color={active ? colors.white : colors.gray500}
+                />
+              )}
+              <Text style={[styles.methodTabText, active && styles.methodTabTextActive]}>
+                {opt.label}
+              </Text>
+            </View>
+          </Pressable>
+        )
+      })}
     </View>
+  )
+}
+
+export function ChoiceChip({
+  label,
+  selected,
+  onPress,
+  icon,
+  variant = 'filled',
+  size = 'default',
+}: {
+  label: string
+  selected: boolean
+  onPress: () => void
+  icon?: IconName
+  variant?: 'filled' | 'outline'
+  size?: 'default' | 'compact'
+}) {
+  const iconColor = selected
+    ? variant === 'filled'
+      ? colors.white
+      : colors.black
+    : colors.gray600
+  const iconSize = size === 'compact' ? 13 : 16
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.choiceChip,
+        size === 'compact' && styles.choiceChipCompact,
+        variant === 'outline' && styles.choiceChipOutline,
+        selected && variant === 'filled' && styles.choiceChipFilled,
+        selected && variant === 'outline' && styles.choiceChipOutlineSelected,
+      ]}
+    >
+      {icon ? <AppIcon name={icon} size={iconSize} color={iconColor} /> : null}
+      <Text
+        style={[
+          styles.choiceChipText,
+          size === 'compact' && styles.choiceChipTextCompact,
+          selected && variant === 'filled' && styles.choiceChipTextFilled,
+          selected && variant === 'outline' && styles.choiceChipTextSelected,
+        ]}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  )
+}
+
+export function OptionRow({
+  label,
+  sub,
+  selected,
+  onPress,
+}: {
+  label: string
+  sub?: string
+  selected: boolean
+  onPress: () => void
+}) {
+  return (
+    <Pressable onPress={onPress} style={styles.optionRow}>
+      <View style={[styles.optionRadio, selected && styles.optionRadioSelected]}>
+        {selected ? <View style={styles.optionRadioDot} /> : null}
+      </View>
+      <View style={styles.optionCopy}>
+        <Text style={styles.optionLabel}>{label}</Text>
+        {sub ? <Text style={styles.optionSub}>{sub}</Text> : null}
+      </View>
+    </Pressable>
+  )
+}
+
+export function BrandSwitch({
+  accent = 'black',
+  style,
+  ...props
+}: { accent?: 'black' | 'green' } & ComponentProps<typeof Switch>) {
+  const onColor = accent === 'green' ? colors.green : colors.black
+  return (
+    <Switch
+      {...props}
+      trackColor={{ false: colors.gray200, true: onColor }}
+      thumbColor={colors.white}
+      ios_backgroundColor={colors.gray200}
+      style={[styles.brandSwitch, style]}
+    />
   )
 }
 
@@ -210,16 +303,89 @@ const styles = StyleSheet.create({
   btnPressed: { opacity: 0.85 },
   methodTabs: {
     flexDirection: 'row',
-    backgroundColor: colors.gray50,
+    backgroundColor: colors.gray75,
     borderRadius: radius.pill,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: colors.gray100,
+    padding: 5,
+    minHeight: 56,
     marginBottom: spacing.xl,
   },
-  methodTab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: radius.pill },
-  methodTabContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  methodTabActive: { backgroundColor: colors.white },
-  methodTabText: { fontSize: 14, fontWeight: '600', color: colors.gray500 },
-  methodTabTextActive: { color: colors.black },
+  methodTab: {
+    flex: 1,
+    minHeight: 46,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.pill,
+  },
+  methodTabContent: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  methodTabActive: { backgroundColor: colors.black },
+  methodTabText: { fontSize: 15, fontWeight: '600', color: colors.gray500 },
+  methodTabTextActive: { color: colors.white },
+  choiceChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 48,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: radius.pill,
+    backgroundColor: colors.gray50,
+  },
+  choiceChipCompact: {
+    minHeight: 34,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 5,
+  },
+  choiceChipOutline: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+  },
+  choiceChipFilled: {
+    backgroundColor: colors.black,
+  },
+  choiceChipOutlineSelected: {
+    borderColor: colors.black,
+    borderWidth: 1.5,
+    backgroundColor: colors.white,
+  },
+  choiceChipText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.gray600,
+  },
+  choiceChipTextCompact: { fontSize: 13 },
+  choiceChipTextFilled: { color: colors.white },
+  choiceChipTextSelected: { color: colors.black },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: 56,
+  },
+  optionRadio: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: colors.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionRadioSelected: { borderColor: colors.black },
+  optionRadioDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.black,
+  },
+  optionCopy: { flex: 1, gap: 2 },
+  optionLabel: { fontSize: 16, fontWeight: '600', color: colors.black },
+  optionSub: { fontSize: 14, color: colors.gray500, lineHeight: 20 },
+  brandSwitch: {
+    transform: [{ scaleX: 1.08 }, { scaleY: 1.08 }],
+  },
 })

@@ -1,13 +1,70 @@
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { DROP_OFF_LABELS, sheetsOptionLabel } from '../../types'
+import { sheetsOptionLabel } from '../../types'
+import { formatDropOffAvailability, formatDropOffHour, type DropOffHour } from '../../lib/dropOffAvailability'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
-import { applyHostPricing } from '../../lib/hostPricing'
+import { applyHostSettings } from '../../lib/hostListing'
 import { formatHostPrice } from '../../lib/hostFilters'
-import { GhostButton, PrimaryButton, Screen } from '../../components/ui'
+import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
+import { BrandSwitch, GhostButton, PrimaryButton, Screen } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
+
+function DropOffBadge({ dropOffTime }: { dropOffTime: DropOffTime }) {
+  return (
+    <View style={styles.dropOffBadge}>
+      <AppIcon name="clock" size={12} color={colors.black} />
+      <Text style={styles.dropOffBadgeText}>{DROP_OFF_LABELS[dropOffTime]}</Text>
+    </View>
+  )
+}
+
+function OrderDetails({
+  dropOffTime,
+  notes,
+  paymentMethod,
+  totalAmount,
+}: {
+  dropOffTime: DropOffTime
+  notes?: string
+  paymentMethod?: 'cash' | 'bank_transfer'
+  totalAmount?: number
+}) {
+  const trimmedNotes = notes?.trim()
+
+  return (
+    <View style={styles.orderDetails}>
+      <View style={styles.detailRow}>
+        <View style={styles.detailIcon}>
+          <AppIcon name="clock" size={16} color={colors.black} />
+        </View>
+        <View style={styles.detailBody}>
+          <Text style={styles.detailLabel}>Guest drop-off time</Text>
+          <Text style={styles.detailValue}>{DROP_OFF_LABELS[dropOffTime]}</Text>
+          <Text style={styles.detailHint}>Expect laundry during this window</Text>
+        </View>
+      </View>
+      {trimmedNotes ? (
+        <View style={styles.notesBox}>
+          <View style={styles.notesHeader}>
+            <AppIcon name="message-square" size={14} color={colors.gray600} />
+            <Text style={styles.notesLabel}>Guest notes</Text>
+          </View>
+          <Text style={styles.notesText}>{trimmedNotes}</Text>
+        </View>
+      ) : (
+        <Text style={styles.noNotes}>No special instructions from guest</Text>
+      )}
+      {paymentMethod && (
+        <Text style={styles.paymentMeta}>
+          {paymentMethod === 'cash' ? 'Cash on pickup' : 'Bank transfer'}
+          {totalAmount != null && totalAmount > 0 ? ` · ${formatMoney(totalAmount)}` : ''}
+        </Text>
+      )}
+    </View>
+  )
+}
 
 export function DashboardScreen() {
   const { user } = useAuth()
@@ -21,11 +78,12 @@ export function DashboardScreen() {
     acceptRequest,
     declineRequest,
     advanceStage,
+    confirmTransferPayment,
   } = useApp()
 
   const rawHost = user ? getHostByUserId(user.id) : undefined
   const hostProfile = rawHost && hostSettings
-    ? applyHostPricing(rawHost, hostSettings)
+    ? applyHostSettings(rawHost, hostSettings)
     : rawHost
   const isOnline = hostSettings?.isOnline ?? false
 
@@ -57,13 +115,24 @@ export function DashboardScreen() {
             </Text>
           </View>
         </View>
-        <Switch
-          value={isOnline}
-          onValueChange={toggleOnline}
-          trackColor={{ false: colors.gray200, true: colors.green }}
-          thumbColor={colors.white}
-        />
+        <BrandSwitch accent="green" value={isOnline} onValueChange={toggleOnline} />
       </View>
+
+      {hostSettings && (
+        <View style={styles.availabilityBar}>
+          <View style={styles.availabilityHeader}>
+            <AppIcon name="calendar" size={14} color={colors.gray600} />
+            <Text style={styles.availabilityTitle}>Your drop-off windows</Text>
+          </View>
+          <Text style={styles.availabilityValue}>
+            {formatDropOffAvailability(hostSettings.dropOffAvailability)}
+          </Text>
+          <Pressable style={styles.availabilityEdit} onPress={() => navigate('account')}>
+            <Text style={styles.availabilityEditText}>Edit availability</Text>
+            <AppIcon name="chevron-right" size={14} color={colors.gray500} />
+          </Pressable>
+        </View>
+      )}
 
       <View style={styles.statsRow}>
         <View style={styles.statChip}>
@@ -93,31 +162,47 @@ export function DashboardScreen() {
         </Text>
       )}
 
+      {hostRequests.length > 0 && (
+        <View style={styles.sectionHeader}>
+          <AppIcon name="inbox" size={14} color={colors.black} />
+          <Text style={styles.sectionHeaderText}>
+            New orders ({hostRequests.length})
+          </Text>
+        </View>
+      )}
+
       {hostRequests.map((request) => (
         <View key={request.id} style={styles.section}>
-          <View style={styles.sectionLabelRow}>
-            <AppIcon name="inbox" size={12} color={colors.gray500} />
-            <Text style={styles.sectionLabel}>New request</Text>
-          </View>
           <View style={styles.card}>
             <View style={styles.row}>
               <View style={styles.avatar}>
                 <AppIcon name="user" size={18} color={colors.gray600} />
               </View>
-              <View>
+              <View style={styles.cardHeader}>
                 <Text style={styles.cardTitle}>{request.customerName}</Text>
                 <Text style={styles.cardMeta}>
                   {request.location} · {request.loads} load{request.loads > 1 ? 's' : ''}
                 </Text>
               </View>
+              <DropOffBadge dropOffTime={request.dropOffTime} />
             </View>
+            <OrderDetails
+              dropOffTime={request.dropOffTime}
+              notes={request.notes}
+              paymentMethod={request.paymentMethod}
+              totalAmount={request.totalAmount}
+            />
             <View style={styles.tags}>
-              <Text style={styles.tag}>{DROP_OFF_LABELS[request.dropOffTime]}</Text>
               <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption, hostProfile?.sheetsPrice ?? 1)}</Text>
+              {request.foldingService && <Text style={styles.tag}>Folding requested</Text>}
             </View>
             <View style={styles.actions}>
-              <PrimaryButton title="Accept" onPress={() => acceptRequest(request.id)} />
-              <GhostButton title="Decline" onPress={() => declineRequest(request.id)} />
+              <View style={styles.actionBtn}>
+                <PrimaryButton title="Accept" onPress={() => acceptRequest(request.id)} full />
+              </View>
+              <View style={styles.actionBtn}>
+                <GhostButton title="Decline" onPress={() => declineRequest(request.id)} full />
+              </View>
             </View>
           </View>
         </View>
@@ -134,14 +219,37 @@ export function DashboardScreen() {
               <View style={styles.avatar}>
                 <AppIcon name="user" size={18} color={colors.gray600} />
               </View>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>{load.customerName}</Text>
                 <Text style={styles.cardMeta}>
                   {load.loads} load · {load.stage.replace('-', ' ')}
                   {load.paymentMethod ? ` · ${load.paymentMethod === 'cash' ? 'Cash' : 'Transfer'}` : ''}
+                  {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending'
+                    ? ' · Awaiting proof'
+                    : ''}
                 </Text>
               </View>
+              <DropOffBadge dropOffTime={load.dropOffTime} />
             </View>
+            <OrderDetails
+              dropOffTime={load.dropOffTime}
+              notes={load.notes}
+              paymentMethod={load.paymentMethod}
+              totalAmount={load.totalAmount}
+            />
+            {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
+              <>
+                <Text style={styles.transferHint}>
+                  Guest should send transfer proof on WhatsApp. Confirm once verified.
+                </Text>
+                <GhostButton
+                  title={`Confirm ${formatMoney(getBookingAmount(load))} received`}
+                  icon="check-circle"
+                  full
+                  onPress={() => confirmTransferPayment(load.id)}
+                />
+              </>
+            )}
             {(load.stage === 'got-bag' || load.stage === 'waiting') && (
               <PrimaryButton title="Start dryer" onPress={() => advanceStage(load.id, 'drying')} full />
             )}
@@ -205,6 +313,26 @@ const styles = StyleSheet.create({
   onlineDotLive: { backgroundColor: colors.green },
   onlineTitle: { fontSize: 14, fontWeight: '700' },
   onlineSub: { fontSize: 12, color: colors.gray600, lineHeight: 17, marginTop: 2 },
+  availabilityBar: {
+    backgroundColor: colors.gray50,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+    gap: spacing.sm,
+  },
+  availabilityHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  availabilityTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600, textTransform: 'uppercase' },
+  availabilityValue: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
+  availabilityEdit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 2,
+    marginTop: spacing.sm,
+  },
+  availabilityEditText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
   statsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   statChip: {
     borderWidth: 1,
@@ -231,6 +359,13 @@ const styles = StyleSheet.create({
   pillText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
   pillLiveText: { color: colors.green },
   listingMeta: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 20 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  sectionHeaderText: { fontSize: 16, fontWeight: '700' },
   section: { marginBottom: spacing.lg },
   sectionLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
   sectionLabel: {
@@ -257,7 +392,61 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardTitle: { fontSize: 16, fontWeight: '600', lineHeight: 22 },
-  cardMeta: { fontSize: 14, color: colors.gray500, marginTop: spacing.sm, lineHeight: 20 },
+  cardHeader: { flex: 1 },
+  cardMeta: { fontSize: 14, color: colors.gray500, marginTop: 2, lineHeight: 20 },
+  orderDetails: {
+    backgroundColor: colors.gray50,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+  },
+  detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  detailIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.gray100,
+  },
+  detailBody: { flex: 1 },
+  detailLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.gray500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  detailValue: { fontSize: 16, fontWeight: '700', marginTop: 2, lineHeight: 22 },
+  detailHint: { fontSize: 12, color: colors.gray500, marginTop: 2 },
+  dropOffBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.black,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+    maxWidth: 120,
+  },
+  dropOffBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white, flexShrink: 1 },
+  notesBox: {
+    backgroundColor: colors.white,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+    gap: 4,
+  },
+  notesHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  notesLabel: { fontSize: 11, fontWeight: '700', color: colors.gray600, textTransform: 'uppercase' },
+  notesText: { fontSize: 14, color: colors.black, lineHeight: 20 },
+  noNotes: { fontSize: 13, color: colors.gray500, fontStyle: 'italic' },
+  paymentMeta: { fontSize: 13, color: colors.gray600, fontWeight: '600' },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tag: {
     fontSize: 12,
@@ -270,7 +459,9 @@ const styles = StyleSheet.create({
     color: colors.gray600,
   },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  actionBtn: { flex: 1 },
   done: { color: colors.green, fontWeight: '600', fontSize: 15, lineHeight: 22 },
+  transferHint: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
   empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
   emptyTitle: { fontSize: 18, fontWeight: '600' },
   emptySub: { fontSize: 14, color: colors.gray500, marginTop: spacing.sm, lineHeight: 20, textAlign: 'center' },

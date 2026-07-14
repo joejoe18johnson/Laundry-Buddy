@@ -7,6 +7,7 @@ import {
 } from '../lib/hostFilters'
 import { colors, radius, spacing } from '../theme'
 import { AppIcon } from './AppIcon'
+import { ChoiceChip } from './ui'
 
 type Props = {
   visible: boolean
@@ -38,12 +39,7 @@ function Chip({
   onPress: () => void
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={[styles.chip, selected && styles.chipSelected]}
-    >
-      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
-    </Pressable>
+    <ChoiceChip label={label} selected={selected} onPress={onPress} variant="outline" />
   )
 }
 
@@ -157,17 +153,6 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.gray600, textTransform: 'uppercase', letterSpacing: 0.4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: {
-    borderWidth: 1,
-    borderColor: colors.gray100,
-    borderRadius: radius.pill,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: colors.white,
-  },
-  chipSelected: { borderColor: colors.black, borderWidth: 1.5 },
-  chipText: { fontSize: 14, fontWeight: '600', color: colors.black },
-  chipTextSelected: { color: colors.black },
   footer: {
     flexDirection: 'row',
     gap: spacing.sm,

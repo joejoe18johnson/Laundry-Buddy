@@ -46,8 +46,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray50,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    marginBottom: spacing.md,
+    paddingVertical: 12,
+    marginBottom: spacing.sm,
   },
   input: {
     flex: 1,

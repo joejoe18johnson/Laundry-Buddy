@@ -1,7 +1,11 @@
 import { Linking, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { useApp } from '../../context/AppContext'
-import { SEED_HOSTS } from '../../data/seedData'
+import { useAuth } from '../../context/AuthContext'
+import { getHostById } from '../../data/mockData'
+import { applyHostListing } from '../../lib/hostListing'
+import { getBookingAmount, formatMoney, formatPaymentMethod } from '../../lib/bookingPayments'
+import { buildTransferProofMessage, sendTransferProofViaWhatsApp } from '../../lib/whatsapp'
 import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
@@ -14,7 +18,8 @@ const STAGES: { key: BookingStage; label: string; desc: string; icon: 'shopping-
 ]
 
 export function TrackingScreen() {
-  const { booking, navigate } = useApp()
+  const { user } = useAuth()
+  const { booking, navigate, getSettingsForHost } = useApp()
 
   if (!booking) {
     return (
@@ -28,8 +33,29 @@ export function TrackingScreen() {
 
   const stageIndex = STAGES.findIndex((s) => s.key === booking.stage)
   const current = STAGES[stageIndex]
-  const host = SEED_HOSTS.find((h) => h.id === booking.hostId)
-  const whatsapp = host?.whatsapp ?? '5016001234'
+  const host = getHostById(booking.hostId)
+  const hostSettings = getSettingsForHost(host?.hostUserId)
+  const resolvedHost = host ? applyHostListing(host, hostSettings) : null
+  const whatsapp = resolvedHost?.whatsapp ?? host?.whatsapp ?? ''
+  const amount = getBookingAmount(booking)
+  const isBankTransfer = booking.paymentMethod === 'bank_transfer'
+  const transferPending = isBankTransfer && booking.paymentStatus === 'pending' && amount > 0
+
+  const sendTransferProof = () => {
+    if (!whatsapp || !user) return
+    sendTransferProofViaWhatsApp(
+      whatsapp,
+      buildTransferProofMessage({
+        guestName: user.name,
+        hostName: booking.hostName,
+        amount,
+        loads: booking.loads,
+        bookingId: booking.id,
+        bankName: hostSettings.bankDetails.bankName,
+        accountNumber: hostSettings.bankDetails.accountNumber,
+      }),
+    )
+  }
 
   return (
     <Screen>
@@ -47,12 +73,44 @@ export function TrackingScreen() {
         </View>
       )}
 
+      {transferPending && (
+        <View style={styles.paymentCard}>
+          <View style={styles.paymentHeader}>
+            <AppIcon name="credit-card" size={18} />
+            <Text style={styles.paymentTitle}>Bank transfer — {formatMoney(amount)}</Text>
+          </View>
+          <Text style={styles.paymentSub}>
+            Send {booking.hostName} your transfer proof on WhatsApp so they can verify payment.
+          </Text>
+          {whatsapp ? (
+            <OutlineButton
+              title="Send proof via WhatsApp"
+              icon="message-circle"
+              full
+              onPress={sendTransferProof}
+            />
+          ) : (
+            <Text style={styles.paymentWarn}>Host has not added a WhatsApp number yet.</Text>
+          )}
+        </View>
+      )}
+
+      {isBankTransfer && booking.paymentStatus === 'paid' && (
+        <View style={styles.paidCard}>
+          <AppIcon name="check-circle" size={18} color={colors.green} />
+          <Text style={styles.paidText}>Transfer verified · {formatMoney(amount)}</Text>
+        </View>
+      )}
+
       <View style={styles.statusHeader}>
         <AppIcon name="package" size={20} color={colors.gray500} />
         <Text style={styles.eyebrow}>Your load</Text>
       </View>
       <Text style={styles.statusTitle}>{current.label}</Text>
-      <Text style={styles.statusSub}>{current.desc} · with {booking.hostName}</Text>
+      <Text style={styles.statusSub}>
+        {current.desc} · with {booking.hostName}
+        {booking.paymentMethod ? ` · ${formatPaymentMethod(booking.paymentMethod)}` : ''}
+      </Text>
 
       <View style={styles.timeline}>
         {STAGES.map((stage, i) => {
@@ -93,7 +151,11 @@ export function TrackingScreen() {
 
       <View style={styles.infoCard}>
         <AppIcon name="message-circle" size={18} color={colors.gray600} />
-        <Text style={styles.infoText}>We'll notify you on WhatsApp when it's ready.</Text>
+        <Text style={styles.infoText}>
+          {transferPending
+            ? 'Message your host on WhatsApp with your transfer screenshot.'
+            : "We'll notify you when your load is ready."}
+        </Text>
       </View>
 
       <View style={styles.pickupCard}>
@@ -116,16 +178,20 @@ export function TrackingScreen() {
           </View>
         </View>
         <View style={{ height: spacing.md }} />
-        <OutlineButton
-          title="Message host"
-          icon="message-circle"
-          full
-          onPress={() =>
-            Linking.openURL(
-              `https://wa.me/${whatsapp}?text=Hi%20${booking.hostName}!%20Checking%20on%20my%20load.`,
-            )
-          }
-        />
+        {whatsapp ? (
+          <OutlineButton
+            title="Message host"
+            icon="message-circle"
+            full
+            onPress={() =>
+              Linking.openURL(
+                `https://wa.me/${whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(
+                  `Hi ${booking.hostName}! Checking on my load.`,
+                )}`,
+              )
+            }
+          />
+        ) : null}
       </View>
     </Screen>
   )
@@ -156,6 +222,29 @@ const styles = StyleSheet.create({
   },
   successTitle: { fontWeight: '600', fontSize: 15, lineHeight: 20 },
   successSub: { fontSize: 13, color: colors.gray600, marginTop: spacing.sm, lineHeight: 18 },
+  paymentCard: {
+    borderWidth: 1,
+    borderColor: colors.black,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.gray50,
+  },
+  paymentHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  paymentTitle: { fontSize: 16, fontWeight: '700' },
+  paymentSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+  paymentWarn: { fontSize: 13, color: colors.danger },
+  paidCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.greenBg,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    marginBottom: spacing.lg,
+  },
+  paidText: { fontSize: 14, fontWeight: '600', color: colors.green },
   statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', letterSpacing: 0.4 },
   statusTitle: { fontSize: 32, fontWeight: '700', marginVertical: spacing.sm, lineHeight: 38 },

@@ -1,12 +1,24 @@
-import { useMemo, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Animated,
+  FlatList,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ListRenderItem,
+  type LayoutChangeEvent,
+} from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { HostCard } from '../../components/HostCard'
 import { HostFilterSheet } from '../../components/HostFilterSheet'
 import { HostSearchBar } from '../../components/HostSearchBar'
-import { WeatherBanner } from '../../components/WeatherBanner'
+import { ChoiceChip } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
-import { ACTIVE_REGION_LABEL, getAvailableHosts } from '../../data/mockData'
+import { ACTIVE_REGION_LABEL, getAvailableHosts, WEATHER } from '../../data/mockData'
 import {
   countActiveFilters,
   DEFAULT_HOST_FILTERS,
@@ -16,6 +28,7 @@ import {
   type HostFilters,
   type HostSort,
 } from '../../lib/hostFilters'
+import type { Host } from '../../types'
 import { colors, radius, spacing } from '../../theme'
 
 const SORT_OPTIONS: { value: HostSort; label: string; icon: 'map-pin' | 'dollar-sign' | 'star' | 'clock' }[] = [
@@ -25,7 +38,58 @@ const SORT_OPTIONS: { value: HostSort; label: string; icon: 'map-pin' | 'dollar-
   { value: 'fastest', label: 'Fastest', icon: 'clock' },
 ]
 
+const PIN_POSITIONS = [
+  { top: '16%' as const, left: '12%' as const },
+  { top: '38%' as const, right: '10%' as const },
+  { top: '55%' as const, left: '22%' as const },
+  { top: '24%' as const, right: '26%' as const },
+  { top: '62%' as const, right: '34%' as const },
+  { top: '44%' as const, left: '48%' as const },
+  { top: '72%' as const, left: '58%' as const },
+  { top: '30%' as const, left: '68%' as const },
+]
+
+type SnapPoint = 'map' | 'half' | 'full'
+
+const SNAP_RATIOS: Record<SnapPoint, number> = {
+  map: 0.24,
+  half: 0.48,
+  full: 0.9,
+}
+
+const SNAP_ORDER: SnapPoint[] = ['map', 'half', 'full']
+
+function getPopularAreas(hosts: Host[]): string[] {
+  const districts = [...new Set(hosts.map((h) => h.district).filter(Boolean))] as string[]
+  const locations = getHostLocations(hosts)
+  return [...districts, ...locations.filter((l) => !districts.includes(l))].slice(0, 8)
+}
+
+function nearestSnap(height: number, containerHeight: number, velocityY: number): SnapPoint {
+  const ratio = height / containerHeight
+  if (velocityY > 0.8) {
+    if (ratio > SNAP_RATIOS.half) return 'half'
+    return 'map'
+  }
+  if (velocityY < -0.8) {
+    if (ratio < SNAP_RATIOS.half) return 'half'
+    return 'full'
+  }
+
+  let best: SnapPoint = 'half'
+  let bestDist = Infinity
+  for (const key of SNAP_ORDER) {
+    const dist = Math.abs(ratio - SNAP_RATIOS[key])
+    if (dist < bestDist) {
+      bestDist = dist
+      best = key
+    }
+  }
+  return best
+}
+
 export function HomeScreen() {
+  const insets = useSafeAreaInsets()
   const { viewHostProfile, onlineHosts } = useApp()
   const allHosts = onlineHosts
   const totalHosts = getAvailableHosts().length
@@ -33,115 +97,160 @@ export function HomeScreen() {
   const [sort, setSort] = useState<HostSort>('nearest')
   const [searchQuery, setSearchQuery] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [containerHeight, setContainerHeight] = useState(0)
+  const [snap, setSnap] = useState<SnapPoint>('half')
+
+  const sheetHeight = useRef(new Animated.Value(0)).current
+  const dragStartHeight = useRef(0)
+  const containerHeightRef = useRef(0)
+  const snapRef = useRef<SnapPoint>('half')
 
   const hosts = useMemo(
     () => filterAndSortHosts(allHosts, filters, sort, searchQuery),
     [allHosts, filters, sort, searchQuery],
   )
   const locations = useMemo(() => getHostLocations(allHosts), [allHosts])
-  const areaSuggestions = useMemo(
-    () => getSearchSuggestions(allHosts, searchQuery),
-    [allHosts, searchQuery],
-  )
   const activeFilterCount = countActiveFilters(filters)
   const trimmedSearch = searchQuery.trim()
+  const popularAreas = useMemo(() => getPopularAreas(allHosts), [allHosts])
 
-  const subtitle = trimmedSearch
-    ? `${hosts.length} host${hosts.length === 1 ? '' : 's'} matching “${trimmedSearch}”`
-    : sort === 'nearest'
-      ? `${hosts.length} online · closest first`
-      : `${hosts.length} of ${totalHosts} online in ${ACTIVE_REGION_LABEL}`
+  const areaChips = useMemo(() => {
+    if (trimmedSearch) {
+      return getSearchSuggestions(allHosts, searchQuery, 6)
+    }
+    return popularAreas
+  }, [allHosts, searchQuery, trimmedSearch, popularAreas])
+
+  const resultLabel = trimmedSearch
+    ? `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}”`
+    : `${hosts.length} online in ${ACTIVE_REGION_LABEL}`
+
+  const animateToSnap = useCallback(
+    (point: SnapPoint) => {
+      const h = containerHeightRef.current
+      if (h <= 0) return
+      snapRef.current = point
+      setSnap(point)
+      Animated.spring(sheetHeight, {
+        toValue: h * SNAP_RATIOS[point],
+        useNativeDriver: false,
+        damping: 28,
+        stiffness: 280,
+        mass: 0.8,
+      }).start()
+    },
+    [sheetHeight],
+  )
+
+  useEffect(() => {
+    snapRef.current = snap
+  }, [snap])
+
+  const onContainerLayout = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height
+    if (h <= 0 || h === containerHeightRef.current) return
+    containerHeightRef.current = h
+    setContainerHeight(h)
+    sheetHeight.setValue(h * SNAP_RATIOS[snapRef.current])
+  }
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 6,
+        onPanResponderGrant: () => {
+          sheetHeight.stopAnimation((v) => {
+            dragStartHeight.current = v
+          })
+        },
+        onPanResponderMove: (_, g) => {
+          const max = containerHeightRef.current * SNAP_RATIOS.full
+          const min = containerHeightRef.current * SNAP_RATIOS.map
+          const next = Math.min(max, Math.max(min, dragStartHeight.current - g.dy))
+          sheetHeight.setValue(next)
+        },
+        onPanResponderRelease: (_, g) => {
+          sheetHeight.stopAnimation((v) => {
+            const target = nearestSnap(v, containerHeightRef.current, g.vy)
+            animateToSnap(target)
+          })
+        },
+      }),
+    [animateToSnap, sheetHeight],
+  )
+
+  const cycleSnap = () => {
+    const idx = SNAP_ORDER.indexOf(snapRef.current)
+    animateToSnap(SNAP_ORDER[(idx + 1) % SNAP_ORDER.length])
+  }
 
   const clearAll = () => {
     setFilters(DEFAULT_HOST_FILTERS)
     setSearchQuery('')
   }
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.map}>
-        <View style={styles.mapGrid} />
-        <View style={styles.youDot}>
-          <View style={styles.youInner} />
-        </View>
-        {hosts.length === 0 ? (
-          <View style={styles.mapEmpty}>
-            <AppIcon name="map-pin" size={20} color={colors.gray400} />
-            <Text style={styles.mapEmptyText}>No hosts in this area</Text>
-          </View>
-        ) : (
-          hosts.slice(0, 6).map((host, i) => (
-            <Pressable
-              key={host.id}
-              style={[styles.pin, pinPositions[i % pinPositions.length]]}
-              onPress={() => viewHostProfile(host)}
-            >
-              <Text style={styles.pinPrice}>{host.price <= 0 ? 'Free' : `$${host.price}`}</Text>
-            </Pressable>
-          ))
-        )}
-      </View>
+  const selectArea = (area: string) => {
+    setSearchQuery(area)
+    setFilters((prev) => ({ ...prev, location: null }))
+    if (snapRef.current === 'map') animateToSnap('half')
+  }
 
-      <View style={styles.sheet}>
-        <View style={styles.handle} />
-        <Text style={styles.sheetTitle}>Select a host</Text>
-        <Text style={styles.sheetSub}>{subtitle}</Text>
+  const renderHost = useCallback<ListRenderItem<Host>>(
+    ({ item }) => <HostCard host={item} />,
+    [],
+  )
 
-        <HostSearchBar value={searchQuery} onChange={setSearchQuery} />
+  const showFullControls = snap !== 'map'
 
-        {areaSuggestions.length > 0 && (
+  const listHeader = showFullControls ? (
+    <View style={styles.listHeader}>
+      <Text style={styles.sheetSub}>{resultLabel}</Text>
+
+      {areaChips.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>
+            {trimmedSearch ? 'Suggestions' : 'Areas'}
+          </Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.chipRow}
             keyboardShouldPersistTaps="handled"
           >
-            {areaSuggestions.map((area) => (
-              <Pressable
+            {areaChips.map((area) => (
+              <ChoiceChip
                 key={area}
-                onPress={() => setSearchQuery(area)}
-                style={[styles.chip, trimmedSearch === area && styles.chipActive]}
-              >
-                <AppIcon
-                  name="map-pin"
-                  size={12}
-                  color={trimmedSearch === area ? colors.white : colors.gray600}
-                />
-                <Text style={[styles.chipText, trimmedSearch === area && styles.chipTextActive]}>
-                  {area}
-                </Text>
-              </Pressable>
+                label={area}
+                size="compact"
+                selected={trimmedSearch === area || filters.location === area}
+                onPress={() => selectArea(area)}
+              />
             ))}
           </ScrollView>
-        )}
+        </View>
+      )}
 
-        <WeatherBanner />
-
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>Sort</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipRow}
-          style={styles.sortScroll}
+          keyboardShouldPersistTaps="handled"
         >
           {SORT_OPTIONS.map((opt) => (
-            <Pressable
+            <ChoiceChip
               key={opt.value}
+              label={opt.label}
+              icon={opt.icon}
+              size="compact"
+              selected={sort === opt.value}
               onPress={() => setSort(opt.value)}
-              style={[styles.chip, sort === opt.value && styles.chipActive]}
-            >
-              <AppIcon
-                name={opt.icon}
-                size={14}
-                color={sort === opt.value ? colors.white : colors.gray600}
-              />
-              <Text style={[styles.chipText, sort === opt.value && styles.chipTextActive]}>
-                {opt.label}
-              </Text>
-            </Pressable>
+            />
           ))}
           <Pressable style={styles.filterChip} onPress={() => setFiltersOpen(true)}>
             <AppIcon name="sliders" size={14} />
-            <Text style={styles.chipText}>Filters</Text>
+            <Text style={styles.filterChipText}>Filters</Text>
             {activeFilterCount > 0 && (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
@@ -149,33 +258,135 @@ export function HomeScreen() {
             )}
           </Pressable>
         </ScrollView>
+      </View>
 
-        <ScrollView
-          style={styles.list}
-          contentContainerStyle={styles.listContent}
+      <View style={styles.weatherRow}>
+        <AppIcon name="cloud-rain" size={14} color={colors.gray500} />
+        <Text style={styles.weatherText} numberOfLines={1}>
+          {WEATHER.headline}
+        </Text>
+      </View>
+
+      <View style={styles.resultsDivider}>
+        <Text style={styles.resultsTitle}>
+          {hosts.length === 0 ? 'No hosts' : `${hosts.length} host${hosts.length === 1 ? '' : 's'}`}
+        </Text>
+        {(trimmedSearch || activeFilterCount > 0) && (
+          <Pressable onPress={clearAll} hitSlop={8}>
+            <Text style={styles.clearLink}>Clear all</Text>
+          </Pressable>
+        )}
+      </View>
+    </View>
+  ) : (
+    <View style={styles.peekHeader}>
+      <Text style={styles.peekText}>
+        {hosts.length} host{hosts.length === 1 ? '' : 's'} nearby · swipe up for list
+      </Text>
+    </View>
+  )
+
+  const listEmpty = (
+    <View style={styles.empty}>
+      <AppIcon name="search" size={28} color={colors.gray400} />
+      <Text style={styles.emptyTitle}>No hosts found</Text>
+      <Text style={styles.emptySub}>
+        {trimmedSearch
+          ? 'Try another area or host name.'
+          : allHosts.length === 0
+            ? 'No hosts are online right now.'
+            : 'Try different filters or sort.'}
+      </Text>
+      {!allHosts.length && totalHosts > 0 && (
+        <Text style={styles.emptyHint}>
+          {totalHosts} host{totalHosts === 1 ? '' : 's'} offline in {ACTIVE_REGION_LABEL}
+        </Text>
+      )}
+    </View>
+  )
+
+  return (
+    <View style={styles.container} onLayout={onContainerLayout}>
+      <View style={styles.map} pointerEvents="box-none">
+        <View style={styles.mapGrid} />
+        <View style={styles.mapRoadH} />
+        <View style={styles.mapRoadV} />
+        <View style={styles.youDot}>
+          <View style={styles.youInner} />
+        </View>
+        {hosts.length === 0 ? (
+          <View style={styles.mapEmpty}>
+            <AppIcon name="map-pin" size={20} color={colors.gray400} />
+            <Text style={styles.mapEmptyText}>Adjust search to see pins</Text>
+          </View>
+        ) : (
+          hosts.slice(0, 8).map((host, i) => (
+            <Pressable
+              key={host.id}
+              style={[styles.pin, PIN_POSITIONS[i % PIN_POSITIONS.length]]}
+              onPress={() => viewHostProfile(host)}
+            >
+              <Text style={styles.pinPrice}>{host.price <= 0 ? 'Free' : `$${host.price}`}</Text>
+            </Pressable>
+          ))
+        )}
+
+        {snap !== 'full' && hosts.length > 0 && (
+          <View style={styles.mapBadgeWrap} pointerEvents="box-none">
+            <Pressable style={styles.mapBadge} onPress={() => animateToSnap('half')}>
+              <AppIcon name="map-pin" size={14} color={colors.white} />
+              <Text style={styles.mapBadgeText}>
+                {hosts.length} host{hosts.length === 1 ? '' : 's'} on map
+              </Text>
+            </Pressable>
+          </View>
+        )}
+      </View>
+
+      <Animated.View
+        style={[
+          styles.sheet,
+          containerHeight > 0 && { height: sheetHeight },
+        ]}
+      >
+        <View style={styles.dragZone} {...panResponder.panHandlers}>
+          <Pressable onPress={cycleSnap} style={styles.handleTouch} hitSlop={12}>
+            <View style={styles.handle} />
+          </Pressable>
+          <View style={styles.sheetTitleRow}>
+            <Text style={styles.sheetTitle}>Select a host</Text>
+            <Pressable onPress={cycleSnap} hitSlop={8} style={styles.snapBtn}>
+              <AppIcon
+                name={snap === 'map' ? 'chevron-up' : snap === 'full' ? 'chevron-down' : 'maximize-2'}
+                size={18}
+                color={colors.gray500}
+              />
+            </Pressable>
+          </View>
+        </View>
+
+        <HostSearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search area, town, or host"
+        />
+
+        <FlatList
+          data={hosts}
+          keyExtractor={(item) => item.id}
+          renderItem={renderHost}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={listEmpty}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.xxl },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-        >
-          {hosts.length === 0 ? (
-            <View style={styles.empty}>
-              <AppIcon name="search" size={28} color={colors.gray400} />
-              <Text style={styles.emptyTitle}>No hosts found</Text>
-              <Text style={styles.emptySub}>
-                {trimmedSearch
-                  ? 'Try a different area or host name.'
-                  : allHosts.length === 0
-                    ? 'No hosts are online right now. Check back soon.'
-                    : 'Try adjusting your filters or sort order.'}
-              </Text>
-              <Pressable style={styles.clearBtn} onPress={clearAll}>
-                <Text style={styles.clearBtnText}>Clear search & filters</Text>
-              </Pressable>
-            </View>
-          ) : (
-            hosts.map((host) => <HostCard key={host.id} host={host} />)
-          )}
-        </ScrollView>
-      </View>
+          keyboardDismissMode="on-drag"
+          scrollEnabled={snap !== 'map'}
+        />
+      </Animated.View>
 
       <HostFilterSheet
         visible={filtersOpen}
@@ -188,40 +399,47 @@ export function HomeScreen() {
   )
 }
 
-const pinPositions = [
-  { top: '18%' as const, left: '14%' as const },
-  { top: '42%' as const, right: '12%' as const },
-  { top: '58%' as const, left: '24%' as const },
-  { top: '28%' as const, right: '28%' as const },
-  { top: '68%' as const, right: '36%' as const },
-  { top: '36%' as const, left: '42%' as const },
-]
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.mapBg },
   map: {
-    flex: 0.34,
-    minHeight: 150,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.mapBg,
-    position: 'relative',
     overflow: 'hidden',
   },
   mapGrid: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.35,
+    opacity: 0.25,
     borderWidth: 1,
     borderColor: colors.gray200,
     borderStyle: 'dashed',
     margin: spacing.lg,
     borderRadius: radius.lg,
   },
+  mapRoadH: {
+    position: 'absolute',
+    top: '42%',
+    left: '8%',
+    right: '8%',
+    height: 2,
+    backgroundColor: colors.gray200,
+    opacity: 0.6,
+  },
+  mapRoadV: {
+    position: 'absolute',
+    left: '52%',
+    top: '12%',
+    bottom: '28%',
+    width: 2,
+    backgroundColor: colors.gray200,
+    opacity: 0.6,
+  },
   youDot: {
     position: 'absolute',
-    top: '46%',
-    left: '48%',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    top: '40%',
+    left: '50%',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: 'rgba(39, 110, 241, 0.25)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -235,10 +453,12 @@ const styles = StyleSheet.create({
     borderColor: colors.white,
   },
   mapEmpty: {
-    ...StyleSheet.absoluteFillObject,
+    position: 'absolute',
+    top: '30%',
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
+    gap: 6,
   },
   mapEmptyText: { fontSize: 13, color: colors.gray500, fontWeight: '500' },
   pin: {
@@ -247,83 +467,141 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: radius.pill,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  pinPrice: { fontSize: 13, fontWeight: '700', color: colors.white },
+  pinPrice: { fontSize: 12, fontWeight: '700', color: colors.white },
+  mapBadgeWrap: {
+    position: 'absolute',
+    top: spacing.md,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  mapBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.black,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    borderRadius: radius.pill,
+  },
+  mapBadgeText: { fontSize: 13, fontWeight: '600', color: colors.white },
   sheet: {
-    flex: 1,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: colors.white,
     borderTopLeftRadius: radius.sheet,
     borderTopRightRadius: radius.sheet,
-    marginTop: -spacing.lg,
     paddingHorizontal: spacing.screen,
-    paddingTop: spacing.sm,
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 12,
   },
+  dragZone: { paddingTop: spacing.sm },
+  handleTouch: { alignItems: 'center', paddingBottom: spacing.sm },
   handle: {
     width: 40,
-    height: 4,
-    borderRadius: 2,
+    height: 5,
+    borderRadius: 3,
     backgroundColor: colors.gray200,
-    alignSelf: 'center',
-    marginBottom: spacing.md,
   },
-  sheetTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.black,
-    letterSpacing: -0.4,
-    marginBottom: 4,
-  },
-  sheetSub: {
-    fontSize: 14,
-    color: colors.gray500,
-    marginBottom: spacing.md,
-  },
-  chipRow: { gap: spacing.sm, paddingBottom: spacing.sm },
-  sortScroll: { marginBottom: spacing.sm },
-  chip: {
+  sheetTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.gray50,
-    borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
   },
-  chipActive: { backgroundColor: colors.black },
-  chipText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-  chipTextActive: { color: colors.white },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.black,
+    letterSpacing: -0.3,
+  },
+  snapBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.gray50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetSub: {
+    fontSize: 13,
+    color: colors.gray500,
+    marginBottom: spacing.sm,
+  },
+  peekHeader: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray100,
+    marginBottom: spacing.sm,
+  },
+  peekText: { fontSize: 13, color: colors.gray500, fontWeight: '500', textAlign: 'center' },
+  listHeader: { gap: 0 },
+  section: { marginBottom: spacing.sm },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.gray400,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6,
+  },
+  chipRow: { gap: 8, paddingRight: spacing.sm },
   filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+    minHeight: 34,
     backgroundColor: colors.white,
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: colors.gray100,
   },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
   filterBadge: {
     backgroundColor: colors.black,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  filterBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white },
-  list: { flex: 1 },
-  listContent: { paddingBottom: spacing.xxl },
-  empty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
-  emptyTitle: { fontSize: 17, fontWeight: '700', color: colors.black },
-  emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20 },
-  clearBtn: {
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
-    borderRadius: radius.pill,
-    backgroundColor: colors.gray50,
+  filterBadgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
+  weatherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.md,
+    paddingVertical: 4,
   },
-  clearBtnText: { fontSize: 14, fontWeight: '600', color: colors.black },
+  weatherText: { flex: 1, fontSize: 12, color: colors.gray500, fontWeight: '500' },
+  resultsDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray100,
+    marginBottom: spacing.sm,
+  },
+  resultsTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
+  clearLink: { fontSize: 13, fontWeight: '600', color: colors.black, textDecorationLine: 'underline' },
+  listContent: { flexGrow: 1 },
+  empty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm, paddingHorizontal: spacing.md },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.black },
+  emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20 },
+  emptyHint: { fontSize: 12, color: colors.gray400, textAlign: 'center' },
 })

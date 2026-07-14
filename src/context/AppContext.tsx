@@ -18,26 +18,38 @@ import {
   SEED_USERS,
 } from '../data/mockData'
 import { calculateBookingTotal, applyHostPricing, getHostPricing } from '../lib/hostPricing'
+import { formatMoney } from '../lib/bookingPayments'
+import { applyHostSettings } from '../lib/hostListing'
 import {
   saveCompletedCustomerPayment,
   saveCompletedHostPayment,
 } from '../lib/paymentHistoryStorage'
+import {
+  appendHostRequest,
+  getHostOrders,
+  mergeActiveLoads,
+  mergeHostRequests,
+  saveHostOrders,
+} from '../lib/hostOrdersStorage'
 import {
   DEFAULT_HOST_SETTINGS,
   getAllHostSettings,
   isHostOnline,
   saveHostSettings,
 } from '../lib/hostSettingsStorage'
-import type {
-  Booking,
-  BookingStage,
-  DropOffTime,
-  Host,
-  HostRequest,
-  HostSettings,
-  PaymentMethod,
-  Screen,
-  SheetsOption,
+import {
+  formatDropOffHour,
+  type DropOffHour,
+} from '../lib/dropOffAvailability'
+import {
+  type Booking,
+  type BookingStage,
+  type Host,
+  type HostRequest,
+  type HostSettings,
+  type PaymentMethod,
+  type Screen,
+  type SheetsOption,
 } from '../types'
 
 interface AppState {
@@ -58,7 +70,7 @@ interface AppState {
   getSettingsForHost: (hostUserId?: string) => HostSettings
   updateHostSettings: (settings: HostSettings) => Promise<void>
   confirmBooking: (details: {
-    dropOffTime: DropOffTime
+    dropOffTime: DropOffHour
     loads: number
     sheetsOption: SheetsOption
     notes: string
@@ -69,6 +81,7 @@ interface AppState {
   declineRequest: (requestId: string) => void
   advanceStage: (loadId: string, stage: BookingStage) => void
   markDry: (loadId: string) => void
+  confirmTransferPayment: (loadId: string) => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -131,16 +144,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setScreen(defaultScreen(role))
     if (role === 'host') {
       const seed = getHostDashboardSeed(user!.id)
-      setHostRequests(seed.pendingRequests)
-      setActiveLoads(seed.activeLoads)
-      setHostStats({
-        loadsToday: seed.loadsToday,
-        maxLoads: seed.maxLoads,
-        accepting: seed.accepting,
+      getHostOrders(user!.id).then((stored) => {
+        setHostRequests(mergeHostRequests(seed.pendingRequests, stored.pendingRequests))
+        setActiveLoads(mergeActiveLoads(seed.activeLoads, stored.activeLoads))
+        setHostStats({
+          loadsToday: seed.loadsToday,
+          maxLoads: seed.maxLoads,
+          accepting: seed.accepting,
+        })
       })
-      setHostSettings(hostSettingsMap[user!.id] ?? { ...DEFAULT_HOST_SETTINGS })
     } else {
       setBooking(getCustomerSeedBooking(user!.id))
+    }
+  }, [role, user!.id])
+
+  useEffect(() => {
+    if (role === 'host') {
+      setHostSettings(hostSettingsMap[user!.id] ?? { ...DEFAULT_HOST_SETTINGS })
     }
   }, [role, user!.id, hostSettingsMap])
 
@@ -149,7 +169,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       getAvailableHosts()
         .filter((h) => isHostOnline(h.hostUserId, hostSettingsMap))
         .map((h) =>
-          applyHostPricing(h, h.hostUserId ? hostSettingsMap[h.hostUserId] : undefined),
+          applyHostSettings(h, h.hostUserId ? hostSettingsMap[h.hostUserId] : undefined),
         ),
     [hostSettingsMap],
   )
@@ -193,11 +213,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const viewHostProfile = useCallback(
     (host: Host) => {
-      const priced = applyHostPricing(
+      const resolved = applyHostSettings(
         host,
         host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined,
       )
-      setSelectedHost(priced)
+      setSelectedHost(resolved)
       setScreen('customer-host-profile')
     },
     [hostSettingsMap],
@@ -205,11 +225,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const selectHost = useCallback(
     (host: Host) => {
-      const priced = applyHostPricing(
+      const resolved = applyHostSettings(
         host,
         host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined,
       )
-      setSelectedHost(priced)
+      setSelectedHost(resolved)
       setScreen('customer-booking')
     },
     [hostSettingsMap],
@@ -236,7 +256,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const confirmBooking = useCallback(
     (details: {
-      dropOffTime: DropOffTime
+      dropOffTime: DropOffHour
       loads: number
       sheetsOption: SheetsOption
       notes: string
@@ -254,8 +274,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sheetsOption: details.sheetsOption,
         foldingService: details.foldingService,
       })
+      const bookingId = `bk-${Date.now()}`
       const newBooking: Booking = {
-        id: `bk-${Date.now()}`,
+        id: bookingId,
         hostId: selectedHost.id,
         hostName: selectedHost.name,
         customerId: user.id,
@@ -282,10 +303,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setBooking(newBooking)
       setScreen('customer-tracking')
 
+      if (selectedHost.hostUserId) {
+        const hostRequest: HostRequest = {
+          id: bookingId,
+          customerId: user.id,
+          customerName: user.name,
+          location: selectedHost.location,
+          loads: details.loads,
+          dropOffTime: details.dropOffTime,
+          sheetsOption: details.sheetsOption,
+          notes: details.notes,
+          paymentMethod: details.paymentMethod,
+          foldingService: details.foldingService,
+          totalAmount,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        }
+        void appendHostRequest(selectedHost.hostUserId, hostRequest)
+      }
+
       notifyHost(
         selectedHost.hostUserId,
         'New booking',
-        `${user.name} booked ${details.loads} load${details.loads > 1 ? 's' : ''} · ${details.paymentMethod === 'cash' ? 'Cash' : 'Bank transfer'}`,
+        `${user.name} · ${formatDropOffHour(details.dropOffTime)}${details.notes.trim() ? ` · "${details.notes.trim()}"` : ''}`,
       )
       notifyCustomer(
         user.id,
@@ -301,9 +341,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const request = hostRequests.find((r) => r.id === requestId)
       if (!request || !user) return
 
-      const hostProfile = getHostByUserId(user.id)
+      const settings = getSettingsForHost(user.id)
+      const hostRaw = getHostByUserId(user.id)
+      const hostProfile = hostRaw ? applyHostSettings(hostRaw, settings) : undefined
+      const pricing = hostProfile
+        ? getHostPricing(hostProfile, settings)
+        : { dryPrice: 0, foldingPrice: 0, sheetsPrice: 1 }
+
       const load: Booking = {
-        id: `load-${Date.now()}`,
+        id: request.id.startsWith('req-') ? `load-${Date.now()}` : request.id,
         hostId: hostProfile?.id ?? 'unknown',
         hostName: hostProfile?.name ?? user.name,
         customerId: request.customerId,
@@ -312,15 +358,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
         loads: request.loads,
         dropOffTime: request.dropOffTime,
         sheetsOption: request.sheetsOption,
-        notes: '',
+        notes: request.notes ?? '',
+        paymentMethod: request.paymentMethod,
+        foldingService: request.foldingService,
+        totalAmount: request.totalAmount,
+        pricePerLoad: pricing.dryPrice,
+        dryPrice: pricing.dryPrice,
+        foldingPrice: pricing.foldingPrice,
+        sheetsPrice: pricing.sheetsPrice,
+        paymentStatus:
+          (request.totalAmount ?? 0) <= 0 || request.paymentMethod === 'cash' ? 'paid' : 'pending',
         stage: 'got-bag',
         address: hostProfile?.address ?? '',
         gateCode: hostProfile?.gateCode ?? '',
         stageTimes: { 'got-bag': nowTime() },
       }
-      setActiveLoads((prev) => [...prev, load])
-      setHostRequests((prev) => prev.filter((r) => r.id !== requestId))
+
+      const nextRequests = hostRequests.filter((r) => r.id !== requestId)
+      const nextLoads = [...activeLoads, load]
+      setActiveLoads(nextLoads)
+      setHostRequests(nextRequests)
       setHostStats((prev) => ({ ...prev, loadsToday: prev.loadsToday + 1 }))
+      void saveHostOrders(user.id, { pendingRequests: nextRequests, activeLoads: nextLoads })
+
+      setBooking((prev) => (prev?.id === request.id ? { ...prev, ...load } : prev))
 
       if (request.customerId) {
         notifyCustomer(
@@ -330,13 +391,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         )
       }
     },
-    [hostRequests, user, notifyCustomer],
+    [hostRequests, activeLoads, user, notifyCustomer, getSettingsForHost],
   )
 
   const declineRequest = useCallback(
     (requestId: string) => {
       const request = hostRequests.find((r) => r.id === requestId)
-      setHostRequests((prev) => prev.filter((r) => r.id !== requestId))
+      const nextRequests = hostRequests.filter((r) => r.id !== requestId)
+      setHostRequests(nextRequests)
+      if (user) {
+        void saveHostOrders(user.id, { pendingRequests: nextRequests, activeLoads })
+      }
       if (request?.customerId) {
         notifyCustomer(
           request.customerId,
@@ -345,7 +410,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         )
       }
     },
-    [hostRequests, notifyCustomer],
+    [hostRequests, activeLoads, user, notifyCustomer],
   )
 
   const advanceStage = useCallback(
@@ -380,14 +445,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       let notifyTarget: Booking | undefined
 
-      setActiveLoads((prev) =>
-        prev.map((load) => {
+      setActiveLoads((prev) => {
+        const next = prev.map((load) => {
           if (load.id !== loadId) return load
           notifyTarget = load
           persistIfReady(load)
           return patchLoad(load)
-        }),
-      )
+        })
+        if (role === 'host' && user) {
+          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+        }
+        return next
+      })
 
       setBooking((prev) => {
         if (prev?.id !== loadId) return prev
@@ -404,7 +473,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         )
       }
     },
-    [notifyCustomer],
+    [notifyCustomer, role, user, hostRequests],
   )
 
   const markDry = useCallback(
@@ -413,6 +482,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setScreen('host-dashboard')
     },
     [advanceStage],
+  )
+
+  const confirmTransferPayment = useCallback(
+    (loadId: string) => {
+      const markPaid = (load: Booking): Booking => ({ ...load, paymentStatus: 'paid' })
+
+      let target: Booking | undefined
+
+      setActiveLoads((prev) => {
+        const next = prev.map((load) => {
+          if (load.id !== loadId) return load
+          target = load
+          return markPaid(load)
+        })
+        if (role === 'host' && user) {
+          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+        }
+        return next
+      })
+
+      setBooking((prev) => {
+        if (prev?.id !== loadId) return prev
+        target = prev
+        return markPaid(prev)
+      })
+
+      if (target?.customerId) {
+        notifyCustomer(
+          target.customerId,
+          'Payment verified',
+          `${target.hostName} confirmed your bank transfer of ${formatMoney(target.totalAmount ?? 0)}.`,
+        )
+      }
+    },
+    [notifyCustomer, role, user, hostRequests],
   )
 
   const value = useMemo(
@@ -438,6 +542,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       declineRequest,
       advanceStage,
       markDry,
+      confirmTransferPayment,
     }),
     [
       screen,
@@ -460,6 +565,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       declineRequest,
       advanceStage,
       markDry,
+      confirmTransferPayment,
     ],
   )
 

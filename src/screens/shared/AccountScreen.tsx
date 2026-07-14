@@ -81,7 +81,7 @@ export function AccountScreen() {
           <DetailRow
             icon="wind"
             label="Dryer setup"
-            value={`${hostProfile.dryerType} · ${hostProfile.turnaroundHours} hr turnaround`}
+            value={`${hostProfile.turnaroundHours} hr turnaround · ${hostProfile.slotsLeft} slots`}
           />
         ) : null}
       </View>
@@ -89,7 +89,7 @@ export function AccountScreen() {
       <Text style={styles.note}>
         {isCustomer
           ? 'Need to update your details? Contact support from the Help menu.'
-          : 'To change your listing or verification documents, contact Laundry Buddy support.'}
+          : 'Update your bio, setup, rules, and prices in Host profile from the menu.'}
       </Text>
     </Screen>
   )

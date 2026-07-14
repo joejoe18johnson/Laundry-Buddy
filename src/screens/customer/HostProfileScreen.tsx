@@ -8,6 +8,7 @@ import { useApp } from '../../context/AppContext'
 import { getHostProfileDetails } from '../../data/mockData'
 import { formatHostPrice } from '../../lib/hostFilters'
 import { formatServicePrice } from '../../lib/hostPricing'
+import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { colors, coverColors, radius, spacing } from '../../theme'
 import type { HostReview } from '../../types'
 
@@ -128,7 +129,9 @@ export function HostProfileScreen() {
         </View>
 
         <InfoSection title="About" icon="info">
-          <Text style={styles.bodyText}>{profile.bio}</Text>
+          <Text style={styles.bodyText}>
+            {settings.listing.bio.trim() || profile.bio}
+          </Text>
         </InfoSection>
 
         <View style={styles.detailsGrid}>
@@ -152,16 +155,18 @@ export function HostProfileScreen() {
             <AppIcon name="clock" size={16} />
             <Text style={styles.detailText}>~{host.turnaroundHours} hr to dry</Text>
           </View>
+          <View style={styles.detailChip}>
+            <AppIcon name="calendar" size={16} />
+            <Text style={styles.detailText}>
+              Drop-off: {formatDropOffAvailability(settings.dropOffAvailability)}
+            </Text>
+          </View>
           {host.hasGenerator && (
             <View style={styles.detailChip}>
               <AppIcon name="zap" size={16} />
               <Text style={styles.detailText}>Generator backup</Text>
             </View>
           )}
-          <View style={styles.detailChip}>
-            <AppIcon name="wind" size={16} />
-            <Text style={styles.detailText}>{host.dryerType} dryer</Text>
-          </View>
           {paymentMethods.length > 0 && (
             <View style={styles.detailChip}>
               <AppIcon name="credit-card" size={16} />

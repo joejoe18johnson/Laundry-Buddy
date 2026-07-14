@@ -1,7 +1,7 @@
 import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User } from '../types'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '8'
+export const SEED_DATA_VERSION = '11'
 
 export const TRAINING_PASSWORD = 'demo1234'
 
@@ -241,7 +241,7 @@ export const SEED_HOSTS: Host[] = [
     address: '8 Hattieville Rd.',
     gateCode: '1102',
     whatsapp: '5016007890',
-    photos: ['Gas dryer — fast cycles', 'Quiet neighborhood', 'Shaded waiting area'],
+    photos: ['Fast cycles', 'Quiet neighborhood', 'Shaded waiting area'],
     rules: ['Text when arriving', 'Separate colors please', 'Pick up by 6pm'],
   },
   {
@@ -334,7 +334,7 @@ export const SEED_HOSTS: Host[] = [
   },
 ]
 
-export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
+export const SEED_HOST_SETTINGS: Record<string, Partial<HostSettings>> = {
   'user-maria': {
     isOnline: true,
     acceptCash: true,
@@ -348,6 +348,7 @@ export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: true,
     pricing: { dryPrice: 0, foldingPrice: 3, sheetsPrice: 1 },
+    dropOffAvailability: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
   },
   'user-lopez': {
     isOnline: true,
@@ -362,6 +363,7 @@ export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: true,
     pricing: { dryPrice: 5, foldingPrice: 5, sheetsPrice: 2 },
+    dropOffAvailability: [14, 15, 16, 17, 18, 19, 20],
   },
   'user-castillo': {
     isOnline: true,
@@ -470,7 +472,7 @@ export const SEED_HOST_PROFILES: Record<string, HostProfileDetails> = {
     ],
   },
   castillo: {
-    bio: 'Gas dryer runs hot and fast — great for big family loads. Quiet Hattieville neighborhood.',
+    bio: 'Runs hot and fast — great for big family loads. Quiet Hattieville neighborhood.',
     memberSince: 'May 2025',
     loadsHosted: 56,
     responseTime: 'About 1 hr',
@@ -572,8 +574,11 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
         customerName: 'Ana',
         location: 'UB',
         loads: 1,
-        dropOffTime: 'before-10',
+        dropOffTime: 9,
         sheetsOption: 'own',
+        notes: 'Mostly towels — please use low heat.',
+        paymentMethod: 'cash',
+        totalAmount: 0,
         status: 'pending',
       },
       {
@@ -582,8 +587,11 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
         customerName: 'Rosa',
         location: 'Maya Mopan',
         loads: 2,
-        dropOffTime: 'after-4',
+        dropOffTime: 17,
         sheetsOption: 'buy',
+        notes: 'Need both loads done by tomorrow morning if possible.',
+        paymentMethod: 'bank_transfer',
+        totalAmount: 8,
         status: 'pending',
       },
     ],
@@ -596,7 +604,7 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
         customerName: 'Carlos',
         location: 'Las Flores',
         loads: 1,
-        dropOffTime: '2pm-4pm',
+        dropOffTime: 14,
         sheetsOption: 'own',
         notes: 'Gym clothes — low heat please',
         stage: 'drying',
@@ -617,8 +625,11 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
         customerName: 'Keisha',
         location: 'UB Dorms',
         loads: 1,
-        dropOffTime: '2pm-4pm',
+        dropOffTime: 14,
         sheetsOption: 'none',
+        notes: 'No dryer sheets — sensitive skin.',
+        paymentMethod: 'cash',
+        totalAmount: 5,
         status: 'pending',
       },
     ],
@@ -645,7 +656,7 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
         customerName: 'James',
         location: 'Roaring Creek',
         loads: 2,
-        dropOffTime: 'before-10',
+        dropOffTime: 9,
         sheetsOption: 'own',
         notes: '',
         stage: 'waiting',
@@ -667,7 +678,7 @@ export const SEED_CUSTOMER_BOOKINGS: Record<string, Booking> = {
     customerName: 'Carlos',
     location: 'Las Flores',
     loads: 1,
-    dropOffTime: '2pm-4pm',
+    dropOffTime: 14,
     sheetsOption: 'own',
     notes: 'Gym clothes — low heat please',
     stage: 'drying',
@@ -687,7 +698,7 @@ export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
       customerName: 'Ana',
       location: 'Las Flores',
       loads: 1,
-      dropOffTime: '2pm-4pm',
+      dropOffTime: 14,
       sheetsOption: 'own',
       notes: '',
       stage: 'ready',
@@ -708,7 +719,7 @@ export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
       customerName: 'Ana',
       location: 'Las Flores',
       loads: 2,
-      dropOffTime: 'before-10',
+      dropOffTime: 9,
       sheetsOption: 'none',
       notes: '',
       stage: 'ready',
@@ -731,7 +742,7 @@ export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
       customerName: 'Carlos',
       location: 'Belmopan City',
       loads: 1,
-      dropOffTime: 'after-4',
+      dropOffTime: 17,
       sheetsOption: 'buy',
       notes: '',
       stage: 'ready',
@@ -754,7 +765,7 @@ export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
       customerName: 'Keisha',
       location: 'Las Flores',
       loads: 1,
-      dropOffTime: '2pm-4pm',
+      dropOffTime: 14,
       sheetsOption: 'own',
       notes: '',
       stage: 'ready',
@@ -780,7 +791,7 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
       customerName: 'Rosa',
       location: 'Las Flores',
       loads: 1,
-      dropOffTime: 'before-10',
+      dropOffTime: 9,
       sheetsOption: 'own',
       notes: '',
       stage: 'ready',
@@ -801,7 +812,7 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
       customerName: 'Ana',
       location: 'Las Flores',
       loads: 2,
-      dropOffTime: '2pm-4pm',
+      dropOffTime: 14,
       sheetsOption: 'none',
       notes: '',
       stage: 'ready',
@@ -824,7 +835,7 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
       customerName: 'James',
       location: 'Las Flores',
       loads: 1,
-      dropOffTime: 'after-4',
+      dropOffTime: 17,
       sheetsOption: 'own',
       notes: '',
       stage: 'ready',
@@ -847,7 +858,7 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
       customerName: 'Carlos',
       location: 'Roaring Creek',
       loads: 1,
-      dropOffTime: 'before-10',
+      dropOffTime: 9,
       sheetsOption: 'own',
       notes: '',
       stage: 'ready',

@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { SEED_HOST_SETTINGS, SEED_DATA_VERSION } from '../data/seedData'
+import { getHostProfileDetails, SEED_HOST_SETTINGS, SEED_DATA_VERSION, SEED_HOSTS } from '../data/seedData'
 import { DEFAULT_HOST_PRICING } from './hostPricing'
+import { normalizeListing } from './hostListing'
+import { normalizeDropOffAvailability } from './dropOffAvailability'
 import type { Host, HostSettings, PaymentMethod } from '../types'
 
 const SETTINGS_KEY = 'laundry-buddy-host-settings'
@@ -15,18 +17,23 @@ export const DEFAULT_HOST_SETTINGS: HostSettings = {
   notifyBookingUpdates: true,
   notifyGuestsWhenOnline: true,
   pricing: { ...DEFAULT_HOST_PRICING },
+  listing: normalizeListing(undefined),
+  dropOffAvailability: normalizeDropOffAvailability(),
 }
 
-/** Ensures legacy stored settings always include pricing and bank details. */
+/** Ensures legacy stored settings always include pricing, listing, and bank details. */
 export function normalizeHostSettings(
   settings?: Partial<HostSettings> | null,
-  host?: Pick<Host, 'price' | 'foldingPrice' | 'sheetsPrice'> | null,
+  host?: Host | null,
 ): HostSettings {
   const pricing = settings?.pricing ?? {
     dryPrice: host?.price ?? DEFAULT_HOST_PRICING.dryPrice,
     foldingPrice: host?.foldingPrice ?? DEFAULT_HOST_PRICING.foldingPrice,
     sheetsPrice: host?.sheetsPrice ?? DEFAULT_HOST_PRICING.sheetsPrice,
   }
+
+  const bio = host ? getHostProfileDetails(host.id).bio : undefined
+  const listing = normalizeListing(settings?.listing, host, bio)
 
   return {
     ...DEFAULT_HOST_SETTINGS,
@@ -36,26 +43,43 @@ export function normalizeHostSettings(
       ...settings?.bankDetails,
     },
     pricing,
+    listing,
+    dropOffAvailability: normalizeDropOffAvailability(settings?.dropOffAvailability),
   }
 }
 
 async function seedIfNeeded(): Promise<Record<string, HostSettings>> {
   const storedVersion = await AsyncStorage.getItem(VERSION_KEY)
   if (storedVersion !== SEED_DATA_VERSION) {
-    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(SEED_HOST_SETTINGS))
+    const normalized = Object.fromEntries(
+      Object.entries(SEED_HOST_SETTINGS).map(([userId, settings]) => [
+        userId,
+        normalizeHostSettings(settings, SEED_HOSTS.find((h) => h.hostUserId === userId)),
+      ]),
+    )
+    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(normalized))
     await AsyncStorage.setItem(VERSION_KEY, SEED_DATA_VERSION)
-    return SEED_HOST_SETTINGS
+    return normalized
   }
 
   const raw = await AsyncStorage.getItem(SETTINGS_KEY)
   if (!raw) {
-    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(SEED_HOST_SETTINGS))
-    return SEED_HOST_SETTINGS
+    const normalized = Object.fromEntries(
+      Object.entries(SEED_HOST_SETTINGS).map(([userId, settings]) => [
+        userId,
+        normalizeHostSettings(settings, SEED_HOSTS.find((h) => h.hostUserId === userId)),
+      ]),
+    )
+    await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(normalized))
+    return normalized
   }
 
   const parsed = JSON.parse(raw) as Record<string, Partial<HostSettings>>
   return Object.fromEntries(
-    Object.entries(parsed).map(([userId, settings]) => [userId, normalizeHostSettings(settings)]),
+    Object.entries(parsed).map(([userId, settings]) => [
+      userId,
+      normalizeHostSettings(settings, SEED_HOSTS.find((h) => h.hostUserId === userId)),
+    ]),
   )
 }
 

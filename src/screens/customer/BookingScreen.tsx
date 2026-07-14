@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { useApp } from '../../context/AppContext'
-import { BackButton, PrimaryButton, Screen } from '../../components/ui'
+import { useAuth } from '../../context/AuthContext'
+import { BackButton, OptionRow, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import {
   calculateBookingTotal,
@@ -10,12 +12,15 @@ import {
   bookingTotalLabel,
 } from '../../lib/hostPricing'
 import { formatMoney } from '../../lib/bookingPayments'
+import { buildTransferProofMessage, sendTransferProofViaWhatsApp } from '../../lib/whatsapp'
+import { sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
 import { colors, radius, spacing } from '../../theme'
-import type { DropOffTime, PaymentMethod, SheetsOption } from '../../types'
+import type { PaymentMethod, SheetsOption } from '../../types'
 
 export function BookingScreen() {
+  const { user } = useAuth()
   const { selectedHost, navigate, confirmBooking, getSettingsForHost } = useApp()
-  const [dropOffTime, setDropOffTime] = useState<DropOffTime>('2pm-4pm')
+  const [dropOffTime, setDropOffTime] = useState<DropOffHour>(14)
   const [loads, setLoads] = useState(1)
   const [sheetsOption, setSheetsOption] = useState<SheetsOption>('own')
   const [foldingService, setFoldingService] = useState(false)
@@ -34,13 +39,18 @@ export function BookingScreen() {
     }
   }, [selectedHost?.id, paymentMethods.join(',')])
 
-  if (!selectedHost) return null
+  const availableTimes = useMemo(
+    () => sortDropOffHours(hostSettings?.dropOffAvailability ?? []),
+    [hostSettings?.dropOffAvailability],
+  )
 
-  const times: { value: DropOffTime; label: string }[] = [
-    { value: 'before-10', label: 'Before 10am' },
-    { value: '2pm-4pm', label: '2pm – 4pm' },
-    { value: 'after-4', label: 'After 4pm' },
-  ]
+  useEffect(() => {
+    if (availableTimes.length > 0 && !availableTimes.includes(dropOffTime)) {
+      setDropOffTime(availableTimes[0])
+    }
+  }, [availableTimes, dropOffTime])
+
+  if (!selectedHost) return null
 
   const dryPrice = selectedHost.price
   const foldingPrice = selectedHost.foldingPrice ?? 0
@@ -84,6 +94,21 @@ export function BookingScreen() {
     hostSettings?.acceptBankTransfer &&
     bank?.accountNumber.trim()
 
+  const sendTransferProof = () => {
+    if (!selectedHost?.whatsapp || !user) return
+    sendTransferProofViaWhatsApp(
+      selectedHost.whatsapp,
+      buildTransferProofMessage({
+        guestName: user.name,
+        hostName: selectedHost.name,
+        amount: totalPrice,
+        loads,
+        bankName: bank?.bankName,
+        accountNumber: bank?.accountNumber,
+      }),
+    )
+  }
+
   return (
     <View style={styles.wrapper}>
       <Screen>
@@ -101,19 +126,17 @@ export function BookingScreen() {
         </View>
 
         <Text style={styles.section}>Drop-off time</Text>
-        <View style={styles.chips}>
-          {times.map((t) => (
-            <Pressable
-              key={t.value}
-              onPress={() => setDropOffTime(t.value)}
-              style={[styles.chip, dropOffTime === t.value && styles.chipSelected]}
-            >
-              <Text style={[styles.chipText, dropOffTime === t.value && styles.chipTextSelected]}>
-                {t.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <Text style={styles.sectionHint}>Pick an hour between 8am and 8pm</Text>
+        {availableTimes.length === 0 ? (
+          <Text style={styles.paymentNote}>This host has not set drop-off hours yet.</Text>
+        ) : (
+          <DropOffHourGrid
+            mode="select"
+            hours={availableTimes}
+            value={dropOffTime}
+            onChange={setDropOffTime}
+          />
+        )}
 
         <Text style={styles.section}>Loads</Text>
         <View style={styles.stepper}>
@@ -250,6 +273,7 @@ const styles = StyleSheet.create({
   rateTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, textTransform: 'uppercase', marginBottom: 4 },
   rateLine: { fontSize: 14, color: colors.gray600, fontWeight: '500' },
   section: { fontSize: 16, fontWeight: '600', marginTop: spacing.lg, marginBottom: spacing.md },
+  sectionHint: { fontSize: 13, color: colors.gray500, marginTop: -spacing.sm, marginBottom: spacing.md },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     borderWidth: 1,
