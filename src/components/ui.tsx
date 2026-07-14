@@ -102,14 +102,19 @@ export function GhostButton({
   title,
   onPress,
   full,
+  icon,
 }: {
   title: string
   onPress: () => void
   full?: boolean
+  icon?: IconName
 }) {
   return (
     <Pressable onPress={onPress} style={[styles.btnGhost, full && styles.btnFull]}>
-      <Text style={styles.btnGhostText}>{title}</Text>
+      <View style={styles.btnContent}>
+        {icon && <AppIcon name={icon} size={18} color={colors.gray600} />}
+        <Text style={styles.btnGhostText}>{title}</Text>
+      </View>
     </Pressable>
   )
 }

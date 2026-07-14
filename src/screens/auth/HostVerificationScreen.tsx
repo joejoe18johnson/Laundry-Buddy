@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { GhostButton, PrimaryButton, Screen } from '../../components/ui'
+import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
 
 export function HostVerificationScreen() {
@@ -21,6 +22,7 @@ export function HostVerificationScreen() {
     return (
       <Screen>
         <View style={styles.pillPending}>
+          <AppIcon name="clock" size={12} color="#b8860b" />
           <Text style={styles.pillPendingText}>Under review</Text>
         </View>
         <Text style={styles.title}>Verification submitted</Text>
@@ -29,21 +31,25 @@ export function HostVerificationScreen() {
         </Text>
         <View style={styles.checklist}>
           <View style={styles.checkItem}>
-            <Text style={styles.checkIcon}>✓</Text>
+            <View style={styles.checkIcon}>
+              <AppIcon name="check" size={14} color={colors.white} />
+            </View>
             <View>
               <Text style={styles.checkTitle}>Government ID</Text>
               <Text style={styles.checkSub}>Uploaded</Text>
             </View>
           </View>
           <View style={styles.checkItem}>
-            <Text style={styles.checkIcon}>✓</Text>
+            <View style={styles.checkIcon}>
+              <AppIcon name="check" size={14} color={colors.white} />
+            </View>
             <View>
               <Text style={styles.checkTitle}>Address proof</Text>
               <Text style={styles.checkSub}>{user.hostVerification?.address}</Text>
             </View>
           </View>
         </View>
-        <GhostButton title="Log out" onPress={logout} full />
+        <GhostButton title="Log out" icon="log-out" onPress={logout} full />
       </Screen>
     )
   }
@@ -51,6 +57,7 @@ export function HostVerificationScreen() {
   return (
     <Screen>
       <View style={styles.pill}>
+        <AppIcon name="shield" size={12} color={colors.gray600} />
         <Text style={styles.pillText}>Host verification</Text>
       </View>
       <Text style={styles.title}>Verify your identity</Text>
@@ -60,7 +67,10 @@ export function HostVerificationScreen() {
           : 'Upload your ID and proof of address so guests can trust your listing.'}
       </Text>
 
-      <Text style={styles.sectionTitle}>Government ID</Text>
+      <View style={styles.sectionHeader}>
+        <AppIcon name="credit-card" size={18} />
+        <Text style={styles.sectionTitle}>Government ID</Text>
+      </View>
       <Text style={styles.sectionSub}>Passport, social security card, or driver's license</Text>
       <Pressable
         onPress={() => setIdUploaded(true)}
