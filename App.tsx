@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
@@ -15,6 +15,7 @@ import { DashboardScreen } from './src/screens/host/DashboardScreen'
 import { HostHubScreen } from './src/screens/host/HostHubScreen'
 import { MarkDryScreen } from './src/screens/host/MarkDryScreen'
 import { WelcomeScreen } from './src/screens/auth/WelcomeScreen'
+import { IntroOnboardingScreen } from './src/screens/auth/IntroOnboardingScreen'
 import { LoginScreen } from './src/screens/auth/LoginScreen'
 import { SignupScreen } from './src/screens/auth/SignupScreen'
 import { HeaderMenu } from './src/components/HeaderMenu'
@@ -24,6 +25,8 @@ import { AccountScreen } from './src/screens/shared/AccountScreen'
 import { HelpScreen } from './src/screens/shared/HelpScreen'
 import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
 import { colors, spacing } from './src/theme'
+import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
+import { SplashLoading } from './src/components/SplashLoading'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
@@ -122,9 +125,37 @@ function AppShell() {
 }
 
 function AuthenticatedApp() {
-  const { user, authScreen } = useAuth()
+  const { user, authScreen, ready } = useAuth()
+  const [introSeen, setIntroSeen] = useState<boolean | null>(null)
+
+  useEffect(() => {
+    if (!ready) return
+    if (user) {
+      setIntroSeen(true)
+      return
+    }
+    hasSeenIntro().then(setIntroSeen)
+  }, [ready, user])
+
+  const completeIntro = async () => {
+    await markIntroSeen()
+    setIntroSeen(true)
+  }
 
   if (!user) {
+    if (!ready || introSeen === null) {
+      return <SplashLoading />
+    }
+
+    if (!introSeen) {
+      return (
+        <SafeAreaView style={styles.app} edges={['top', 'bottom']}>
+          <StatusBar style="dark" />
+          <IntroOnboardingScreen onComplete={completeIntro} />
+        </SafeAreaView>
+      )
+    }
+
     return (
       <SafeAreaView style={styles.app} edges={['top', 'bottom']}>
         <StatusBar style="dark" />
