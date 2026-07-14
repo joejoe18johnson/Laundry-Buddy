@@ -29,6 +29,7 @@ const SORT_OPTIONS: { value: HostSort; label: string; icon: 'map-pin' | 'dollar-
 export function HomeScreen() {
   const { showMap, setShowMap, viewHostProfile, onlineHosts } = useApp()
   const allHosts = onlineHosts
+  const totalHosts = getAvailableHosts().length
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
   const [sort, setSort] = useState<HostSort>('nearest')
   const [searchQuery, setSearchQuery] = useState('')
@@ -49,8 +50,8 @@ export function HomeScreen() {
   const subtitle = trimmedSearch
     ? `${hosts.length} host${hosts.length === 1 ? '' : 's'} matching “${trimmedSearch}”`
     : sort === 'nearest'
-      ? `${hosts.length} hosts · closest to you first`
-      : `${hosts.length} of ${allHosts.length} hosts in ${ACTIVE_REGION_LABEL}`
+      ? `${hosts.length} online · closest to you first`
+      : `${hosts.length} of ${totalHosts} hosts online in ${ACTIVE_REGION_LABEL}`
 
   const clearAll = () => {
     setFilters(DEFAULT_HOST_FILTERS)
@@ -166,7 +167,9 @@ export function HomeScreen() {
           <Text style={styles.emptySub}>
             {trimmedSearch
               ? 'Try a different area or host name.'
-              : 'Try adjusting your filters or sort order.'}
+              : allHosts.length === 0
+                ? 'No hosts are online right now. Check back soon or try another area.'
+                : 'Try adjusting your filters or sort order.'}
           </Text>
           <Pressable style={styles.clearBtn} onPress={clearAll}>
             <Text style={styles.clearBtnText}>Clear search & filters</Text>
