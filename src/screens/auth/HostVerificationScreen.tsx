@@ -88,14 +88,14 @@ export function HostVerificationScreen() {
         </Text>
       </Pressable>
 
-      <View style={{ height: 20 }} />
+      <View style={{ height: spacing.lg }} />
       <PrimaryButton
         title="Submit for review"
         onPress={() => submitHostVerification({ address, idUploaded, addressUploaded })}
         disabled={!canSubmit}
         full
       />
-      <View style={{ height: 12 }} />
+      <View style={{ height: spacing.md }} />
       <GhostButton title="Log out" onPress={logout} full />
     </Screen>
   )
