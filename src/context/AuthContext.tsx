@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { ActivityIndicator, View } from 'react-native'
+import { SplashLoading } from '../components/SplashLoading'
 import { normalizePhone } from '../lib/phone'
 import {
   emailInUse,
@@ -18,7 +18,7 @@ import {
   saveUser,
   setSessionUserId,
 } from '../lib/authStorage'
-import { colors } from '../theme'
+import * as SplashScreen from 'expo-splash-screen'
 import type { AppRole, AuthScreen, HostVerification, LoginMethod, User } from '../types'
 
 interface SignupInput {
@@ -61,6 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true)
     })
   }, [])
+
+  useEffect(() => {
+    if (ready) {
+      SplashScreen.hideAsync().catch(() => {})
+    }
+  }, [ready])
 
   const navigateAuth = useCallback((screen: AuthScreen) => {
     setAuthError(null)
@@ -184,11 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   if (!ready) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
-    )
+    return <SplashLoading />
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

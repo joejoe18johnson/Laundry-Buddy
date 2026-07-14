@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, Text, View } from 'react-native'
+import { Image, Platform, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { TRAINING_ACCOUNTS, TRAINING_PASSWORD, ACTIVE_REGION_LABEL } from '../../data/seedData'
 import { OutlineButton, PrimaryButton, Screen } from '../../components/ui'
@@ -10,6 +10,7 @@ export function WelcomeScreen() {
   return (
     <Screen style={styles.container}>
       <View style={styles.hero}>
+        <Image source={require('../../../assets/splash-icon.png')} style={styles.logoMark} accessibilityLabel="Laundry Buddy logo" />
         <Text style={styles.logo}>Laundry Buddy</Text>
         <Text style={styles.title}>Dry laundry, rain or shine</Text>
         <Text style={styles.tagline}>
@@ -38,6 +39,7 @@ export function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: { flexGrow: 1 },
   hero: { flex: 1, justifyContent: 'center', paddingVertical: 40 },
+  logoMark: { width: 88, height: 88, marginBottom: 16 },
   logo: { fontSize: 18, fontWeight: '700', color: colors.accent, marginBottom: 24 },
   title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, marginBottom: 12 },
   tagline: { fontSize: 16, color: colors.gray500, lineHeight: 24 },

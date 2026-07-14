@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="128" y1="128" x2="896" y2="896" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff385c"/>
+      <stop offset="1" stop-color="#e31c5f"/>
+    </linearGradient>
+    <linearGradient id="drum" x1="312" y1="280" x2="712" y2="744" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ffe8ee"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="224" fill="url(#bg)"/>
+  <rect x="192" y="176" width="640" height="672" rx="72" fill="#ffffff" fill-opacity="0.18"/>
+  <rect x="224" y="208" width="576" height="608" rx="56" fill="#ffffff" fill-opacity="0.95"/>
+  <rect x="256" y="240" width="512" height="96" rx="24" fill="#ffd6df"/>
+  <circle cx="320" cy="288" r="16" fill="#ff385c"/>
+  <circle cx="384" cy="288" r="16" fill="#ffb347"/>
+  <circle cx="448" cy="288" r="16" fill="#6ec6ff"/>
+  <rect x="672" y="264" width="64" height="48" rx="12" fill="#f0f0f0" stroke="#dddddd" stroke-width="4"/>
+  <circle cx="512" cy="520" r="176" fill="url(#drum)" stroke="#ffd6df" stroke-width="12"/>
+  <circle cx="512" cy="520" r="128" fill="#fff5f7" stroke="#ff385c" stroke-width="8" stroke-opacity="0.35"/>
+  <circle cx="448" cy="472" r="28" fill="#ff385c" fill-opacity="0.85"/>
+  <circle cx="548" cy="500" r="22" fill="#276ef1" fill-opacity="0.8"/>
+  <circle cx="492" cy="572" r="24" fill="#ffb347" fill-opacity="0.9"/>
+  <circle cx="572" cy="560" r="18" fill="#008a05" fill-opacity="0.75"/>
+  <path d="M512 392v48" stroke="#ff385c" stroke-width="10" stroke-linecap="round" stroke-opacity="0.5"/>
+  <path d="M512 600v48" stroke="#ff385c" stroke-width="10" stroke-linecap="round" stroke-opacity="0.5"/>
+  <path d="M416 520h48" stroke="#ff385c" stroke-width="10" stroke-linecap="round" stroke-opacity="0.5"/>
+  <path d="M560 520h48" stroke="#ff385c" stroke-width="10" stroke-linecap="round" stroke-opacity="0.5"/>
+  <rect x="352" y="784" width="320" height="48" rx="24" fill="#ffffff" fill-opacity="0.35"/>
+</svg>

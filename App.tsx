@@ -1,4 +1,5 @@
 import { StatusBar } from 'expo-status-bar'
+import * as SplashScreen from 'expo-splash-screen'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppProvider, useApp } from './src/context/AppContext'
@@ -13,6 +14,8 @@ import { LoginScreen } from './src/screens/auth/LoginScreen'
 import { SignupScreen } from './src/screens/auth/SignupScreen'
 import { HostVerificationScreen } from './src/screens/auth/HostVerificationScreen'
 import { colors } from './src/theme'
+
+SplashScreen.preventAutoHideAsync().catch(() => {})
 
 function AppShell() {
   const { user, logout } = useAuth()
