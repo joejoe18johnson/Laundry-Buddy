@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { GhostButton, PrimaryButton, Screen } from '../../components/ui'
-import { colors, radius } from '../../theme'
+import { colors, radius, spacing } from '../../theme'
 
 export function HostVerificationScreen() {
   const { user, submitHostVerification, logout } = useAuth()
@@ -71,7 +71,7 @@ export function HostVerificationScreen() {
         </Text>
       </Pressable>
 
-      <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Home address</Text>
+      <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>Home address</Text>
       <TextInput
         style={styles.input}
         placeholder="22 Coconut St., Las Flores"

@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
 import { GhostButton, PrimaryButton, Screen } from '../../components/ui'
-import { colors, radius } from '../../theme'
+import { colors, radius, spacing } from '../../theme'
 
 export function DashboardScreen() {
   const { user } = useAuth()
@@ -101,12 +101,12 @@ export function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  title: { fontSize: 22, fontWeight: '700', flex: 1 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  title: { fontSize: 22, fontWeight: '700', flex: 1, lineHeight: 28 },
   pill: {
     backgroundColor: colors.gray50,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.gray100,
@@ -114,25 +114,25 @@ const styles = StyleSheet.create({
   pillLive: { backgroundColor: colors.greenBg, borderColor: 'rgba(0,138,5,0.2)' },
   pillText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
   pillLiveText: { color: colors.green },
-  stats: { fontSize: 15, fontWeight: '500', marginBottom: 4 },
-  sub: { fontSize: 14, color: colors.gray500, marginBottom: 24 },
-  section: { marginBottom: 24 },
+  stats: { fontSize: 15, fontWeight: '500', marginBottom: spacing.sm, lineHeight: 22 },
+  sub: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 20 },
+  section: { marginBottom: spacing.lg },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray500,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 10,
+    marginBottom: spacing.sm,
   },
   card: {
     borderWidth: 1,
     borderColor: colors.gray100,
     borderRadius: radius.lg,
-    padding: 18,
-    gap: 14,
+    padding: spacing.lg,
+    gap: spacing.md,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   avatar: {
     width: 44,
     height: 44,
@@ -142,22 +142,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { fontSize: 16, fontWeight: '600', color: colors.gray600 },
-  cardTitle: { fontSize: 16, fontWeight: '600' },
-  cardMeta: { fontSize: 14, color: colors.gray500, marginTop: 2 },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  cardTitle: { fontSize: 16, fontWeight: '600', lineHeight: 22 },
+  cardMeta: { fontSize: 14, color: colors.gray500, marginTop: spacing.sm, lineHeight: 20 },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tag: {
     fontSize: 12,
     backgroundColor: colors.gray50,
     borderWidth: 1,
     borderColor: colors.gray100,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: radius.pill,
     color: colors.gray600,
   },
-  actions: { flexDirection: 'row', gap: 10 },
-  done: { color: colors.green, fontWeight: '600', fontSize: 15 },
-  empty: { alignItems: 'center', paddingVertical: 60 },
+  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  done: { color: colors.green, fontWeight: '600', fontSize: 15, lineHeight: 22 },
+  empty: { alignItems: 'center', paddingVertical: spacing.xxl },
   emptyTitle: { fontSize: 18, fontWeight: '600' },
-  emptySub: { fontSize: 14, color: colors.gray500, marginTop: 8 },
+  emptySub: { fontSize: 14, color: colors.gray500, marginTop: spacing.sm, lineHeight: 20 },
 })
