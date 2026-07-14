@@ -1,7 +1,7 @@
-import type { Booking, Host, HostProfileDetails, HostRequest, User } from '../types'
+import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User } from '../types'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '6'
+export const SEED_DATA_VERSION = '7'
 
 export const TRAINING_PASSWORD = 'demo1234'
 
@@ -320,6 +320,83 @@ export const SEED_HOSTS: Host[] = [
     rules: ['Ring on arrival', 'Cash or transfer OK', 'Large loads +$2'],
   },
 ]
+
+export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
+  'user-maria': {
+    isOnline: true,
+    acceptCash: true,
+    acceptBankTransfer: true,
+    bankDetails: {
+      bankName: 'Belize Bank',
+      accountName: 'Maria Flores',
+      accountNumber: '1234567890',
+    },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: true,
+  },
+  'user-lopez': {
+    isOnline: true,
+    acceptCash: true,
+    acceptBankTransfer: true,
+    bankDetails: {
+      bankName: 'Heritage Bank',
+      accountName: 'Roberto Lopez',
+      accountNumber: '9876543210',
+    },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: true,
+  },
+  'user-castillo': {
+    isOnline: true,
+    acceptCash: true,
+    acceptBankTransfer: false,
+    bankDetails: { bankName: '', accountName: '', accountNumber: '' },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: true,
+  },
+  'user-rupert': {
+    isOnline: false,
+    acceptCash: true,
+    acceptBankTransfer: true,
+    bankDetails: {
+      bankName: 'Atlantic Bank',
+      accountName: 'Rupert Cain',
+      accountNumber: '5551234567',
+    },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: true,
+  },
+  'user-elena': {
+    isOnline: true,
+    acceptCash: true,
+    acceptBankTransfer: true,
+    bankDetails: {
+      bankName: 'Belize Bank',
+      accountName: 'Elena Torres',
+      accountNumber: '4445556666',
+    },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: true,
+  },
+  'user-marcus': {
+    isOnline: false,
+    acceptCash: true,
+    acceptBankTransfer: true,
+    bankDetails: {
+      bankName: 'ScotiaBank',
+      accountName: 'Marcus Young',
+      accountNumber: '7778889999',
+    },
+    notifyNewRequests: true,
+    notifyBookingUpdates: true,
+    notifyGuestsWhenOnline: false,
+  },
+}
 
 export const SEED_HOST_PROFILES: Record<string, HostProfileDetails> = {
   maria: {

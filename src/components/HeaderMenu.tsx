@@ -1,20 +1,79 @@
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import type { ReactNode } from 'react'
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { AppIcon } from './AppIcon'
+import { AppIcon, type IconName } from './AppIcon'
 import { colors, radius, spacing } from '../theme'
 import type { User } from '../types'
+
+type MenuAction = {
+  icon: IconName
+  label: string
+  onPress: () => void
+  badge?: string
+}
 
 type Props = {
   visible: boolean
   user: User
   onClose: () => void
-  onPastLoads: () => void
   onLogout: () => void
+  /** Customer: active booking in progress */
+  hasActiveLoad?: boolean
+  onExplore?: () => void
+  onMyLoad?: () => void
+  onPastLoads?: () => void
+  onDashboard?: () => void
+  onAccount?: () => void
+  onHelp?: () => void
 }
 
-export function HeaderMenu({ visible, user, onClose, onPastLoads, onLogout }: Props) {
+function MenuItem({ icon, label, onPress, badge }: MenuAction) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+      onPress={onPress}
+    >
+      <AppIcon name={icon} size={20} />
+      <Text style={styles.menuLabel}>{label}</Text>
+      {badge ? (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge}</Text>
+        </View>
+      ) : null}
+      <AppIcon name="chevron-right" size={18} color={colors.gray400} />
+    </Pressable>
+  )
+}
+
+function MenuSection({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <View style={styles.section}>
+      {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
+      {children}
+    </View>
+  )
+}
+
+export function HeaderMenu({
+  visible,
+  user,
+  onClose,
+  onLogout,
+  hasActiveLoad,
+  onExplore,
+  onMyLoad,
+  onPastLoads,
+  onDashboard,
+  onAccount,
+  onHelp,
+}: Props) {
   const isCustomer = user.role === 'customer'
   const contact = user.email ?? user.phone
+
+  const go = (action?: () => void) => {
+    onClose()
+    action?.()
+  }
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -35,27 +94,45 @@ export function HeaderMenu({ visible, user, onClose, onPastLoads, onLogout }: Pr
               </Pressable>
             </View>
 
-            <View style={styles.menu}>
-              <Pressable
-                style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
-                onPress={() => {
-                  onClose()
-                  onPastLoads()
-                }}
-              >
-                <AppIcon name="clock" size={20} />
-                <Text style={styles.menuLabel}>{isCustomer ? 'Past loads' : 'Load history'}</Text>
-                <AppIcon name="chevron-right" size={18} color={colors.gray400} />
-              </Pressable>
-            </View>
+            <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
+              <MenuSection title={isCustomer ? 'Browse' : 'Hosting'}>
+                {isCustomer && onExplore ? (
+                  <MenuItem icon="search" label="Explore dryers" onPress={() => go(onExplore)} />
+                ) : null}
+                {!isCustomer && onDashboard ? (
+                  <MenuItem icon="home" label="Dashboard" onPress={() => go(onDashboard)} />
+                ) : null}
+                {isCustomer && onMyLoad ? (
+                  <MenuItem
+                    icon="package"
+                    label="My load"
+                    onPress={() => go(onMyLoad)}
+                    badge={hasActiveLoad ? 'Active' : undefined}
+                  />
+                ) : null}
+                {onPastLoads ? (
+                  <MenuItem
+                    icon="clock"
+                    label={isCustomer ? 'Past loads' : 'Load history'}
+                    onPress={() => go(onPastLoads)}
+                  />
+                ) : null}
+              </MenuSection>
+
+              <MenuSection title="Account">
+                {onAccount ? (
+                  <MenuItem icon="user" label="Profile & account" onPress={() => go(onAccount)} />
+                ) : null}
+                {onHelp ? (
+                  <MenuItem icon="help-circle" label="Help & support" onPress={() => go(onHelp)} />
+                ) : null}
+              </MenuSection>
+            </ScrollView>
 
             <View style={styles.footer}>
               <Pressable
                 style={({ pressed }) => [styles.logoutItem, pressed && styles.menuItemPressed]}
-                onPress={() => {
-                  onClose()
-                  onLogout()
-                }}
+                onPress={() => go(onLogout)}
               >
                 <AppIcon name="log-out" size={20} />
                 <Text style={styles.logoutLabel}>Log out</Text>
@@ -108,7 +185,17 @@ const styles = StyleSheet.create({
   role: { fontSize: 13, color: colors.gray500, marginTop: 2 },
   contact: { fontSize: 12, color: colors.gray400, marginTop: spacing.sm },
   closeBtn: { padding: spacing.sm },
-  menu: { paddingVertical: spacing.sm, flex: 1 },
+  menu: { flex: 1, paddingVertical: spacing.sm },
+  section: { paddingBottom: spacing.sm },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.gray400,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -118,6 +205,15 @@ const styles = StyleSheet.create({
   },
   menuItemPressed: { backgroundColor: colors.gray50 },
   menuLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.black },
+  badge: {
+    backgroundColor: colors.greenBg,
+    borderRadius: radius.pill,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: colors.green,
+  },
+  badgeText: { fontSize: 10, fontWeight: '700', color: colors.green },
   footer: {
     borderTopWidth: 1,
     borderTopColor: colors.gray100,

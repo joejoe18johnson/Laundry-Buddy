@@ -15,6 +15,36 @@ export type Screen =
   | 'host-dashboard'
   | 'host-mark-dry'
   | 'history'
+  | 'account'
+  | 'help'
+  | 'notifications'
+
+export type PaymentMethod = 'cash' | 'bank_transfer'
+
+export interface HostBankDetails {
+  bankName: string
+  accountName: string
+  accountNumber: string
+}
+
+export interface HostSettings {
+  isOnline: boolean
+  acceptCash: boolean
+  acceptBankTransfer: boolean
+  bankDetails: HostBankDetails
+  notifyNewRequests: boolean
+  notifyBookingUpdates: boolean
+  notifyGuestsWhenOnline: boolean
+}
+
+export interface AppNotification {
+  id: string
+  userId: string
+  title: string
+  body: string
+  time: string
+  read: boolean
+}
 
 export interface HostVerification {
   status: VerificationStatus
@@ -89,6 +119,7 @@ export interface Booking {
   stageTimes: Partial<Record<BookingStage, string>>
   isNew?: boolean
   completedAt?: string
+  paymentMethod?: PaymentMethod
 }
 
 export interface HostRequest {

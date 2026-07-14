@@ -18,6 +18,8 @@ import { SignupScreen } from './src/screens/auth/SignupScreen'
 import { HeaderMenu } from './src/components/HeaderMenu'
 import { HostVerificationScreen } from './src/screens/auth/HostVerificationScreen'
 import { HistoryScreen } from './src/screens/shared/HistoryScreen'
+import { AccountScreen } from './src/screens/shared/AccountScreen'
+import { HelpScreen } from './src/screens/shared/HelpScreen'
 import { colors, spacing } from './src/theme'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
@@ -28,12 +30,14 @@ function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const isCustomer = user!.role === 'customer'
-  const showTabBar =
-    isCustomer &&
-    booking &&
-    screen !== 'customer-tracking' &&
-    screen !== 'customer-host-profile' &&
-    screen !== 'history'
+  const hideTabBarScreens = new Set([
+    'customer-tracking',
+    'customer-host-profile',
+    'history',
+    'account',
+    'help',
+  ])
+  const showTabBar = isCustomer && booking && !hideTabBarScreens.has(screen)
   const exploreActive =
     screen === 'customer-home' || screen === 'customer-booking' || screen === 'customer-host-profile'
 
@@ -62,7 +66,13 @@ function AppShell() {
         visible={menuOpen}
         user={user!}
         onClose={() => setMenuOpen(false)}
+        hasActiveLoad={!!booking}
+        onExplore={isCustomer ? () => navigate('customer-home') : undefined}
+        onMyLoad={isCustomer ? () => navigate('customer-tracking') : undefined}
         onPastLoads={() => navigate('history')}
+        onDashboard={!isCustomer ? () => navigate('host-dashboard') : undefined}
+        onAccount={() => navigate('account')}
+        onHelp={() => navigate('help')}
         onLogout={logout}
       />
 
@@ -74,6 +84,8 @@ function AppShell() {
         {screen === 'host-dashboard' && <DashboardScreen />}
         {screen === 'host-mark-dry' && <MarkDryScreen />}
         {screen === 'history' && <HistoryScreen />}
+        {screen === 'account' && <AccountScreen />}
+        {screen === 'help' && <HelpScreen />}
       </View>
 
       {showTabBar && (

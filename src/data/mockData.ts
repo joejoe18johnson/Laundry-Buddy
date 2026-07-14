@@ -12,4 +12,6 @@ export {
   getHostHistory,
   TRAINING_ACCOUNTS,
   TRAINING_PASSWORD,
+  SEED_HOST_SETTINGS,
+  SEED_USERS,
 } from './seedData'
