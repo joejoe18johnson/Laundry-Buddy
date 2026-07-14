@@ -4,6 +4,7 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../context/AppContext'
 import type { Host } from '../types'
 import { colors, coverColors, radius, spacing } from '../theme'
+import { AppIcon } from './AppIcon'
 import { PrimaryButton } from './ui'
 
 export function HostCard({ host }: { host: Host }) {
