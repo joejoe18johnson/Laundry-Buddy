@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { SEED_HOST_SETTINGS, SEED_DATA_VERSION } from '../data/seedData'
-import type { HostSettings, PaymentMethod } from '../types'
+import { DEFAULT_HOST_PRICING } from './hostPricing'
+import type { Host, HostSettings, PaymentMethod } from '../types'
 
 const SETTINGS_KEY = 'laundry-buddy-host-settings'
 const VERSION_KEY = 'laundry-buddy-host-settings-version'
@@ -13,6 +14,29 @@ export const DEFAULT_HOST_SETTINGS: HostSettings = {
   notifyNewRequests: true,
   notifyBookingUpdates: true,
   notifyGuestsWhenOnline: true,
+  pricing: { ...DEFAULT_HOST_PRICING },
+}
+
+/** Ensures legacy stored settings always include pricing and bank details. */
+export function normalizeHostSettings(
+  settings?: Partial<HostSettings> | null,
+  host?: Pick<Host, 'price' | 'foldingPrice' | 'sheetsPrice'> | null,
+): HostSettings {
+  const pricing = settings?.pricing ?? {
+    dryPrice: host?.price ?? DEFAULT_HOST_PRICING.dryPrice,
+    foldingPrice: host?.foldingPrice ?? DEFAULT_HOST_PRICING.foldingPrice,
+    sheetsPrice: host?.sheetsPrice ?? DEFAULT_HOST_PRICING.sheetsPrice,
+  }
+
+  return {
+    ...DEFAULT_HOST_SETTINGS,
+    ...settings,
+    bankDetails: {
+      ...DEFAULT_HOST_SETTINGS.bankDetails,
+      ...settings?.bankDetails,
+    },
+    pricing,
+  }
 }
 
 async function seedIfNeeded(): Promise<Record<string, HostSettings>> {
@@ -28,7 +52,11 @@ async function seedIfNeeded(): Promise<Record<string, HostSettings>> {
     await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(SEED_HOST_SETTINGS))
     return SEED_HOST_SETTINGS
   }
-  return JSON.parse(raw) as Record<string, HostSettings>
+
+  const parsed = JSON.parse(raw) as Record<string, Partial<HostSettings>>
+  return Object.fromEntries(
+    Object.entries(parsed).map(([userId, settings]) => [userId, normalizeHostSettings(settings)]),
+  )
 }
 
 export async function getAllHostSettings(): Promise<Record<string, HostSettings>> {
@@ -42,7 +70,7 @@ export async function getHostSettings(userId: string): Promise<HostSettings> {
 
 export async function saveHostSettings(userId: string, settings: HostSettings): Promise<void> {
   const all = await seedIfNeeded()
-  all[userId] = settings
+  all[userId] = normalizeHostSettings(settings)
   await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(all))
 }
 

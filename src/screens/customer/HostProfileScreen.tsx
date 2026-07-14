@@ -7,6 +7,7 @@ import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { getHostProfileDetails } from '../../data/mockData'
 import { formatHostPrice } from '../../lib/hostFilters'
+import { formatServicePrice } from '../../lib/hostPricing'
 import { colors, coverColors, radius, spacing } from '../../theme'
 import type { HostReview } from '../../types'
 
@@ -76,12 +77,19 @@ function InfoSection({ title, icon, children }: { title: string; icon: 'info' | 
 }
 
 export function HostProfileScreen() {
-  const { selectedHost, navigate, selectHost } = useApp()
+  const { selectedHost, navigate, selectHost, getSettingsForHost } = useApp()
 
   if (!selectedHost) return null
 
   const host = selectedHost
   const profile = getHostProfileDetails(host.id)
+  const settings = getSettingsForHost(host.hostUserId)
+  const paymentMethods = [
+    settings.acceptCash ? 'Cash' : null,
+    settings.acceptBankTransfer && settings.bankDetails.accountNumber.trim()
+      ? 'Bank transfer'
+      : null,
+  ].filter(Boolean)
   const gradient = coverColors[host.id] ?? ['#667eea', '#764ba2']
 
   return (
@@ -94,9 +102,13 @@ export function HostProfileScreen() {
             <Text style={styles.avatarText}>{host.name[0]}</Text>
           </View>
           <Text style={styles.heroName}>{host.name}</Text>
+          <View style={styles.onlineBadge}>
+            <View style={styles.onlineDot} />
+            <Text style={styles.onlineText}>Online now</Text>
+          </View>
           <View style={styles.heroLocation}>
             <AppIcon name="map-pin" size={14} color="rgba(255,255,255,0.9)" />
-            <Text style={styles.heroLocationText}>{host.location}, Cayo</Text>
+            <Text style={styles.heroLocationText}>{host.location}{host.district ? ` · ${host.district}` : ''}</Text>
           </View>
           <View style={styles.heroRating}>
             <Stars rating={host.rating || 5} size={16} filledColor={colors.white} emptyColor="rgba(255,255,255,0.35)" />
@@ -121,8 +133,20 @@ export function HostProfileScreen() {
 
         <View style={styles.detailsGrid}>
           <View style={styles.detailChip}>
-            <AppIcon name="dollar-sign" size={16} />
-            <Text style={styles.detailText}>{formatHostPrice(host.price)} per standard load</Text>
+            <AppIcon name="wind" size={16} />
+            <Text style={styles.detailText}>Drying — {formatHostPrice(host.price)} per load</Text>
+          </View>
+          {(host.foldingPrice ?? 0) > 0 && (
+            <View style={styles.detailChip}>
+              <AppIcon name="layers" size={16} />
+              <Text style={styles.detailText}>Folding — {formatHostPrice(host.foldingPrice!)} per load</Text>
+            </View>
+          )}
+          <View style={styles.detailChip}>
+            <AppIcon name="tag" size={16} />
+            <Text style={styles.detailText}>
+              Dryer sheets — {formatServicePrice(host.sheetsPrice ?? 1)} if guest buys
+            </Text>
           </View>
           <View style={styles.detailChip}>
             <AppIcon name="clock" size={16} />
@@ -134,16 +158,16 @@ export function HostProfileScreen() {
               <Text style={styles.detailText}>Generator backup</Text>
             </View>
           )}
-          {host.foldingExtra != null && (
-            <View style={styles.detailChip}>
-              <AppIcon name="layers" size={16} />
-              <Text style={styles.detailText}>Folding +${host.foldingExtra}</Text>
-            </View>
-          )}
           <View style={styles.detailChip}>
             <AppIcon name="wind" size={16} />
             <Text style={styles.detailText}>{host.dryerType} dryer</Text>
           </View>
+          {paymentMethods.length > 0 && (
+            <View style={styles.detailChip}>
+              <AppIcon name="credit-card" size={16} />
+              <Text style={styles.detailText}>Accepts {paymentMethods.join(' · ')}</Text>
+            </View>
+          )}
         </View>
 
         <InfoSection title="Setup" icon="image">
@@ -216,6 +240,19 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 28, fontWeight: '700', color: colors.black },
   heroName: { fontSize: 26, fontWeight: '700', color: colors.white, letterSpacing: -0.5 },
+  onlineBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'center',
+    marginTop: spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+  },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#7CFC7C' },
+  onlineText: { fontSize: 12, fontWeight: '700', color: colors.white },
   heroLocation: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm },
   heroLocationText: { fontSize: 14, color: 'rgba(255,255,255,0.9)' },
   heroRating: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },

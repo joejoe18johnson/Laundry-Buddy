@@ -27,6 +27,12 @@ export interface HostBankDetails {
   accountNumber: string
 }
 
+export interface HostPricing {
+  dryPrice: number
+  foldingPrice: number
+  sheetsPrice: number
+}
+
 export interface HostSettings {
   isOnline: boolean
   acceptCash: boolean
@@ -35,6 +41,7 @@ export interface HostSettings {
   notifyNewRequests: boolean
   notifyBookingUpdates: boolean
   notifyGuestsWhenOnline: boolean
+  pricing: HostPricing
 }
 
 export interface AppNotification {
@@ -78,7 +85,8 @@ export interface Host {
   turnaroundHours: number
   dryerType: string
   hasGenerator: boolean
-  foldingExtra?: number
+  foldingPrice?: number
+  sheetsPrice?: number
   address: string
   gateCode: string
   photos: string[]
@@ -120,6 +128,13 @@ export interface Booking {
   isNew?: boolean
   completedAt?: string
   paymentMethod?: PaymentMethod
+  pricePerLoad?: number
+  dryPrice?: number
+  foldingPrice?: number
+  sheetsPrice?: number
+  foldingService?: boolean
+  totalAmount?: number
+  paymentStatus?: 'paid' | 'pending'
 }
 
 export interface HostRequest {
@@ -141,6 +156,13 @@ export const DROP_OFF_LABELS: Record<DropOffTime, string> = {
 
 export const SHEETS_LABELS: Record<SheetsOption, string> = {
   own: 'Brings own sheets ✓',
-  buy: 'Wants to buy sheets ($1)',
+  buy: 'Wants to buy sheets from host',
   none: 'No sheets please',
+}
+
+export function sheetsOptionLabel(option: SheetsOption, sheetsPrice: number): string {
+  if (option === 'buy') {
+    return sheetsPrice <= 0 ? 'Buy sheets from host (Free)' : `Buy sheets from host ($${sheetsPrice}/load)`
+  }
+  return SHEETS_LABELS[option]
 }

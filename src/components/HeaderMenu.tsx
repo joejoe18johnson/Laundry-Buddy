@@ -25,6 +25,9 @@ type Props = {
   onDashboard?: () => void
   onAccount?: () => void
   onHelp?: () => void
+  onNotifications?: () => void
+  notificationCount?: number
+  isHostOnline?: boolean
 }
 
 function MenuItem({ icon, label, onPress, badge }: MenuAction) {
@@ -66,6 +69,9 @@ export function HeaderMenu({
   onDashboard,
   onAccount,
   onHelp,
+  onNotifications,
+  notificationCount,
+  isHostOnline,
 }: Props) {
   const isCustomer = user.role === 'customer'
   const contact = user.email ?? user.phone
@@ -87,6 +93,11 @@ export function HeaderMenu({
               <View style={styles.headerText}>
                 <Text style={styles.name}>{user.name}</Text>
                 <Text style={styles.role}>{isCustomer ? 'Guest' : 'Host'}</Text>
+                {!isCustomer && (
+                  <Text style={[styles.onlineStatus, isHostOnline ? styles.onlineLive : null]}>
+                    {isHostOnline ? '● Online' : '○ Offline'}
+                  </Text>
+                )}
                 {contact ? <Text style={styles.contact}>{contact}</Text> : null}
               </View>
               <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
@@ -113,7 +124,7 @@ export function HeaderMenu({
                 {onPastLoads ? (
                   <MenuItem
                     icon="clock"
-                    label={isCustomer ? 'Past loads' : 'Load history'}
+                    label={isCustomer ? 'Past loads & payments' : 'Load history'}
                     onPress={() => go(onPastLoads)}
                   />
                 ) : null}
@@ -121,7 +132,19 @@ export function HeaderMenu({
 
               <MenuSection title="Account">
                 {onAccount ? (
-                  <MenuItem icon="user" label="Profile & account" onPress={() => go(onAccount)} />
+                  <MenuItem
+                    icon="user"
+                    label={isCustomer ? 'Profile & account' : 'Host profile & settings'}
+                    onPress={() => go(onAccount)}
+                  />
+                ) : null}
+                {onNotifications ? (
+                  <MenuItem
+                    icon="bell"
+                    label="Notifications"
+                    onPress={() => go(onNotifications)}
+                    badge={notificationCount ? String(notificationCount) : undefined}
+                  />
                 ) : null}
                 {onHelp ? (
                   <MenuItem icon="help-circle" label="Help & support" onPress={() => go(onHelp)} />
@@ -183,6 +206,8 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   name: { fontSize: 18, fontWeight: '700', color: colors.black },
   role: { fontSize: 13, color: colors.gray500, marginTop: 2 },
+  onlineStatus: { fontSize: 12, color: colors.gray400, marginTop: 4, fontWeight: '600' },
+  onlineLive: { color: colors.green },
   contact: { fontSize: 12, color: colors.gray400, marginTop: spacing.sm },
   closeBtn: { padding: spacing.sm },
   menu: { flex: 1, paddingVertical: spacing.sm },

@@ -6,11 +6,13 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
 import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, needsHostVerification, useAuth } from './src/context/AuthContext'
+import { NotificationProvider, useUserNotifications } from './src/context/NotificationContext'
 import { HomeScreen } from './src/screens/customer/HomeScreen'
 import { BookingScreen } from './src/screens/customer/BookingScreen'
 import { HostProfileScreen } from './src/screens/customer/HostProfileScreen'
 import { TrackingScreen } from './src/screens/customer/TrackingScreen'
 import { DashboardScreen } from './src/screens/host/DashboardScreen'
+import { HostHubScreen } from './src/screens/host/HostHubScreen'
 import { MarkDryScreen } from './src/screens/host/MarkDryScreen'
 import { WelcomeScreen } from './src/screens/auth/WelcomeScreen'
 import { LoginScreen } from './src/screens/auth/LoginScreen'
@@ -20,22 +22,27 @@ import { HostVerificationScreen } from './src/screens/auth/HostVerificationScree
 import { HistoryScreen } from './src/screens/shared/HistoryScreen'
 import { AccountScreen } from './src/screens/shared/AccountScreen'
 import { HelpScreen } from './src/screens/shared/HelpScreen'
+import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
 import { colors, spacing } from './src/theme'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
 function AppShell() {
   const { user, logout } = useAuth()
-  const { screen, booking, navigate } = useApp()
+  const { screen, booking, navigate, hostSettings } = useApp()
+  const { unreadCount } = useUserNotifications(user!.id)
   const [menuOpen, setMenuOpen] = useState(false)
 
   const isCustomer = user!.role === 'customer'
+  const firstName = user!.name.split(' ')[0]
+  const isHome = screen === 'customer-home'
   const hideTabBarScreens = new Set([
     'customer-tracking',
     'customer-host-profile',
     'history',
     'account',
     'help',
+    'notifications',
   ])
   const showTabBar = isCustomer && booking && !hideTabBarScreens.has(screen)
   const exploreActive =
@@ -44,18 +51,20 @@ function AppShell() {
   return (
     <SafeAreaView style={styles.app} edges={['top']}>
       <StatusBar style="dark" />
-      <View style={styles.header}>
-        <View style={styles.logoRow}>
-          <AppIcon name="wind" size={18} color={colors.accent} />
-          <Text style={styles.logo}>Laundry Buddy</Text>
-        </View>
+      <View style={[styles.header, isHome && styles.headerHome]}>
+        <Text style={styles.greetingLarge}>Hi {firstName}</Text>
         <View style={styles.headerRight}>
-          <View style={styles.profile}>
-            <View style={styles.profileIcon}>
-              <AppIcon name="user" size={14} />
-            </View>
-            <Text style={styles.greeting}>{user!.name}</Text>
-          </View>
+          <Pressable onPress={() => navigate('notifications')} style={styles.bellBtn} hitSlop={8}>
+            <AppIcon name="bell" size={22} />
+            {unreadCount > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </Pressable>
+          <Pressable onPress={() => navigate('account')} style={styles.avatar} hitSlop={4}>
+            <AppIcon name="user" size={18} color={colors.gray600} />
+          </Pressable>
           <Pressable onPress={() => setMenuOpen(true)} style={styles.menuBtn} hitSlop={8}>
             <AppIcon name="menu" size={22} />
           </Pressable>
@@ -67,12 +76,15 @@ function AppShell() {
         user={user!}
         onClose={() => setMenuOpen(false)}
         hasActiveLoad={!!booking}
+        isHostOnline={hostSettings?.isOnline}
+        notificationCount={unreadCount}
         onExplore={isCustomer ? () => navigate('customer-home') : undefined}
         onMyLoad={isCustomer ? () => navigate('customer-tracking') : undefined}
         onPastLoads={() => navigate('history')}
         onDashboard={!isCustomer ? () => navigate('host-dashboard') : undefined}
         onAccount={() => navigate('account')}
         onHelp={() => navigate('help')}
+        onNotifications={() => navigate('notifications')}
         onLogout={logout}
       />
 
@@ -84,8 +96,9 @@ function AppShell() {
         {screen === 'host-dashboard' && <DashboardScreen />}
         {screen === 'host-mark-dry' && <MarkDryScreen />}
         {screen === 'history' && <HistoryScreen />}
-        {screen === 'account' && <AccountScreen />}
+        {screen === 'account' && (isCustomer ? <AccountScreen /> : <HostHubScreen />)}
         {screen === 'help' && <HelpScreen />}
+        {screen === 'notifications' && <NotificationsScreen />}
       </View>
 
       {showTabBar && (
@@ -132,9 +145,11 @@ function AuthenticatedApp() {
   }
 
   return (
-    <AppProvider>
-      <AppShell />
-    </AppProvider>
+    <NotificationProvider>
+      <AppProvider>
+        <AppShell />
+      </AppProvider>
+    </NotificationProvider>
   )
 }
 
@@ -155,30 +170,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.screen,
-    paddingVertical: 18,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
+    backgroundColor: colors.white,
   },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  logo: { fontSize: 17, fontWeight: '700', color: colors.accent },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  profile: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  profileIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerHome: {
+    borderBottomWidth: 0,
+    paddingBottom: 8,
   },
-  greeting: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-  menuBtn: {
+  greetingLarge: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.black,
+    letterSpacing: -0.4,
+  },
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  bellBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.gray50,
-    borderWidth: 1,
-    borderColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.black,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.gray75,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menuBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -11,11 +11,11 @@ type Props = {
 export function HostSearchBar({
   value,
   onChange,
-  placeholder = 'Search area or host…',
+  placeholder = 'Where to dry? Search area or host',
 }: Props) {
   return (
     <View style={styles.wrap}>
-      <AppIcon name="search" size={18} color={colors.gray500} />
+      <AppIcon name="search" size={20} color={colors.gray500} />
       <TextInput
         style={styles.input}
         value={value}
@@ -27,14 +27,12 @@ export function HostSearchBar({
         returnKeyType="search"
         clearButtonMode="never"
       />
-      {value.length > 0 && (
-        <Pressable
-          onPress={() => onChange('')}
-          hitSlop={8}
-          accessibilityLabel="Clear search"
-        >
-          <AppIcon name="x" size={18} color={colors.gray500} />
+      {value.length > 0 ? (
+        <Pressable onPress={() => onChange('')} hitSlop={8} accessibilityLabel="Clear search">
+          <AppIcon name="x-circle" size={18} color={colors.gray400} />
         </Pressable>
+      ) : (
+        <AppIcon name="clock" size={18} color={colors.gray400} />
       )}
     </View>
   )
@@ -45,17 +43,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.gray200,
+    backgroundColor: colors.gray50,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    backgroundColor: colors.white,
-    marginBottom: spacing.sm,
+    paddingVertical: 14,
+    marginBottom: spacing.md,
   },
   input: {
     flex: 1,
     fontSize: 16,
+    fontWeight: '500',
     color: colors.black,
     padding: 0,
   },

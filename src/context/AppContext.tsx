@@ -12,9 +12,16 @@ import { useNotifications } from './NotificationContext'
 import {
   getCustomerSeedBooking,
   getHostByUserId,
+  getHostById,
   getHostDashboardSeed,
   getAvailableHosts,
+  SEED_USERS,
 } from '../data/mockData'
+import { calculateBookingTotal, applyHostPricing, getHostPricing } from '../lib/hostPricing'
+import {
+  saveCompletedCustomerPayment,
+  saveCompletedHostPayment,
+} from '../lib/paymentHistoryStorage'
 import {
   DEFAULT_HOST_SETTINGS,
   getAllHostSettings,
@@ -56,6 +63,7 @@ interface AppState {
     sheetsOption: SheetsOption
     notes: string
     paymentMethod: PaymentMethod
+    foldingService: boolean
   }) => void
   acceptRequest: (requestId: string) => void
   declineRequest: (requestId: string) => void
@@ -138,7 +146,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const onlineHosts = useMemo(
     () =>
-      getAvailableHosts().filter((h) => isHostOnline(h.hostUserId, hostSettingsMap)),
+      getAvailableHosts()
+        .filter((h) => isHostOnline(h.hostUserId, hostSettingsMap))
+        .map((h) =>
+          applyHostPricing(h, h.hostUserId ? hostSettingsMap[h.hostUserId] : undefined),
+        ),
     [hostSettingsMap],
   )
 
@@ -153,24 +165,55 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateHostSettings = useCallback(
     async (settings: HostSettings) => {
       if (role !== 'host' || !user) return
+      const wasOnline = hostSettingsMap[user.id]?.isOnline ?? false
       await saveHostSettings(user.id, settings)
       setHostSettings(settings)
       setHostSettingsMap((prev) => ({ ...prev, [user.id]: settings }))
+
+      if (!wasOnline && settings.isOnline && settings.notifyGuestsWhenOnline) {
+        const hostProfile = getHostByUserId(user.id)
+        if (hostProfile) {
+          const customers = SEED_USERS.filter((u) => u.role === 'customer')
+          await Promise.all(
+            customers.map((c) =>
+              push(
+                c.id,
+                `${hostProfile.name} is online`,
+                `${hostProfile.name} is accepting loads in ${hostProfile.location}. Book now while slots last.`,
+              ),
+            ),
+          )
+        }
+      }
     },
-    [role, user],
+    [role, user, hostSettingsMap, push],
   )
 
   const navigate = useCallback((next: Screen) => setScreen(next), [])
 
-  const viewHostProfile = useCallback((host: Host) => {
-    setSelectedHost(host)
-    setScreen('customer-host-profile')
-  }, [])
+  const viewHostProfile = useCallback(
+    (host: Host) => {
+      const priced = applyHostPricing(
+        host,
+        host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined,
+      )
+      setSelectedHost(priced)
+      setScreen('customer-host-profile')
+    },
+    [hostSettingsMap],
+  )
 
-  const selectHost = useCallback((host: Host) => {
-    setSelectedHost(host)
-    setScreen('customer-booking')
-  }, [])
+  const selectHost = useCallback(
+    (host: Host) => {
+      const priced = applyHostPricing(
+        host,
+        host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined,
+      )
+      setSelectedHost(priced)
+      setScreen('customer-booking')
+    },
+    [hostSettingsMap],
+  )
 
   const notifyHost = useCallback(
     async (hostUserId: string | undefined, title: string, body: string) => {
@@ -198,8 +241,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sheetsOption: SheetsOption
       notes: string
       paymentMethod: PaymentMethod
+      foldingService: boolean
     }) => {
       if (!selectedHost || !user) return
+      const settings = getSettingsForHost(selectedHost.hostUserId)
+      const pricing = getHostPricing(selectedHost, settings)
+      const totalAmount = calculateBookingTotal({
+        loads: details.loads,
+        dryPrice: pricing.dryPrice,
+        foldingPrice: pricing.foldingPrice,
+        sheetsPrice: pricing.sheetsPrice,
+        sheetsOption: details.sheetsOption,
+        foldingService: details.foldingService,
+      })
       const newBooking: Booking = {
         id: `bk-${Date.now()}`,
         hostId: selectedHost.id,
@@ -212,6 +266,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sheetsOption: details.sheetsOption,
         notes: details.notes,
         paymentMethod: details.paymentMethod,
+        pricePerLoad: pricing.dryPrice,
+        dryPrice: pricing.dryPrice,
+        foldingPrice: pricing.foldingPrice,
+        sheetsPrice: pricing.sheetsPrice,
+        foldingService: details.foldingService,
+        totalAmount,
+        paymentStatus: totalAmount <= 0 ? 'paid' : 'pending',
         stage: 'got-bag',
         address: selectedHost.address,
         gateCode: selectedHost.gateCode,
@@ -232,7 +293,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         `${selectedHost.name} will expect your laundry during your drop-off window.`,
       )
     },
-    [selectedHost, user, notifyHost, notifyCustomer],
+    [selectedHost, user, notifyHost, notifyCustomer, getSettingsForHost],
   )
 
   const acceptRequest = useCallback(
@@ -290,30 +351,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const advanceStage = useCallback(
     (loadId: string, stage: BookingStage) => {
       const time = nowTime()
-      let customerId: string | undefined
-      let hostName = ''
+      const completedDate = new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+
+      const patchLoad = (load: Booking): Booking => ({
+        ...load,
+        stage,
+        stageTimes: { ...load.stageTimes, [stage]: time },
+        ...(stage === 'ready'
+          ? { completedAt: completedDate, paymentStatus: 'paid' as const }
+          : {}),
+      })
+
+      const persistIfReady = (load: Booking) => {
+        if (stage !== 'ready') return
+        const completed = patchLoad(load)
+        if (completed.customerId) {
+          saveCompletedCustomerPayment(completed.customerId, completed)
+        }
+        const host = getHostById(completed.hostId)
+        if (host?.hostUserId) {
+          saveCompletedHostPayment(host.hostUserId, completed)
+        }
+      }
+
+      let notifyTarget: Booking | undefined
 
       setActiveLoads((prev) =>
         prev.map((load) => {
-          if (load.id === loadId) {
-            customerId = load.customerId
-            hostName = load.hostName
-            return { ...load, stage, stageTimes: { ...load.stageTimes, [stage]: time } }
-          }
-          return load
+          if (load.id !== loadId) return load
+          notifyTarget = load
+          persistIfReady(load)
+          return patchLoad(load)
         }),
       )
-      setBooking((prev) =>
-        prev?.id === loadId
-          ? { ...prev, stage, stageTimes: { ...prev.stageTimes, [stage]: time } }
-          : prev,
-      )
 
-      if (customerId) {
+      setBooking((prev) => {
+        if (prev?.id !== loadId) return prev
+        notifyTarget = prev
+        persistIfReady(prev)
+        return patchLoad(prev)
+      })
+
+      if (notifyTarget?.customerId) {
         notifyCustomer(
-          customerId,
+          notifyTarget.customerId,
           STAGE_LABELS[stage],
-          `${hostName} updated your load — ${STAGE_LABELS[stage].toLowerCase()}.`,
+          `${notifyTarget.hostName} updated your load — ${STAGE_LABELS[stage].toLowerCase()}.`,
         )
       }
     },

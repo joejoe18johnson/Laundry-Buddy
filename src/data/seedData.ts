@@ -1,7 +1,7 @@
 import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User } from '../types'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '7'
+export const SEED_DATA_VERSION = '8'
 
 export const TRAINING_PASSWORD = 'demo1234'
 
@@ -188,6 +188,8 @@ export const SEED_HOSTS: Host[] = [
     rating: 4.9,
     reviewCount: 47,
     price: 0,
+    foldingPrice: 3,
+    sheetsPrice: 1,
     slotsLeft: 3,
     turnaroundHours: 3,
     dryerType: 'Electric',
@@ -208,11 +210,12 @@ export const SEED_HOSTS: Host[] = [
     rating: 5.0,
     reviewCount: 31,
     price: 5,
+    foldingPrice: 5,
+    sheetsPrice: 2,
     slotsLeft: 2,
     turnaroundHours: 4,
     dryerType: 'Electric',
     hasGenerator: true,
-    foldingExtra: 5,
     address: '14 University Drive',
     gateCode: '8890',
     whatsapp: '5016005678',
@@ -229,6 +232,8 @@ export const SEED_HOSTS: Host[] = [
     rating: 4.8,
     reviewCount: 22,
     price: 3,
+    foldingPrice: 0,
+    sheetsPrice: 1,
     slotsLeft: 4,
     turnaroundHours: 3,
     dryerType: 'Gas',
@@ -249,6 +254,8 @@ export const SEED_HOSTS: Host[] = [
     rating: 4.7,
     reviewCount: 18,
     price: 4,
+    foldingPrice: 4,
+    sheetsPrice: 2,
     slotsLeft: 1,
     turnaroundHours: 5,
     dryerType: 'Electric',
@@ -269,6 +276,8 @@ export const SEED_HOSTS: Host[] = [
     rating: 0,
     reviewCount: 0,
     price: 0,
+    foldingPrice: 0,
+    sheetsPrice: 1,
     slotsLeft: 0,
     turnaroundHours: 3,
     dryerType: 'Electric',
@@ -289,6 +298,8 @@ export const SEED_HOSTS: Host[] = [
     rating: 4.6,
     reviewCount: 14,
     price: 4,
+    foldingPrice: 3,
+    sheetsPrice: 1,
     slotsLeft: 2,
     turnaroundHours: 4,
     dryerType: 'Electric',
@@ -309,6 +320,8 @@ export const SEED_HOSTS: Host[] = [
     rating: 4.5,
     reviewCount: 9,
     price: 6,
+    foldingPrice: 5,
+    sheetsPrice: 2,
     slotsLeft: 3,
     turnaroundHours: 3,
     dryerType: 'Electric',
@@ -334,6 +347,7 @@ export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
     notifyNewRequests: true,
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: true,
+    pricing: { dryPrice: 0, foldingPrice: 3, sheetsPrice: 1 },
   },
   'user-lopez': {
     isOnline: true,
@@ -347,6 +361,7 @@ export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
     notifyNewRequests: true,
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: true,
+    pricing: { dryPrice: 5, foldingPrice: 5, sheetsPrice: 2 },
   },
   'user-castillo': {
     isOnline: true,
@@ -356,6 +371,7 @@ export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
     notifyNewRequests: true,
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: true,
+    pricing: { dryPrice: 3, foldingPrice: 0, sheetsPrice: 1 },
   },
   'user-rupert': {
     isOnline: false,
@@ -369,6 +385,7 @@ export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
     notifyNewRequests: true,
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: true,
+    pricing: { dryPrice: 4, foldingPrice: 4, sheetsPrice: 2 },
   },
   'user-elena': {
     isOnline: true,
@@ -382,6 +399,7 @@ export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
     notifyNewRequests: true,
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: true,
+    pricing: { dryPrice: 4, foldingPrice: 3, sheetsPrice: 1 },
   },
   'user-marcus': {
     isOnline: false,
@@ -395,6 +413,7 @@ export const SEED_HOST_SETTINGS: Record<string, HostSettings> = {
     notifyNewRequests: true,
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: false,
+    pricing: { dryPrice: 6, foldingPrice: 5, sheetsPrice: 2 },
   },
 }
 
@@ -676,6 +695,10 @@ export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
       gateCode: '1122',
       stageTimes: { 'got-bag': '2:10pm', waiting: '2:30pm', drying: '3:00pm', ready: '4:15pm' },
       completedAt: 'Jul 8, 2026',
+      pricePerLoad: 5,
+      totalAmount: 5,
+      paymentMethod: 'cash',
+      paymentStatus: 'paid',
     },
     {
       id: 'past-ana-2',
@@ -693,6 +716,10 @@ export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
       gateCode: '4421',
       stageTimes: { 'got-bag': '8:45am', waiting: '9:00am', drying: '9:30am', ready: '11:00am' },
       completedAt: 'Jun 29, 2026',
+      pricePerLoad: 0,
+      totalAmount: 0,
+      paymentMethod: 'bank_transfer',
+      paymentStatus: 'paid',
     },
   ],
   'user-carlos': [
@@ -712,6 +739,10 @@ export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
       gateCode: '9012',
       stageTimes: { 'got-bag': '4:30pm', waiting: '5:00pm', drying: '5:20pm', ready: '6:45pm' },
       completedAt: 'Jul 1, 2026',
+      pricePerLoad: 3,
+      totalAmount: 4,
+      paymentMethod: 'cash',
+      paymentStatus: 'paid',
     },
   ],
   'user-keisha': [
@@ -731,6 +762,10 @@ export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
       gateCode: '4421',
       stageTimes: { 'got-bag': '2:00pm', waiting: '2:20pm', drying: '2:45pm', ready: '4:00pm' },
       completedAt: 'Jul 10, 2026',
+      pricePerLoad: 0,
+      totalAmount: 0,
+      paymentMethod: 'cash',
+      paymentStatus: 'paid',
     },
   ],
 }
@@ -753,6 +788,10 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
       gateCode: '4421',
       stageTimes: { 'got-bag': '8:00am', waiting: '8:30am', drying: '9:00am', ready: '10:30am' },
       completedAt: 'Jul 11, 2026',
+      pricePerLoad: 0,
+      totalAmount: 0,
+      paymentMethod: 'cash',
+      paymentStatus: 'paid',
     },
     {
       id: 'past-maria-2',
@@ -770,6 +809,10 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
       gateCode: '4421',
       stageTimes: { 'got-bag': '2:15pm', waiting: '2:40pm', drying: '3:10pm', ready: '4:30pm' },
       completedAt: 'Jun 29, 2026',
+      pricePerLoad: 0,
+      totalAmount: 0,
+      paymentMethod: 'bank_transfer',
+      paymentStatus: 'paid',
     },
   ],
   'user-lopez': [
@@ -789,6 +832,10 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
       gateCode: '1122',
       stageTimes: { 'got-bag': '4:00pm', waiting: '4:30pm', drying: '5:00pm', ready: '6:15pm' },
       completedAt: 'Jul 6, 2026',
+      pricePerLoad: 5,
+      totalAmount: 5,
+      paymentMethod: 'cash',
+      paymentStatus: 'paid',
     },
   ],
   'user-rupert': [
@@ -808,6 +855,10 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
       gateCode: '7733',
       stageTimes: { 'got-bag': '7:45am', waiting: '8:15am', drying: '8:45am', ready: '10:00am' },
       completedAt: 'Jul 9, 2026',
+      pricePerLoad: 4,
+      totalAmount: 4,
+      paymentMethod: 'bank_transfer',
+      paymentStatus: 'paid',
     },
   ],
 }
@@ -837,6 +888,10 @@ export function getAvailableHosts(): Host[] {
 
 export function getHostByUserId(userId: string): Host | undefined {
   return SEED_HOSTS.find((h) => h.hostUserId === userId)
+}
+
+export function getHostById(hostId: string): Host | undefined {
+  return SEED_HOSTS.find((h) => h.id === hostId)
 }
 
 export function getHostProfileDetails(hostId: string): HostProfileDetails {

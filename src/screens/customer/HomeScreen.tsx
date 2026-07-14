@@ -5,7 +5,6 @@ import { HostCard } from '../../components/HostCard'
 import { HostFilterSheet } from '../../components/HostFilterSheet'
 import { HostSearchBar } from '../../components/HostSearchBar'
 import { WeatherBanner } from '../../components/WeatherBanner'
-import { Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { ACTIVE_REGION_LABEL, getAvailableHosts } from '../../data/mockData'
 import {
@@ -27,7 +26,7 @@ const SORT_OPTIONS: { value: HostSort; label: string; icon: 'map-pin' | 'dollar-
 ]
 
 export function HomeScreen() {
-  const { showMap, setShowMap, viewHostProfile, onlineHosts } = useApp()
+  const { viewHostProfile, onlineHosts } = useApp()
   const allHosts = onlineHosts
   const totalHosts = getAvailableHosts().length
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
@@ -50,8 +49,8 @@ export function HomeScreen() {
   const subtitle = trimmedSearch
     ? `${hosts.length} host${hosts.length === 1 ? '' : 's'} matching “${trimmedSearch}”`
     : sort === 'nearest'
-      ? `${hosts.length} online · closest to you first`
-      : `${hosts.length} of ${totalHosts} hosts online in ${ACTIVE_REGION_LABEL}`
+      ? `${hosts.length} online · closest first`
+      : `${hosts.length} of ${totalHosts} online in ${ACTIVE_REGION_LABEL}`
 
   const clearAll = () => {
     setFilters(DEFAULT_HOST_FILTERS)
@@ -59,125 +58,124 @@ export function HomeScreen() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.title}>Find a dryer near you</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
+    <View style={styles.container}>
+      <View style={styles.map}>
+        <View style={styles.mapGrid} />
+        <View style={styles.youDot}>
+          <View style={styles.youInner} />
+        </View>
+        {hosts.length === 0 ? (
+          <View style={styles.mapEmpty}>
+            <AppIcon name="map-pin" size={20} color={colors.gray400} />
+            <Text style={styles.mapEmptyText}>No hosts in this area</Text>
+          </View>
+        ) : (
+          hosts.slice(0, 6).map((host, i) => (
+            <Pressable
+              key={host.id}
+              style={[styles.pin, pinPositions[i % pinPositions.length]]}
+              onPress={() => viewHostProfile(host)}
+            >
+              <Text style={styles.pinPrice}>{host.price <= 0 ? 'Free' : `$${host.price}`}</Text>
+            </Pressable>
+          ))
+        )}
+      </View>
 
-      <HostSearchBar value={searchQuery} onChange={setSearchQuery} />
+      <View style={styles.sheet}>
+        <View style={styles.handle} />
+        <Text style={styles.sheetTitle}>Select a host</Text>
+        <Text style={styles.sheetSub}>{subtitle}</Text>
 
-      {areaSuggestions.length > 0 && (
+        <HostSearchBar value={searchQuery} onChange={setSearchQuery} />
+
+        {areaSuggestions.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.chipRow}
+            keyboardShouldPersistTaps="handled"
+          >
+            {areaSuggestions.map((area) => (
+              <Pressable
+                key={area}
+                onPress={() => setSearchQuery(area)}
+                style={[styles.chip, trimmedSearch === area && styles.chipActive]}
+              >
+                <AppIcon
+                  name="map-pin"
+                  size={12}
+                  color={trimmedSearch === area ? colors.white : colors.gray600}
+                />
+                <Text style={[styles.chipText, trimmedSearch === area && styles.chipTextActive]}>
+                  {area}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
+
+        <WeatherBanner />
+
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.areaRow}
-          style={styles.areaScroll}
-          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.chipRow}
+          style={styles.sortScroll}
         >
-          {areaSuggestions.map((area) => (
+          {SORT_OPTIONS.map((opt) => (
             <Pressable
-              key={area}
-              onPress={() => setSearchQuery(area)}
-              style={[styles.areaChip, trimmedSearch === area && styles.areaChipActive]}
+              key={opt.value}
+              onPress={() => setSort(opt.value)}
+              style={[styles.chip, sort === opt.value && styles.chipActive]}
             >
               <AppIcon
-                name="map-pin"
-                size={12}
-                color={trimmedSearch === area ? colors.white : colors.gray600}
+                name={opt.icon}
+                size={14}
+                color={sort === opt.value ? colors.white : colors.gray600}
               />
-              <Text style={[styles.areaText, trimmedSearch === area && styles.areaTextActive]}>
-                {area}
+              <Text style={[styles.chipText, sort === opt.value && styles.chipTextActive]}>
+                {opt.label}
               </Text>
             </Pressable>
           ))}
-        </ScrollView>
-      )}
-
-      <WeatherBanner />
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.sortRow}
-        style={styles.sortScroll}
-      >
-        {SORT_OPTIONS.map((opt) => (
-          <Pressable
-            key={opt.value}
-            onPress={() => setSort(opt.value)}
-            style={[styles.sortChip, sort === opt.value && styles.sortChipActive]}
-          >
-            <AppIcon
-              name={opt.icon}
-              size={14}
-              color={sort === opt.value ? colors.white : colors.gray600}
-            />
-            <Text style={[styles.sortText, sort === opt.value && styles.sortTextActive]}>
-              {opt.label}
-            </Text>
+          <Pressable style={styles.filterChip} onPress={() => setFiltersOpen(true)}>
+            <AppIcon name="sliders" size={14} />
+            <Text style={styles.chipText}>Filters</Text>
+            {activeFilterCount > 0 && (
+              <View style={styles.filterBadge}>
+                <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
           </Pressable>
-        ))}
-      </ScrollView>
+        </ScrollView>
 
-      <View style={styles.toolbar}>
-        <Pressable style={styles.toolBtn} onPress={() => setFiltersOpen(true)}>
-          <AppIcon name="sliders" size={16} />
-          <Text style={styles.toolText}>Filters</Text>
-          {activeFilterCount > 0 && (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
-            </View>
-          )}
-        </Pressable>
-        <Pressable style={styles.toolBtn} onPress={() => setShowMap(!showMap)}>
-          <AppIcon name={showMap ? 'list' : 'map'} size={16} />
-          <Text style={styles.toolText}>{showMap ? 'List' : 'Map'}</Text>
-        </Pressable>
-      </View>
-
-      {showMap ? (
-        <View style={styles.map}>
+        <ScrollView
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {hosts.length === 0 ? (
-            <View style={styles.emptyMap}>
+            <View style={styles.empty}>
               <AppIcon name="search" size={28} color={colors.gray400} />
-              <Text style={styles.emptyText}>No hosts match your filters</Text>
-              <Pressable onPress={clearAll}>
-                <Text style={styles.emptyLink}>Clear search & filters</Text>
+              <Text style={styles.emptyTitle}>No hosts found</Text>
+              <Text style={styles.emptySub}>
+                {trimmedSearch
+                  ? 'Try a different area or host name.'
+                  : allHosts.length === 0
+                    ? 'No hosts are online right now. Check back soon.'
+                    : 'Try adjusting your filters or sort order.'}
+              </Text>
+              <Pressable style={styles.clearBtn} onPress={clearAll}>
+                <Text style={styles.clearBtnText}>Clear search & filters</Text>
               </Pressable>
             </View>
           ) : (
-            hosts.map((host, i) => (
-              <Pressable
-                key={host.id}
-                style={[styles.pin, pinPositions[i % 4]]}
-                onPress={() => viewHostProfile(host)}
-              >
-                <Text style={styles.pinPrice}>{host.price <= 0 ? 'Free' : `$${host.price}`}</Text>
-                <Text style={styles.pinName}>{host.name}</Text>
-                <Text style={styles.pinMeta}>
-                  {host.turnaroundHours} hr · {host.distanceKm} km
-                </Text>
-              </Pressable>
-            ))
+            hosts.map((host) => <HostCard key={host.id} host={host} />)
           )}
-        </View>
-      ) : hosts.length === 0 ? (
-        <View style={styles.emptyList}>
-          <AppIcon name="search" size={32} color={colors.gray400} />
-          <Text style={styles.emptyTitle}>No hosts found</Text>
-          <Text style={styles.emptySub}>
-            {trimmedSearch
-              ? 'Try a different area or host name.'
-              : allHosts.length === 0
-                ? 'No hosts are online right now. Check back soon or try another area.'
-                : 'Try adjusting your filters or sort order.'}
-          </Text>
-          <Pressable style={styles.clearBtn} onPress={clearAll}>
-            <Text style={styles.clearBtnText}>Clear search & filters</Text>
-          </Pressable>
-        </View>
-      ) : (
-        hosts.map((host) => <HostCard key={host.id} host={host} />)
-      )}
+        </ScrollView>
+      </View>
 
       <HostFilterSheet
         visible={filtersOpen}
@@ -186,64 +184,127 @@ export function HomeScreen() {
         onChange={setFilters}
         onClose={() => setFiltersOpen(false)}
       />
-    </Screen>
+    </View>
   )
 }
 
 const pinPositions = [
-  { top: '22%' as const, left: '18%' as const },
-  { top: '48%' as const, right: '16%' as const },
-  { top: '62%' as const, left: '28%' as const },
-  { top: '32%' as const, right: '32%' as const },
+  { top: '18%' as const, left: '14%' as const },
+  { top: '42%' as const, right: '12%' as const },
+  { top: '58%' as const, left: '24%' as const },
+  { top: '28%' as const, right: '28%' as const },
+  { top: '68%' as const, right: '36%' as const },
+  { top: '36%' as const, left: '42%' as const },
 ]
 
 const styles = StyleSheet.create({
-  title: { fontSize: 26, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 32 },
-  subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.md, lineHeight: 22 },
-  areaScroll: { marginHorizontal: -spacing.screen, marginBottom: spacing.md },
-  areaRow: { paddingHorizontal: spacing.screen, gap: spacing.sm },
-  areaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+  container: { flex: 1, backgroundColor: colors.mapBg },
+  map: {
+    flex: 0.34,
+    minHeight: 150,
+    backgroundColor: colors.mapBg,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  mapGrid: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.35,
     borderWidth: 1,
     borderColor: colors.gray200,
-    borderRadius: radius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderStyle: 'dashed',
+    margin: spacing.lg,
+    borderRadius: radius.lg,
   },
-  areaChipActive: { backgroundColor: colors.black, borderColor: colors.black },
-  areaText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-  areaTextActive: { color: colors.white },
-  sortScroll: { marginHorizontal: -spacing.screen, marginBottom: spacing.md },
-  sortRow: { paddingHorizontal: spacing.screen, gap: spacing.sm },
-  sortChip: {
+  youDot: {
+    position: 'absolute',
+    top: '46%',
+    left: '48%',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(39, 110, 241, 0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  youInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.blue,
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  mapEmpty: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  mapEmptyText: { fontSize: 13, color: colors.gray500, fontWeight: '500' },
+  pin: {
+    position: 'absolute',
+    backgroundColor: colors.black,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.pill,
+  },
+  pinPrice: { fontSize: 13, fontWeight: '700', color: colors.white },
+  sheet: {
+    flex: 1,
+    backgroundColor: colors.white,
+    borderTopLeftRadius: radius.sheet,
+    borderTopRightRadius: radius.sheet,
+    marginTop: -spacing.lg,
+    paddingHorizontal: spacing.screen,
+    paddingTop: spacing.sm,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.gray200,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.black,
+    letterSpacing: -0.4,
+    marginBottom: 4,
+  },
+  sheetSub: {
+    fontSize: 14,
+    color: colors.gray500,
+    marginBottom: spacing.md,
+  },
+  chipRow: { gap: spacing.sm, paddingBottom: spacing.sm },
+  sortScroll: { marginBottom: spacing.sm },
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderWidth: 1,
-    borderColor: colors.gray200,
+    backgroundColor: colors.gray50,
     borderRadius: radius.pill,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  sortChipActive: { backgroundColor: colors.black, borderColor: colors.black },
-  sortText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-  sortTextActive: { color: colors.white },
-  toolbar: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  toolBtn: {
+  chipActive: { backgroundColor: colors.black },
+  chipText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+  chipTextActive: { color: colors.white },
+  filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.gray200,
+    gap: 6,
+    backgroundColor: colors.white,
     borderRadius: radius.pill,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: colors.gray100,
   },
-  toolText: { fontSize: 13, fontWeight: '600' },
   filterBadge: {
-    backgroundColor: colors.accent,
+    backgroundColor: colors.black,
     minWidth: 18,
     height: 18,
     borderRadius: 9,
@@ -252,44 +313,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   filterBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white },
-  map: {
-    height: 340,
-    backgroundColor: colors.gray50,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.gray100,
-    position: 'relative',
-  },
-  pin: {
-    position: 'absolute',
-    backgroundColor: colors.white,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    gap: 2,
-    minWidth: 88,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: colors.gray100,
-  },
-  pinPrice: { fontSize: 15, fontWeight: '700', color: colors.black },
-  pinName: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
-  pinMeta: { fontSize: 11, color: colors.gray400 },
-  emptyMap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  emptyList: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
-  emptyTitle: { fontSize: 18, fontWeight: '600' },
-  emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center' },
-  emptyText: { fontSize: 14, color: colors.gray500 },
-  emptyLink: { fontSize: 14, fontWeight: '600', color: colors.accent },
+  list: { flex: 1 },
+  listContent: { paddingBottom: spacing.xxl },
+  empty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.sm },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: colors.black },
+  emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20 },
   clearBtn: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: 12,
     borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.gray200,
+    backgroundColor: colors.gray50,
   },
-  clearBtnText: { fontSize: 14, fontWeight: '600' },
+  clearBtnText: { fontSize: 14, fontWeight: '600', color: colors.black },
 })

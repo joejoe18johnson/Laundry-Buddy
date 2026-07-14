@@ -1,9 +1,10 @@
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { DROP_OFF_LABELS, SHEETS_LABELS } from '../../types'
+import { DROP_OFF_LABELS, sheetsOptionLabel } from '../../types'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
+import { applyHostPricing } from '../../lib/hostPricing'
 import { formatHostPrice } from '../../lib/hostFilters'
 import { GhostButton, PrimaryButton, Screen } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
@@ -22,7 +23,10 @@ export function DashboardScreen() {
     advanceStage,
   } = useApp()
 
-  const hostProfile = user ? getHostByUserId(user.id) : undefined
+  const rawHost = user ? getHostByUserId(user.id) : undefined
+  const hostProfile = rawHost && hostSettings
+    ? applyHostPricing(rawHost, hostSettings)
+    : rawHost
   const isOnline = hostSettings?.isOnline ?? false
 
   const toggleOnline = async (online: boolean) => {
@@ -80,7 +84,12 @@ export function DashboardScreen() {
 
       {hostProfile && (
         <Text style={styles.listingMeta}>
-          {formatHostPrice(hostProfile.price)} per load · {hostProfile.slotsLeft} slots · ~{hostProfile.turnaroundHours} hr dry
+          Dry {formatHostPrice(hostProfile.price)}
+          {(hostProfile.foldingPrice ?? 0) > 0
+            ? ` · Folding ${formatHostPrice(hostProfile.foldingPrice!)}`
+            : ''}
+          {' · Sheets '}{formatHostPrice(hostProfile.sheetsPrice ?? 1)}
+          {' · '}{hostProfile.slotsLeft} slots · ~{hostProfile.turnaroundHours} hr
         </Text>
       )}
 
@@ -104,7 +113,7 @@ export function DashboardScreen() {
             </View>
             <View style={styles.tags}>
               <Text style={styles.tag}>{DROP_OFF_LABELS[request.dropOffTime]}</Text>
-              <Text style={styles.tag}>{SHEETS_LABELS[request.sheetsOption]}</Text>
+              <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption, hostProfile?.sheetsPrice ?? 1)}</Text>
             </View>
             <View style={styles.actions}>
               <PrimaryButton title="Accept" onPress={() => acceptRequest(request.id)} />

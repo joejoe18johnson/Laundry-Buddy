@@ -61,8 +61,21 @@ export function HelpScreen() {
       <Text style={styles.subtitle}>
         {isCustomer
           ? 'How to book a neighbor’s dryer in the Cayo Area'
-          : 'Tips for hosting loads safely and smoothly'}
+          : 'Build your reputation — every load logged on the app counts'}
       </Text>
+
+      {!isCustomer && (
+        <View style={styles.reputationBanner}>
+          <AppIcon name="award" size={20} color={colors.black} />
+          <View style={styles.reputationText}>
+            <Text style={styles.reputationTitle}>Laundry Buddy is about reputation</Text>
+            <Text style={styles.reputationBody}>
+              Record every sale on the app. The more loads you complete here, the higher you appear in guest
+              searches. Off-platform deals hurt your visibility and your trust score.
+            </Text>
+          </View>
+        </View>
+      )}
 
       <Text style={styles.section}>How it works</Text>
       {isCustomer ? (
@@ -74,13 +87,14 @@ export function HelpScreen() {
         </>
       ) : (
         <>
-          <Step n={1} title="Accept requests" body="Review guest details and drop-off window on your dashboard." />
-          <Step n={2} title="Update stages" body="Mark when you receive the bag, start drying, and when it’s ready." />
-          <Step n={3} title="Set clear rules" body="Keep turnaround times realistic and communicate outages early." />
+          <Step n={1} title="Go online" body="Turn on your availability so guests can find you in search." />
+          <Step n={2} title="Accept & update loads" body="Accept requests and mark each stage until the load is ready." />
+          <Step n={3} title="Record every sale" body="Log every completed load on the app — cash or bank transfer. This builds your reputation." />
+          <Step n={4} title="Earn visibility" body="More completed loads and reviews help you appear higher when guests search." />
         </>
       )}
 
-      <Text style={styles.section}>Common questions</Text>
+      <Text style={styles.section}>{isCustomer ? 'Common questions' : 'Host FAQ — reputation & sales'}</Text>
       <View style={styles.faqCard}>
         {isCustomer ? (
           <>
@@ -100,12 +114,28 @@ export function HelpScreen() {
         ) : (
           <>
             <FaqItem
+              question="Why should I record all my sales on the app?"
+              answer="Every load you log adds to your reputation — reviews, completed count, and trust signals guests look for. Laundry Buddy is built on reputation, not one-off deals. Hosts who keep accurate records get more repeat bookings."
+            />
+            <FaqItem
+              question="Does logging more loads help me show up in search?"
+              answer="Yes. The more loads you complete and record on Laundry Buddy, the more visible you become to guests browsing nearby. Active hosts with a strong on-app history rank higher in search results than hosts who go quiet or skip logging."
+            />
+            <FaqItem
+              question="Can I arrange bookings or payment outside the app?"
+              answer="Please don’t. Off-platform deals bypass reviews, leave no record if something goes wrong, and hurt your standing on Laundry Buddy. Always accept bookings through the app and mark loads complete when done — whether the guest pays cash or bank transfer."
+            />
+            <FaqItem
+              question="What if a guest asks to pay me directly to skip the app?"
+              answer="Politely decline and point them to your Laundry Buddy listing. Deals outside the site don’t count toward your reputation and may result in fewer search impressions. Guests who book through the app can still pay cash or transfer — you just keep everything documented here."
+            />
+            <FaqItem
               question="How do I pause new requests?"
-              answer="Use Accepting loads on your dashboard when you are full or away."
+              answer="Go offline in your profile or use Accepting loads on your dashboard when you are full or away. Finish and log any active loads first so your record stays accurate."
             />
             <FaqItem
               question="What if power goes out?"
-              answer="Message guests right away. Generator hosts should note that on their listing."
+              answer="Message guests right away. Generator hosts should note that on their listing. Update the load stage in the app so guests stay informed."
             />
           </>
         )}
@@ -130,6 +160,19 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   title: { fontSize: 26, fontWeight: '700', lineHeight: 32 },
   subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
+  reputationBanner: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.black,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.gray50,
+  },
+  reputationText: { flex: 1, gap: spacing.sm },
+  reputationTitle: { fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  reputationBody: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
   section: { fontSize: 16, fontWeight: '600', marginBottom: spacing.md, marginTop: spacing.sm },
   step: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
   stepNum: {

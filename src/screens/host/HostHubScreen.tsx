@@ -11,10 +11,10 @@ import { AppIcon } from '../../components/AppIcon'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
-import { useNotifications } from '../../context/NotificationContext'
-import { getHostByUserId, getHostProfileDetails, SEED_USERS } from '../../data/mockData'
+import { getHostByUserId, getHostProfileDetails } from '../../data/mockData'
 import { formatHostPrice } from '../../lib/hostFilters'
-import { PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
+import { getHostPaymentMethods, normalizeHostSettings, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
+import { parsePriceInput } from '../../lib/hostPricing'
 import { colors, radius, spacing } from '../../theme'
 import type { HostSettings } from '../../types'
 
@@ -84,30 +84,44 @@ export function HostHubScreen() {
     hostRequests,
     activeLoads,
   } = useApp()
-  const { push } = useNotifications()
 
-  const [draft, setDraft] = useState<HostSettings | null>(hostSettings)
+  const host = user ? getHostByUserId(user.id) : null
+
+  const [draft, setDraft] = useState<HostSettings>(() =>
+    normalizeHostSettings(hostSettings, host),
+  )
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    setDraft(hostSettings)
-  }, [hostSettings])
+    if (!hostSettings || !user) return
+    const h = getHostByUserId(user.id)
+    setDraft(normalizeHostSettings(hostSettings, h))
+  }, [hostSettings, user])
 
-  if (!user || !draft) return null
+  if (!user) return null
 
-  const host = getHostByUserId(user.id)
   const profile = host ? getHostProfileDetails(host.id) : null
   const verification = user.hostVerification
+  const pricing = draft.pricing
 
   const patch = (partial: Partial<HostSettings>) => {
-    setDraft((prev) => (prev ? { ...prev, ...partial } : prev))
+    setDraft((prev) => normalizeHostSettings({ ...prev, ...partial }, host))
+    setSaved(false)
+  }
+
+  const patchPricing = (partial: Partial<HostSettings['pricing']>) => {
+    setDraft((prev) => {
+      const base = normalizeHostSettings(prev, host)
+      return normalizeHostSettings({ ...base, pricing: { ...base.pricing, ...partial } }, host)
+    })
     setSaved(false)
   }
 
   const patchBank = (field: keyof HostSettings['bankDetails'], value: string) => {
-    setDraft((prev) =>
-      prev ? { ...prev, bankDetails: { ...prev.bankDetails, [field]: value } } : prev,
-    )
+    setDraft((prev) => ({
+      ...prev,
+      bankDetails: { ...prev.bankDetails, [field]: value },
+    }))
     setSaved(false)
   }
 
@@ -115,19 +129,6 @@ export function HostHubScreen() {
     const next = { ...draft, isOnline: online }
     setDraft(next)
     await updateHostSettings(next)
-
-    if (online && next.notifyGuestsWhenOnline && host) {
-      const customers = SEED_USERS.filter((u) => u.role === 'customer')
-      await Promise.all(
-        customers.map((c) =>
-          push(
-            c.id,
-            `${host.name} is online`,
-            `${host.name} is accepting loads in ${host.location}. Book now while slots last.`,
-          ),
-        ),
-      )
-    }
   }
 
   const handleSave = async () => {
@@ -189,7 +190,6 @@ export function HostHubScreen() {
       {host && (
         <Section title="Listing">
           <Row icon="map-pin" label="Location" value={`${host.location}${host.district ? ` · ${host.district}` : ''}`} />
-          <Row icon="dollar-sign" label="Price" value={`${formatHostPrice(host.price)} per load`} />
           <Row icon="wind" label="Dryer" value={`${host.dryerType} · ~${host.turnaroundHours} hr · ${host.slotsLeft} slots`} />
           {profile ? (
             <Row icon="shield" label="Rating" value={`${host.rating > 0 ? host.rating.toFixed(1) : 'New'} · ${profile.loadsHosted} loads hosted`} />
@@ -200,6 +200,44 @@ export function HostHubScreen() {
           ))}
         </Section>
       )}
+
+      <Section title="Your prices">
+        <Text style={styles.sectionHint}>
+          You control what you charge. Guests see these rates when booking. Set folding to $0 to hide that service.
+        </Text>
+        <View style={styles.priceField}>
+          <Text style={styles.priceLabel}>Drying (per load)</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="number-pad"
+            value={String(pricing.dryPrice)}
+            onChangeText={(v) => patchPricing({ dryPrice: parsePriceInput(v) })}
+          />
+        </View>
+        <View style={styles.priceField}>
+          <Text style={styles.priceLabel}>Folding service (per load)</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="number-pad"
+            value={String(pricing.foldingPrice)}
+            onChangeText={(v) => patchPricing({ foldingPrice: parsePriceInput(v) })}
+          />
+        </View>
+        <View style={styles.priceField}>
+          <Text style={styles.priceLabel}>Dryer sheets (if guest buys)</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="number-pad"
+            value={String(pricing.sheetsPrice)}
+            onChangeText={(v) => patchPricing({ sheetsPrice: parsePriceInput(v) })}
+          />
+        </View>
+        <Text style={styles.paymentSummary}>
+          Guests see: Dry {formatHostPrice(pricing.dryPrice)}
+          {pricing.foldingPrice > 0 ? ` · Folding ${formatHostPrice(pricing.foldingPrice)}` : ''}
+          {' · Sheets '}{formatHostPrice(pricing.sheetsPrice)}
+        </Text>
+      </Section>
 
       <Section title="Payments">
         <Text style={styles.sectionHint}>Choose how guests can pay you.</Text>
@@ -274,6 +312,18 @@ export function HostHubScreen() {
           <Row icon="map-pin" label="Verified address" value={verification.address} />
         ) : null}
       </Section>
+
+      <Pressable style={styles.reputationCard} onPress={() => navigate('help')}>
+        <AppIcon name="award" size={18} />
+        <View style={styles.reputationCardText}>
+          <Text style={styles.reputationCardTitle}>Log every sale — build your reputation</Text>
+          <Text style={styles.reputationCardBody}>
+            More completed loads on the app means higher search visibility. Read the host FAQ on why
+            off-platform deals hurt your standing.
+          </Text>
+        </View>
+        <AppIcon name="chevron-right" size={18} color={colors.gray400} />
+      </Pressable>
 
       <View style={styles.actions}>
         <PrimaryButton title={saved ? 'Saved' : 'Save changes'} onPress={handleSave} full />
@@ -363,8 +413,24 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
   },
+  priceField: { gap: spacing.sm },
+  priceLabel: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
   paymentSummary: { fontSize: 13, color: colors.green, fontWeight: '600' },
   paymentWarning: { fontSize: 13, color: colors.danger, fontWeight: '500' },
+  reputationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.black,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.gray50,
+  },
+  reputationCardText: { flex: 1, gap: 4 },
+  reputationCardTitle: { fontSize: 14, fontWeight: '700', lineHeight: 19 },
+  reputationCardBody: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
   actions: { gap: spacing.sm, marginBottom: spacing.xl },
   linkBtn: {
     flexDirection: 'row',
