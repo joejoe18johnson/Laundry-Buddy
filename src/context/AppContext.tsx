@@ -8,17 +8,27 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from './AuthContext'
+import { useNotifications } from './NotificationContext'
 import {
   getCustomerSeedBooking,
   getHostByUserId,
   getHostDashboardSeed,
+  getAvailableHosts,
 } from '../data/mockData'
+import {
+  DEFAULT_HOST_SETTINGS,
+  getAllHostSettings,
+  isHostOnline,
+  saveHostSettings,
+} from '../lib/hostSettingsStorage'
 import type {
   Booking,
   BookingStage,
   DropOffTime,
   Host,
   HostRequest,
+  HostSettings,
+  PaymentMethod,
   Screen,
   SheetsOption,
 } from '../types'
@@ -30,16 +40,22 @@ interface AppState {
   hostRequests: HostRequest[]
   activeLoads: Booking[]
   hostStats: { loadsToday: number; maxLoads: number; accepting: boolean }
+  hostSettings: HostSettings | null
+  hostSettingsMap: Record<string, HostSettings>
+  onlineHosts: Host[]
   showMap: boolean
   navigate: (screen: Screen) => void
   viewHostProfile: (host: Host) => void
   selectHost: (host: Host) => void
   setShowMap: (show: boolean) => void
+  getSettingsForHost: (hostUserId?: string) => HostSettings
+  updateHostSettings: (settings: HostSettings) => Promise<void>
   confirmBooking: (details: {
     dropOffTime: DropOffTime
     loads: number
     sheetsOption: SheetsOption
     notes: string
+    paymentMethod: PaymentMethod
   }) => void
   acceptRequest: (requestId: string) => void
   declineRequest: (requestId: string) => void
@@ -48,6 +64,13 @@ interface AppState {
 }
 
 const AppContext = createContext<AppState | null>(null)
+
+const STAGE_LABELS: Record<BookingStage, string> = {
+  'got-bag': 'Bag received',
+  waiting: 'Waiting for dryer',
+  drying: 'Drying',
+  ready: 'Ready for pickup',
+}
 
 function nowTime() {
   return new Date().toLocaleTimeString('en-US', {
@@ -63,6 +86,7 @@ function defaultScreen(role: 'customer' | 'host'): Screen {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
+  const { push } = useNotifications()
   const role = user!.role
 
   const hostSeed = role === 'host' ? getHostDashboardSeed(user!.id) : null
@@ -82,7 +106,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     maxLoads: hostSeed?.maxLoads ?? 4,
     accepting: hostSeed?.accepting ?? true,
   })
+  const [hostSettingsMap, setHostSettingsMap] = useState<Record<string, HostSettings>>({})
+  const [hostSettings, setHostSettings] = useState<HostSettings | null>(null)
   const [showMap, setShowMap] = useState(false)
+
+  useEffect(() => {
+    getAllHostSettings().then((map) => {
+      setHostSettingsMap(map)
+      if (role === 'host') {
+        setHostSettings(map[user!.id] ?? { ...DEFAULT_HOST_SETTINGS })
+      }
+    })
+  }, [role, user!.id])
 
   useEffect(() => {
     setScreen(defaultScreen(role))
@@ -95,10 +130,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
         maxLoads: seed.maxLoads,
         accepting: seed.accepting,
       })
+      setHostSettings(hostSettingsMap[user!.id] ?? { ...DEFAULT_HOST_SETTINGS })
     } else {
       setBooking(getCustomerSeedBooking(user!.id))
     }
-  }, [role, user!.id])
+  }, [role, user!.id, hostSettingsMap])
+
+  const onlineHosts = useMemo(
+    () =>
+      getAvailableHosts().filter((h) => isHostOnline(h.hostUserId, hostSettingsMap)),
+    [hostSettingsMap],
+  )
+
+  const getSettingsForHost = useCallback(
+    (hostUserId?: string) => {
+      if (!hostUserId) return { ...DEFAULT_HOST_SETTINGS }
+      return hostSettingsMap[hostUserId] ?? { ...DEFAULT_HOST_SETTINGS }
+    },
+    [hostSettingsMap],
+  )
+
+  const updateHostSettings = useCallback(
+    async (settings: HostSettings) => {
+      if (role !== 'host' || !user) return
+      await saveHostSettings(user.id, settings)
+      setHostSettings(settings)
+      setHostSettingsMap((prev) => ({ ...prev, [user.id]: settings }))
+    },
+    [role, user],
+  )
 
   const navigate = useCallback((next: Screen) => setScreen(next), [])
 
@@ -112,12 +172,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setScreen('customer-booking')
   }, [])
 
+  const notifyHost = useCallback(
+    async (hostUserId: string | undefined, title: string, body: string) => {
+      if (!hostUserId) return
+      const settings = hostSettingsMap[hostUserId]
+      if (settings?.notifyNewRequests !== false) {
+        await push(hostUserId, title, body)
+      }
+    },
+    [hostSettingsMap, push],
+  )
+
+  const notifyCustomer = useCallback(
+    async (customerId: string | undefined, title: string, body: string) => {
+      if (!customerId) return
+      await push(customerId, title, body)
+    },
+    [push],
+  )
+
   const confirmBooking = useCallback(
     (details: {
       dropOffTime: DropOffTime
       loads: number
       sheetsOption: SheetsOption
       notes: string
+      paymentMethod: PaymentMethod
     }) => {
       if (!selectedHost || !user) return
       const newBooking: Booking = {
@@ -131,6 +211,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dropOffTime: details.dropOffTime,
         sheetsOption: details.sheetsOption,
         notes: details.notes,
+        paymentMethod: details.paymentMethod,
         stage: 'got-bag',
         address: selectedHost.address,
         gateCode: selectedHost.gateCode,
@@ -139,8 +220,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       setBooking(newBooking)
       setScreen('customer-tracking')
+
+      notifyHost(
+        selectedHost.hostUserId,
+        'New booking',
+        `${user.name} booked ${details.loads} load${details.loads > 1 ? 's' : ''} · ${details.paymentMethod === 'cash' ? 'Cash' : 'Bank transfer'}`,
+      )
+      notifyCustomer(
+        user.id,
+        'Booking confirmed',
+        `${selectedHost.name} will expect your laundry during your drop-off window.`,
+      )
     },
-    [selectedHost, user],
+    [selectedHost, user, notifyHost, notifyCustomer],
   )
 
   const acceptRequest = useCallback(
@@ -168,29 +260,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveLoads((prev) => [...prev, load])
       setHostRequests((prev) => prev.filter((r) => r.id !== requestId))
       setHostStats((prev) => ({ ...prev, loadsToday: prev.loadsToday + 1 }))
+
+      if (request.customerId) {
+        notifyCustomer(
+          request.customerId,
+          'Request accepted',
+          `${hostProfile?.name ?? user.name} accepted your load request.`,
+        )
+      }
     },
-    [hostRequests, user],
+    [hostRequests, user, notifyCustomer],
   )
 
-  const declineRequest = useCallback((requestId: string) => {
-    setHostRequests((prev) => prev.filter((r) => r.id !== requestId))
-  }, [])
+  const declineRequest = useCallback(
+    (requestId: string) => {
+      const request = hostRequests.find((r) => r.id === requestId)
+      setHostRequests((prev) => prev.filter((r) => r.id !== requestId))
+      if (request?.customerId) {
+        notifyCustomer(
+          request.customerId,
+          'Request declined',
+          'The host could not take your load this time. Try another nearby host.',
+        )
+      }
+    },
+    [hostRequests, notifyCustomer],
+  )
 
-  const advanceStage = useCallback((loadId: string, stage: BookingStage) => {
-    const time = nowTime()
-    setActiveLoads((prev) =>
-      prev.map((load) =>
-        load.id === loadId
-          ? { ...load, stage, stageTimes: { ...load.stageTimes, [stage]: time } }
-          : load,
-      ),
-    )
-    setBooking((prev) =>
-      prev?.id === loadId
-        ? { ...prev, stage, stageTimes: { ...prev.stageTimes, [stage]: time } }
-        : prev,
-    )
-  }, [])
+  const advanceStage = useCallback(
+    (loadId: string, stage: BookingStage) => {
+      const time = nowTime()
+      let customerId: string | undefined
+      let hostName = ''
+
+      setActiveLoads((prev) =>
+        prev.map((load) => {
+          if (load.id === loadId) {
+            customerId = load.customerId
+            hostName = load.hostName
+            return { ...load, stage, stageTimes: { ...load.stageTimes, [stage]: time } }
+          }
+          return load
+        }),
+      )
+      setBooking((prev) =>
+        prev?.id === loadId
+          ? { ...prev, stage, stageTimes: { ...prev.stageTimes, [stage]: time } }
+          : prev,
+      )
+
+      if (customerId) {
+        notifyCustomer(
+          customerId,
+          STAGE_LABELS[stage],
+          `${hostName} updated your load — ${STAGE_LABELS[stage].toLowerCase()}.`,
+        )
+      }
+    },
+    [notifyCustomer],
+  )
 
   const markDry = useCallback(
     (loadId: string) => {
@@ -208,11 +336,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostRequests,
       activeLoads,
       hostStats,
+      hostSettings,
+      hostSettingsMap,
+      onlineHosts,
       showMap,
       navigate,
       viewHostProfile,
       selectHost,
       setShowMap,
+      getSettingsForHost,
+      updateHostSettings,
       confirmBooking,
       acceptRequest,
       declineRequest,
@@ -226,10 +359,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostRequests,
       activeLoads,
       hostStats,
+      hostSettings,
+      hostSettingsMap,
+      onlineHosts,
       showMap,
       navigate,
       viewHostProfile,
       selectHost,
+      getSettingsForHost,
+      updateHostSettings,
       confirmBooking,
       acceptRequest,
       declineRequest,
