@@ -1,10 +1,20 @@
+import { useState } from 'react'
+import { LayoutChangeEvent, StyleSheet, View } from 'react-native'
 import Svg, { Circle, Path, Rect, Text as SvgText } from 'react-native-svg'
 import { colors } from '../theme'
 
 /** Bundled stylized map — always visible for testing, no network required. */
 export function SampleMapArt() {
+  const [size, setSize] = useState({ width: 400, height: 400 })
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout
+    if (width > 0 && height > 0) setSize({ width, height })
+  }
+
   return (
-    <Svg width="100%" height="100%" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice">
+    <View style={styles.wrap} onLayout={onLayout}>
+      <Svg width={size.width} height={size.height} viewBox="0 0 400 400" preserveAspectRatio="xMidYMid slice">
       <Rect width={400} height={400} fill="#e8efe4" />
       <Rect x={0} y={0} width={400} height={400} fill="#dce8f5" opacity={0.35} />
       <Path
@@ -45,6 +55,11 @@ export function SampleMapArt() {
       <SvgText x={300} y={268} textAnchor="middle" fill={colors.gray500} fontSize={9}>
         Belmopan
       </SvgText>
-    </Svg>
+      </Svg>
+    </View>
   )
 }
+
+const styles = StyleSheet.create({
+  wrap: { flex: 1, width: '100%', height: '100%' },
+})

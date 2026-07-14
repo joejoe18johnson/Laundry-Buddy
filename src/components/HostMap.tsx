@@ -1,9 +1,7 @@
-import Constants from 'expo-constants'
 import { Component, type ReactNode } from 'react'
-import { NativeModules, Platform } from 'react-native'
+import { NativeModules } from 'react-native'
+import { HostMapLeaflet } from './map/HostMapLeaflet'
 import { HostMapLibre } from './map/HostMapLibre'
-import { HostMapNative } from './map/HostMapNative'
-import { HostMapSample } from './map/HostMapSample'
 import type { Host } from '../types'
 
 export interface HostMapProps {
@@ -11,23 +9,7 @@ export interface HostMapProps {
   onHostPress: (host: Host) => void
 }
 
-type MapBackend = 'maplibre' | 'native' | 'sample'
-
-function resolveMapBackend(): MapBackend {
-  if (Platform.OS === 'web') return 'sample'
-  if (NativeModules.MLRNModule != null) return 'maplibre'
-  if (Constants.appOwnership === 'expo' && (Platform.OS === 'ios' || Platform.OS === 'android')) {
-    return 'native'
-  }
-  return 'sample'
-}
-
-interface State {
-  backend: MapBackend
-  failed: boolean
-}
-
-/** Catches native map crashes and falls back to the sample map. */
+/** Catches native map crashes and falls back to Leaflet. */
 class MapErrorBoundary extends Component<
   { fallback: ReactNode; children: ReactNode },
   { hasError: boolean }
@@ -45,17 +27,18 @@ class MapErrorBoundary extends Component<
 }
 
 /**
- * Home map — MapLibre + OpenFreeMap when available (free OSM tiles),
- * Apple/Google via react-native-maps in Expo Go, sample map as fallback.
+ * Home map — Leaflet + OpenStreetMap in Expo Go (default).
+ * MapLibre + OpenFreeMap when a native dev build includes MapLibre.
  */
 export function HostMap(props: HostMapProps) {
-  const backend = resolveMapBackend()
-  const sample = <HostMapSample {...props} />
+  const leaflet = <HostMapLeaflet {...props} />
+  const hasMapLibre = NativeModules.MLRNModule != null
 
-  if (backend === 'sample') return sample
+  if (!hasMapLibre) return leaflet
 
-  const map =
-    backend === 'maplibre' ? <HostMapLibre {...props} /> : <HostMapNative {...props} />
-
-  return <MapErrorBoundary fallback={sample}>{map}</MapErrorBoundary>
+  return (
+    <MapErrorBoundary fallback={leaflet}>
+      <HostMapLibre {...props} />
+    </MapErrorBoundary>
+  )
 }

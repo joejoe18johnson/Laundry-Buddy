@@ -372,6 +372,7 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
+    zIndex: 0,
   },
   mapBadgeWrap: {
     position: 'absolute',
