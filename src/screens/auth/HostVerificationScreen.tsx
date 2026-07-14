@@ -1,5 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
+import { GhostButton, PrimaryButton, Screen } from '../../components/ui'
+import { colors, radius } from '../../theme'
 
 export function HostVerificationScreen() {
   const { user, submitHostVerification, logout } = useAuth()
@@ -12,133 +15,158 @@ export function HostVerificationScreen() {
   const status = user.hostVerification?.status ?? 'none'
   const isPending = status === 'pending'
   const isRejected = status === 'rejected'
-
   const canSubmit = address.trim().length > 0 && idUploaded && addressUploaded && !isPending
-
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    if (!canSubmit) return
-    submitHostVerification({ address, idUploaded, addressUploaded })
-  }
 
   if (isPending) {
     return (
-      <div className="auth-screen">
-        <header className="auth-header">
-          <span className="status-pill pending">Under review</span>
-          <h1>Verification submitted</h1>
-          <p className="muted">
-            We're reviewing your ID and address proof. This usually takes 24 hours. We'll notify you when you're approved.
-          </p>
-        </header>
-
-        <div className="verification-checklist">
-          <div className="check-item done">
-            <span className="check-icon">✓</span>
-            <div>
-              <strong>Government ID</strong>
-              <p className="muted">Uploaded</p>
-            </div>
-          </div>
-          <div className="check-item done">
-            <span className="check-icon">✓</span>
-            <div>
-              <strong>Address proof</strong>
-              <p className="muted">{user.hostVerification?.address}</p>
-            </div>
-          </div>
-        </div>
-
-        <button type="button" className="btn btn-ghost btn-full" onClick={logout}>
-          Log out
-        </button>
-      </div>
+      <Screen>
+        <View style={styles.pillPending}>
+          <Text style={styles.pillPendingText}>Under review</Text>
+        </View>
+        <Text style={styles.title}>Verification submitted</Text>
+        <Text style={styles.subtitle}>
+          We're reviewing your ID and address proof. This usually takes 24 hours.
+        </Text>
+        <View style={styles.checklist}>
+          <View style={styles.checkItem}>
+            <Text style={styles.checkIcon}>✓</Text>
+            <View>
+              <Text style={styles.checkTitle}>Government ID</Text>
+              <Text style={styles.checkSub}>Uploaded</Text>
+            </View>
+          </View>
+          <View style={styles.checkItem}>
+            <Text style={styles.checkIcon}>✓</Text>
+            <View>
+              <Text style={styles.checkTitle}>Address proof</Text>
+              <Text style={styles.checkSub}>{user.hostVerification?.address}</Text>
+            </View>
+          </View>
+        </View>
+        <GhostButton title="Log out" onPress={logout} full />
+      </Screen>
     )
   }
 
   return (
-    <div className="auth-screen">
-      <header className="auth-header">
-        <span className="status-pill">Host verification</span>
-        <h1>Verify your identity</h1>
-        <p className="muted">
-          {isRejected
-            ? 'Your previous submission was rejected. Please resubmit clear documents.'
-            : 'Upload your ID and proof of address so guests can trust your listing.'}
-        </p>
-      </header>
+    <Screen>
+      <View style={styles.pill}>
+        <Text style={styles.pillText}>Host verification</Text>
+      </View>
+      <Text style={styles.title}>Verify your identity</Text>
+      <Text style={styles.subtitle}>
+        {isRejected
+          ? 'Your previous submission was rejected. Please resubmit clear documents.'
+          : 'Upload your ID and proof of address so guests can trust your listing.'}
+      </Text>
 
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <section className="verify-section">
-          <h2>Government ID</h2>
-          <p className="muted small">Passport, social security card, or driver's license</p>
-          <button
-            type="button"
-            className={`upload-card ${idUploaded ? 'done' : ''}`}
-            onClick={() => setIdUploaded(true)}
-          >
-            {idUploaded ? (
-              <>
-                <span className="upload-check">✓</span>
-                <span>ID uploaded</span>
-              </>
-            ) : (
-              <>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <rect x="3" y="4" width="18" height="16" rx="2" />
-                  <circle cx="9" cy="11" r="2" />
-                  <path d="M15 9h2M15 13h2" />
-                </svg>
-                <span>Upload ID photo</span>
-              </>
-            )}
-          </button>
-        </section>
+      <Text style={styles.sectionTitle}>Government ID</Text>
+      <Text style={styles.sectionSub}>Passport, social security card, or driver's license</Text>
+      <Pressable
+        onPress={() => setIdUploaded(true)}
+        style={[styles.upload, idUploaded && styles.uploadDone]}
+      >
+        <Text style={[styles.uploadText, idUploaded && styles.uploadTextDone]}>
+          {idUploaded ? '✓ ID uploaded' : 'Upload ID photo'}
+        </Text>
+      </Pressable>
 
-        <section className="verify-section">
-          <h2>Home address</h2>
-          <label className="field">
-            <span>Street address</span>
-            <input
-              type="text"
-              placeholder="22 Coconut St., Las Flores"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              required
-            />
-          </label>
+      <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Home address</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="22 Coconut St., Las Flores"
+        value={address}
+        onChangeText={setAddress}
+      />
+      <Text style={styles.sectionSub}>Utility bill or lease in your name</Text>
+      <Pressable
+        onPress={() => setAddressUploaded(true)}
+        style={[styles.upload, addressUploaded && styles.uploadDone]}
+      >
+        <Text style={[styles.uploadText, addressUploaded && styles.uploadTextDone]}>
+          {addressUploaded ? '✓ Address proof uploaded' : 'Upload address proof'}
+        </Text>
+      </Pressable>
 
-          <p className="muted small">Proof of address — utility bill or lease in your name</p>
-          <button
-            type="button"
-            className={`upload-card ${addressUploaded ? 'done' : ''}`}
-            onClick={() => setAddressUploaded(true)}
-          >
-            {addressUploaded ? (
-              <>
-                <span className="upload-check">✓</span>
-                <span>Address proof uploaded</span>
-              </>
-            ) : (
-              <>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
-                </svg>
-                <span>Upload address proof</span>
-              </>
-            )}
-          </button>
-        </section>
-
-        <button type="submit" className="btn btn-primary btn-full" disabled={!canSubmit}>
-          Submit for review
-        </button>
-
-        <button type="button" className="btn btn-ghost btn-full" onClick={logout}>
-          Log out
-        </button>
-      </form>
-    </div>
+      <View style={{ height: 20 }} />
+      <PrimaryButton
+        title="Submit for review"
+        onPress={() => submitHostVerification({ address, idUploaded, addressUploaded })}
+        disabled={!canSubmit}
+        full
+      />
+      <View style={{ height: 12 }} />
+      <GhostButton title="Log out" onPress={logout} full />
+    </Screen>
   )
 }
+
+const styles = StyleSheet.create({
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 8 },
+  subtitle: { fontSize: 15, color: colors.gray500, lineHeight: 22, marginBottom: 24 },
+  pill: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.gray50,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    marginBottom: 12,
+  },
+  pillText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
+  pillPending: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fff8e6',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    marginBottom: 12,
+  },
+  pillPendingText: { fontSize: 12, fontWeight: '600', color: '#b8860b' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  sectionSub: { fontSize: 13, color: colors.gray500, marginBottom: 10 },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.sm,
+    padding: 14,
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  upload: {
+    minHeight: 100,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.gray200,
+    borderRadius: radius.md,
+    backgroundColor: colors.gray50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  uploadDone: { borderStyle: 'solid', borderColor: colors.green, backgroundColor: colors.greenBg },
+  uploadText: { fontSize: 15, fontWeight: '500', color: colors.gray500 },
+  uploadTextDone: { color: colors.green },
+  checklist: { gap: 12, marginVertical: 24 },
+  checkItem: {
+    flexDirection: 'row',
+    gap: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+    borderRadius: radius.md,
+  },
+  checkIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.green,
+    color: colors.white,
+    textAlign: 'center',
+    lineHeight: 28,
+    fontSize: 14,
+    fontWeight: '700',
+    overflow: 'hidden',
+  },
+  checkTitle: { fontSize: 15, fontWeight: '600' },
+  checkSub: { fontSize: 13, color: colors.gray500, marginTop: 2 },
+})

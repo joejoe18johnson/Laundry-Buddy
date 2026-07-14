@@ -34,9 +34,12 @@ export interface User {
 
 export interface Host {
   id: string
+  hostUserId?: string
   name: string
   location: string
+  distanceKm?: number
   rating: number
+  reviewCount?: number
   price: number
   slotsLeft: number
   turnaroundHours: number
@@ -54,6 +57,7 @@ export interface Booking {
   id: string
   hostId: string
   hostName: string
+  customerId?: string
   customerName: string
   location: string
   loads: number
@@ -69,6 +73,7 @@ export interface Booking {
 
 export interface HostRequest {
   id: string
+  customerId?: string
   customerName: string
   location: string
   loads: number

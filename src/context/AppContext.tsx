@@ -8,7 +8,11 @@ import {
   type ReactNode,
 } from 'react'
 import { useAuth } from './AuthContext'
-import { HOSTS, INITIAL_REQUEST } from '../data/mockData'
+import {
+  getCustomerSeedBooking,
+  getHostByUserId,
+  getHostDashboardSeed,
+} from '../data/mockData'
 import type {
   Booking,
   BookingStage,
@@ -23,8 +27,9 @@ interface AppState {
   screen: Screen
   selectedHost: Host | null
   booking: Booking | null
-  hostRequest: HostRequest | null
-  activeLoad: Booking | null
+  hostRequests: HostRequest[]
+  activeLoads: Booking[]
+  hostStats: { loadsToday: number; maxLoads: number; accepting: boolean }
   showMap: boolean
   navigate: (screen: Screen) => void
   selectHost: (host: Host) => void
@@ -35,10 +40,10 @@ interface AppState {
     sheetsOption: SheetsOption
     notes: string
   }) => void
-  acceptRequest: () => void
-  declineRequest: () => void
-  advanceStage: (stage: BookingStage) => void
-  markDry: () => void
+  acceptRequest: (requestId: string) => void
+  declineRequest: (requestId: string) => void
+  advanceStage: (loadId: string, stage: BookingStage) => void
+  markDry: (loadId: string) => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -59,16 +64,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const role = user!.role
 
+  const hostSeed = role === 'host' ? getHostDashboardSeed(user!.id) : null
+  const customerSeed = role === 'customer' ? getCustomerSeedBooking(user!.id) : null
+
   const [screen, setScreen] = useState<Screen>(() => defaultScreen(role))
   const [selectedHost, setSelectedHost] = useState<Host | null>(null)
-  const [booking, setBooking] = useState<Booking | null>(null)
-  const [hostRequest, setHostRequest] = useState<HostRequest | null>(INITIAL_REQUEST)
-  const [activeLoad, setActiveLoad] = useState<Booking | null>(null)
+  const [booking, setBooking] = useState<Booking | null>(() => customerSeed)
+  const [hostRequests, setHostRequests] = useState<HostRequest[]>(
+    () => hostSeed?.pendingRequests ?? [],
+  )
+  const [activeLoads, setActiveLoads] = useState<Booking[]>(
+    () => hostSeed?.activeLoads ?? [],
+  )
+  const [hostStats, setHostStats] = useState({
+    loadsToday: hostSeed?.loadsToday ?? 0,
+    maxLoads: hostSeed?.maxLoads ?? 4,
+    accepting: hostSeed?.accepting ?? true,
+  })
   const [showMap, setShowMap] = useState(false)
 
   useEffect(() => {
     setScreen(defaultScreen(role))
-  }, [role])
+    if (role === 'host') {
+      const seed = getHostDashboardSeed(user!.id)
+      setHostRequests(seed.pendingRequests)
+      setActiveLoads(seed.activeLoads)
+      setHostStats({
+        loadsToday: seed.loadsToday,
+        maxLoads: seed.maxLoads,
+        accepting: seed.accepting,
+      })
+    } else {
+      setBooking(getCustomerSeedBooking(user!.id))
+    }
+  }, [role, user!.id])
 
   const navigate = useCallback((next: Screen) => setScreen(next), [])
 
@@ -89,6 +118,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         id: `bk-${Date.now()}`,
         hostId: selectedHost.id,
         hostName: selectedHost.name,
+        customerId: user.id,
         customerName: user.name,
         location: selectedHost.location,
         loads: details.loads,
@@ -107,55 +137,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [selectedHost, user],
   )
 
-  const acceptRequest = useCallback(() => {
-    if (!hostRequest) return
-    const host = HOSTS[0]
-    const load: Booking = {
-      id: 'load-carlos',
-      hostId: host.id,
-      hostName: host.name,
-      customerName: 'Carlos',
-      location: 'Las Flores',
-      loads: 1,
-      dropOffTime: '2pm-4pm',
-      sheetsOption: 'own',
-      notes: '',
-      stage: 'got-bag',
-      address: host.address,
-      gateCode: host.gateCode,
-      stageTimes: { 'got-bag': '9:12am' },
-    }
-    setActiveLoad(load)
-    setHostRequest(null)
-  }, [hostRequest])
+  const acceptRequest = useCallback(
+    (requestId: string) => {
+      const request = hostRequests.find((r) => r.id === requestId)
+      if (!request || !user) return
 
-  const declineRequest = useCallback(() => setHostRequest(null), [])
+      const hostProfile = getHostByUserId(user.id)
+      const load: Booking = {
+        id: `load-${Date.now()}`,
+        hostId: hostProfile?.id ?? 'unknown',
+        hostName: hostProfile?.name ?? user.name,
+        customerId: request.customerId,
+        customerName: request.customerName,
+        location: request.location,
+        loads: request.loads,
+        dropOffTime: request.dropOffTime,
+        sheetsOption: request.sheetsOption,
+        notes: '',
+        stage: 'got-bag',
+        address: hostProfile?.address ?? '',
+        gateCode: hostProfile?.gateCode ?? '',
+        stageTimes: { 'got-bag': nowTime() },
+      }
+      setActiveLoads((prev) => [...prev, load])
+      setHostRequests((prev) => prev.filter((r) => r.id !== requestId))
+      setHostStats((prev) => ({ ...prev, loadsToday: prev.loadsToday + 1 }))
+    },
+    [hostRequests, user],
+  )
 
-  const advanceStage = useCallback((stage: BookingStage) => {
-    setActiveLoad((prev) =>
-      prev
-        ? { ...prev, stage, stageTimes: { ...prev.stageTimes, [stage]: nowTime() } }
-        : prev,
+  const declineRequest = useCallback((requestId: string) => {
+    setHostRequests((prev) => prev.filter((r) => r.id !== requestId))
+  }, [])
+
+  const advanceStage = useCallback((loadId: string, stage: BookingStage) => {
+    const time = nowTime()
+    setActiveLoads((prev) =>
+      prev.map((load) =>
+        load.id === loadId
+          ? { ...load, stage, stageTimes: { ...load.stageTimes, [stage]: time } }
+          : load,
+      ),
     )
     setBooking((prev) =>
-      prev
-        ? { ...prev, stage, stageTimes: { ...prev.stageTimes, [stage]: nowTime() } }
+      prev?.id === loadId
+        ? { ...prev, stage, stageTimes: { ...prev.stageTimes, [stage]: time } }
         : prev,
     )
   }, [])
 
-  const markDry = useCallback(() => {
-    advanceStage('ready')
-    setScreen('host-dashboard')
-  }, [advanceStage])
+  const markDry = useCallback(
+    (loadId: string) => {
+      advanceStage(loadId, 'ready')
+      setScreen('host-dashboard')
+    },
+    [advanceStage],
+  )
 
   const value = useMemo(
     () => ({
       screen,
       selectedHost,
       booking,
-      hostRequest,
-      activeLoad,
+      hostRequests,
+      activeLoads,
+      hostStats,
       showMap,
       navigate,
       selectHost,
@@ -170,8 +216,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       screen,
       selectedHost,
       booking,
-      hostRequest,
-      activeLoad,
+      hostRequests,
+      activeLoads,
+      hostStats,
       showMap,
       navigate,
       selectHost,

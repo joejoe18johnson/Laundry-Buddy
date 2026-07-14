@@ -1,120 +1,142 @@
 import { useState } from 'react'
-import type { Host } from '../types'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../context/AppContext'
+import type { Host } from '../types'
+import { colors, coverColors, radius, spacing } from '../theme'
+import { PrimaryButton } from './ui'
 
-const COVER_GRADIENTS: Record<string, string> = {
-  maria: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-  lopez: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-}
-
-interface HostCardProps {
-  host: Host
-}
-
-function StarIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-    </svg>
-  )
-}
-
-export function HostCard({ host }: HostCardProps) {
+export function HostCard({ host }: { host: Host }) {
   const { selectHost } = useApp()
   const [expanded, setExpanded] = useState(false)
-  const [showGeneratorInfo, setShowGeneratorInfo] = useState(false)
+  const [showGenerator, setShowGenerator] = useState(false)
+  const gradient = coverColors[host.id] ?? ['#667eea', '#764ba2']
 
   return (
-    <article className="host-card">
-      <button
-        type="button"
-        className="host-card-cover"
-        style={{ background: COVER_GRADIENTS[host.id] }}
-        onClick={() => setExpanded((e) => !e)}
-        aria-expanded={expanded}
-      >
-        <span className="host-card-badge">Free</span>
-      </button>
+    <View style={styles.card}>
+      <Pressable onPress={() => setExpanded(!expanded)}>
+        <LinearGradient colors={gradient} style={styles.cover} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>Free</Text>
+          </View>
+        </LinearGradient>
+      </Pressable>
 
-      <div className="host-card-body">
-        <button
-          type="button"
-          className="host-card-main"
-          onClick={() => setExpanded((e) => !e)}
-          aria-expanded={expanded}
-        >
-          <div className="host-card-row">
-            <h3 className="host-title">{host.location}</h3>
-            <span className="host-rating">
-              <StarIcon />
-              {host.rating.toFixed(1)}
-            </span>
-          </div>
-          <p className="host-subtitle">Hosted by {host.name}</p>
-          <p className="host-meta">
-            {host.slotsLeft} slots today · ~{host.turnaroundHours} hr turnaround · {host.dryerType}
-          </p>
-          <div className="host-tags">
+      <View style={styles.body}>
+        <Pressable onPress={() => setExpanded(!expanded)}>
+          <View style={styles.row}>
+            <Text style={styles.title}>{host.location}</Text>
+            <Text style={styles.rating}>
+              ★ {host.rating > 0 ? host.rating.toFixed(1) : 'New'}
+              {host.reviewCount ? ` (${host.reviewCount})` : ''}
+            </Text>
+          </View>
+          <Text style={styles.subtitle}>Hosted by {host.name}</Text>
+          <Text style={styles.meta}>
+            {host.slotsLeft} slots · ~{host.turnaroundHours} hr · {host.dryerType}
+            {host.distanceKm != null ? ` · ${host.distanceKm} km` : ''}
+          </Text>
+          <View style={styles.tags}>
             {host.hasGenerator && (
-              <button
-                type="button"
-                className="tag tag-accent"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowGeneratorInfo(true)
-                }}
-              >
-                Generator
-              </button>
+              <Pressable onPress={() => setShowGenerator(true)} style={styles.tagAccent}>
+                <Text style={styles.tagAccentText}>Generator</Text>
+              </Pressable>
             )}
             {host.foldingExtra != null && (
-              <span className="tag">Folding +${host.foldingExtra}</span>
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>Folding +${host.foldingExtra}</Text>
+              </View>
             )}
-          </div>
-        </button>
+          </View>
+        </Pressable>
 
         {expanded && (
-          <div className="host-expanded">
-            <div className="expanded-block">
-              <p className="expanded-label">Setup</p>
-              <ul className="detail-list">
-                {host.photos.map((photo) => (
-                  <li key={photo}>{photo}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="expanded-block">
-              <p className="expanded-label">House rules</p>
-              <ul className="detail-list">
-                {host.rules.map((rule) => (
-                  <li key={rule}>{rule}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <View style={styles.expanded}>
+            <Text style={styles.expandedLabel}>Setup</Text>
+            {host.photos.map((p) => (
+              <Text key={p} style={styles.expandedItem}>· {p}</Text>
+            ))}
+            <Text style={[styles.expandedLabel, { marginTop: 12 }]}>House rules</Text>
+            {host.rules.map((r) => (
+              <Text key={r} style={styles.expandedItem}>· {r}</Text>
+            ))}
+          </View>
         )}
 
-        <button type="button" className="btn btn-primary btn-full" onClick={() => selectHost(host)}>
-          Book slot
-        </button>
-      </div>
+        <PrimaryButton title="Book slot" onPress={() => selectHost(host)} full />
+      </View>
 
-      {showGeneratorInfo && (
-        <div className="modal-overlay" onClick={() => setShowGeneratorInfo(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-icon-wrap">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
-            </div>
-            <h3>Generator backup</h3>
-            <p>Works during BEL power outages — your load keeps drying when the grid goes down.</p>
-            <button type="button" className="btn btn-primary btn-full" onClick={() => setShowGeneratorInfo(false)}>
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
-    </article>
+      <Modal visible={showGenerator} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowGenerator(false)}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Generator backup</Text>
+            <Text style={styles.modalBody}>
+              Works during BEL power outages — your load keeps drying when the grid goes down.
+            </Text>
+            <PrimaryButton title="Got it" onPress={() => setShowGenerator(false)} full />
+          </View>
+        </Pressable>
+      </Modal>
+    </View>
   )
 }
+
+const styles = StyleSheet.create({
+  card: { marginBottom: spacing.lg },
+  cover: { height: 180, borderRadius: radius.lg, justifyContent: 'flex-start', padding: 12 },
+  badge: {
+    backgroundColor: colors.white,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    alignSelf: 'flex-start',
+  },
+  badgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  body: { paddingTop: 12, gap: 12 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  title: { fontSize: 16, fontWeight: '600' },
+  rating: { fontSize: 14, fontWeight: '500' },
+  subtitle: { fontSize: 14, color: colors.gray500, marginTop: 2 },
+  meta: { fontSize: 14, color: colors.gray500, marginTop: 4 },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+  tag: {
+    backgroundColor: colors.gray50,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+  },
+  tagText: { fontSize: 12, color: colors.gray600 },
+  tagAccent: {
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+  },
+  tagAccentText: { fontSize: 12, fontWeight: '500' },
+  expanded: { borderTopWidth: 1, borderTopColor: colors.gray100, paddingTop: 12 },
+  expandedLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.gray500,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  expandedItem: { fontSize: 14, color: colors.gray600, paddingVertical: 2 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modal: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: 24,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8, textAlign: 'center' },
+  modalBody: { fontSize: 15, color: colors.gray500, textAlign: 'center', marginBottom: 20, lineHeight: 22 },
+})

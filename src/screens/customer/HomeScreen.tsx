@@ -1,55 +1,86 @@
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { WeatherBanner } from '../../components/WeatherBanner'
 import { HostCard } from '../../components/HostCard'
-import { HOSTS } from '../../data/mockData'
+import { Screen } from '../../components/ui'
+import { getAvailableHosts, ACTIVE_REGION_LABEL } from '../../data/mockData'
 import { useApp } from '../../context/AppContext'
+import { colors, radius } from '../../theme'
 
 export function HomeScreen() {
   const { showMap, setShowMap } = useApp()
+  const hosts = getAvailableHosts()
 
   return (
-    <div className="screen">
-      <header className="screen-hero">
-        <h1>Find a dryer near you</h1>
-        <p className="screen-subtitle">Free community drying in Belmopan</p>
-      </header>
+    <Screen>
+      <Text style={styles.title}>Find a dryer near you</Text>
+      <Text style={styles.subtitle}>{hosts.length} hosts available in {ACTIVE_REGION_LABEL}</Text>
+      <Text style={styles.regionHint}>Belmopan, Roaring Creek & nearby communities</Text>
 
       <WeatherBanner />
 
-      <div className="toolbar">
-        <button type="button" className="toolbar-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
-          </svg>
-          Filters
-        </button>
-        <button type="button" className="toolbar-btn" onClick={() => setShowMap(!showMap)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-            <circle cx="12" cy="10" r="3" />
-          </svg>
-          {showMap ? 'List' : 'Map'}
-        </button>
-      </div>
+      <View style={styles.toolbar}>
+        <Pressable style={styles.toolBtn}>
+          <Text style={styles.toolText}>Filters</Text>
+        </Pressable>
+        <Pressable style={styles.toolBtn} onPress={() => setShowMap(!showMap)}>
+          <Text style={styles.toolText}>{showMap ? 'List' : 'Map'}</Text>
+        </Pressable>
+      </View>
 
       {showMap ? (
-        <div className="map-placeholder">
-          <div className="map-grid" />
-          <div className="map-pin map-pin-1">
-            <span>Maria</span>
-            <small>0.8 km</small>
-          </div>
-          <div className="map-pin map-pin-2">
-            <span>Mr. Lopez</span>
-            <small>1.2 km</small>
-          </div>
-        </div>
-      ) : (
-        <div className="host-list">
-          {HOSTS.map((host) => (
-            <HostCard key={host.id} host={host} />
+        <View style={styles.map}>
+          {hosts.map((host, i) => (
+            <View key={host.id} style={[styles.pin, pinPositions[i % 4]]}>
+              <Text style={styles.pinName}>{host.name}</Text>
+              <Text style={styles.pinDist}>{host.distanceKm} km</Text>
+            </View>
           ))}
-        </div>
+        </View>
+      ) : (
+        hosts.map((host) => <HostCard key={host.id} host={host} />)
       )}
-    </div>
+    </Screen>
   )
 }
+
+const pinPositions = [
+  { top: '25%' as const, left: '20%' as const },
+  { top: '45%' as const, right: '18%' as const },
+  { top: '60%' as const, left: '30%' as const },
+  { top: '35%' as const, right: '35%' as const },
+]
+
+const styles = StyleSheet.create({
+  title: { fontSize: 26, fontWeight: '700', marginBottom: 6 },
+  subtitle: { fontSize: 15, color: colors.gray500, marginBottom: 4 },
+  regionHint: { fontSize: 13, color: colors.gray400, marginBottom: 16 },
+  toolbar: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  toolBtn: {
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  toolText: { fontSize: 13, fontWeight: '600' },
+  map: {
+    height: 320,
+    backgroundColor: colors.gray50,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+    position: 'relative',
+  },
+  pin: {
+    position: 'absolute',
+    backgroundColor: colors.white,
+    padding: 10,
+    borderRadius: radius.md,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  pinName: { fontSize: 13, fontWeight: '600' },
+  pinDist: { fontSize: 11, color: colors.gray500 },
+})

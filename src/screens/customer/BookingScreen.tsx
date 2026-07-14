@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useApp } from '../../context/AppContext'
+import { BackButton, PrimaryButton, Screen } from '../../components/ui'
+import { colors, radius } from '../../theme'
 import type { DropOffTime, SheetsOption } from '../../types'
 
 export function BookingScreen() {
@@ -24,94 +27,145 @@ export function BookingScreen() {
   ]
 
   return (
-    <div className="screen screen-booking">
-      <button type="button" className="back-btn" onClick={() => navigate('customer-home')}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Back
-      </button>
+    <View style={styles.wrapper}>
+      <Screen>
+        <BackButton onPress={() => navigate('customer-home')} />
+        <Text style={styles.eyebrow}>{selectedHost.location}</Text>
+        <Text style={styles.title}>Book with {selectedHost.name}</Text>
 
-      <header className="booking-header">
-        <p className="booking-eyebrow">{selectedHost.location}</p>
-        <h1>Book with {selectedHost.name}</h1>
-      </header>
-
-      <section className="form-section">
-        <h2>Drop-off time</h2>
-        <div className="chip-group">
+        <Text style={styles.section}>Drop-off time</Text>
+        <View style={styles.chips}>
           {times.map((t) => (
-            <button
+            <Pressable
               key={t.value}
-              type="button"
-              className={`chip ${dropOffTime === t.value ? 'selected' : ''}`}
-              onClick={() => setDropOffTime(t.value)}
+              onPress={() => setDropOffTime(t.value)}
+              style={[styles.chip, dropOffTime === t.value && styles.chipSelected]}
             >
-              {t.label}
-            </button>
+              <Text style={[styles.chipText, dropOffTime === t.value && styles.chipTextSelected]}>
+                {t.label}
+              </Text>
+            </Pressable>
           ))}
-        </div>
-      </section>
+        </View>
 
-      <section className="form-section">
-        <h2>Loads</h2>
-        <div className="stepper">
-          <button type="button" className="stepper-btn" onClick={() => setLoads(Math.max(1, loads - 1))} aria-label="Decrease">
-            −
-          </button>
-          <div className="stepper-value">
-            <span className="stepper-count">{loads}</span>
-            <span className="stepper-label">standard basket{loads > 1 ? 's' : ''}</span>
-          </div>
-          <button type="button" className="stepper-btn" onClick={() => setLoads(loads + 1)} aria-label="Increase">
-            +
-          </button>
-        </div>
-      </section>
+        <Text style={styles.section}>Loads</Text>
+        <View style={styles.stepper}>
+          <Pressable onPress={() => setLoads(Math.max(1, loads - 1))} style={styles.stepBtn}>
+            <Text style={styles.stepBtnText}>−</Text>
+          </Pressable>
+          <View style={styles.stepValue}>
+            <Text style={styles.stepCount}>{loads}</Text>
+            <Text style={styles.stepLabel}>standard basket{loads > 1 ? 's' : ''}</Text>
+          </View>
+          <Pressable onPress={() => setLoads(loads + 1)} style={styles.stepBtn}>
+            <Text style={styles.stepBtnText}>+</Text>
+          </Pressable>
+        </View>
 
-      <section className="form-section">
-        <h2>Dryer sheets</h2>
-        <div className="option-list">
-          {sheets.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              className={`option-row ${sheetsOption === s.value ? 'selected' : ''}`}
-              onClick={() => setSheetsOption(s.value)}
-            >
-              <span className="option-radio" />
-              <span className="option-text">
-                {s.label}
-                {s.sub && <small>{s.sub}</small>}
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
+        <Text style={styles.section}>Dryer sheets</Text>
+        {sheets.map((s) => (
+          <Pressable
+            key={s.value}
+            onPress={() => setSheetsOption(s.value)}
+            style={styles.optionRow}
+          >
+            <View style={[styles.radio, sheetsOption === s.value && styles.radioSelected]} />
+            <View>
+              <Text style={styles.optionLabel}>{s.label}</Text>
+              {s.sub && <Text style={styles.optionSub}>{s.sub}</Text>}
+            </View>
+          </Pressable>
+        ))}
 
-      <section className="form-section">
-        <h2>Special notes</h2>
-        <textarea
+        <Text style={styles.section}>Special notes</Text>
+        <TextInput
+          style={styles.notes}
+          multiline
+          numberOfLines={3}
           value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
+          onChangeText={setNotes}
           placeholder="Any special instructions..."
         />
-      </section>
+        <View style={{ height: 100 }} />
+      </Screen>
 
-      <div className="sticky-footer">
-        <div className="sticky-footer-info">
-          <span className="price">Free</span>
-          <span className="price-sub">No payment required</span>
-        </div>
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => confirmBooking({ dropOffTime, loads, sheetsOption, notes })}
-        >
-          Confirm booking
-        </button>
-      </div>
-    </div>
+      <View style={styles.footer}>
+        <View>
+          <Text style={styles.price}>Free</Text>
+          <Text style={styles.priceSub}>No payment required</Text>
+        </View>
+        <PrimaryButton
+          title="Confirm booking"
+          onPress={() => confirmBooking({ dropOffTime, loads, sheetsOption, notes })}
+        />
+      </View>
+    </View>
   )
 }
+
+const styles = StyleSheet.create({
+  wrapper: { flex: 1, backgroundColor: colors.white },
+  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', marginTop: 8 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: 20 },
+  section: { fontSize: 16, fontWeight: '600', marginTop: 16, marginBottom: 12 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.pill,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  chipSelected: { backgroundColor: colors.black, borderColor: colors.black },
+  chipText: { fontSize: 14, fontWeight: '500' },
+  chipTextSelected: { color: colors.white },
+  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', maxWidth: 280 },
+  stepBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepBtnText: { fontSize: 22, color: colors.black },
+  stepValue: { alignItems: 'center' },
+  stepCount: { fontSize: 24, fontWeight: '700' },
+  stepLabel: { fontSize: 13, color: colors.gray500 },
+  optionRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.gray200,
+  },
+  radioSelected: { borderColor: colors.black, backgroundColor: colors.black },
+  optionLabel: { fontSize: 16, fontWeight: '500' },
+  optionSub: { fontSize: 13, color: colors.gray500 },
+  notes: {
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.md,
+    padding: 14,
+    fontSize: 16,
+    minHeight: 90,
+    textAlignVertical: 'top',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray100,
+  },
+  price: { fontSize: 18, fontWeight: '700' },
+  priceSub: { fontSize: 12, color: colors.gray500 },
+})

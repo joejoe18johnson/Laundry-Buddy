@@ -1,5 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
+import { BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
+import { colors, radius } from '../../theme'
 import type { AppRole, LoginMethod } from '../../types'
 
 export function SignupScreen() {
@@ -11,10 +14,9 @@ export function SignupScreen() {
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<AppRole>('customer')
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault()
+  const handleSignup = async () => {
     clearAuthError()
-    signup({
+    await signup({
       name,
       method,
       phone: method === 'phone' ? phone : undefined,
@@ -25,126 +27,160 @@ export function SignupScreen() {
   }
 
   return (
-    <div className="auth-screen">
-      <button type="button" className="back-btn" onClick={() => navigateAuth('welcome')}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Back
-      </button>
+    <Screen>
+      <BackButton onPress={() => navigateAuth('welcome')} />
+      <Text style={styles.title}>Create account</Text>
+      <Text style={styles.subtitle}>Join as a guest or host your dryer</Text>
 
-      <header className="auth-header">
-        <h1>Create account</h1>
-        <p className="muted">Join as a guest or host your dryer</p>
-      </header>
-
-      <div className="role-picker">
-        <button
-          type="button"
-          className={`role-card ${role === 'customer' ? 'selected' : ''}`}
-          onClick={() => setRole('customer')}
-        >
-          <strong>I need a dryer</strong>
-          <span>Book loads near you</span>
-        </button>
-        <button
-          type="button"
-          className={`role-card ${role === 'host' ? 'selected' : ''}`}
-          onClick={() => setRole('host')}
-        >
-          <strong>I have a dryer</strong>
-          <span>Host & help neighbors</span>
-        </button>
-      </div>
+      <View style={styles.roleRow}>
+        {(['customer', 'host'] as const).map((r) => (
+          <Pressable
+            key={r}
+            onPress={() => setRole(r)}
+            style={[styles.roleCard, role === r && styles.roleSelected]}
+          >
+            <Text style={styles.roleTitle}>{r === 'customer' ? 'I need a dryer' : 'I have a dryer'}</Text>
+            <Text style={styles.roleSub}>
+              {r === 'customer' ? 'Book loads near you' : 'Host & help neighbors'}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
 
       {role === 'host' && (
-        <div className="info-card auth-notice">
-          <p>Hosts must verify their ID and address before accepting loads.</p>
-        </div>
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>Hosts must verify ID and address before accepting loads.</Text>
+        </View>
       )}
 
-      <div className="method-tabs">
-        <button
-          type="button"
-          className={method === 'phone' ? 'active' : ''}
-          onClick={() => { setMethod('phone'); clearAuthError() }}
-        >
-          Phone
-        </button>
-        <button
-          type="button"
-          className={method === 'email' ? 'active' : ''}
-          onClick={() => { setMethod('email'); clearAuthError() }}
-        >
-          Email
-        </button>
-      </div>
+      <MethodTabs
+        value={method}
+        options={[
+          { value: 'phone', label: 'Phone' },
+          { value: 'email', label: 'Email' },
+        ]}
+        onChange={(m) => {
+          setMethod(m)
+          clearAuthError()
+        }}
+      />
 
-      <form className="auth-form" onSubmit={handleSubmit}>
-        <label className="field">
-          <span>Full name</span>
-          <input
-            type="text"
-            placeholder="Your name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </label>
+      <View style={styles.field}>
+        <Text style={styles.label}>Full name</Text>
+        <TextInput style={styles.input} placeholder="Your name" value={name} onChangeText={setName} />
+      </View>
 
-        {method === 'phone' ? (
-          <label className="field">
-            <span>Phone number</span>
-            <div className="phone-input">
-              <span className="phone-prefix">+501</span>
-              <input
-                type="tel"
-                inputMode="numeric"
-                placeholder="600 1234"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-              />
-            </div>
-          </label>
-        ) : (
-          <label className="field">
-            <span>Email</span>
-            <input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+      {method === 'phone' ? (
+        <View style={styles.field}>
+          <Text style={styles.label}>Phone number</Text>
+          <View style={styles.phoneRow}>
+            <Text style={styles.prefix}>+501</Text>
+            <TextInput
+              style={styles.phoneInput}
+              placeholder="600 1234"
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
             />
-          </label>
-        )}
-
-        <label className="field">
-          <span>Password</span>
-          <input
-            type="password"
-            placeholder="At least 6 characters"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            minLength={6}
-            required
+          </View>
+        </View>
+      ) : (
+        <View style={styles.field}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
           />
-        </label>
+        </View>
+      )}
 
-        {authError && <p className="auth-error">{authError}</p>}
+      <View style={styles.field}>
+        <Text style={styles.label}>Password</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="At least 6 characters"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+      </View>
 
-        <button type="submit" className="btn btn-primary btn-full">
-          {role === 'host' ? 'Continue to verification' : 'Create account'}
-        </button>
-      </form>
+      {authError && <Text style={styles.error}>{authError}</Text>}
 
-      <p className="auth-switch">
-        Already have an account?{' '}
-        <button type="button" className="link-btn" onClick={() => navigateAuth('login')}>
-          Log in
-        </button>
-      </p>
-    </div>
+      <PrimaryButton
+        title={role === 'host' ? 'Continue to verification' : 'Create account'}
+        onPress={handleSignup}
+        full
+      />
+
+      <Pressable onPress={() => navigateAuth('login')} style={styles.switch}>
+        <Text style={styles.switchText}>
+          Already have an account? <Text style={styles.link}>Log in</Text>
+        </Text>
+      </Pressable>
+    </Screen>
   )
 }
+
+const styles = StyleSheet.create({
+  title: { fontSize: 28, fontWeight: '700', marginBottom: 6 },
+  subtitle: { fontSize: 15, color: colors.gray500, marginBottom: 20 },
+  roleRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  roleCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.md,
+    padding: 14,
+  },
+  roleSelected: { borderColor: colors.black, backgroundColor: colors.gray50 },
+  roleTitle: { fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  roleSub: { fontSize: 12, color: colors.gray500 },
+  notice: {
+    backgroundColor: colors.gray50,
+    padding: 14,
+    borderRadius: radius.md,
+    marginBottom: 16,
+  },
+  noticeText: { fontSize: 13, color: colors.gray600 },
+  field: { marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', color: colors.gray600, marginBottom: 6 },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.sm,
+    padding: 14,
+    fontSize: 16,
+  },
+  phoneRow: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
+  },
+  prefix: {
+    padding: 14,
+    backgroundColor: colors.gray50,
+    borderRightWidth: 1,
+    borderRightColor: colors.gray200,
+    fontSize: 16,
+    color: colors.gray600,
+  },
+  phoneInput: { flex: 1, padding: 14, fontSize: 16 },
+  error: {
+    color: colors.danger,
+    backgroundColor: '#fef2f2',
+    padding: 12,
+    borderRadius: radius.sm,
+    marginBottom: 16,
+    fontSize: 14,
+  },
+  switch: { marginTop: 24, alignItems: 'center' },
+  switchText: { fontSize: 14, color: colors.gray500 },
+  link: { fontWeight: '600', color: colors.black, textDecorationLine: 'underline' },
+})

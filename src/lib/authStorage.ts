@@ -1,84 +1,81 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { User } from '../types'
+import { SEED_DATA_VERSION, SEED_USERS } from '../data/seedData'
 import { normalizePhone } from './phone'
 
 const USERS_KEY = 'laundry-buddy-users'
 const SESSION_KEY = 'laundry-buddy-session'
+const VERSION_KEY = 'laundry-buddy-data-version'
 
-const SEED_USERS: User[] = [
-  {
-    id: 'user-ana',
-    name: 'Ana',
-    phone: '5016001111',
-    password: 'demo1234',
-    role: 'customer',
-  },
-  {
-    id: 'user-maria',
-    name: 'Maria',
-    email: 'maria@example.com',
-    phone: '5016001234',
-    password: 'demo1234',
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '22 Coconut St., Las Flores, Belmopan',
-      submittedAt: '2026-07-01T10:00:00.000Z',
-    },
-  },
-]
+async function seedUsersIfNeeded(): Promise<User[]> {
+  const storedVersion = await AsyncStorage.getItem(VERSION_KEY)
+  if (storedVersion !== SEED_DATA_VERSION) {
+    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(SEED_USERS))
+    await AsyncStorage.setItem(VERSION_KEY, SEED_DATA_VERSION)
+    return SEED_USERS
+  }
 
-function readUsers(): User[] {
-  const raw = localStorage.getItem(USERS_KEY)
+  const raw = await AsyncStorage.getItem(USERS_KEY)
   if (!raw) {
-    localStorage.setItem(USERS_KEY, JSON.stringify(SEED_USERS))
+    await AsyncStorage.setItem(USERS_KEY, JSON.stringify(SEED_USERS))
     return SEED_USERS
   }
   return JSON.parse(raw) as User[]
 }
 
-function writeUsers(users: User[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users))
+async function readUsers(): Promise<User[]> {
+  return seedUsersIfNeeded()
 }
 
-export function getSessionUserId(): string | null {
-  return localStorage.getItem(SESSION_KEY)
+async function writeUsers(users: User[]) {
+  await AsyncStorage.setItem(USERS_KEY, JSON.stringify(users))
 }
 
-export function setSessionUserId(id: string | null) {
-  if (id) localStorage.setItem(SESSION_KEY, id)
-  else localStorage.removeItem(SESSION_KEY)
+export async function getSessionUserId(): Promise<string | null> {
+  return AsyncStorage.getItem(SESSION_KEY)
 }
 
-export function getCurrentUser(): User | null {
-  const id = getSessionUserId()
+export async function setSessionUserId(id: string | null) {
+  if (id) await AsyncStorage.setItem(SESSION_KEY, id)
+  else await AsyncStorage.removeItem(SESSION_KEY)
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  const id = await getSessionUserId()
   if (!id) return null
-  return readUsers().find((u) => u.id === id) ?? null
+  const users = await readUsers()
+  return users.find((u) => u.id === id) ?? null
 }
 
-export function saveUser(user: User) {
-  const users = readUsers()
+export async function saveUser(user: User) {
+  const users = await readUsers()
   const index = users.findIndex((u) => u.id === user.id)
   if (index >= 0) users[index] = user
   else users.push(user)
-  writeUsers(users)
+  await writeUsers(users)
 }
 
-export function findUserByPhone(phone: string): User | undefined {
+export async function findUserByPhone(phone: string): Promise<User | undefined> {
   const normalized = normalizePhone(phone)
-  return readUsers().find((u) => u.phone && normalizePhone(u.phone) === normalized)
+  const users = await readUsers()
+  return users.find((u) => u.phone && normalizePhone(u.phone) === normalized)
 }
 
-export function findUserByEmail(email: string): User | undefined {
+export async function findUserByEmail(email: string): Promise<User | undefined> {
   const normalized = email.trim().toLowerCase()
-  return readUsers().find((u) => u.email?.toLowerCase() === normalized)
+  const users = await readUsers()
+  return users.find((u) => u.email?.toLowerCase() === normalized)
 }
 
-export function phoneInUse(phone: string): boolean {
-  return !!findUserByPhone(phone)
+export async function phoneInUse(phone: string): Promise<boolean> {
+  return !!(await findUserByPhone(phone))
 }
 
-export function emailInUse(email: string): boolean {
-  return !!findUserByEmail(email)
+export async function emailInUse(email: string): Promise<boolean> {
+  return !!(await findUserByEmail(email))
+}
+
+export async function resetTrainingData() {
+  await AsyncStorage.multiRemove([USERS_KEY, VERSION_KEY, SESSION_KEY])
+  await seedUsersIfNeeded()
 }

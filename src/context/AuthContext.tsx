@@ -2,10 +2,12 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
+import { ActivityIndicator, View } from 'react-native'
 import { normalizePhone } from '../lib/phone'
 import {
   emailInUse,
@@ -16,6 +18,7 @@ import {
   saveUser,
   setSessionUserId,
 } from '../lib/authStorage'
+import { colors } from '../theme'
 import type { AppRole, AuthScreen, HostVerification, LoginMethod, User } from '../types'
 
 interface SignupInput {
@@ -29,26 +32,35 @@ interface SignupInput {
 
 interface AuthState {
   user: User | null
+  ready: boolean
   authScreen: AuthScreen
   authError: string | null
   navigateAuth: (screen: AuthScreen) => void
-  login: (method: LoginMethod, identifier: string, password: string) => boolean
-  signup: (input: SignupInput) => boolean
-  logout: () => void
+  login: (method: LoginMethod, identifier: string, password: string) => Promise<boolean>
+  signup: (input: SignupInput) => Promise<boolean>
+  logout: () => Promise<void>
   submitHostVerification: (data: {
     address: string
     idUploaded: boolean
     addressUploaded: boolean
-  }) => void
+  }) => Promise<void>
   clearAuthError: () => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => getCurrentUser())
+  const [user, setUser] = useState<User | null>(null)
+  const [ready, setReady] = useState(false)
   const [authScreen, setAuthScreen] = useState<AuthScreen>('welcome')
   const [authError, setAuthError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getCurrentUser().then((u) => {
+      setUser(u)
+      setReady(true)
+    })
+  }, [])
 
   const navigateAuth = useCallback((screen: AuthScreen) => {
     setAuthError(null)
@@ -57,30 +69,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearAuthError = useCallback(() => setAuthError(null), [])
 
-  const login = useCallback((method: LoginMethod, identifier: string, password: string) => {
+  const login = useCallback(async (method: LoginMethod, identifier: string, password: string) => {
     const found =
-      method === 'phone'
-        ? findUserByPhone(identifier)
-        : findUserByEmail(identifier)
+      method === 'phone' ? await findUserByPhone(identifier) : await findUserByEmail(identifier)
 
     if (!found || found.password !== password) {
       setAuthError('Invalid credentials. Check your details and try again.')
       return false
     }
 
-    setSessionUserId(found.id)
+    await setSessionUserId(found.id)
     setUser(found)
     setAuthError(null)
     return true
   }, [])
 
-  const signup = useCallback((input: SignupInput) => {
+  const signup = useCallback(async (input: SignupInput) => {
     if (input.method === 'phone') {
       if (!input.phone?.trim()) {
         setAuthError('Phone number is required.')
         return false
       }
-      if (phoneInUse(input.phone)) {
+      if (await phoneInUse(input.phone)) {
         setAuthError('This phone number is already registered.')
         return false
       }
@@ -89,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthError('Email is required.')
         return false
       }
-      if (emailInUse(input.email)) {
+      if (await emailInUse(input.email)) {
         setAuthError('This email is already registered.')
         return false
       }
@@ -109,31 +119,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: input.role,
       hostVerification:
         input.role === 'host'
-          ? {
-              status: 'none',
-              idUploaded: false,
-              addressUploaded: false,
-              address: '',
-            }
+          ? { status: 'none', idUploaded: false, addressUploaded: false, address: '' }
           : undefined,
     }
 
-    saveUser(newUser)
-    setSessionUserId(newUser.id)
+    await saveUser(newUser)
+    await setSessionUserId(newUser.id)
     setUser(newUser)
     setAuthError(null)
     return true
   }, [])
 
-  const logout = useCallback(() => {
-    setSessionUserId(null)
+  const logout = useCallback(async () => {
+    await setSessionUserId(null)
     setUser(null)
     setAuthScreen('welcome')
     setAuthError(null)
   }, [])
 
   const submitHostVerification = useCallback(
-    (data: { address: string; idUploaded: boolean; addressUploaded: boolean }) => {
+    async (data: { address: string; idUploaded: boolean; addressUploaded: boolean }) => {
       if (!user || user.role !== 'host') return
 
       const verification: HostVerification = {
@@ -145,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const updated: User = { ...user, hostVerification: verification }
-      saveUser(updated)
+      await saveUser(updated)
       setUser(updated)
     },
     [user],
@@ -154,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       user,
+      ready,
       authScreen,
       authError,
       navigateAuth,
@@ -165,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [
       user,
+      ready,
       authScreen,
       authError,
       navigateAuth,
@@ -176,6 +183,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     ],
   )
 
+  if (!ready) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    )
+  }
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
@@ -183,10 +198,6 @@ export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
-}
-
-export function isHostVerified(user: User): boolean {
-  return user.role !== 'host' || user.hostVerification?.status === 'verified'
 }
 
 export function needsHostVerification(user: User): boolean {

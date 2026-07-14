@@ -1,73 +1,73 @@
 import { useState } from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../../context/AppContext'
+import { BackButton, PrimaryButton, Screen } from '../../components/ui'
+import { colors, radius } from '../../theme'
 
 export function MarkDryScreen() {
-  const { activeLoad, navigate, markDry } = useApp()
+  const { activeLoads, navigate, markDry } = useApp()
   const [photoTaken, setPhotoTaken] = useState(false)
 
-  if (!activeLoad) {
+  const dryingLoad = activeLoads.find((l) => l.stage === 'drying')
+
+  if (!dryingLoad) {
     return (
-      <div className="screen screen-empty">
-        <p className="empty-title">No active load</p>
-        <button type="button" className="btn btn-primary" onClick={() => navigate('host-dashboard')}>
-          Back to dashboard
-        </button>
-      </div>
+      <Screen style={styles.empty}>
+        <Text style={styles.emptyTitle}>No load to mark dry</Text>
+        <PrimaryButton title="Back to dashboard" onPress={() => navigate('host-dashboard')} full />
+      </Screen>
     )
   }
 
   return (
-    <div className="screen">
-      <button type="button" className="back-btn" onClick={() => navigate('host-dashboard')}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M19 12H5M12 19l-7-7 7-7" />
-        </svg>
-        Back
-      </button>
+    <Screen>
+      <BackButton onPress={() => navigate('host-dashboard')} />
+      <Text style={styles.eyebrow}>Active load</Text>
+      <Text style={styles.title}>{dryingLoad.customerName}'s laundry</Text>
 
-      <header className="booking-header">
-        <p className="booking-eyebrow">Active load</p>
-        <h1>{activeLoad.customerName}'s laundry</h1>
-      </header>
+      <Text style={styles.section}>Confirm it's dry</Text>
+      <Text style={styles.sub}>Take a photo so the customer can trust it's ready.</Text>
 
-      <section className="mark-dry-section">
-        <h2>Confirm it's dry</h2>
-        <p className="muted">Take a photo so the customer can trust it's ready.</p>
+      <Pressable
+        onPress={() => setPhotoTaken(true)}
+        style={[styles.upload, photoTaken && styles.uploadDone]}
+      >
+        <Text style={[styles.uploadText, photoTaken && styles.uploadTextDone]}>
+          {photoTaken ? '✓ Photo added' : 'Add photo'}
+        </Text>
+      </Pressable>
 
-        <button
-          type="button"
-          className={`photo-upload ${photoTaken ? 'taken' : ''}`}
-          onClick={() => setPhotoTaken(true)}
-        >
-          {photoTaken ? (
-            <>
-              <div className="photo-preview-thumb" />
-              <span>Photo added</span>
-            </>
-          ) : (
-            <>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
-              <span>Add photo</span>
-            </>
-          )}
-        </button>
-
-        <button
-          type="button"
-          className="btn btn-primary btn-full"
-          disabled={!photoTaken}
-          onClick={markDry}
-        >
-          Mark as dry
-        </button>
-
-        <p className="notify-preview">
-          Sends: "Your load is dry! Ready for pickup."
-        </p>
-      </section>
-    </div>
+      <PrimaryButton
+        title="Mark as dry"
+        onPress={() => markDry(dryingLoad.id)}
+        disabled={!photoTaken}
+        full
+      />
+      <Text style={styles.notify}>Sends: "Your load is dry! Ready for pickup."</Text>
+    </Screen>
   )
 }
+
+const styles = StyleSheet.create({
+  empty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: 20 },
+  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', marginTop: 8 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: 20 },
+  section: { fontSize: 20, fontWeight: '700', marginBottom: 6 },
+  sub: { fontSize: 14, color: colors.gray500, marginBottom: 20 },
+  upload: {
+    minHeight: 160,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: colors.gray200,
+    borderRadius: radius.lg,
+    backgroundColor: colors.gray50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  uploadDone: { borderStyle: 'solid', borderColor: colors.green, backgroundColor: colors.greenBg },
+  uploadText: { fontSize: 16, fontWeight: '500', color: colors.gray500 },
+  uploadTextDone: { color: colors.green },
+  notify: { fontSize: 13, color: colors.gray500, textAlign: 'center', marginTop: 16 },
+})
