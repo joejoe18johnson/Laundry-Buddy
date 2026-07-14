@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../../context/AppContext'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
+import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
 
 export function MarkDryScreen() {
@@ -22,28 +23,39 @@ export function MarkDryScreen() {
   return (
     <Screen>
       <BackButton onPress={() => navigate('host-dashboard')} />
-      <Text style={styles.eyebrow}>Active load</Text>
+      <View style={styles.statusHeader}>
+        <AppIcon name="package" size={16} color={colors.gray500} />
+        <Text style={styles.eyebrow}>Active load</Text>
+      </View>
       <Text style={styles.title}>{dryingLoad.customerName}'s laundry</Text>
 
-      <Text style={styles.section}>Confirm it's dry</Text>
+      <View style={styles.sectionHeader}>
+        <AppIcon name="check-circle" size={20} />
+        <Text style={styles.section}>Confirm it's dry</Text>
+      </View>
       <Text style={styles.sub}>Take a photo so the customer can trust it's ready.</Text>
 
       <Pressable
         onPress={() => setPhotoTaken(true)}
         style={[styles.upload, photoTaken && styles.uploadDone]}
       >
+        <AppIcon name={photoTaken ? 'check-circle' : 'camera'} size={28} color={photoTaken ? colors.green : colors.gray500} />
         <Text style={[styles.uploadText, photoTaken && styles.uploadTextDone]}>
-          {photoTaken ? '✓ Photo added' : 'Add photo'}
+          {photoTaken ? 'Photo added' : 'Add photo'}
         </Text>
       </Pressable>
 
       <PrimaryButton
         title="Mark as dry"
+        icon="wind"
         onPress={() => markDry(dryingLoad.id)}
         disabled={!photoTaken}
         full
       />
-      <Text style={styles.notify}>Sends: "Your load is dry! Ready for pickup."</Text>
+      <View style={styles.notifyRow}>
+        <AppIcon name="message-circle" size={14} color={colors.gray500} />
+        <Text style={styles.notify}>Sends: "Your load is dry! Ready for pickup."</Text>
+      </View>
     </Screen>
   )
 }
@@ -51,9 +63,11 @@ export function MarkDryScreen() {
 const styles = StyleSheet.create({
   empty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
   emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: spacing.lg },
-  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', marginTop: spacing.sm, letterSpacing: 0.4 },
+  statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
+  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', letterSpacing: 0.4 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.lg, lineHeight: 30 },
-  section: { fontSize: 20, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 26 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  section: { fontSize: 20, fontWeight: '700', lineHeight: 26 },
   sub: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
   upload: {
     minHeight: 180,
@@ -66,9 +80,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.lg,
     padding: spacing.lg,
+    gap: spacing.sm,
   },
   uploadDone: { borderStyle: 'solid', borderColor: colors.green, backgroundColor: colors.greenBg },
   uploadText: { fontSize: 16, fontWeight: '500', color: colors.gray500 },
   uploadTextDone: { color: colors.green },
-  notify: { fontSize: 13, color: colors.gray500, textAlign: 'center', marginTop: spacing.md, lineHeight: 20 },
+  notifyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.md },
+  notify: { fontSize: 13, color: colors.gray500, lineHeight: 20, flexShrink: 1 },
 })

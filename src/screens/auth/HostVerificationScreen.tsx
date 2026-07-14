@@ -76,12 +76,16 @@ export function HostVerificationScreen() {
         onPress={() => setIdUploaded(true)}
         style={[styles.upload, idUploaded && styles.uploadDone]}
       >
+        <AppIcon name={idUploaded ? 'check-circle' : 'upload'} size={24} color={idUploaded ? colors.green : colors.gray500} />
         <Text style={[styles.uploadText, idUploaded && styles.uploadTextDone]}>
-          {idUploaded ? '✓ ID uploaded' : 'Upload ID photo'}
+          {idUploaded ? 'ID uploaded' : 'Upload ID photo'}
         </Text>
       </Pressable>
 
-      <Text style={[styles.sectionTitle, { marginTop: spacing.lg }]}>Home address</Text>
+      <View style={[styles.sectionHeader, { marginTop: spacing.lg }]}>
+        <AppIcon name="home" size={18} />
+        <Text style={styles.sectionTitle}>Home address</Text>
+      </View>
       <TextInput
         style={styles.input}
         placeholder="22 Coconut St., Las Flores"
@@ -93,20 +97,22 @@ export function HostVerificationScreen() {
         onPress={() => setAddressUploaded(true)}
         style={[styles.upload, addressUploaded && styles.uploadDone]}
       >
+        <AppIcon name={addressUploaded ? 'check-circle' : 'upload'} size={24} color={addressUploaded ? colors.green : colors.gray500} />
         <Text style={[styles.uploadText, addressUploaded && styles.uploadTextDone]}>
-          {addressUploaded ? '✓ Address proof uploaded' : 'Upload address proof'}
+          {addressUploaded ? 'Address proof uploaded' : 'Upload address proof'}
         </Text>
       </Pressable>
 
       <View style={{ height: spacing.lg }} />
       <PrimaryButton
         title="Submit for review"
+        icon="send"
         onPress={() => submitHostVerification({ address, idUploaded, addressUploaded })}
         disabled={!canSubmit}
         full
       />
       <View style={{ height: spacing.md }} />
-      <GhostButton title="Log out" onPress={logout} full />
+      <GhostButton title="Log out" icon="log-out" onPress={logout} full />
     </Screen>
   )
 }
@@ -115,6 +121,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34 },
   subtitle: { fontSize: 15, color: colors.gray500, lineHeight: 24, marginBottom: spacing.lg },
   pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     alignSelf: 'flex-start',
     backgroundColor: colors.gray50,
     paddingHorizontal: 12,
@@ -124,6 +133,9 @@ const styles = StyleSheet.create({
   },
   pillText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
   pillPending: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     alignSelf: 'flex-start',
     backgroundColor: '#fff8e6',
     paddingHorizontal: 12,
@@ -132,7 +144,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   pillPendingText: { fontSize: 12, fontWeight: '600', color: '#b8860b' },
-  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: spacing.sm, marginTop: spacing.sm },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm, marginTop: spacing.sm },
+  sectionTitle: { fontSize: 16, fontWeight: '600' },
   sectionSub: { fontSize: 13, color: colors.gray500, marginBottom: spacing.md, lineHeight: 20 },
   input: {
     borderWidth: 1,
@@ -153,6 +166,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.sm,
     padding: spacing.md,
+    gap: spacing.sm,
   },
   uploadDone: { borderStyle: 'solid', borderColor: colors.green, backgroundColor: colors.greenBg },
   uploadText: { fontSize: 15, fontWeight: '500', color: colors.gray500 },
@@ -171,12 +185,8 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     backgroundColor: colors.green,
-    color: colors.white,
-    textAlign: 'center',
-    lineHeight: 28,
-    fontSize: 14,
-    fontWeight: '700',
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   checkTitle: { fontSize: 15, fontWeight: '600', lineHeight: 20 },
   checkSub: { fontSize: 13, color: colors.gray500, marginTop: spacing.sm, lineHeight: 18 },

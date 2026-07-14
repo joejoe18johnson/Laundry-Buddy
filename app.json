@@ -34,7 +34,9 @@
           "imageWidth": 200,
           "resizeMode": "contain"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-asset"
     ]
   }
 }

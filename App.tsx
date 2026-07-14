@@ -24,6 +24,7 @@ function AppShell() {
 
   const isCustomer = user!.role === 'customer'
   const showTabBar = isCustomer && booking && screen !== 'customer-tracking'
+  const exploreActive = screen === 'customer-home' || screen === 'customer-booking'
 
   return (
     <SafeAreaView style={styles.app} edges={['top']}>
@@ -61,17 +62,13 @@ function AppShell() {
             <AppIcon
               name="search"
               size={20}
-              color={screen === 'customer-home' ? colors.black : colors.gray500}
+              color={exploreActive ? colors.black : colors.gray500}
             />
-            <Text style={[styles.tabText, screen === 'customer-home' && styles.tabTextActive]}>Explore</Text>
+            <Text style={[styles.tabText, exploreActive && styles.tabTextActive]}>Explore</Text>
           </Pressable>
           <Pressable style={styles.tab} onPress={() => navigate('customer-tracking')}>
-            <AppIcon
-              name="package"
-              size={20}
-              color={screen === 'customer-tracking' ? colors.black : colors.gray500}
-            />
-            <Text style={[styles.tabText, screen === 'customer-tracking' && styles.tabTextActive]}>My load</Text>
+            <AppIcon name="package" size={20} color={colors.gray500} />
+            <Text style={styles.tabText}>My load</Text>
           </Pressable>
         </SafeAreaView>
       )}
