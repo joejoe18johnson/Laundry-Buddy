@@ -16,7 +16,8 @@ import {
   loadHostPaymentHistory,
 } from '../../lib/paymentHistoryStorage'
 import { colors, radius, spacing } from '../../theme'
-import { DROP_OFF_LABELS, type Booking } from '../../types'
+import { formatDropOffHour } from '../../lib/dropOffAvailability'
+import { type Booking } from '../../types'
 
 function PaymentStatusBadge({ status }: { status?: Booking['paymentStatus'] }) {
   const paid = status === 'paid' || status == null
@@ -51,7 +52,7 @@ function HistoryCard({ item, isCustomer }: { item: Booking; isCustomer: boolean 
       <View style={styles.metaRow}>
         <AppIcon name="package" size={14} color={colors.gray500} />
         <Text style={styles.metaText}>
-          {item.loads} load{item.loads > 1 ? 's' : ''} · {DROP_OFF_LABELS[item.dropOffTime]}
+          {item.loads} load{item.loads > 1 ? 's' : ''} · {formatDropOffHour(item.dropOffTime)}
         </Text>
       </View>
 

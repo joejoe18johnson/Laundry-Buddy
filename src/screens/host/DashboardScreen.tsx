@@ -11,11 +11,11 @@ import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
 
-function DropOffBadge({ dropOffTime }: { dropOffTime: DropOffTime }) {
+function DropOffBadge({ dropOffTime }: { dropOffTime: DropOffHour }) {
   return (
     <View style={styles.dropOffBadge}>
-      <AppIcon name="clock" size={12} color={colors.black} />
-      <Text style={styles.dropOffBadgeText}>{DROP_OFF_LABELS[dropOffTime]}</Text>
+      <AppIcon name="clock" size={12} color={colors.white} />
+      <Text style={styles.dropOffBadgeText}>{formatDropOffHour(dropOffTime)}</Text>
     </View>
   )
 }
@@ -26,7 +26,7 @@ function OrderDetails({
   paymentMethod,
   totalAmount,
 }: {
-  dropOffTime: DropOffTime
+  dropOffTime: DropOffHour
   notes?: string
   paymentMethod?: 'cash' | 'bank_transfer'
   totalAmount?: number
@@ -41,7 +41,7 @@ function OrderDetails({
         </View>
         <View style={styles.detailBody}>
           <Text style={styles.detailLabel}>Guest drop-off time</Text>
-          <Text style={styles.detailValue}>{DROP_OFF_LABELS[dropOffTime]}</Text>
+          <Text style={styles.detailValue}>{formatDropOffHour(dropOffTime)}</Text>
           <Text style={styles.detailHint}>Expect laundry during this window</Text>
         </View>
       </View>
@@ -122,7 +122,7 @@ export function DashboardScreen() {
         <View style={styles.availabilityBar}>
           <View style={styles.availabilityHeader}>
             <AppIcon name="calendar" size={14} color={colors.gray600} />
-            <Text style={styles.availabilityTitle}>Your drop-off windows</Text>
+            <Text style={styles.availabilityTitle}>Your drop-off hours (8am – 8pm)</Text>
           </View>
           <Text style={styles.availabilityValue}>
             {formatDropOffAvailability(hostSettings.dropOffAvailability)}
