@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { AppIcon } from '../../components/AppIcon'
 import { WeatherBanner } from '../../components/WeatherBanner'
 import { HostCard } from '../../components/HostCard'
 import { Screen } from '../../components/ui'
@@ -20,9 +21,11 @@ export function HomeScreen() {
 
       <View style={styles.toolbar}>
         <Pressable style={styles.toolBtn}>
+          <AppIcon name="sliders" size={16} />
           <Text style={styles.toolText}>Filters</Text>
         </Pressable>
         <Pressable style={styles.toolBtn} onPress={() => setShowMap(!showMap)}>
+          <AppIcon name={showMap ? 'list' : 'map'} size={16} />
           <Text style={styles.toolText}>{showMap ? 'List' : 'Map'}</Text>
         </Pressable>
       </View>
@@ -31,6 +34,7 @@ export function HomeScreen() {
         <View style={styles.map}>
           {hosts.map((host, i) => (
             <View key={host.id} style={[styles.pin, pinPositions[i % 4]]}>
+              <AppIcon name="map-pin" size={14} color={colors.accent} />
               <Text style={styles.pinName}>{host.name}</Text>
               <Text style={styles.pinDist}>{host.distanceKm} km</Text>
             </View>
@@ -56,6 +60,9 @@ const styles = StyleSheet.create({
   regionHint: { fontSize: 13, color: colors.gray400, marginBottom: spacing.lg, lineHeight: 20 },
   toolbar: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   toolBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.gray200,
     borderRadius: radius.pill,
@@ -76,6 +83,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     padding: spacing.sm,
     borderRadius: radius.md,
+    gap: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 8,
