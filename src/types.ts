@@ -110,6 +110,8 @@ export interface Host {
   photos: string[]
   rules: string[]
   whatsapp: string
+  latitude: number
+  longitude: number
 }
 
 export interface HostReview {

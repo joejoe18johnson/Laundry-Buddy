@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { HostCard } from '../../components/HostCard'
 import { HostFilterSheet } from '../../components/HostFilterSheet'
+import { HostMap } from '../../components/HostMap'
 import { HostSearchBar } from '../../components/HostSearchBar'
 import { ChoiceChip } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
@@ -36,17 +37,6 @@ const SORT_OPTIONS: { value: HostSort; label: string; icon: 'map-pin' | 'dollar-
   { value: 'cheapest', label: 'Cheapest', icon: 'dollar-sign' },
   { value: 'rating', label: 'Top rated', icon: 'star' },
   { value: 'fastest', label: 'Fastest', icon: 'clock' },
-]
-
-const PIN_POSITIONS = [
-  { top: '16%' as const, left: '12%' as const },
-  { top: '38%' as const, right: '10%' as const },
-  { top: '55%' as const, left: '22%' as const },
-  { top: '24%' as const, right: '26%' as const },
-  { top: '62%' as const, right: '34%' as const },
-  { top: '44%' as const, left: '48%' as const },
-  { top: '72%' as const, left: '58%' as const },
-  { top: '30%' as const, left: '68%' as const },
 ]
 
 type SnapPoint = 'map' | 'half' | 'full'
@@ -308,29 +298,7 @@ export function HomeScreen() {
   return (
     <View style={styles.container} onLayout={onContainerLayout}>
       <View style={styles.map} pointerEvents="box-none">
-        <View style={styles.mapGrid} />
-        <View style={styles.mapRoadH} />
-        <View style={styles.mapRoadV} />
-        <View style={styles.youDot}>
-          <View style={styles.youInner} />
-        </View>
-        {hosts.length === 0 ? (
-          <View style={styles.mapEmpty}>
-            <AppIcon name="map-pin" size={20} color={colors.gray400} />
-            <Text style={styles.mapEmptyText}>Adjust search to see pins</Text>
-          </View>
-        ) : (
-          hosts.slice(0, 8).map((host, i) => (
-            <Pressable
-              key={host.id}
-              style={[styles.pin, PIN_POSITIONS[i % PIN_POSITIONS.length]]}
-              onPress={() => viewHostProfile(host)}
-            >
-              <Text style={styles.pinPrice}>{host.price <= 0 ? 'Free' : `$${host.price}`}</Text>
-            </Pressable>
-          ))
-        )}
-
+        <HostMap hosts={hosts} onHostPress={viewHostProfile} />
         {snap !== 'full' && hosts.length > 0 && (
           <View style={styles.mapBadgeWrap} pointerEvents="box-none">
             <Pressable style={styles.mapBadge} onPress={() => animateToSnap('half')}>
@@ -403,77 +371,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.mapBg },
   map: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.mapBg,
     overflow: 'hidden',
   },
-  mapGrid: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.25,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderStyle: 'dashed',
-    margin: spacing.lg,
-    borderRadius: radius.lg,
-  },
-  mapRoadH: {
-    position: 'absolute',
-    top: '42%',
-    left: '8%',
-    right: '8%',
-    height: 2,
-    backgroundColor: colors.gray200,
-    opacity: 0.6,
-  },
-  mapRoadV: {
-    position: 'absolute',
-    left: '52%',
-    top: '12%',
-    bottom: '28%',
-    width: 2,
-    backgroundColor: colors.gray200,
-    opacity: 0.6,
-  },
-  youDot: {
-    position: 'absolute',
-    top: '40%',
-    left: '50%',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(39, 110, 241, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  youInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.blue,
-    borderWidth: 2,
-    borderColor: colors.white,
-  },
-  mapEmpty: {
-    position: 'absolute',
-    top: '30%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    gap: 6,
-  },
-  mapEmptyText: { fontSize: 13, color: colors.gray500, fontWeight: '500' },
-  pin: {
-    position: 'absolute',
-    backgroundColor: colors.black,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  pinPrice: { fontSize: 12, fontWeight: '700', color: colors.white },
   mapBadgeWrap: {
     position: 'absolute',
     top: spacing.md,
