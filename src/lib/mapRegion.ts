@@ -72,5 +72,25 @@ export function buildSampleMapUrl(region: MapRegion, width = 800, height = 800):
   )
 }
 
+/** OpenFreeMap vector style — free, no API key (MapLibre). */
+export const OPENFREEMAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
+
 /** OpenStreetMap raster tiles — free, no API key required. */
 export const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+
+export function regionToBounds(region: MapRegion) {
+  return {
+    ne: [region.longitude + region.longitudeDelta / 2, region.latitude + region.latitudeDelta / 2] as [
+      number,
+      number,
+    ],
+    sw: [region.longitude - region.longitudeDelta / 2, region.latitude - region.latitudeDelta / 2] as [
+      number,
+      number,
+    ],
+  }
+}
+
+export function regionToZoom(latitudeDelta: number): number {
+  return Math.max(8, Math.min(14, Math.round(Math.log2(360 / latitudeDelta) - 0.5)))
+}
