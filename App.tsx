@@ -8,6 +8,7 @@ import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, needsHostVerification, useAuth } from './src/context/AuthContext'
 import { HomeScreen } from './src/screens/customer/HomeScreen'
 import { BookingScreen } from './src/screens/customer/BookingScreen'
+import { HostProfileScreen } from './src/screens/customer/HostProfileScreen'
 import { TrackingScreen } from './src/screens/customer/TrackingScreen'
 import { DashboardScreen } from './src/screens/host/DashboardScreen'
 import { MarkDryScreen } from './src/screens/host/MarkDryScreen'
@@ -28,8 +29,13 @@ function AppShell() {
 
   const isCustomer = user!.role === 'customer'
   const showTabBar =
-    isCustomer && booking && screen !== 'customer-tracking' && screen !== 'history'
-  const exploreActive = screen === 'customer-home' || screen === 'customer-booking'
+    isCustomer &&
+    booking &&
+    screen !== 'customer-tracking' &&
+    screen !== 'customer-host-profile' &&
+    screen !== 'history'
+  const exploreActive =
+    screen === 'customer-home' || screen === 'customer-booking' || screen === 'customer-host-profile'
 
   return (
     <SafeAreaView style={styles.app} edges={['top']}>
@@ -62,6 +68,7 @@ function AppShell() {
 
       <View style={[styles.main, showTabBar && styles.mainWithTab]}>
         {screen === 'customer-home' && <HomeScreen />}
+        {screen === 'customer-host-profile' && <HostProfileScreen />}
         {screen === 'customer-booking' && <BookingScreen />}
         {screen === 'customer-tracking' && <TrackingScreen />}
         {screen === 'host-dashboard' && <DashboardScreen />}
