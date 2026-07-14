@@ -2,6 +2,10 @@ export type DropOffTime = 'before-10' | '2pm-4pm' | 'after-4'
 export type SheetsOption = 'own' | 'buy' | 'none'
 export type BookingStage = 'got-bag' | 'waiting' | 'drying' | 'ready'
 export type AppRole = 'customer' | 'host'
+export type LoginMethod = 'phone' | 'email'
+export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected'
+
+export type AuthScreen = 'welcome' | 'login' | 'signup'
 
 export type Screen =
   | 'customer-home'
@@ -9,6 +13,24 @@ export type Screen =
   | 'customer-tracking'
   | 'host-dashboard'
   | 'host-mark-dry'
+
+export interface HostVerification {
+  status: VerificationStatus
+  idUploaded: boolean
+  addressUploaded: boolean
+  address: string
+  submittedAt?: string
+}
+
+export interface User {
+  id: string
+  name: string
+  phone?: string
+  email?: string
+  password: string
+  role: AppRole
+  hostVerification?: HostVerification
+}
 
 export interface Host {
   id: string

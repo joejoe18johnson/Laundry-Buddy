@@ -1,7 +1,9 @@
 import { DROP_OFF_LABELS, SHEETS_LABELS } from '../../types'
 import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
 
 export function DashboardScreen() {
+  const { user } = useAuth()
   const { hostRequest, activeLoad, navigate, acceptRequest, declineRequest, advanceStage } =
     useApp()
 
@@ -9,7 +11,7 @@ export function DashboardScreen() {
     <div className="screen">
       <header className="host-header">
         <div className="host-header-top">
-          <h1>Maria's dryer</h1>
+          <h1>{user?.name}'s dryer</h1>
           <span className="status-pill live">Accepting</span>
         </div>
         <p className="host-stats">2 of 4 loads today</p>

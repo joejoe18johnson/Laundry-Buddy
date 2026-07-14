@@ -1160,3 +1160,373 @@ textarea:focus {
 .tab-bar button.active {
   color: var(--black);
 }
+
+/* ── Auth ── */
+
+.app-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-greeting {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--gray-600);
+}
+
+.logout-btn {
+  border: none;
+  background: var(--gray-50);
+  color: var(--black);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  border: 1px solid var(--gray-100);
+  transition: border-color var(--transition);
+}
+
+.logout-btn:hover {
+  border-color: var(--gray-200);
+}
+
+.auth-screen {
+  padding: 20px;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-hero {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 40px 0 32px;
+}
+
+.auth-logo {
+  font-weight: 700;
+  font-size: 1.125rem;
+  color: var(--accent);
+  margin: 0 0 24px;
+  letter-spacing: -0.02em;
+}
+
+.auth-hero h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  margin: 0 0 12px;
+  line-height: 1.15;
+}
+
+.auth-tagline {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--gray-500);
+  line-height: 1.5;
+  max-width: 280px;
+}
+
+.auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.auth-demo-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  line-height: 1.5;
+  padding: 16px 0 24px;
+}
+
+.auth-header {
+  padding: 8px 0 24px;
+}
+
+.auth-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 8px 0 6px;
+}
+
+.method-tabs {
+  display: flex;
+  background: var(--gray-50);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  margin-bottom: 24px;
+  border: 1px solid var(--gray-100);
+}
+
+.method-tabs button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-500);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.method-tabs button.active {
+  background: var(--white);
+  color: var(--black);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  transition: border-color var(--transition);
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--black);
+}
+
+.phone-input {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  transition: border-color var(--transition);
+}
+
+.phone-input:focus-within {
+  border-color: var(--black);
+}
+
+.phone-prefix {
+  padding: 14px 12px;
+  background: var(--gray-50);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--gray-600);
+  border-right: 1px solid var(--gray-200);
+}
+
+.phone-input input {
+  border: none;
+  flex: 1;
+  padding: 14px;
+}
+
+.phone-input input:focus {
+  outline: none;
+}
+
+.auth-error {
+  margin: 0;
+  padding: 12px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.auth-switch {
+  text-align: center;
+  margin: 24px 0;
+  font-size: 0.875rem;
+  color: var(--gray-500);
+}
+
+.link-btn {
+  border: none;
+  background: none;
+  color: var(--black);
+  font-weight: 600;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.role-picker {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: var(--white);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all var(--transition);
+}
+
+.role-card strong {
+  font-size: 0.875rem;
+  color: var(--black);
+}
+
+.role-card span {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.role-card.selected {
+  border-color: var(--black);
+  background: var(--gray-50);
+}
+
+.auth-notice {
+  margin-bottom: 20px;
+}
+
+.auth-notice p {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+.status-pill.pending {
+  background: #fff8e6;
+  color: #b8860b;
+  border-color: #ffe082;
+}
+
+.verify-section {
+  padding: 20px 0;
+  border-top: 1px solid var(--gray-100);
+}
+
+.verify-section h2 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.upload-card {
+  width: 100%;
+  min-height: 120px;
+  margin-top: 12px;
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius);
+  background: var(--gray-50);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  transition: all var(--transition);
+}
+
+.upload-card:hover {
+  border-color: var(--gray-400);
+}
+
+.upload-card.done {
+  border-style: solid;
+  border-color: var(--green);
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.upload-check {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+}
+
+.verification-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 24px 0 32px;
+}
+
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius);
+}
+
+.check-item.done .check-icon {
+  background: var(--green);
+  color: var(--white);
+}
+
+.check-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.check-item strong {
+  display: block;
+  font-size: 0.9375rem;
+  margin-bottom: 2px;
+}
+
+.muted.small {
+  font-size: 0.8125rem;
+  margin-top: 4px;
+}

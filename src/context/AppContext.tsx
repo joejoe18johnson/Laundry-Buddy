@@ -2,13 +2,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
+import { useAuth } from './AuthContext'
 import { HOSTS, INITIAL_REQUEST } from '../data/mockData'
 import type {
-  AppRole,
   Booking,
   BookingStage,
   DropOffTime,
@@ -19,14 +20,12 @@ import type {
 } from '../types'
 
 interface AppState {
-  role: AppRole
   screen: Screen
   selectedHost: Host | null
   booking: Booking | null
   hostRequest: HostRequest | null
   activeLoad: Booking | null
   showMap: boolean
-  setRole: (role: AppRole) => void
   navigate: (screen: Screen) => void
   selectHost: (host: Host) => void
   setShowMap: (show: boolean) => void
@@ -52,19 +51,24 @@ function nowTime() {
   })
 }
 
+function defaultScreen(role: 'customer' | 'host'): Screen {
+  return role === 'host' ? 'host-dashboard' : 'customer-home'
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [role, setRoleState] = useState<AppRole>('customer')
-  const [screen, setScreen] = useState<Screen>('customer-home')
+  const { user } = useAuth()
+  const role = user!.role
+
+  const [screen, setScreen] = useState<Screen>(() => defaultScreen(role))
   const [selectedHost, setSelectedHost] = useState<Host | null>(null)
   const [booking, setBooking] = useState<Booking | null>(null)
   const [hostRequest, setHostRequest] = useState<HostRequest | null>(INITIAL_REQUEST)
   const [activeLoad, setActiveLoad] = useState<Booking | null>(null)
   const [showMap, setShowMap] = useState(false)
 
-  const setRole = useCallback((next: AppRole) => {
-    setRoleState(next)
-    setScreen(next === 'customer' ? 'customer-home' : 'host-dashboard')
-  }, [])
+  useEffect(() => {
+    setScreen(defaultScreen(role))
+  }, [role])
 
   const navigate = useCallback((next: Screen) => setScreen(next), [])
 
@@ -80,12 +84,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       sheetsOption: SheetsOption
       notes: string
     }) => {
-      if (!selectedHost) return
+      if (!selectedHost || !user) return
       const newBooking: Booking = {
         id: `bk-${Date.now()}`,
         hostId: selectedHost.id,
         hostName: selectedHost.name,
-        customerName: 'You',
+        customerName: user.name,
         location: selectedHost.location,
         loads: details.loads,
         dropOffTime: details.dropOffTime,
@@ -100,7 +104,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setBooking(newBooking)
       setScreen('customer-tracking')
     },
-    [selectedHost],
+    [selectedHost, user],
   )
 
   const acceptRequest = useCallback(() => {
@@ -147,14 +151,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      role,
       screen,
       selectedHost,
       booking,
       hostRequest,
       activeLoad,
       showMap,
-      setRole,
       navigate,
       selectHost,
       setShowMap,
@@ -165,14 +167,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDry,
     }),
     [
-      role,
       screen,
       selectedHost,
       booking,
       hostRequest,
       activeLoad,
       showMap,
-      setRole,
       navigate,
       selectHost,
       confirmBooking,
