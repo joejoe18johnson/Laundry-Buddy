@@ -7,7 +7,7 @@ import { HostSearchBar } from '../../components/HostSearchBar'
 import { WeatherBanner } from '../../components/WeatherBanner'
 import { Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
-import { getAvailableHosts, ACTIVE_REGION_LABEL } from '../../data/mockData'
+import { ACTIVE_REGION_LABEL, getAvailableHosts } from '../../data/mockData'
 import {
   countActiveFilters,
   DEFAULT_HOST_FILTERS,
@@ -27,8 +27,8 @@ const SORT_OPTIONS: { value: HostSort; label: string; icon: 'map-pin' | 'dollar-
 ]
 
 export function HomeScreen() {
-  const { showMap, setShowMap, viewHostProfile } = useApp()
-  const allHosts = getAvailableHosts()
+  const { showMap, setShowMap, viewHostProfile, onlineHosts } = useApp()
+  const allHosts = onlineHosts
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
   const [sort, setSort] = useState<HostSort>('nearest')
   const [searchQuery, setSearchQuery] = useState('')
