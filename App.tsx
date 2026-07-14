@@ -27,6 +27,7 @@ import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
 import { colors, spacing } from './src/theme'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
 import { SplashLoading } from './src/components/SplashLoading'
+import { ToastProvider } from './src/context/ToastContext'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
 
@@ -50,6 +51,12 @@ function AppShell() {
   const showTabBar = isCustomer && booking && !hideTabBarScreens.has(screen)
   const exploreActive =
     screen === 'customer-home' || screen === 'customer-booking' || screen === 'customer-host-profile'
+
+  const loadTabActive = screen === 'customer-tracking'
+  const loadNeedsAttention =
+    booking &&
+    (booking.requestStatus === 'pending' ||
+      (booking.requestStatus !== 'declined' && booking.stage !== 'ready'))
 
   return (
     <SafeAreaView style={styles.app} edges={['top']}>
@@ -115,8 +122,15 @@ function AppShell() {
             <Text style={[styles.tabText, exploreActive && styles.tabTextActive]}>Home</Text>
           </Pressable>
           <Pressable style={styles.tab} onPress={() => navigate('customer-tracking')}>
-            <AppIcon name="package" size={20} color={colors.gray500} />
-            <Text style={styles.tabText}>My load</Text>
+            <View>
+              <AppIcon
+                name="package"
+                size={20}
+                color={loadTabActive ? colors.black : colors.gray500}
+              />
+              {loadNeedsAttention && !loadTabActive && <View style={styles.tabDot} />}
+            </View>
+            <Text style={[styles.tabText, loadTabActive && styles.tabTextActive]}>My load</Text>
           </Pressable>
         </SafeAreaView>
       )}
@@ -177,9 +191,11 @@ function AuthenticatedApp() {
 
   return (
     <NotificationProvider>
-      <AppProvider>
-        <AppShell />
-      </AppProvider>
+      <ToastProvider>
+        <AppProvider>
+          <AppShell />
+        </AppProvider>
+      </ToastProvider>
     </NotificationProvider>
   )
 }
@@ -265,4 +281,15 @@ const styles = StyleSheet.create({
   tab: { flex: 1, paddingVertical: 10, alignItems: 'center', gap: 4 },
   tabText: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
   tabTextActive: { color: colors.black },
+  tabDot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.black,
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
 })

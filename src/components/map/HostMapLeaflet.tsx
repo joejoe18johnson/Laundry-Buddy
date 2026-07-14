@@ -2,20 +2,19 @@ import { useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 import { buildLeafletMapHtml } from '../../lib/leafletMapHtml'
+import { SEARCH_RADIUS_KM } from '../../lib/geo'
 import { colors } from '../../theme'
-import type { Host } from '../../types'
-
-interface Props {
-  hosts: Host[]
-  onHostPress: (host: Host) => void
-}
+import type { HostMapProps } from '../HostMap'
 
 /**
  * Interactive OpenStreetMap via Leaflet in a WebView.
  * Works in Expo Go, web, and simulators — no native map build required.
  */
-export function HostMapLeaflet({ hosts, onHostPress }: Props) {
-  const html = useMemo(() => buildLeafletMapHtml(hosts), [hosts])
+export function HostMapLeaflet({ hosts, onHostPress, userLocation, radiusKm = SEARCH_RADIUS_KM }: HostMapProps) {
+  const html = useMemo(
+    () => buildLeafletMapHtml(hosts, userLocation, radiusKm),
+    [hosts, userLocation, radiusKm],
+  )
 
   return (
     <View style={styles.wrap}>

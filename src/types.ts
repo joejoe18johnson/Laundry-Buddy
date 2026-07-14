@@ -155,6 +155,8 @@ export interface Booking {
   foldingService?: boolean
   totalAmount?: number
   paymentStatus?: 'paid' | 'pending'
+  requestStatus?: 'pending' | 'accepted' | 'declined'
+  loadPhotoUri?: string
 }
 
 export interface HostRequest {
@@ -171,6 +173,7 @@ export interface HostRequest {
   totalAmount?: number
   status: 'pending' | 'accepted' | 'declined'
   createdAt?: string
+  loadPhotoUri?: string
 }
 
 export function sheetsOptionLabel(option: SheetsOption, sheetsPrice: number): string {

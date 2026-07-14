@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { useAuth } from './AuthContext'
 import { useNotifications } from './NotificationContext'
+import { useToast } from './ToastContext'
 import {
   getCustomerSeedBooking,
   getHostByUserId,
@@ -38,9 +39,14 @@ import {
   saveHostSettings,
 } from '../lib/hostSettingsStorage'
 import {
-  formatDropOffHour,
-  type DropOffHour,
-} from '../lib/dropOffAvailability'
+  enrichHostsWithDistance,
+  filterHostsWithinRadius,
+  SEARCH_RADIUS_KM,
+  type Coordinates,
+} from '../lib/geo'
+import { USER_LOCATION } from '../lib/mapRegion'
+import * as Location from 'expo-location'
+import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
 import {
   type Booking,
   type BookingStage,
@@ -62,7 +68,13 @@ interface AppState {
   hostSettings: HostSettings | null
   hostSettingsMap: Record<string, HostSettings>
   onlineHosts: Host[]
+  userLocation: Coordinates
+  userLocationLabel: string
+  locationLoading: boolean
+  searchRadiusKm: number
+  requestUserLocation: () => Promise<void>
   showMap: boolean
+  refreshHostData: () => Promise<void>
   navigate: (screen: Screen) => void
   viewHostProfile: (host: Host) => void
   selectHost: (host: Host) => void
@@ -76,6 +88,7 @@ interface AppState {
     notes: string
     paymentMethod: PaymentMethod
     foldingService: boolean
+    loadPhotoUri?: string
   }) => void
   acceptRequest: (requestId: string) => void
   declineRequest: (requestId: string) => void
@@ -108,6 +121,7 @@ function defaultScreen(role: 'customer' | 'host'): Screen {
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { push } = useNotifications()
+  const { showToast } = useToast()
   const role = user!.role
 
   const hostSeed = role === 'host' ? getHostDashboardSeed(user!.id) : null
@@ -130,6 +144,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [hostSettingsMap, setHostSettingsMap] = useState<Record<string, HostSettings>>({})
   const [hostSettings, setHostSettings] = useState<HostSettings | null>(null)
   const [showMap, setShowMap] = useState(false)
+  const [userLocation, setUserLocation] = useState<Coordinates>(USER_LOCATION)
+  const [userLocationLabel, setUserLocationLabel] = useState('San Ignacio')
+  const [locationLoading, setLocationLoading] = useState(false)
 
   useEffect(() => {
     getAllHostSettings().then((map) => {
@@ -164,15 +181,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [role, user!.id, hostSettingsMap])
 
-  const onlineHosts = useMemo(
-    () =>
-      getAvailableHosts()
-        .filter((h) => isHostOnline(h.hostUserId, hostSettingsMap))
-        .map((h) =>
-          applyHostSettings(h, h.hostUserId ? hostSettingsMap[h.hostUserId] : undefined),
-        ),
-    [hostSettingsMap],
-  )
+  const onlineHosts = useMemo(() => {
+    const available = getAvailableHosts()
+      .filter((h) => isHostOnline(h.hostUserId, hostSettingsMap))
+      .map((h) =>
+        applyHostSettings(h, h.hostUserId ? hostSettingsMap[h.hostUserId] : undefined),
+      )
+    const withDistance = enrichHostsWithDistance(available, userLocation)
+    return filterHostsWithinRadius(withDistance, userLocation, SEARCH_RADIUS_KM)
+  }, [hostSettingsMap, userLocation])
+
+  const requestUserLocation = useCallback(async () => {
+    setLocationLoading(true)
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync()
+      if (status !== 'granted') {
+        showToast('Location permission denied', { icon: 'map-pin' })
+        return
+      }
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      })
+      setUserLocation({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      })
+      setUserLocationLabel('Your location')
+      showToast('Showing hosts near you', { icon: 'navigation' })
+    } catch {
+      showToast('Could not get your location', { icon: 'map-pin' })
+    } finally {
+      setLocationLoading(false)
+    }
+  }, [showToast])
 
   const getSettingsForHost = useCallback(
     (hostUserId?: string) => {
@@ -189,6 +230,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await saveHostSettings(user.id, settings)
       setHostSettings(settings)
       setHostSettingsMap((prev) => ({ ...prev, [user.id]: settings }))
+      showToast('Settings saved', { icon: 'check' })
 
       if (!wasOnline && settings.isOnline && settings.notifyGuestsWhenOnline) {
         const hostProfile = getHostByUserId(user.id)
@@ -206,8 +248,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [role, user, hostSettingsMap, push],
+    [role, user, hostSettingsMap, push, showToast],
   )
+
+  const refreshHostData = useCallback(async () => {
+    const map = await getAllHostSettings()
+    setHostSettingsMap(map)
+    if (role === 'host' && user) {
+      setHostSettings(map[user.id] ?? { ...DEFAULT_HOST_SETTINGS })
+    }
+  }, [role, user])
 
   const navigate = useCallback((next: Screen) => setScreen(next), [])
 
@@ -262,6 +312,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       notes: string
       paymentMethod: PaymentMethod
       foldingService: boolean
+      loadPhotoUri?: string
     }) => {
       if (!selectedHost || !user) return
       const settings = getSettingsForHost(selectedHost.hostUserId)
@@ -294,10 +345,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         foldingService: details.foldingService,
         totalAmount,
         paymentStatus: totalAmount <= 0 ? 'paid' : 'pending',
+        requestStatus: 'pending',
+        loadPhotoUri: details.loadPhotoUri,
         stage: 'got-bag',
         address: selectedHost.address,
         gateCode: selectedHost.gateCode,
-        stageTimes: { 'got-bag': nowTime() },
+        stageTimes: {},
         isNew: true,
       }
       setBooking(newBooking)
@@ -316,6 +369,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           paymentMethod: details.paymentMethod,
           foldingService: details.foldingService,
           totalAmount,
+          loadPhotoUri: details.loadPhotoUri,
           status: 'pending',
           createdAt: new Date().toISOString(),
         }
@@ -325,15 +379,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       notifyHost(
         selectedHost.hostUserId,
         'New booking',
-        `${user.name} · ${formatDropOffHour(details.dropOffTime)}${details.notes.trim() ? ` · "${details.notes.trim()}"` : ''}`,
+        `${user.name} · ${formatDropOffHour(details.dropOffTime)}${details.notes.trim() ? ` · "${details.notes.trim()}"` : ''}${details.loadPhotoUri ? ' · Photo attached' : ''}`,
       )
       notifyCustomer(
         user.id,
-        'Booking confirmed',
-        `${selectedHost.name} will expect your laundry during your drop-off window.`,
+        'Request sent',
+        `${selectedHost.name} will review your load request. We'll notify you when they accept.`,
       )
+      showToast('Request sent to host', { icon: 'send' })
     },
-    [selectedHost, user, notifyHost, notifyCustomer, getSettingsForHost],
+    [selectedHost, user, notifyHost, notifyCustomer, getSettingsForHost, showToast],
   )
 
   const acceptRequest = useCallback(
@@ -362,12 +417,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         paymentMethod: request.paymentMethod,
         foldingService: request.foldingService,
         totalAmount: request.totalAmount,
+        loadPhotoUri: request.loadPhotoUri,
         pricePerLoad: pricing.dryPrice,
         dryPrice: pricing.dryPrice,
         foldingPrice: pricing.foldingPrice,
         sheetsPrice: pricing.sheetsPrice,
         paymentStatus:
           (request.totalAmount ?? 0) <= 0 || request.paymentMethod === 'cash' ? 'paid' : 'pending',
+        requestStatus: 'accepted',
         stage: 'got-bag',
         address: hostProfile?.address ?? '',
         gateCode: hostProfile?.gateCode ?? '',
@@ -381,17 +438,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setHostStats((prev) => ({ ...prev, loadsToday: prev.loadsToday + 1 }))
       void saveHostOrders(user.id, { pendingRequests: nextRequests, activeLoads: nextLoads })
 
-      setBooking((prev) => (prev?.id === request.id ? { ...prev, ...load } : prev))
+      setBooking((prev) =>
+        prev?.id === request.id ? { ...prev, ...load, requestStatus: 'accepted', isNew: false } : prev,
+      )
 
       if (request.customerId) {
-        notifyCustomer(
-          request.customerId,
-          'Request accepted',
-          `${hostProfile?.name ?? user.name} accepted your load request.`,
-        )
+        const hostName = hostProfile?.name ?? user.name
+        const bank = settings.bankDetails
+        const needsTransfer =
+          request.paymentMethod === 'bank_transfer' && (request.totalAmount ?? 0) > 0
+        const body = needsTransfer
+          ? `${hostName} accepted your load! Transfer ${formatMoney(request.totalAmount ?? 0)} to ${bank.bankName} · ${bank.accountNumber}, then send proof on WhatsApp. Drop off at ${hostProfile?.address ?? 'the address shown in the app'}.`
+          : `${hostName} accepted your load! Drop off at ${hostProfile?.address ?? 'the address shown in the app'}.`
+        notifyCustomer(request.customerId, 'Load accepted', body)
+        showToast('Guest notified', { icon: 'check-circle' })
       }
     },
-    [hostRequests, activeLoads, user, notifyCustomer, getSettingsForHost],
+    [hostRequests, activeLoads, user, notifyCustomer, getSettingsForHost, showToast],
   )
 
   const declineRequest = useCallback(
@@ -409,8 +472,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           'The host could not take your load this time. Try another nearby host.',
         )
       }
+      setBooking((prev) =>
+        prev?.id === requestId ? { ...prev, requestStatus: 'declined', isNew: false } : prev,
+      )
+      showToast('Request declined', { icon: 'x-circle' })
     },
-    [hostRequests, activeLoads, user, notifyCustomer],
+    [hostRequests, activeLoads, user, notifyCustomer, showToast],
   )
 
   const advanceStage = useCallback(
@@ -479,9 +546,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const markDry = useCallback(
     (loadId: string) => {
       advanceStage(loadId, 'ready')
+      showToast('Load marked dry — guest notified', { icon: 'check-circle' })
       setScreen('host-dashboard')
     },
-    [advanceStage],
+    [advanceStage, showToast],
   )
 
   const confirmTransferPayment = useCallback(
@@ -514,9 +582,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           'Payment verified',
           `${target.hostName} confirmed your bank transfer of ${formatMoney(target.totalAmount ?? 0)}.`,
         )
+        showToast('Payment marked received', { icon: 'check-circle' })
       }
     },
-    [notifyCustomer, role, user, hostRequests],
+    [notifyCustomer, role, user, hostRequests, showToast],
   )
 
   const value = useMemo(
@@ -530,7 +599,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostSettings,
       hostSettingsMap,
       onlineHosts,
+      userLocation,
+      userLocationLabel,
+      locationLoading,
+      searchRadiusKm: SEARCH_RADIUS_KM,
+      requestUserLocation,
       showMap,
+      refreshHostData,
       navigate,
       viewHostProfile,
       selectHost,
@@ -554,7 +629,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostSettings,
       hostSettingsMap,
       onlineHosts,
+      userLocation,
+      userLocationLabel,
+      locationLoading,
+      requestUserLocation,
       showMap,
+      refreshHostData,
       navigate,
       viewHostProfile,
       selectHost,

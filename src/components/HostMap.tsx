@@ -7,6 +7,8 @@ import type { Host } from '../types'
 export interface HostMapProps {
   hosts: Host[]
   onHostPress: (host: Host) => void
+  userLocation: { latitude: number; longitude: number }
+  radiusKm?: number
 }
 
 /** Catches native map crashes and falls back to Leaflet. */

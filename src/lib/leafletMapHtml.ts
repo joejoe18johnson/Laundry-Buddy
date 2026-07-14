@@ -1,7 +1,11 @@
-import { USER_LOCATION } from './mapRegion'
+import type { Coordinates } from './geo'
 import type { Host } from '../types'
 
-export function buildLeafletMapHtml(hosts: Host[]): string {
+export function buildLeafletMapHtml(
+  hosts: Host[],
+  userLocation: Coordinates,
+  radiusKm: number,
+): string {
   const payload = JSON.stringify(
     hosts.map((h) => ({
       id: h.id,
@@ -23,21 +27,28 @@ export function buildLeafletMapHtml(hosts: Host[]): string {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #map { width: 100%; height: 100%; background: #e9ecef; }
     .pin {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
       background: #000;
       color: #fff;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font: 700 12px -apple-system, BlinkMacSystemFont, sans-serif;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      font: 700 11px -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      line-height: 1;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+      border: 2.5px solid #fff;
     }
+    .pin-free { font-size: 9px; font-weight: 800; }
     .you {
-      width: 12px;
-      height: 12px;
+      width: 14px;
+      height: 14px;
       background: #276ef1;
-      border: 2px solid #fff;
+      border: 2.5px solid #fff;
       border-radius: 50%;
-      box-shadow: 0 0 0 5px rgba(39,110,241,0.25);
+      box-shadow: 0 0 0 6px rgba(39,110,241,0.22);
     }
     .leaflet-control-attribution { font-size: 9px !important; }
   </style>
@@ -46,14 +57,25 @@ export function buildLeafletMapHtml(hosts: Host[]): string {
   <div id="map"></div>
   <script>
     const hosts = ${payload};
-    const you = { lat: ${USER_LOCATION.latitude}, lng: ${USER_LOCATION.longitude} };
+    const you = { lat: ${userLocation.latitude}, lng: ${userLocation.longitude} };
+    const radiusM = ${radiusKm * 1000};
 
     const map = L.map('map', { zoomControl: true, attributionControl: true })
-      .setView([you.lat, you.lng], 12);
+      .setView([you.lat, you.lng], 13);
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    L.circle([you.lat, you.lng], {
+      radius: radiusM,
+      color: '#000000',
+      weight: 1.5,
+      opacity: 0.55,
+      fillColor: '#000000',
+      fillOpacity: 0.06,
+      dashArray: '7 6'
     }).addTo(map);
 
     const youIcon = L.divIcon({
@@ -62,15 +84,16 @@ export function buildLeafletMapHtml(hosts: Host[]): string {
       iconSize: [20, 20],
       iconAnchor: [10, 10]
     });
-    L.marker([you.lat, you.lng], { icon: youIcon }).addTo(map);
+    L.marker([you.lat, you.lng], { icon: youIcon, zIndexOffset: 1000 }).addTo(map);
 
-    const markers = [];
     hosts.forEach(function(h) {
       const label = h.price <= 0 ? 'Free' : ('$' + h.price);
+      const freeClass = h.price <= 0 ? ' pin-free' : '';
       const icon = L.divIcon({
-        html: '<div class="pin">' + label + '</div>',
+        html: '<div class="pin' + freeClass + '">' + label + '</div>',
         className: '',
-        iconAnchor: [24, 32]
+        iconSize: [38, 38],
+        iconAnchor: [19, 19]
       });
       const marker = L.marker([h.lat, h.lng], { icon: icon }).addTo(map);
       marker.on('click', function() {
@@ -78,13 +101,7 @@ export function buildLeafletMapHtml(hosts: Host[]): string {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'host', hostId: h.id }));
         }
       });
-      markers.push(marker);
     });
-
-    markers.push(L.marker([you.lat, you.lng]));
-    if (markers.length > 1) {
-      map.fitBounds(L.featureGroup(markers).getBounds().pad(0.18));
-    }
 
     setTimeout(function() { map.invalidateSize(); }, 250);
     window.addEventListener('resize', function() { map.invalidateSize(); });

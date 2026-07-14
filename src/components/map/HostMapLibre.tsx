@@ -1,24 +1,39 @@
 import { useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Camera, MapView, MarkerView } from '@maplibre/maplibre-react-native'
+import { Camera, FillLayer, LineLayer, MapView, MarkerView, ShapeSource } from '@maplibre/maplibre-react-native'
 import { HostPricePin, YouMarker } from './MapPins'
+import { circleRing } from '../../lib/geo'
 import {
-  getMapRegion,
+  getMapRegionForRadius,
   OPENFREEMAP_STYLE_URL,
   regionToBounds,
-  USER_LOCATION,
 } from '../../lib/mapRegion'
-import type { Host } from '../../types'
-
-interface Props {
-  hosts: Host[]
-  onHostPress: (host: Host) => void
-}
+import { SEARCH_RADIUS_KM } from '../../lib/geo'
+import type { HostMapProps } from '../HostMap'
 
 /** MapLibre + OpenFreeMap — free OSM vector maps (dev/production builds). */
-export function HostMapLibre({ hosts, onHostPress }: Props) {
-  const region = useMemo(() => getMapRegion(hosts), [hosts])
+export function HostMapLibre({
+  hosts,
+  onHostPress,
+  userLocation,
+  radiusKm = SEARCH_RADIUS_KM,
+}: HostMapProps) {
+  const region = useMemo(
+    () => getMapRegionForRadius(userLocation, radiusKm),
+    [userLocation, radiusKm],
+  )
   const bounds = regionToBounds(region)
+  const circleGeo = useMemo(
+    () => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: [circleRing(userLocation, radiusKm)],
+      },
+      properties: {},
+    }),
+    [userLocation, radiusKm],
+  )
 
   return (
     <View style={styles.wrap}>
@@ -32,23 +47,40 @@ export function HostMapLibre({ hosts, onHostPress }: Props) {
         rotateEnabled={false}
       >
         <Camera
-          defaultSettings={
-            hosts.length > 0
-              ? { bounds: { ne: bounds.ne, sw: bounds.sw } }
-              : {
-                  centerCoordinate: [USER_LOCATION.longitude, USER_LOCATION.latitude],
-                  zoomLevel: 12,
-                }
-          }
+          defaultSettings={{
+            bounds: { ne: bounds.ne, sw: bounds.sw },
+            paddingTop: 24,
+            paddingBottom: 24,
+            paddingLeft: 24,
+            paddingRight: 24,
+          }}
         />
-        <MarkerView coordinate={[USER_LOCATION.longitude, USER_LOCATION.latitude]} anchor={{ x: 0.5, y: 0.5 }}>
+        <ShapeSource id="radius-circle" shape={circleGeo}>
+          <FillLayer
+            id="radius-fill"
+            style={{ fillColor: '#000000', fillOpacity: 0.06 }}
+          />
+          <LineLayer
+            id="radius-line"
+            style={{
+              lineColor: '#000000',
+              lineWidth: 1.5,
+              lineOpacity: 0.55,
+              lineDasharray: [2, 2],
+            }}
+          />
+        </ShapeSource>
+        <MarkerView
+          coordinate={[userLocation.longitude, userLocation.latitude]}
+          anchor={{ x: 0.5, y: 0.5 }}
+        >
           <YouMarker />
         </MarkerView>
         {hosts.map((host) => (
           <MarkerView
             key={host.id}
             coordinate={[host.longitude, host.latitude]}
-            anchor={{ x: 0.5, y: 1 }}
+            anchor={{ x: 0.5, y: 0.5 }}
           >
             <HostPricePin price={host.price} onPress={() => onHostPress(host)} />
           </MarkerView>

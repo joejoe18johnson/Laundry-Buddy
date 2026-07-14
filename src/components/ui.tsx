@@ -255,6 +255,69 @@ export function LoadingScreen() {
   )
 }
 
+export type StatusBadgeVariant =
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'paid'
+  | 'awaiting'
+  | 'drying'
+  | 'ready'
+  | 'neutral'
+
+export function StatusBadge({
+  label,
+  variant = 'neutral',
+}: {
+  label: string
+  variant?: StatusBadgeVariant
+}) {
+  const badgeStyles: Record<StatusBadgeVariant, { bg: object; text: object }> = {
+    pending: { bg: styles.status_pending, text: styles.statusText_pending },
+    accepted: { bg: styles.status_accepted, text: styles.statusText_accepted },
+    declined: { bg: styles.status_declined, text: styles.statusText_declined },
+    paid: { bg: styles.status_paid, text: styles.statusText_paid },
+    awaiting: { bg: styles.status_awaiting, text: styles.statusText_awaiting },
+    drying: { bg: styles.status_drying, text: styles.statusText_drying },
+    ready: { bg: styles.status_ready, text: styles.statusText_ready },
+    neutral: { bg: styles.status_neutral, text: styles.statusText_neutral },
+  }
+  const v = badgeStyles[variant]
+  return (
+    <View style={[styles.statusBadge, v.bg]}>
+      <Text style={[styles.statusBadgeText, v.text]}>{label}</Text>
+    </View>
+  )
+}
+
+export function StepIndicator({
+  steps,
+  current,
+}: {
+  steps: string[]
+  current: number
+}) {
+  return (
+    <View style={styles.stepRow}>
+      {steps.map((step, i) => {
+        const done = i < current
+        const active = i === current
+        return (
+          <View key={step} style={styles.stepItem}>
+            <View style={[styles.stepDot, done && styles.stepDotDone, active && styles.stepDotActive]}>
+              {done ? <AppIcon name="check" size={10} color={colors.white} /> : null}
+            </View>
+            <Text style={[styles.stepLabel, (done || active) && styles.stepLabelActive]} numberOfLines={1}>
+              {step}
+            </Text>
+            {i < steps.length - 1 && <View style={[styles.stepLine, done && styles.stepLineDone]} />}
+          </View>
+        )
+      })}
+    </View>
+  )
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.white },
   flex: { flex: 1 },
@@ -388,4 +451,55 @@ const styles = StyleSheet.create({
   brandSwitch: {
     transform: [{ scaleX: 1.08 }, { scaleY: 1.08 }],
   },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+  },
+  statusBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.3, textTransform: 'uppercase' },
+  status_pending: { backgroundColor: colors.gray50, borderColor: colors.gray200 },
+  statusText_pending: { color: colors.gray600 },
+  status_accepted: { backgroundColor: colors.greenBg, borderColor: 'rgba(5,148,79,0.25)' },
+  statusText_accepted: { color: colors.green },
+  status_declined: { backgroundColor: '#fff5f5', borderColor: 'rgba(193,53,21,0.2)' },
+  statusText_declined: { color: colors.danger },
+  status_paid: { backgroundColor: colors.greenBg, borderColor: 'rgba(5,148,79,0.25)' },
+  statusText_paid: { color: colors.green },
+  status_awaiting: { backgroundColor: '#fffbeb', borderColor: '#fde68a' },
+  statusText_awaiting: { color: '#b45309' },
+  status_drying: { backgroundColor: colors.gray50, borderColor: colors.black },
+  statusText_drying: { color: colors.black },
+  status_ready: { backgroundColor: colors.black, borderColor: colors.black },
+  statusText_ready: { color: colors.white },
+  status_neutral: { backgroundColor: colors.gray50, borderColor: colors.gray100 },
+  statusText_neutral: { color: colors.gray600 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.lg, gap: 2 },
+  stepItem: { flex: 1, alignItems: 'center', position: 'relative' },
+  stepDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.gray200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    marginBottom: 6,
+  },
+  stepDotDone: { backgroundColor: colors.black, borderColor: colors.black },
+  stepDotActive: { borderColor: colors.black, borderWidth: 2.5 },
+  stepLabel: { fontSize: 10, fontWeight: '600', color: colors.gray400, textAlign: 'center' },
+  stepLabelActive: { color: colors.black },
+  stepLine: {
+    position: 'absolute',
+    top: 10,
+    left: '55%',
+    right: '-45%',
+    height: 2,
+    backgroundColor: colors.gray200,
+    zIndex: -1,
+  },
+  stepLineDone: { backgroundColor: colors.black },
 })

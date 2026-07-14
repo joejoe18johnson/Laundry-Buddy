@@ -1,4 +1,5 @@
-import { Linking, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -6,7 +7,7 @@ import { getHostById } from '../../data/mockData'
 import { applyHostListing } from '../../lib/hostListing'
 import { getBookingAmount, formatMoney, formatPaymentMethod } from '../../lib/bookingPayments'
 import { buildTransferProofMessage, sendTransferProofViaWhatsApp } from '../../lib/whatsapp'
-import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
+import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
 
@@ -20,6 +21,29 @@ const STAGES: { key: BookingStage; label: string; desc: string; icon: 'shopping-
 export function TrackingScreen() {
   const { user } = useAuth()
   const { booking, navigate, getSettingsForHost } = useApp()
+  const [bannerVisible, setBannerVisible] = useState(true)
+  const pulse = useRef(new Animated.Value(1)).current
+
+  useEffect(() => {
+    setBannerVisible(true)
+  }, [booking?.id])
+
+  useEffect(() => {
+    if (!booking?.isNew || booking.requestStatus === 'declined') return
+    const timer = setTimeout(() => setBannerVisible(false), 6000)
+    return () => clearTimeout(timer)
+  }, [booking?.id, booking?.isNew, booking?.requestStatus])
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.35, duration: 900, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]),
+    )
+    loop.start()
+    return () => loop.stop()
+  }, [pulse, booking?.stage])
 
   if (!booking) {
     return (
@@ -39,7 +63,23 @@ export function TrackingScreen() {
   const whatsapp = resolvedHost?.whatsapp ?? host?.whatsapp ?? ''
   const amount = getBookingAmount(booking)
   const isBankTransfer = booking.paymentMethod === 'bank_transfer'
-  const transferPending = isBankTransfer && booking.paymentStatus === 'pending' && amount > 0
+  const isAccepted = booking.requestStatus !== 'pending' && booking.requestStatus !== 'declined'
+  const isPending = booking.requestStatus === 'pending'
+  const isDeclined = booking.requestStatus === 'declined'
+  const transferPending = isAccepted && isBankTransfer && booking.paymentStatus === 'pending' && amount > 0
+  const bank = hostSettings.bankDetails
+
+  const statusBadge = isDeclined
+    ? { label: 'Declined', variant: 'declined' as const }
+    : isPending
+      ? { label: 'Awaiting host', variant: 'awaiting' as const }
+      : booking.stage === 'ready'
+        ? { label: 'Ready', variant: 'ready' as const }
+        : booking.stage === 'drying'
+          ? { label: 'Drying', variant: 'drying' as const }
+          : transferPending
+            ? { label: 'Pay now', variant: 'pending' as const }
+            : { label: 'Accepted', variant: 'accepted' as const }
 
   const sendTransferProof = () => {
     if (!whatsapp || !user) return
@@ -61,15 +101,47 @@ export function TrackingScreen() {
     <Screen>
       <BackButton onPress={() => navigate('customer-home')} label="Home" />
 
-      {booking.isNew && (
-        <View style={styles.success}>
+      {booking.isNew && !isDeclined && bannerVisible && (
+        <Pressable onPress={() => setBannerVisible(false)} style={styles.success}>
           <View style={styles.successIcon}>
             <AppIcon name="check" size={18} color={colors.white} />
           </View>
-          <View>
-            <Text style={styles.successTitle}>Booking confirmed</Text>
-            <Text style={styles.successSub}>Drop off at {booking.address}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.successTitle}>
+              {isPending ? 'Request sent' : 'Booking confirmed'}
+            </Text>
+            <Text style={styles.successSub}>
+              {isPending
+                ? `Waiting for ${booking.hostName} to accept your load`
+                : `Drop off at ${booking.address}`}
+            </Text>
           </View>
+          <AppIcon name="x" size={16} color={colors.gray500} />
+        </Pressable>
+      )}
+
+      {isPending && (
+        <View style={styles.pendingCard}>
+          <AppIcon name="clock" size={18} color={colors.gray600} />
+          <View style={styles.pendingBody}>
+            <Text style={styles.pendingTitle}>Awaiting host acceptance</Text>
+            <Text style={styles.pendingSub}>
+              {booking.hostName} is reviewing your request. You'll get a notification when they accept — bank transfer details will appear then.
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {isDeclined && (
+        <View style={styles.declinedCard}>
+          <AppIcon name="x-circle" size={18} color={colors.danger} />
+          <View style={styles.pendingBody}>
+            <Text style={styles.declinedTitle}>Request declined</Text>
+            <Text style={styles.pendingSub}>
+              {booking.hostName} couldn't take your load. Try another nearby host.
+            </Text>
+          </View>
+          <PrimaryButton title="Find another host" icon="search" onPress={() => navigate('customer-home')} full />
         </View>
       )}
 
@@ -79,8 +151,15 @@ export function TrackingScreen() {
             <AppIcon name="credit-card" size={18} />
             <Text style={styles.paymentTitle}>Bank transfer — {formatMoney(amount)}</Text>
           </View>
+          {bank?.accountNumber?.trim() ? (
+            <View style={styles.bankBlock}>
+              <Text style={styles.bankLine}>{bank.bankName}</Text>
+              <Text style={styles.bankLine}>{bank.accountName}</Text>
+              <Text style={styles.bankAccount}>{bank.accountNumber}</Text>
+            </View>
+          ) : null}
           <Text style={styles.paymentSub}>
-            Send {booking.hostName} your transfer proof on WhatsApp so they can verify payment.
+            Transfer the amount above, then send {booking.hostName} your proof on WhatsApp.
           </Text>
           {whatsapp ? (
             <OutlineButton
@@ -95,16 +174,19 @@ export function TrackingScreen() {
         </View>
       )}
 
-      {isBankTransfer && booking.paymentStatus === 'paid' && (
+      {isBankTransfer && booking.paymentStatus === 'paid' && isAccepted && (
         <View style={styles.paidCard}>
           <AppIcon name="check-circle" size={18} color={colors.green} />
           <Text style={styles.paidText}>Transfer verified · {formatMoney(amount)}</Text>
         </View>
       )}
 
+      {!isPending && !isDeclined && (
+        <>
       <View style={styles.statusHeader}>
         <AppIcon name="package" size={20} color={colors.gray500} />
         <Text style={styles.eyebrow}>Your load</Text>
+        <StatusBadge label={statusBadge.label} variant={statusBadge.variant} />
       </View>
       <Text style={styles.statusTitle}>{current.label}</Text>
       <Text style={styles.statusSub}>
@@ -120,11 +202,12 @@ export function TrackingScreen() {
           return (
             <View key={stage.key} style={styles.timelineRow}>
               <View style={styles.timelineLeft}>
-                <View
+                <Animated.View
                   style={[
                     styles.dot,
                     done && styles.dotDone,
                     active && styles.dotActive,
+                    active && { transform: [{ scale: pulse }] },
                   ]}
                 />
                 {i < STAGES.length - 1 && (
@@ -148,16 +231,23 @@ export function TrackingScreen() {
           )
         })}
       </View>
+        </>
+      )}
 
+      {!isDeclined && (
       <View style={styles.infoCard}>
         <AppIcon name="message-circle" size={18} color={colors.gray600} />
         <Text style={styles.infoText}>
-          {transferPending
-            ? 'Message your host on WhatsApp with your transfer screenshot.'
-            : "We'll notify you when your load is ready."}
+          {isPending
+            ? "We'll notify you as soon as the host accepts your request."
+            : transferPending
+              ? 'Message your host on WhatsApp with your transfer screenshot.'
+              : "We'll notify you when your load is ready."}
         </Text>
       </View>
+      )}
 
+      {isAccepted && (
       <View style={styles.pickupCard}>
         <View style={styles.pickupTitleRow}>
           <AppIcon name="map-pin" size={18} />
@@ -193,6 +283,7 @@ export function TrackingScreen() {
           />
         ) : null}
       </View>
+      )}
     </Screen>
   )
 }
@@ -222,6 +313,33 @@ const styles = StyleSheet.create({
   },
   successTitle: { fontWeight: '600', fontSize: 15, lineHeight: 20 },
   successSub: { fontSize: 13, color: colors.gray600, marginTop: spacing.sm, lineHeight: 18 },
+  pendingCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: colors.gray50,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+  },
+  pendingBody: { flex: 1 },
+  pendingTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  pendingSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+  declinedCard: {
+    gap: spacing.md,
+    backgroundColor: '#fff5f5',
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(220,38,38,0.2)',
+  },
+  declinedTitle: { fontSize: 16, fontWeight: '700', color: colors.danger, marginBottom: 4 },
+  bankBlock: { gap: 2, marginVertical: spacing.sm },
+  bankLine: { fontSize: 14, fontWeight: '600' },
+  bankAccount: { fontSize: 17, fontWeight: '700', letterSpacing: 0.5 },
   paymentCard: {
     borderWidth: 1,
     borderColor: colors.black,
@@ -245,7 +363,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   paidText: { fontSize: 14, fontWeight: '600', color: colors.green },
-  statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', letterSpacing: 0.4 },
   statusTitle: { fontSize: 32, fontWeight: '700', marginVertical: spacing.sm, lineHeight: 38 },
   statusSub: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },

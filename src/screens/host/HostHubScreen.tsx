@@ -165,12 +165,13 @@ export function HostHubScreen() {
   const [draft, setDraft] = useState<HostSettings>(() =>
     normalizeHostSettings(hostSettings, host),
   )
-  const [saved, setSaved] = useState(false)
+  const [saved, setSaved] = useState(true)
 
   useEffect(() => {
     if (!hostSettings || !user) return
     const h = getHostByUserId(user.id)
     setDraft(normalizeHostSettings(hostSettings, h))
+    setSaved(true)
   }, [hostSettings, user])
 
   if (!user) return null
@@ -274,7 +275,8 @@ export function HostHubScreen() {
     .join(' · ')
 
   return (
-    <Screen>
+    <View style={styles.hubWrap}>
+    <Screen style={!saved ? styles.hubScrollWithBar : undefined}>
       <BackButton onPress={() => navigate('host-dashboard')} label="Dashboard" />
       <View style={styles.titleRow}>
         <AppIcon name="user" size={22} />
@@ -577,10 +579,40 @@ export function HostHubScreen() {
         </Pressable>
       </View>
     </Screen>
+    {!saved && (
+      <View style={styles.stickySaveBar}>
+        <Text style={styles.stickySaveText}>You have unsaved changes</Text>
+        <PrimaryButton title="Save now" onPress={handleSave} />
+      </View>
+    )}
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  hubWrap: { flex: 1, backgroundColor: colors.white },
+  hubScrollWithBar: { paddingBottom: 100 },
+  stickySaveBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  stickySaveText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.gray600 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   title: { fontSize: 26, fontWeight: '700', lineHeight: 32 },
   subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },

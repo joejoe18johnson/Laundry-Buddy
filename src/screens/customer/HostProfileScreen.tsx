@@ -103,9 +103,11 @@ export function HostProfileScreen() {
             <Text style={styles.avatarText}>{host.name[0]}</Text>
           </View>
           <Text style={styles.heroName}>{host.name}</Text>
-          <View style={styles.onlineBadge}>
-            <View style={styles.onlineDot} />
-            <Text style={styles.onlineText}>Online now</Text>
+          <View style={[styles.onlineBadge, !settings.isOnline && styles.offlineBadge]}>
+            <View style={[styles.onlineDot, !settings.isOnline && styles.offlineDot]} />
+            <Text style={[styles.onlineText, !settings.isOnline && styles.offlineText]}>
+              {settings.isOnline ? 'Online now' : 'Offline'}
+            </Text>
           </View>
           <View style={styles.heroLocation}>
             <AppIcon name="map-pin" size={14} color="rgba(255,255,255,0.9)" />
@@ -258,6 +260,9 @@ const styles = StyleSheet.create({
   },
   onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#7CFC7C' },
   onlineText: { fontSize: 12, fontWeight: '700', color: colors.white },
+  offlineBadge: { backgroundColor: 'rgba(255,255,255,0.15)' },
+  offlineDot: { backgroundColor: colors.gray400 },
+  offlineText: { color: 'rgba(255,255,255,0.75)' },
   heroLocation: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm },
   heroLocationText: { fontSize: 14, color: 'rgba(255,255,255,0.9)' },
   heroRating: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },

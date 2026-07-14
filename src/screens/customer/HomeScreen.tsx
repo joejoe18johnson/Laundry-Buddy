@@ -4,6 +4,7 @@ import {
   FlatList,
   PanResponder,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -80,7 +81,7 @@ function nearestSnap(height: number, containerHeight: number, velocityY: number)
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets()
-  const { viewHostProfile, onlineHosts } = useApp()
+  const { viewHostProfile, onlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm } = useApp()
   const allHosts = onlineHosts
   const totalHosts = getAvailableHosts().length
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
@@ -89,6 +90,9 @@ export function HomeScreen() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [containerHeight, setContainerHeight] = useState(0)
   const [snap, setSnap] = useState<SnapPoint>('half')
+  const [refreshing, setRefreshing] = useState(false)
+
+  const chevronBounce = useRef(new Animated.Value(0)).current
 
   const sheetHeight = useRef(new Animated.Value(0)).current
   const dragStartHeight = useRef(0)
@@ -113,7 +117,7 @@ export function HomeScreen() {
 
   const resultLabel = trimmedSearch
     ? `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}”`
-    : `${hosts.length} online in ${ACTIVE_REGION_LABEL}`
+    : `${hosts.length} within ${searchRadiusKm} km · ${userLocationLabel}`
 
   const animateToSnap = useCallback(
     (point: SnapPoint) => {
@@ -135,6 +139,24 @@ export function HomeScreen() {
   useEffect(() => {
     snapRef.current = snap
   }, [snap])
+
+  useEffect(() => {
+    if (snap !== 'map') return
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(chevronBounce, { toValue: -4, duration: 700, useNativeDriver: true }),
+        Animated.timing(chevronBounce, { toValue: 0, duration: 700, useNativeDriver: true }),
+      ]),
+    )
+    loop.start()
+    return () => loop.stop()
+  }, [snap, chevronBounce])
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await refreshHostData()
+    setRefreshing(false)
+  }, [refreshHostData])
 
   const onContainerLayout = (e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height
@@ -271,7 +293,7 @@ export function HomeScreen() {
   ) : (
     <View style={styles.peekHeader}>
       <Text style={styles.peekText}>
-        {hosts.length} host{hosts.length === 1 ? '' : 's'} nearby · swipe up for list
+        {hosts.length} host{hosts.length === 1 ? '' : 's'} within {searchRadiusKm} km · swipe up
       </Text>
     </View>
   )
@@ -298,13 +320,18 @@ export function HomeScreen() {
   return (
     <View style={styles.container} onLayout={onContainerLayout}>
       <View style={styles.map} pointerEvents="box-none">
-        <HostMap hosts={hosts} onHostPress={viewHostProfile} />
+        <HostMap
+          hosts={hosts}
+          onHostPress={viewHostProfile}
+          userLocation={userLocation}
+          radiusKm={searchRadiusKm}
+        />
         {snap !== 'full' && hosts.length > 0 && (
           <View style={styles.mapBadgeWrap} pointerEvents="box-none">
             <Pressable style={styles.mapBadge} onPress={() => animateToSnap('half')}>
               <AppIcon name="map-pin" size={14} color={colors.white} />
               <Text style={styles.mapBadgeText}>
-                {hosts.length} host{hosts.length === 1 ? '' : 's'} on map
+                {hosts.length} within {searchRadiusKm} km
               </Text>
             </Pressable>
           </View>
@@ -323,19 +350,23 @@ export function HomeScreen() {
           </Pressable>
           <View style={styles.sheetTitleRow}>
             <Text style={styles.sheetTitle}>Select a host</Text>
-            <Pressable onPress={cycleSnap} hitSlop={8} style={styles.snapBtn}>
+          <Pressable onPress={cycleSnap} hitSlop={8} style={styles.snapBtn}>
+            <Animated.View style={{ transform: [{ translateY: snap === 'map' ? chevronBounce : 0 }] }}>
               <AppIcon
                 name={snap === 'map' ? 'chevron-up' : snap === 'full' ? 'chevron-down' : 'maximize-2'}
                 size={18}
                 color={colors.gray500}
               />
-            </Pressable>
+            </Animated.View>
+          </Pressable>
           </View>
         </View>
 
         <HostSearchBar
           value={searchQuery}
           onChange={setSearchQuery}
+          onLocate={requestUserLocation}
+          locating={locationLoading}
           placeholder="Search area, town, or host"
         />
 
@@ -345,6 +376,9 @@ export function HomeScreen() {
           renderItem={renderHost}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.black} />
+          }
           contentContainerStyle={[
             styles.listContent,
             { paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.xxl },

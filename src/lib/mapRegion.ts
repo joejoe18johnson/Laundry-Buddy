@@ -1,14 +1,14 @@
 import type { Host } from '../types'
+import type { Coordinates } from './geo'
+import { SEARCH_RADIUS_KM } from './geo'
 
-/** Guest search center — San Ignacio, Cayo */
-export const USER_LOCATION = {
+export { SEARCH_RADIUS_KM }
+export type { Coordinates } from './geo'
+
+/** Default guest search center — San Ignacio, Cayo */
+export const USER_LOCATION: Coordinates = {
   latitude: 17.156,
   longitude: -89.069,
-}
-
-const DEFAULT_DELTA = {
-  latitudeDelta: 0.14,
-  longitudeDelta: 0.14,
 }
 
 export interface MapRegion {
@@ -18,27 +18,18 @@ export interface MapRegion {
   longitudeDelta: number
 }
 
-export function getMapRegion(hosts: Host[]): MapRegion {
-  if (!hosts.length) {
-    return { ...USER_LOCATION, ...DEFAULT_DELTA }
-  }
+export function getMapRegion(hosts: Host[], center: Coordinates = USER_LOCATION): MapRegion {
+  void hosts
+  return getMapRegionForRadius(center, SEARCH_RADIUS_KM)
+}
 
-  const lats = hosts.map((h) => h.latitude)
-  const lngs = hosts.map((h) => h.longitude)
-  lats.push(USER_LOCATION.latitude)
-  lngs.push(USER_LOCATION.longitude)
-
-  const minLat = Math.min(...lats)
-  const maxLat = Math.max(...lats)
-  const minLng = Math.min(...lngs)
-  const maxLng = Math.max(...lngs)
-
-  const latitudeDelta = Math.max((maxLat - minLat) * 1.5, 0.06)
-  const longitudeDelta = Math.max((maxLng - minLng) * 1.5, 0.06)
-
+/** Map view that fits a radius circle around the guest. */
+export function getMapRegionForRadius(center: Coordinates, radiusKm: number): MapRegion {
+  const latitudeDelta = (radiusKm * 2.4) / 111
+  const longitudeDelta = latitudeDelta / Math.cos((center.latitude * Math.PI) / 180)
   return {
-    latitude: (minLat + maxLat) / 2,
-    longitude: (minLng + maxLng) / 2,
+    latitude: center.latitude,
+    longitude: center.longitude,
     latitudeDelta,
     longitudeDelta,
   }

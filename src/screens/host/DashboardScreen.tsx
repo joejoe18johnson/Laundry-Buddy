@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { sheetsOptionLabel } from '../../types'
 import { formatDropOffAvailability, formatDropOffHour, type DropOffHour } from '../../lib/dropOffAvailability'
@@ -8,8 +8,22 @@ import { getHostByUserId } from '../../data/mockData'
 import { applyHostSettings } from '../../lib/hostListing'
 import { formatHostPrice } from '../../lib/hostFilters'
 import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
-import { BrandSwitch, GhostButton, PrimaryButton, Screen } from '../../components/ui'
+import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
+import type { BookingStage } from '../../types'
+
+function stageBadge(stage: BookingStage) {
+  switch (stage) {
+    case 'ready':
+      return { label: 'Ready', variant: 'ready' as const }
+    case 'drying':
+      return { label: 'Drying', variant: 'drying' as const }
+    case 'waiting':
+      return { label: 'Waiting', variant: 'awaiting' as const }
+    default:
+      return { label: 'Received', variant: 'neutral' as const }
+  }
+}
 
 function DropOffBadge({ dropOffTime }: { dropOffTime: DropOffHour }) {
   return (
@@ -25,16 +39,27 @@ function OrderDetails({
   notes,
   paymentMethod,
   totalAmount,
+  loadPhotoUri,
 }: {
   dropOffTime: DropOffHour
   notes?: string
   paymentMethod?: 'cash' | 'bank_transfer'
   totalAmount?: number
+  loadPhotoUri?: string
 }) {
   const trimmedNotes = notes?.trim()
 
   return (
     <View style={styles.orderDetails}>
+      {loadPhotoUri ? (
+        <View style={styles.photoBlock}>
+          <View style={styles.notesHeader}>
+            <AppIcon name="camera" size={14} color={colors.gray600} />
+            <Text style={styles.notesLabel}>Guest load photo</Text>
+          </View>
+          <Image source={{ uri: loadPhotoUri }} style={styles.loadPhoto} resizeMode="cover" />
+        </View>
+      ) : null}
       <View style={styles.detailRow}>
         <View style={styles.detailIcon}>
           <AppIcon name="clock" size={16} color={colors.black} />
@@ -58,7 +83,7 @@ function OrderDetails({
       )}
       {paymentMethod && (
         <Text style={styles.paymentMeta}>
-          {paymentMethod === 'cash' ? 'Cash on pickup' : 'Bank transfer'}
+          {paymentMethod === 'cash' ? 'Cash on pickup' : 'Bank transfer after acceptance'}
           {totalAmount != null && totalAmount > 0 ? ` · ${formatMoney(totalAmount)}` : ''}
         </Text>
       )}
@@ -100,8 +125,8 @@ export function DashboardScreen() {
           <Text style={styles.title}>{hostProfile?.name ?? user?.name}'s dryer</Text>
         </View>
         <Pressable style={styles.hubLink} onPress={() => navigate('account')}>
-          <AppIcon name="user" size={16} />
-          <Text style={styles.hubLinkText}>Profile</Text>
+          <AppIcon name="settings" size={16} />
+          <Text style={styles.hubLinkText}>Host settings</Text>
         </Pressable>
       </View>
 
@@ -191,6 +216,7 @@ export function DashboardScreen() {
               notes={request.notes}
               paymentMethod={request.paymentMethod}
               totalAmount={request.totalAmount}
+              loadPhotoUri={request.loadPhotoUri}
             />
             <View style={styles.tags}>
               <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption, hostProfile?.sheetsPrice ?? 1)}</Text>
@@ -222,13 +248,13 @@ export function DashboardScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>{load.customerName}</Text>
                 <Text style={styles.cardMeta}>
-                  {load.loads} load · {load.stage.replace('-', ' ')}
-                  {load.paymentMethod ? ` · ${load.paymentMethod === 'cash' ? 'Cash' : 'Transfer'}` : ''}
+                  {load.loads} load · {load.paymentMethod === 'cash' ? 'Cash' : 'Transfer'}
                   {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending'
                     ? ' · Awaiting proof'
                     : ''}
                 </Text>
               </View>
+              <StatusBadge {...stageBadge(load.stage)} />
               <DropOffBadge dropOffTime={load.dropOffTime} />
             </View>
             <OrderDetails
@@ -236,6 +262,7 @@ export function DashboardScreen() {
               notes={load.notes}
               paymentMethod={load.paymentMethod}
               totalAmount={load.totalAmount}
+              loadPhotoUri={load.loadPhotoUri}
             />
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
               <>
@@ -447,6 +474,13 @@ const styles = StyleSheet.create({
   notesText: { fontSize: 14, color: colors.black, lineHeight: 20 },
   noNotes: { fontSize: 13, color: colors.gray500, fontStyle: 'italic' },
   paymentMeta: { fontSize: 13, color: colors.gray600, fontWeight: '600' },
+  photoBlock: { gap: spacing.sm },
+  loadPhoto: {
+    width: '100%',
+    height: 160,
+    borderRadius: radius.sm,
+    backgroundColor: colors.gray100,
+  },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   tag: {
     fontSize: 12,

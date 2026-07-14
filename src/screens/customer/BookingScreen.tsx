@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
+import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
 import { useApp } from '../../context/AppContext'
-import { useAuth } from '../../context/AuthContext'
-import { BackButton, OptionRow, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
+import { BackButton, ChoiceChip, OptionRow, PrimaryButton, Screen, StepIndicator } from '../../components/ui'
 import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import {
   calculateBookingTotal,
@@ -12,19 +12,18 @@ import {
   bookingTotalLabel,
 } from '../../lib/hostPricing'
 import { formatMoney } from '../../lib/bookingPayments'
-import { buildTransferProofMessage, sendTransferProofViaWhatsApp } from '../../lib/whatsapp'
 import { sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
 import { colors, radius, spacing } from '../../theme'
 import type { PaymentMethod, SheetsOption } from '../../types'
 
 export function BookingScreen() {
-  const { user } = useAuth()
   const { selectedHost, navigate, confirmBooking, getSettingsForHost } = useApp()
   const [dropOffTime, setDropOffTime] = useState<DropOffHour>(14)
   const [loads, setLoads] = useState(1)
   const [sheetsOption, setSheetsOption] = useState<SheetsOption>('own')
   const [foldingService, setFoldingService] = useState(false)
-  const [notes, setNotes] = useState('Please no high heat - gym clothes')
+  const [notes, setNotes] = useState('')
+  const [loadPhotoUri, setLoadPhotoUri] = useState<string | null>(null)
 
   const hostSettings = selectedHost ? getSettingsForHost(selectedHost.hostUserId) : null
   const paymentMethods = useMemo(
@@ -88,26 +87,15 @@ export function BookingScreen() {
     sheetsOption,
     foldingService: showFolding && foldingService,
   })
-  const bank = hostSettings?.bankDetails
-  const showBankDetails =
-    paymentMethod === 'bank_transfer' &&
-    hostSettings?.acceptBankTransfer &&
-    bank?.accountNumber.trim()
 
-  const sendTransferProof = () => {
-    if (!selectedHost?.whatsapp || !user) return
-    sendTransferProofViaWhatsApp(
-      selectedHost.whatsapp,
-      buildTransferProofMessage({
-        guestName: user.name,
-        hostName: selectedHost.name,
-        amount: totalPrice,
-        loads,
-        bankName: bank?.bankName,
-        accountNumber: bank?.accountNumber,
-      }),
-    )
-  }
+  const canConfirm = paymentMethods.length > 0 && availableTimes.length > 0
+  const validationHint = !availableTimes.length
+    ? 'Host has no drop-off hours set'
+    : !paymentMethods.length
+      ? 'Host has no payment methods'
+      : null
+
+  const bookingStep = paymentMethod && loads >= 1 ? (loadPhotoUri || notes.trim() ? 4 : 3) : 2
 
   return (
     <View style={styles.wrapper}>
@@ -115,6 +103,11 @@ export function BookingScreen() {
         <BackButton onPress={() => navigate('customer-host-profile')} />
         <Text style={styles.eyebrow}>{selectedHost.location}</Text>
         <Text style={styles.title}>Book with {selectedHost.name}</Text>
+
+        <StepIndicator
+          steps={['Time', 'Loads', 'Pay', 'Photo', 'Review']}
+          current={Math.min(bookingStep, 4)}
+        />
 
         <View style={styles.rateCard}>
           <Text style={styles.rateTitle}>Host rates (per load)</Text>
@@ -172,14 +165,10 @@ export function BookingScreen() {
                 </Pressable>
               ))}
             </View>
-            {showBankDetails && bank && (
-              <View style={styles.bankCard}>
-                <Text style={styles.bankTitle}>Transfer to this account</Text>
-                <Text style={styles.bankLine}>{bank.bankName}</Text>
-                <Text style={styles.bankLine}>{bank.accountName}</Text>
-                <Text style={styles.bankAccount}>{bank.accountNumber}</Text>
-                <Text style={styles.bankHint}>Pay before or at drop-off — host will confirm receipt.</Text>
-              </View>
+            {paymentMethod === 'bank_transfer' && (
+              <Text style={styles.paymentNote}>
+                Bank details will be shared after {selectedHost.name} accepts your request.
+              </Text>
             )}
             {paymentMethod === 'cash' && (
               <Text style={styles.paymentNote}>Bring cash to pay {selectedHost.name} at drop-off or pickup.</Text>
@@ -189,36 +178,30 @@ export function BookingScreen() {
 
         <Text style={styles.section}>Dryer sheets</Text>
         {sheets.map((s) => (
-          <Pressable
+          <OptionRow
             key={s.value}
+            label={s.label}
+            sub={s.sub}
+            selected={sheetsOption === s.value}
             onPress={() => setSheetsOption(s.value)}
-            style={styles.optionRow}
-          >
-            <View style={[styles.radio, sheetsOption === s.value && styles.radioSelected]} />
-            <View>
-              <Text style={styles.optionLabel}>{s.label}</Text>
-              {s.sub && <Text style={styles.optionSub}>{s.sub}</Text>}
-            </View>
-          </Pressable>
+          />
         ))}
 
         {showFolding && (
           <>
             <Text style={styles.section}>Folding service</Text>
-            <Pressable
+            <OptionRow
+              label={`Add folding — ${formatServicePrice(foldingPrice)} per load`}
+              sub="Host folds clothes after drying"
+              selected={foldingService}
               onPress={() => setFoldingService(!foldingService)}
-              style={styles.optionRow}
-            >
-              <View style={[styles.radio, foldingService && styles.radioSelected]} />
-              <View>
-                <Text style={styles.optionLabel}>
-                  Add folding — {formatServicePrice(foldingPrice)} per load
-                </Text>
-                <Text style={styles.optionSub}>Host folds clothes after drying</Text>
-              </View>
-            </Pressable>
+            />
           </>
         )}
+
+        <Text style={styles.section}>Photo of your load</Text>
+        <Text style={styles.sectionHint}>Show the host what you're dropping off</Text>
+        <LoadPhotoCapture photoUri={loadPhotoUri} onPhotoChange={setLoadPhotoUri} />
 
         <Text style={styles.section}>Special notes</Text>
         <TextInput
@@ -233,15 +216,16 @@ export function BookingScreen() {
       </Screen>
 
       <View style={styles.footer}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={[styles.price, totalPrice <= 0 && styles.priceFree]}>
             {formatMoney(totalPrice)}
           </Text>
           <Text style={styles.priceSub}>{priceBreakdown}</Text>
+          {validationHint && <Text style={styles.validationHint}>{validationHint}</Text>}
         </View>
         <PrimaryButton
           title="Confirm booking"
-          disabled={paymentMethods.length === 0}
+          disabled={!canConfirm}
           onPress={() =>
             confirmBooking({
               dropOffTime,
@@ -250,6 +234,7 @@ export function BookingScreen() {
               notes,
               paymentMethod,
               foldingService: showFolding && foldingService,
+              loadPhotoUri: loadPhotoUri ?? undefined,
             })
           }
         />
@@ -350,4 +335,5 @@ const styles = StyleSheet.create({
   price: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
   priceFree: { color: colors.green },
   priceSub: { fontSize: 12, color: colors.gray500, lineHeight: 18 },
+  validationHint: { fontSize: 12, color: colors.danger, marginTop: 4, fontWeight: '600' },
 })

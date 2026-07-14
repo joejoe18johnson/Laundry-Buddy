@@ -37,6 +37,13 @@
       ],
       "expo-font",
       "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.",
+          "cameraPermission": "Allow Laundry Buddy to use your camera to photograph your load for the host."
+        }
+      ],
       "@maplibre/maplibre-react-native"
     ]
   }

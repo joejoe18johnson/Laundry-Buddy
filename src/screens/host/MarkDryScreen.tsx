@@ -1,13 +1,14 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
+import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
 import { useApp } from '../../context/AppContext'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
-import { colors, radius, spacing } from '../../theme'
+import { colors, spacing } from '../../theme'
 
 export function MarkDryScreen() {
   const { activeLoads, navigate, markDry } = useApp()
-  const [photoTaken, setPhotoTaken] = useState(false)
+  const [photoUri, setPhotoUri] = useState<string | null>(null)
 
   const dryingLoad = activeLoads.find((l) => l.stage === 'drying')
 
@@ -35,21 +36,15 @@ export function MarkDryScreen() {
       </View>
       <Text style={styles.sub}>Take a photo so the customer can trust it's ready.</Text>
 
-      <Pressable
-        onPress={() => setPhotoTaken(true)}
-        style={[styles.upload, photoTaken && styles.uploadDone]}
-      >
-        <AppIcon name={photoTaken ? 'check-circle' : 'camera'} size={28} color={photoTaken ? colors.green : colors.gray500} />
-        <Text style={[styles.uploadText, photoTaken && styles.uploadTextDone]}>
-          {photoTaken ? 'Photo added' : 'Add photo'}
-        </Text>
-      </Pressable>
+      <LoadPhotoCapture photoUri={photoUri} onPhotoChange={setPhotoUri} />
+
+      <View style={{ height: spacing.lg }} />
 
       <PrimaryButton
         title="Mark as dry"
         icon="wind"
         onPress={() => markDry(dryingLoad.id)}
-        disabled={!photoTaken}
+        disabled={!photoUri}
         full
       />
       <View style={styles.notifyRow}>
@@ -69,22 +64,6 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   section: { fontSize: 20, fontWeight: '700', lineHeight: 26 },
   sub: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
-  upload: {
-    minHeight: 180,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.gray200,
-    borderRadius: radius.lg,
-    backgroundColor: colors.gray50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  uploadDone: { borderStyle: 'solid', borderColor: colors.green, backgroundColor: colors.greenBg },
-  uploadText: { fontSize: 16, fontWeight: '500', color: colors.gray500 },
-  uploadTextDone: { color: colors.green },
   notifyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, marginTop: spacing.md },
   notify: { fontSize: 13, color: colors.gray500, lineHeight: 20, flexShrink: 1 },
 })
