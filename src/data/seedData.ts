@@ -2,7 +2,7 @@ import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '13'
+export const SEED_DATA_VERSION = '14'
 
 export const TRAINING_PASSWORD = 'demo1234'
 
@@ -12,7 +12,7 @@ export const ACTIVE_REGION_LABEL = 'Cayo Area'
 
 export const WEATHER = {
   headline: 'Rainy week ahead',
-  detail: `3 days of rain forecast · dryers within 5 km of you`,
+  detail: `3 days of rain forecast · hosts across all Belize districts`,
 }
 
 export const SEED_USERS: User[] = [
@@ -1190,6 +1190,19 @@ export function getHostById(hostId: string): Host | undefined {
 }
 
 export function getHostProfileDetails(hostId: string): HostProfileDetails {
+  if (hostId.startsWith('gen-')) {
+    const host = getHostById(hostId)
+    return {
+      bio: host
+        ? `Community dryer host in ${host.location}, ${host.district ?? 'Belize'}.`
+        : 'Community host on Laundry Buddy.',
+      memberSince: '2025',
+      loadsHosted: 12 + (hostId.length * 3) % 80,
+      responseTime: 'Under 2 hrs',
+      reviews: [],
+    }
+  }
+
   return (
     SEED_HOST_PROFILES[hostId] ?? {
       bio: 'Community host in the Cayo Area.',

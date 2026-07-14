@@ -1,14 +1,13 @@
-import { LinearGradient } from 'expo-linear-gradient'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../context/AppContext'
 import { formatHostPrice } from '../lib/hostFilters'
 import type { Host } from '../types'
-import { colors, coverColors, radius, spacing } from '../theme'
+import { colors, radius, spacing } from '../theme'
 import { AppIcon } from './AppIcon'
+import { HostAvatar } from './HostAvatar'
 
 export function HostCard({ host }: { host: Host }) {
   const { viewHostProfile } = useApp()
-  const gradient = coverColors[host.id] ?? ['#1a1a1a', '#404040']
   const isFree = host.price <= 0
 
   return (
@@ -16,14 +15,7 @@ export function HostCard({ host }: { host: Host }) {
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       onPress={() => viewHostProfile(host)}
     >
-      <LinearGradient
-        colors={gradient}
-        style={styles.iconBox}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <AppIcon name="wind" size={18} color={colors.white} />
-      </LinearGradient>
+      <HostAvatar host={host} size={48} />
 
       <View style={styles.body}>
         <Text style={styles.name} numberOfLines={1}>
@@ -68,13 +60,6 @@ const styles = StyleSheet.create({
   cardPressed: {
     borderColor: colors.black,
     backgroundColor: colors.gray50,
-  },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   body: { flex: 1, gap: 2, minWidth: 0 },
   name: {

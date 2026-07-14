@@ -9,6 +9,7 @@ export interface HostMapProps {
   onHostPress: (host: Host) => void
   userLocation: { latitude: number; longitude: number }
   radiusKm?: number
+  fitToResults?: boolean
 }
 
 /** Catches native map crashes and falls back to Leaflet. */

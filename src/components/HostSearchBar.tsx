@@ -5,17 +5,23 @@ import { colors, radius, spacing } from '../theme'
 type Props = {
   value: string
   onChange: (value: string) => void
+  onFocus?: () => void
   onLocate?: () => void
   locating?: boolean
   placeholder?: string
+  autoFocus?: boolean
+  editable?: boolean
 }
 
 export function HostSearchBar({
   value,
   onChange,
+  onFocus,
   onLocate,
   locating = false,
   placeholder = 'Search area or host near you',
+  autoFocus = false,
+  editable = true,
 }: Props) {
   return (
     <View style={styles.wrap}>
@@ -24,12 +30,15 @@ export function HostSearchBar({
         style={styles.input}
         value={value}
         onChangeText={onChange}
+        onFocus={onFocus}
         placeholder={placeholder}
         placeholderTextColor={colors.gray400}
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="search"
         clearButtonMode="never"
+        autoFocus={autoFocus}
+        editable={editable}
       />
       {value.length > 0 ? (
         <Pressable onPress={() => onChange('')} hitSlop={8} accessibilityLabel="Clear search">

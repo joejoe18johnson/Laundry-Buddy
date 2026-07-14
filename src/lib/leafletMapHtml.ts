@@ -8,6 +8,7 @@ export function buildLeafletMapHtml(
   hosts: Host[],
   userLocation: Coordinates,
   radiusKm: number,
+  fitToResults = false,
 ): string {
   const payload = JSON.stringify(
     hosts.map((h) => ({
@@ -152,6 +153,7 @@ export function buildLeafletMapHtml(
     const you = { lat: ${userLocation.latitude}, lng: ${userLocation.longitude} };
     const radiusM = ${radiusKm * 1000};
     const HALO = ${HALO};
+    const fitToResults = ${fitToResults ? 'true' : 'false'};
 
     function hostMarkerHtml(label, isFree) {
       return '<div class="marker-wrap">' +
@@ -202,6 +204,12 @@ export function buildLeafletMapHtml(
         }
       });
     });
+
+    if (fitToResults && hosts.length > 0) {
+      const bounds = L.latLngBounds([[you.lat, you.lng]]);
+      hosts.forEach(function(h) { bounds.extend([h.lat, h.lng]); });
+      map.fitBounds(bounds, { padding: [52, 52], maxZoom: 14 });
+    }
 
     setTimeout(function() { map.invalidateSize(); }, 250);
     window.addEventListener('resize', function() { map.invalidateSize(); });

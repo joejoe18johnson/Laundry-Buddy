@@ -1,4 +1,5 @@
 import type { Host } from '../types'
+import { BELIZE_DISTRICTS } from './belizeDistricts'
 
 export type HostSort = 'nearest' | 'cheapest' | 'rating' | 'fastest'
 
@@ -8,6 +9,10 @@ export interface HostFilters {
   minRating: number | null
   maxDryHours: number | null
 }
+
+export type SearchSuggestion =
+  | { type: 'host'; host: Host; label: string }
+  | { type: 'place'; label: string }
 
 export const DEFAULT_HOST_FILTERS: HostFilters = {
   location: null,
@@ -33,6 +38,72 @@ export function countActiveFilters(filters: HostFilters): number {
   ].filter((v) => v != null).length
 }
 
+function hostSearchHaystack(host: Host): string {
+  return [
+    host.name,
+    host.location,
+    host.district,
+    host.address,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+export function getSearchRelevance(host: Host, query: string): number {
+  const q = query.trim().toLowerCase()
+  if (!q) return 0
+
+  const name = host.name.toLowerCase()
+  const location = host.location.toLowerCase()
+  const district = (host.district ?? '').toLowerCase()
+  const address = host.address.toLowerCase()
+
+  if (name === q) return 120
+  if (name.startsWith(q)) return 100
+  if (location === q || district === q) return 95
+  if (location.startsWith(q) || district.startsWith(q)) return 85
+  if (name.includes(q)) return 75
+  if (location.includes(q)) return 65
+  if (district.includes(q)) return 60
+  if (address.includes(q)) return 50
+
+  const tokens = q.split(/\s+/).filter(Boolean)
+  const haystack = hostSearchHaystack(host)
+  const matchedTokens = tokens.filter((token) => haystack.includes(token)).length
+  return matchedTokens * 20
+}
+
+export function matchesHostSearch(host: Host, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+
+  const haystack = hostSearchHaystack(host)
+  const tokens = q.split(/\s+/).filter(Boolean)
+  return tokens.every((token) => haystack.includes(token))
+}
+
+function compareHosts(a: Host, b: Host, sort: HostSort): number {
+  let cmp = 0
+  switch (sort) {
+    case 'cheapest':
+      cmp = a.price - b.price
+      break
+    case 'rating':
+      cmp = b.rating - a.rating
+      break
+    case 'fastest':
+      cmp = a.turnaroundHours - b.turnaroundHours
+      break
+    case 'nearest':
+    default:
+      cmp = (a.distanceKm ?? 999) - (b.distanceKm ?? 999)
+      break
+  }
+  if (cmp !== 0) return cmp
+  return (a.distanceKm ?? 999) - (b.distanceKm ?? 999)
+}
+
 export function filterAndSortHosts(
   hosts: Host[],
   filters: HostFilters,
@@ -54,66 +125,66 @@ export function filterAndSortHosts(
   })
 
   result = [...result].sort((a, b) => {
-    let cmp = 0
-    switch (sort) {
-      case 'cheapest':
-        cmp = a.price - b.price
-        break
-      case 'rating':
-        cmp = b.rating - a.rating
-        break
-      case 'fastest':
-        cmp = a.turnaroundHours - b.turnaroundHours
-        break
-      case 'nearest':
-      default:
-        cmp = (a.distanceKm ?? 999) - (b.distanceKm ?? 999)
-        break
+    if (query) {
+      const rel = getSearchRelevance(b, query) - getSearchRelevance(a, query)
+      if (rel !== 0) return rel
     }
-    if (cmp !== 0) return cmp
-    return (a.distanceKm ?? 999) - (b.distanceKm ?? 999)
+    return compareHosts(a, b, sort)
   })
 
   return result
 }
 
-export function matchesHostSearch(host: Host, query: string): boolean {
-  const q = query.trim().toLowerCase()
-  if (!q) return true
-
-  const haystack = [
-    host.name,
-    host.location,
-    host.district,
-    host.address,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
-
-  const tokens = q.split(/\s+/).filter(Boolean)
-  return tokens.every((token) => haystack.includes(token))
+export function getSearchSuggestions(hosts: Host[], query: string, limit = 8): string[] {
+  return getSearchSuggestionItems(hosts, query, limit).map((item) => item.label)
 }
 
-export function getSearchSuggestions(hosts: Host[], query: string, limit = 8): string[] {
+export function getSearchSuggestionItems(hosts: Host[], query: string, limit = 8): SearchSuggestion[] {
   const q = query.trim().toLowerCase()
-  const labels = new Set<string>()
+  const items: SearchSuggestion[] = []
+  const seen = new Set<string>()
 
-  for (const host of hosts) {
-    if (host.district) labels.add(host.district)
-    labels.add(host.location)
-    labels.add(host.name)
+  const addPlace = (label: string) => {
+    const key = label.toLowerCase()
+    if (seen.has(key)) return
+    seen.add(key)
+    items.push({ type: 'place', label })
   }
 
-  const sorted = [...labels].sort((a, b) => a.localeCompare(b))
+  const addHost = (host: Host) => {
+    const key = `host:${host.id}`
+    if (seen.has(key)) return
+    seen.add(key)
+    items.push({ type: 'host', host, label: host.name })
+  }
 
   if (!q) {
-    const districts = [...new Set(hosts.map((h) => h.district).filter(Boolean))] as string[]
-    const locations = getHostLocations(hosts)
-    return [...districts, ...locations.filter((l) => !districts.includes(l))].slice(0, limit)
+    BELIZE_DISTRICTS.forEach(addPlace)
+    hosts.slice(0, Math.max(0, limit - items.length)).forEach(addHost)
+    return items.slice(0, limit)
   }
 
-  return sorted.filter((label) => label.toLowerCase().includes(q)).slice(0, limit)
+  const rankedHosts = [...hosts]
+    .filter((host) => matchesHostSearch(host, q))
+    .sort((a, b) => getSearchRelevance(b, q) - getSearchRelevance(a, q))
+
+  for (const host of rankedHosts) {
+    if (items.length >= limit) break
+    if (host.name.toLowerCase().includes(q)) addHost(host)
+  }
+
+  for (const host of hosts) {
+    if (items.length >= limit) break
+    if (host.district?.toLowerCase().includes(q)) addPlace(host.district)
+    if (host.location.toLowerCase().includes(q)) addPlace(host.location)
+  }
+
+  for (const host of rankedHosts) {
+    if (items.length >= limit) break
+    addHost(host)
+  }
+
+  return items.slice(0, limit)
 }
 
 export function getHostLocations(hosts: Host[]): string[] {

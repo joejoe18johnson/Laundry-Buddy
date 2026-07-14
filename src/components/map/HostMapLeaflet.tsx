@@ -10,10 +10,10 @@ import type { HostMapProps } from '../HostMap'
  * Interactive OpenStreetMap via Leaflet in a WebView.
  * Works in Expo Go, web, and simulators — no native map build required.
  */
-export function HostMapLeaflet({ hosts, onHostPress, userLocation, radiusKm = SEARCH_RADIUS_KM }: HostMapProps) {
+export function HostMapLeaflet({ hosts, onHostPress, userLocation, radiusKm = SEARCH_RADIUS_KM, fitToResults = false }: HostMapProps) {
   const html = useMemo(
-    () => buildLeafletMapHtml(hosts, userLocation, radiusKm),
-    [hosts, userLocation, radiusKm],
+    () => buildLeafletMapHtml(hosts, userLocation, radiusKm, fitToResults),
+    [hosts, userLocation, radiusKm, fitToResults],
   )
 
   return (

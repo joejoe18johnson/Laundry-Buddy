@@ -7,6 +7,7 @@ import { getHostById } from '../../data/mockData'
 import { applyHostListing } from '../../lib/hostListing'
 import { getBookingAmount, formatMoney, formatPaymentMethod } from '../../lib/bookingPayments'
 import { buildTransferProofMessage, sendTransferProofViaWhatsApp } from '../../lib/whatsapp'
+import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
@@ -81,6 +82,19 @@ export function TrackingScreen() {
             ? { label: 'Pay now', variant: 'pending' as const }
             : { label: 'Accepted', variant: 'accepted' as const }
 
+  const handleDirections = () => {
+    if (host) {
+      void openHostDirections({
+        latitude: host.latitude,
+        longitude: host.longitude,
+        name: host.name,
+        address: booking.address,
+      })
+      return
+    }
+    void openDirections({ address: booking.address, label: booking.hostName })
+  }
+
   const sendTransferProof = () => {
     if (!whatsapp || !user) return
     sendTransferProofViaWhatsApp(
@@ -130,6 +144,16 @@ export function TrackingScreen() {
             </Text>
           </View>
         </View>
+      )}
+
+      {!isDeclined && (
+        <PrimaryButton
+          title="Directions"
+          icon="navigation"
+          full
+          onPress={handleDirections}
+          style={styles.directionsBtn}
+        />
       )}
 
       {isDeclined && (
@@ -268,6 +292,7 @@ export function TrackingScreen() {
           </View>
         </View>
         <View style={{ height: spacing.md }} />
+        <OutlineButton title="Directions" icon="navigation" full onPress={handleDirections} />
         {whatsapp ? (
           <OutlineButton
             title="Message host"

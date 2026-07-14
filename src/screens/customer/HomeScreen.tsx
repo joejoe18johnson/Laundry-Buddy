@@ -18,6 +18,7 @@ import { HostCard } from '../../components/HostCard'
 import { HostFilterSheet } from '../../components/HostFilterSheet'
 import { HostMap } from '../../components/HostMap'
 import { HostSearchBar } from '../../components/HostSearchBar'
+import { HostSearchOverlay } from '../../components/HostSearchOverlay'
 import { ChoiceChip } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { ACTIVE_REGION_LABEL, getAvailableHosts, WEATHER } from '../../data/mockData'
@@ -30,6 +31,7 @@ import {
   type HostFilters,
   type HostSort,
 } from '../../lib/hostFilters'
+import { BELIZE_DISTRICTS } from '../../lib/belizeDistricts'
 import type { Host } from '../../types'
 import { colors, radius, spacing } from '../../theme'
 
@@ -50,10 +52,8 @@ const SNAP_RATIOS: Record<SnapPoint, number> = {
 
 const SNAP_ORDER: SnapPoint[] = ['map', 'half', 'full']
 
-function getPopularAreas(hosts: Host[]): string[] {
-  const districts = [...new Set(hosts.map((h) => h.district).filter(Boolean))] as string[]
-  const locations = getHostLocations(hosts)
-  return [...districts, ...locations.filter((l) => !districts.includes(l))].slice(0, 8)
+function getPopularAreas(): string[] {
+  return [...BELIZE_DISTRICTS]
 }
 
 function nearestSnap(height: number, containerHeight: number, velocityY: number): SnapPoint {
@@ -81,12 +81,13 @@ function nearestSnap(height: number, containerHeight: number, velocityY: number)
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets()
-  const { viewHostProfile, onlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm } = useApp()
+  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm } = useApp()
   const allHosts = onlineHosts
   const totalHosts = getAvailableHosts().length
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
   const [sort, setSort] = useState<HostSort>('nearest')
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [containerHeight, setContainerHeight] = useState(0)
   const [snap, setSnap] = useState<SnapPoint>('half')
@@ -99,21 +100,23 @@ export function HomeScreen() {
   const containerHeightRef = useRef(0)
   const snapRef = useRef<SnapPoint>('half')
 
-  const hosts = useMemo(
-    () => filterAndSortHosts(allHosts, filters, sort, searchQuery),
-    [allHosts, filters, sort, searchQuery],
-  )
-  const locations = useMemo(() => getHostLocations(allHosts), [allHosts])
-  const activeFilterCount = countActiveFilters(filters)
   const trimmedSearch = searchQuery.trim()
-  const popularAreas = useMemo(() => getPopularAreas(allHosts), [allHosts])
+  const hostSource = trimmedSearch ? allOnlineHosts : allHosts
+
+  const hosts = useMemo(
+    () => filterAndSortHosts(hostSource, filters, sort, searchQuery),
+    [hostSource, filters, sort, searchQuery],
+  )
+  const locations = useMemo(() => getHostLocations(allOnlineHosts), [allOnlineHosts])
+  const activeFilterCount = countActiveFilters(filters)
+  const popularAreas = useMemo(() => getPopularAreas(), [])
 
   const areaChips = useMemo(() => {
     if (trimmedSearch) {
-      return getSearchSuggestions(allHosts, searchQuery, 6)
+      return getSearchSuggestions(allOnlineHosts, searchQuery, 6)
     }
     return popularAreas
-  }, [allHosts, searchQuery, trimmedSearch, popularAreas])
+  }, [allOnlineHosts, searchQuery, trimmedSearch, popularAreas])
 
   const resultLabel = trimmedSearch
     ? `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}”`
@@ -201,6 +204,16 @@ export function HomeScreen() {
     setSearchQuery('')
   }
 
+  const openSearch = () => {
+    setSearchOpen(true)
+    if (snapRef.current === 'map') animateToSnap('half')
+  }
+
+  const handleSearchQueryChange = (query: string) => {
+    setSearchQuery(query)
+    if (query.trim() && snapRef.current === 'map') animateToSnap('half')
+  }
+
   const selectArea = (area: string) => {
     setSearchQuery(area)
     setFilters((prev) => ({ ...prev, location: null }))
@@ -221,7 +234,7 @@ export function HomeScreen() {
       {areaChips.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>
-            {trimmedSearch ? 'Suggestions' : 'Areas'}
+            {trimmedSearch ? 'Suggestions' : 'Districts'}
           </Text>
           <ScrollView
             horizontal
@@ -325,6 +338,7 @@ export function HomeScreen() {
           onHostPress={viewHostProfile}
           userLocation={userLocation}
           radiusKm={searchRadiusKm}
+          fitToResults={!!trimmedSearch}
         />
         {snap !== 'full' && hosts.length > 0 && (
           <View style={styles.mapBadgeWrap} pointerEvents="box-none">
@@ -362,13 +376,18 @@ export function HomeScreen() {
           </View>
         </View>
 
-        <HostSearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          onLocate={requestUserLocation}
-          locating={locationLoading}
-          placeholder="Search area, town, or host"
-        />
+        <Pressable onPress={openSearch}>
+          <View pointerEvents="none">
+            <HostSearchBar
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onLocate={requestUserLocation}
+              locating={locationLoading}
+              placeholder="Search area, town, or host"
+              editable={false}
+            />
+          </View>
+        </Pressable>
 
         <FlatList
           data={hosts}
@@ -396,6 +415,14 @@ export function HomeScreen() {
         locations={locations}
         onChange={setFilters}
         onClose={() => setFiltersOpen(false)}
+      />
+
+      <HostSearchOverlay
+        visible={searchOpen}
+        initialQuery={searchQuery}
+        sort={sort}
+        onClose={() => setSearchOpen(false)}
+        onQueryChange={handleSearchQueryChange}
       />
     </View>
   )

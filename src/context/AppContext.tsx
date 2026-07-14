@@ -72,6 +72,7 @@ interface AppState {
   hostSettings: HostSettings | null
   hostSettingsMap: Record<string, HostSettings>
   onlineHosts: Host[]
+  allOnlineHosts: Host[]
   userLocation: Coordinates
   userLocationLabel: string
   locationLoading: boolean
@@ -203,15 +204,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [role, user!.id, hostSettingsMap])
 
-  const onlineHosts = useMemo(() => {
+  const allOnlineHosts = useMemo(() => {
     const available = getAvailableHosts()
       .filter((h) => isHostOnline(h.hostUserId, hostSettingsMap))
       .map((h) =>
         applyHostSettings(h, h.hostUserId ? hostSettingsMap[h.hostUserId] : undefined),
       )
-    const withDistance = enrichHostsWithDistance(available, userLocation)
-    return filterHostsWithinRadius(withDistance, userLocation, searchRadiusKm)
-  }, [hostSettingsMap, userLocation, searchRadiusKm])
+    return enrichHostsWithDistance(available, userLocation)
+  }, [hostSettingsMap, userLocation])
+
+  const onlineHosts = useMemo(
+    () => filterHostsWithinRadius(allOnlineHosts, userLocation, searchRadiusKm),
+    [allOnlineHosts, userLocation, searchRadiusKm],
+  )
 
   const setLocationPreset = useCallback(
     (label: string, latitude: number, longitude: number) => {
@@ -646,6 +651,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostSettings,
       hostSettingsMap,
       onlineHosts,
+      allOnlineHosts,
       userLocation,
       userLocationLabel,
       locationLoading,
@@ -678,6 +684,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostSettings,
       hostSettingsMap,
       onlineHosts,
+      allOnlineHosts,
       userLocation,
       userLocationLabel,
       locationLoading,
