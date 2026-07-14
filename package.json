@@ -14,7 +14,7 @@
   "dependencies": {
     "@maplibre/maplibre-react-native": "10.2.0",
     "@react-native-async-storage/async-storage": "1.23.1",
-    "expo": "~52.0.47",
+    "expo": "^54.0.0",
     "expo-asset": "~11.0.5",
     "expo-constants": "~17.0.8",
     "expo-font": "~13.0.4",
