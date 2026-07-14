@@ -352,6 +352,7 @@ const styles = StyleSheet.create({
   pendingBody: { flex: 1 },
   pendingTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
   pendingSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+  directionsBtn: { marginBottom: spacing.lg },
   declinedCard: {
     gap: spacing.md,
     backgroundColor: '#fff5f5',
