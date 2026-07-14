@@ -39,6 +39,7 @@ export interface Host {
   hostUserId?: string
   name: string
   location: string
+  district?: string
   distanceKm?: number
   rating: number
   reviewCount?: number

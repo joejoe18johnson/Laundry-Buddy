@@ -1,7 +1,7 @@
 import type { Booking, Host, HostProfileDetails, HostRequest, User } from '../types'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '5'
+export const SEED_DATA_VERSION = '6'
 
 export const TRAINING_PASSWORD = 'demo1234'
 
@@ -114,6 +114,36 @@ export const SEED_USERS: User[] = [
       submittedAt: '2026-07-05T11:00:00.000Z',
     },
   },
+  {
+    id: 'user-elena',
+    name: 'Elena',
+    email: 'elena.ow@example.com',
+    phone: '5016007788',
+    password: TRAINING_PASSWORD,
+    role: 'host',
+    hostVerification: {
+      status: 'verified',
+      idUploaded: true,
+      addressUploaded: true,
+      address: '15 Main St., Orange Walk Town',
+      submittedAt: '2026-06-28T12:00:00.000Z',
+    },
+  },
+  {
+    id: 'user-marcus',
+    name: 'Marcus',
+    email: 'marcus.bze@example.com',
+    phone: '5016008899',
+    password: TRAINING_PASSWORD,
+    role: 'host',
+    hostVerification: {
+      status: 'verified',
+      idUploaded: true,
+      addressUploaded: true,
+      address: '8 North Front St., Belize City',
+      submittedAt: '2026-07-02T15:00:00.000Z',
+    },
+  },
   // ── Hosts (verification states for training) ──
   {
     id: 'user-sandra',
@@ -153,6 +183,7 @@ export const SEED_HOSTS: Host[] = [
     hostUserId: 'user-maria',
     name: 'Maria',
     location: 'Las Flores',
+    district: 'Cayo',
     distanceKm: 0.8,
     rating: 4.9,
     reviewCount: 47,
@@ -172,6 +203,7 @@ export const SEED_HOSTS: Host[] = [
     hostUserId: 'user-lopez',
     name: 'Mr. Lopez',
     location: 'UB Area',
+    district: 'Cayo',
     distanceKm: 1.2,
     rating: 5.0,
     reviewCount: 31,
@@ -192,6 +224,7 @@ export const SEED_HOSTS: Host[] = [
     hostUserId: 'user-castillo',
     name: 'Mrs. Castillo',
     location: 'Hattieville',
+    district: 'Cayo',
     distanceKm: 2.4,
     rating: 4.8,
     reviewCount: 22,
@@ -211,6 +244,7 @@ export const SEED_HOSTS: Host[] = [
     hostUserId: 'user-rupert',
     name: 'Don Rupert',
     location: 'Roaring Creek',
+    district: 'Cayo',
     distanceKm: 5.1,
     rating: 4.7,
     reviewCount: 18,
@@ -230,6 +264,7 @@ export const SEED_HOSTS: Host[] = [
     hostUserId: 'user-sandra',
     name: 'Sandra',
     location: 'Salvapan',
+    district: 'Cayo',
     distanceKm: 1.8,
     rating: 0,
     reviewCount: 0,
@@ -243,6 +278,46 @@ export const SEED_HOSTS: Host[] = [
     whatsapp: '5016003456',
     photos: ['New host — setup coming soon'],
     rules: ['Verification in progress'],
+  },
+  {
+    id: 'elena',
+    hostUserId: 'user-elena',
+    name: 'Elena',
+    location: 'Orange Walk Town',
+    district: 'Orange Walk',
+    distanceKm: 45.2,
+    rating: 4.6,
+    reviewCount: 14,
+    price: 4,
+    slotsLeft: 2,
+    turnaroundHours: 4,
+    dryerType: 'Electric',
+    hasGenerator: false,
+    address: '15 Main St.',
+    gateCode: '3301',
+    whatsapp: '5016007788',
+    photos: ['Town center drop-off', 'Compact dryer', 'Evening hours'],
+    rules: ['Text before drop-off', 'Pick up same day if possible', 'No bleach'],
+  },
+  {
+    id: 'marcus',
+    hostUserId: 'user-marcus',
+    name: 'Marcus',
+    location: 'Belize City',
+    district: 'Belize',
+    distanceKm: 82.1,
+    rating: 4.5,
+    reviewCount: 9,
+    price: 6,
+    slotsLeft: 3,
+    turnaroundHours: 3,
+    dryerType: 'Electric',
+    hasGenerator: true,
+    address: '8 North Front St.',
+    gateCode: '5512',
+    whatsapp: '5016008899',
+    photos: ['Waterfront area', 'Generator backup', 'Weekend slots'],
+    rules: ['Ring on arrival', 'Cash or transfer OK', 'Large loads +$2'],
   },
 ]
 
@@ -348,6 +423,36 @@ export const SEED_HOST_PROFILES: Record<string, HostProfileDetails> = {
     loadsHosted: 0,
     responseTime: '—',
     reviews: [],
+  },
+  elena: {
+    bio: 'Orange Walk Town host with evening drop-off hours. Handy if you are visiting or passing through the north.',
+    memberSince: 'May 2025',
+    loadsHosted: 38,
+    responseTime: 'About 1 hr',
+    reviews: [
+      {
+        id: 'rev-e1',
+        author: 'Rosa',
+        rating: 5,
+        comment: 'Found Elena while searching Orange Walk — easy drop-off downtown.',
+        date: 'Jun 25, 2026',
+      },
+    ],
+  },
+  marcus: {
+    bio: 'Belize City host near the waterfront. Generator backup and weekend availability.',
+    memberSince: 'Jun 2025',
+    loadsHosted: 27,
+    responseTime: 'Under 2 hr',
+    reviews: [
+      {
+        id: 'rev-mc1',
+        author: 'James',
+        rating: 4,
+        comment: 'Good option when I was in the city for the weekend.',
+        date: 'Jul 3, 2026',
+      },
+    ],
   },
 }
 
@@ -638,6 +743,8 @@ export const TRAINING_ACCOUNTS = [
   { label: 'Mr. Lopez (host)', login: 'lopez@example.com', type: 'email' as const },
   { label: 'Mrs. Castillo (host)', login: 'castillo@example.com', type: 'email' as const },
   { label: 'Don Rupert (host, full)', login: '6009012', type: 'phone' as const },
+  { label: 'Elena (host, Orange Walk)', login: 'elena.ow@example.com', type: 'email' as const },
+  { label: 'Marcus (host, Belize City)', login: 'marcus.bze@example.com', type: 'email' as const },
   { label: 'Sandra (host, pending)', login: '6003456', type: 'phone' as const },
   { label: 'James (host, rejected)', login: 'james.host@example.com', type: 'email' as const },
 ]

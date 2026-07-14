@@ -20,6 +20,8 @@ export const coverColors: Record<string, [string, string]> = {
   castillo: ['#4facfe', '#00f2fe'],
   rupert: ['#43e97b', '#38f9d7'],
   sandra: ['#fa709a', '#fee140'],
+  elena: ['#a18cd1', '#fbc2eb'],
+  marcus: ['#ff9a9e', '#fecfef'],
 }
 
 export const spacing = {

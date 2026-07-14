@@ -37,8 +37,12 @@ export function filterAndSortHosts(
   hosts: Host[],
   filters: HostFilters,
   sort: HostSort,
+  searchQuery = '',
 ): Host[] {
+  const query = searchQuery.trim()
+
   let result = hosts.filter((host) => {
+    if (!matchesHostSearch(host, query)) return false
     if (filters.location && host.location !== filters.location) return false
     if (filters.maxPrice != null && host.price > filters.maxPrice) return false
     if (filters.minRating != null) {
@@ -50,20 +54,67 @@ export function filterAndSortHosts(
   })
 
   result = [...result].sort((a, b) => {
+    let cmp = 0
     switch (sort) {
       case 'cheapest':
-        return a.price - b.price
+        cmp = a.price - b.price
+        break
       case 'rating':
-        return b.rating - a.rating
+        cmp = b.rating - a.rating
+        break
       case 'fastest':
-        return a.turnaroundHours - b.turnaroundHours
+        cmp = a.turnaroundHours - b.turnaroundHours
+        break
       case 'nearest':
       default:
-        return (a.distanceKm ?? 999) - (b.distanceKm ?? 999)
+        cmp = (a.distanceKm ?? 999) - (b.distanceKm ?? 999)
+        break
     }
+    if (cmp !== 0) return cmp
+    return (a.distanceKm ?? 999) - (b.distanceKm ?? 999)
   })
 
   return result
+}
+
+export function matchesHostSearch(host: Host, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+
+  const haystack = [
+    host.name,
+    host.location,
+    host.district,
+    host.address,
+    host.dryerType,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  const tokens = q.split(/\s+/).filter(Boolean)
+  return tokens.every((token) => haystack.includes(token))
+}
+
+export function getSearchSuggestions(hosts: Host[], query: string, limit = 8): string[] {
+  const q = query.trim().toLowerCase()
+  const labels = new Set<string>()
+
+  for (const host of hosts) {
+    if (host.district) labels.add(host.district)
+    labels.add(host.location)
+    labels.add(host.name)
+  }
+
+  const sorted = [...labels].sort((a, b) => a.localeCompare(b))
+
+  if (!q) {
+    const districts = [...new Set(hosts.map((h) => h.district).filter(Boolean))] as string[]
+    const locations = getHostLocations(hosts)
+    return [...districts, ...locations.filter((l) => !districts.includes(l))].slice(0, limit)
+  }
+
+  return sorted.filter((label) => label.toLowerCase().includes(q)).slice(0, limit)
 }
 
 export function getHostLocations(hosts: Host[]): string[] {

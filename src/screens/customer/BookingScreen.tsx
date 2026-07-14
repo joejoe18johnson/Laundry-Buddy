@@ -26,6 +26,8 @@ export function BookingScreen() {
     { value: 'none', label: 'No sheets' },
   ]
 
+  const totalPrice = selectedHost.price * loads
+
   return (
     <View style={styles.wrapper}>
       <Screen>
@@ -91,8 +93,12 @@ export function BookingScreen() {
 
       <View style={styles.footer}>
         <View>
-          <Text style={styles.price}>Free</Text>
-          <Text style={styles.priceSub}>No payment required</Text>
+          <Text style={[styles.price, totalPrice <= 0 && styles.priceFree]}>
+            {totalPrice <= 0 ? 'Free' : `$${totalPrice}`}
+          </Text>
+          <Text style={styles.priceSub}>
+            {loads} load{loads > 1 ? 's' : ''} · ~{selectedHost.turnaroundHours} hr dry
+          </Text>
         </View>
         <PrimaryButton
           title="Confirm booking"
@@ -169,5 +175,6 @@ const styles = StyleSheet.create({
     borderTopColor: colors.gray100,
   },
   price: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
+  priceFree: { color: colors.green },
   priceSub: { fontSize: 12, color: colors.gray500, lineHeight: 18 },
 })

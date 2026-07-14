@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import {
@@ -15,7 +16,7 @@ type Props = {
   onClose: () => void
 }
 
-function FilterSection({ title, icon, children }: { title: string; icon: 'map-pin' | 'dollar-sign' | 'star' | 'clock'; children: React.ReactNode }) {
+function FilterSection({ title, icon, children }: { title: string; icon: 'map-pin' | 'dollar-sign' | 'star' | 'clock'; children: ReactNode }) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>

@@ -6,6 +6,7 @@ import { AppIcon } from '../../components/AppIcon'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { getHostProfileDetails } from '../../data/mockData'
+import { formatHostPrice } from '../../lib/hostFilters'
 import { colors, coverColors, radius, spacing } from '../../theme'
 import type { HostReview } from '../../types'
 
@@ -120,12 +121,12 @@ export function HostProfileScreen() {
 
         <View style={styles.detailsGrid}>
           <View style={styles.detailChip}>
-            <AppIcon name="wind" size={16} />
-            <Text style={styles.detailText}>{host.dryerType} dryer</Text>
+            <AppIcon name="dollar-sign" size={16} />
+            <Text style={styles.detailText}>{formatHostPrice(host.price)} per standard load</Text>
           </View>
           <View style={styles.detailChip}>
             <AppIcon name="clock" size={16} />
-            <Text style={styles.detailText}>~{host.turnaroundHours} hr turnaround</Text>
+            <Text style={styles.detailText}>~{host.turnaroundHours} hr to dry</Text>
           </View>
           {host.hasGenerator && (
             <View style={styles.detailChip}>
@@ -140,8 +141,8 @@ export function HostProfileScreen() {
             </View>
           )}
           <View style={styles.detailChip}>
-            <AppIcon name="gift" size={16} />
-            <Text style={styles.detailText}>Free for community</Text>
+            <AppIcon name="wind" size={16} />
+            <Text style={styles.detailText}>{host.dryerType} dryer</Text>
           </View>
         </View>
 
@@ -182,8 +183,12 @@ export function HostProfileScreen() {
 
       <SafeAreaView edges={['bottom']} style={styles.footer}>
         <View style={styles.footerInfo}>
-          <Text style={styles.footerPrice}>Free</Text>
-          <Text style={styles.footerSub}>{host.slotsLeft} slots available</Text>
+          <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
+            {formatHostPrice(host.price)}
+          </Text>
+          <Text style={styles.footerSub}>
+            per standard load · {host.slotsLeft} slots · ~{host.turnaroundHours} hr dry
+          </Text>
         </View>
         <PrimaryButton title="Book slot" icon="calendar" onPress={() => selectHost(host)} />
       </SafeAreaView>
@@ -283,5 +288,6 @@ const styles = StyleSheet.create({
   },
   footerInfo: { flex: 1 },
   footerPrice: { fontSize: 18, fontWeight: '700' },
+  footerPriceFree: { color: colors.green },
   footerSub: { fontSize: 12, color: colors.gray500, marginTop: 2 },
 })
