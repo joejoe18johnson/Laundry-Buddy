@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
+import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
 import type { AppRole, LoginMethod } from '../../types'
 
@@ -39,6 +40,7 @@ export function SignupScreen() {
             onPress={() => setRole(r)}
             style={[styles.roleCard, role === r && styles.roleSelected]}
           >
+            <AppIcon name={r === 'customer' ? 'search' : 'home'} size={20} />
             <Text style={styles.roleTitle}>{r === 'customer' ? 'I need a dryer' : 'I have a dryer'}</Text>
             <Text style={styles.roleSub}>
               {r === 'customer' ? 'Book loads near you' : 'Host & help neighbors'}
@@ -49,6 +51,7 @@ export function SignupScreen() {
 
       {role === 'host' && (
         <View style={styles.notice}>
+          <AppIcon name="shield" size={16} color={colors.gray600} />
           <Text style={styles.noticeText}>Hosts must verify ID and address before accepting loads.</Text>
         </View>
       )}
@@ -56,8 +59,8 @@ export function SignupScreen() {
       <MethodTabs
         value={method}
         options={[
-          { value: 'phone', label: 'Phone' },
-          { value: 'email', label: 'Email' },
+          { value: 'phone', label: 'Phone', icon: 'smartphone' },
+          { value: 'email', label: 'Email', icon: 'mail' },
         ]}
         onChange={(m) => {
           setMethod(m)
@@ -136,11 +139,15 @@ const styles = StyleSheet.create({
     borderColor: colors.gray200,
     borderRadius: radius.md,
     padding: spacing.md,
+    gap: spacing.sm,
   },
   roleSelected: { borderColor: colors.black, backgroundColor: colors.gray50 },
   roleTitle: { fontSize: 14, fontWeight: '600', marginBottom: spacing.sm },
   roleSub: { fontSize: 12, color: colors.gray500, lineHeight: 18 },
   notice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
     backgroundColor: colors.gray50,
     padding: spacing.md,
     borderRadius: radius.md,

@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
+import { AppIcon } from './src/components/AppIcon'
 import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, needsHostVerification, useAuth } from './src/context/AuthContext'
 import { HomeScreen } from './src/screens/customer/HomeScreen'
@@ -28,10 +29,19 @@ function AppShell() {
     <SafeAreaView style={styles.app} edges={['top']}>
       <StatusBar style="dark" />
       <View style={styles.header}>
-        <Text style={styles.logo}>Laundry Buddy</Text>
+        <View style={styles.logoRow}>
+          <AppIcon name="wind" size={18} color={colors.accent} />
+          <Text style={styles.logo}>Laundry Buddy</Text>
+        </View>
         <View style={styles.headerRight}>
-          <Text style={styles.greeting}>{user!.name}</Text>
+          <View style={styles.profile}>
+            <View style={styles.profileIcon}>
+              <AppIcon name="user" size={14} />
+            </View>
+            <Text style={styles.greeting}>{user!.name}</Text>
+          </View>
           <Pressable onPress={logout} style={styles.logout}>
+            <AppIcon name="log-out" size={14} />
             <Text style={styles.logoutText}>Log out</Text>
           </Pressable>
         </View>
@@ -48,10 +58,20 @@ function AppShell() {
       {showTabBar && (
         <SafeAreaView edges={['bottom']} style={styles.tabBar}>
           <Pressable style={styles.tab} onPress={() => navigate('customer-home')}>
-            <Text style={styles.tabText}>Explore</Text>
+            <AppIcon
+              name="search"
+              size={20}
+              color={screen === 'customer-home' ? colors.black : colors.gray500}
+            />
+            <Text style={[styles.tabText, screen === 'customer-home' && styles.tabTextActive]}>Explore</Text>
           </Pressable>
-          <Pressable style={[styles.tab, styles.tabActive]} onPress={() => navigate('customer-tracking')}>
-            <Text style={[styles.tabText, styles.tabTextActive]}>My load</Text>
+          <Pressable style={styles.tab} onPress={() => navigate('customer-tracking')}>
+            <AppIcon
+              name="package"
+              size={20}
+              color={screen === 'customer-tracking' ? colors.black : colors.gray500}
+            />
+            <Text style={[styles.tabText, screen === 'customer-tracking' && styles.tabTextActive]}>My load</Text>
           </Pressable>
         </SafeAreaView>
       )}
@@ -110,10 +130,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
   },
+  logoRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   logo: { fontSize: 17, fontWeight: '700', color: colors.accent },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  greeting: { fontSize: 13, color: colors.gray600 },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  profileIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  greeting: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
   logout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.gray50,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -132,8 +165,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     backgroundColor: colors.white,
   },
-  tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
-  tabActive: {},
-  tabText: { fontSize: 13, fontWeight: '600', color: colors.gray500 },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', gap: 4 },
+  tabText: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
   tabTextActive: { color: colors.black },
 })

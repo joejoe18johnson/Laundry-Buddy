@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
-import { colors } from '../theme'
+import { colors, spacing } from '../theme'
 
 type Props = {
   message?: string
@@ -20,7 +20,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.white,
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xl,
   },
   title: {
     fontSize: 28,
@@ -28,8 +28,9 @@ const styles = StyleSheet.create({
     color: colors.black,
     textAlign: 'center',
     letterSpacing: -0.5,
+    lineHeight: 36,
   },
   spinner: {
-    marginTop: 32,
+    marginTop: spacing.xl,
   },
 })

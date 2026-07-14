@@ -49,14 +49,14 @@ export function MarkDryScreen() {
 }
 
 const styles = StyleSheet.create({
-  empty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: 20 },
-  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', marginTop: 8 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 20 },
-  section: { fontSize: 20, fontWeight: '700', marginBottom: 6 },
-  sub: { fontSize: 14, color: colors.gray500, marginBottom: 20 },
+  empty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
+  emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: spacing.lg },
+  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', marginTop: spacing.sm, letterSpacing: 0.4 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.lg, lineHeight: 30 },
+  section: { fontSize: 20, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 26 },
+  sub: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
   upload: {
-    minHeight: 160,
+    minHeight: 180,
     borderWidth: 2,
     borderStyle: 'dashed',
     borderColor: colors.gray200,
@@ -64,10 +64,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
+    padding: spacing.lg,
   },
   uploadDone: { borderStyle: 'solid', borderColor: colors.green, backgroundColor: colors.greenBg },
   uploadText: { fontSize: 16, fontWeight: '500', color: colors.gray500 },
   uploadTextDone: { color: colors.green },
-  notify: { fontSize: 13, color: colors.gray500, textAlign: 'center', marginTop: 16 },
+  notify: { fontSize: 13, color: colors.gray500, textAlign: 'center', marginTop: spacing.md, lineHeight: 20 },
 })

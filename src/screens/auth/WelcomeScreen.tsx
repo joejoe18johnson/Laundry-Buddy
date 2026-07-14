@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { TRAINING_ACCOUNTS, TRAINING_PASSWORD, ACTIVE_REGION_LABEL } from '../../data/seedData'
 import { OutlineButton, PrimaryButton, Screen } from '../../components/ui'
+import { AppIcon } from '../../components/AppIcon'
 import { colors, spacing } from '../../theme'
 
 export function WelcomeScreen() {
@@ -25,12 +26,15 @@ export function WelcomeScreen() {
         <Text style={styles.regionNote}>More districts coming soon.</Text>
       </View>
 
-      <PrimaryButton title="Log in" onPress={() => navigateAuth('login')} full />
+      <PrimaryButton title="Log in" icon="log-in" onPress={() => navigateAuth('login')} full />
       <View style={styles.gap} />
-      <OutlineButton title="Create account" onPress={() => navigateAuth('signup')} full />
+      <OutlineButton title="Create account" icon="user-plus" onPress={() => navigateAuth('signup')} full />
 
       <View style={styles.training}>
-        <Text style={styles.trainingTitle}>Training accounts · password {TRAINING_PASSWORD}</Text>
+        <View style={styles.trainingTitleRow}>
+          <AppIcon name="users" size={14} color={colors.gray600} />
+          <Text style={styles.trainingTitle}>Training accounts · password {TRAINING_PASSWORD}</Text>
+        </View>
         {TRAINING_ACCOUNTS.map((a) => (
           <Pressable
             key={a.label}
@@ -38,6 +42,11 @@ export function WelcomeScreen() {
             onPress={() => handleTrainingLogin(a.login, a.type)}
             disabled={signingIn !== null}
           >
+            <AppIcon
+              name={a.label.includes('host') ? 'home' : 'user'}
+              size={16}
+              color={colors.accent}
+            />
             <Text style={styles.trainingName}>{a.label}</Text>
             <Text style={[styles.trainingLogin, signingIn === a.login && styles.trainingLoginBusy]}>
               {signingIn === a.login ? 'Signing in…' : a.login}
@@ -63,18 +72,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray100,
   },
+  trainingTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   trainingTitle: {
     fontSize: 11,
     fontWeight: '600',
     color: colors.gray600,
     textTransform: 'uppercase',
-    marginBottom: spacing.md,
     letterSpacing: 0.4,
   },
   trainingRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.sm,
     marginHorizontal: -4,
     paddingHorizontal: 4,
@@ -92,6 +107,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.gray500,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginLeft: spacing.sm,
   },
   trainingLoginBusy: { color: colors.gray500, textDecorationLine: 'none' },
 })

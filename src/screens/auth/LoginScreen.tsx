@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
+import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
 import type { LoginMethod } from '../../types'
 
@@ -26,8 +27,8 @@ export function LoginScreen() {
       <MethodTabs
         value={method}
         options={[
-          { value: 'phone', label: 'Phone' },
-          { value: 'email', label: 'Email' },
+          { value: 'phone', label: 'Phone', icon: 'smartphone' },
+          { value: 'email', label: 'Email', icon: 'mail' },
         ]}
         onChange={(m) => {
           setMethod(m)
@@ -37,7 +38,10 @@ export function LoginScreen() {
 
       {method === 'phone' ? (
         <View style={styles.field}>
-          <Text style={styles.label}>Phone number</Text>
+          <View style={styles.labelRow}>
+            <AppIcon name="smartphone" size={16} color={colors.gray600} />
+            <Text style={styles.label}>Phone number</Text>
+          </View>
           <View style={styles.phoneRow}>
             <Text style={styles.prefix}>+501</Text>
             <TextInput
@@ -51,7 +55,10 @@ export function LoginScreen() {
         </View>
       ) : (
         <View style={styles.field}>
-          <Text style={styles.label}>Email</Text>
+          <View style={styles.labelRow}>
+            <AppIcon name="mail" size={16} color={colors.gray600} />
+            <Text style={styles.label}>Email</Text>
+          </View>
           <TextInput
             style={styles.input}
             placeholder="you@example.com"
@@ -64,7 +71,10 @@ export function LoginScreen() {
       )}
 
       <View style={styles.field}>
-        <Text style={styles.label}>Password</Text>
+        <View style={styles.labelRow}>
+          <AppIcon name="lock" size={16} color={colors.gray600} />
+          <Text style={styles.label}>Password</Text>
+        </View>
         <TextInput
           style={styles.input}
           placeholder="Your password"
@@ -91,7 +101,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34 },
   subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
   field: { marginBottom: spacing.md },
-  label: { fontSize: 13, fontWeight: '600', color: colors.gray600, marginBottom: spacing.sm },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+  label: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
   input: {
     borderWidth: 1,
     borderColor: colors.gray200,

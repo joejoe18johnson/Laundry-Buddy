@@ -11,6 +11,7 @@ import {
   ViewStyle,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { AppIcon, type IconName } from './AppIcon'
 import { colors, radius, spacing } from '../theme'
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
@@ -35,7 +36,8 @@ export function Screen({ children, style }: { children: ReactNode; style?: ViewS
 export function BackButton({ onPress, label = 'Back' }: { onPress: () => void; label?: string }) {
   return (
     <Pressable onPress={onPress} style={styles.backBtn}>
-      <Text style={styles.backText}>← {label}</Text>
+      <AppIcon name="chevron-left" size={18} />
+      <Text style={styles.backText}>{label}</Text>
     </Pressable>
   )
 }
@@ -45,11 +47,13 @@ export function PrimaryButton({
   onPress,
   disabled,
   full,
+  icon,
 }: {
   title: string
   onPress: () => void
   disabled?: boolean
   full?: boolean
+  icon?: IconName
 }) {
   return (
     <Pressable
@@ -62,7 +66,10 @@ export function PrimaryButton({
         pressed && !disabled && styles.btnPressed,
       ]}
     >
-      <Text style={styles.btnPrimaryText}>{title}</Text>
+      <View style={styles.btnContent}>
+        {icon && <AppIcon name={icon} size={18} color={colors.white} />}
+        <Text style={styles.btnPrimaryText}>{title}</Text>
+      </View>
     </Pressable>
   )
 }
@@ -71,17 +78,22 @@ export function OutlineButton({
   title,
   onPress,
   full,
+  icon,
 }: {
   title: string
   onPress: () => void
   full?: boolean
+  icon?: IconName
 }) {
   return (
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [styles.btnOutline, full && styles.btnFull, pressed && styles.btnPressed]}
     >
-      <Text style={styles.btnOutlineText}>{title}</Text>
+      <View style={styles.btnContent}>
+        {icon && <AppIcon name={icon} size={18} />}
+        <Text style={styles.btnOutlineText}>{title}</Text>
+      </View>
     </Pressable>
   )
 }
@@ -108,7 +120,7 @@ export function MethodTabs<T extends string>({
   onChange,
 }: {
   value: T
-  options: { value: T; label: string }[]
+  options: { value: T; label: string; icon?: IconName }[]
   onChange: (v: T) => void
 }) {
   return (
@@ -119,9 +131,18 @@ export function MethodTabs<T extends string>({
           onPress={() => onChange(opt.value)}
           style={[styles.methodTab, value === opt.value && styles.methodTabActive]}
         >
-          <Text style={[styles.methodTabText, value === opt.value && styles.methodTabTextActive]}>
-            {opt.label}
-          </Text>
+          <View style={styles.methodTabContent}>
+            {opt.icon && (
+              <AppIcon
+                name={opt.icon}
+                size={16}
+                color={value === opt.value ? colors.black : colors.gray500}
+              />
+            )}
+            <Text style={[styles.methodTabText, value === opt.value && styles.methodTabTextActive]}>
+              {opt.label}
+            </Text>
+          </View>
         </Pressable>
       ))}
     </View>
@@ -145,8 +166,15 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  backBtn: { paddingVertical: spacing.sm, marginBottom: spacing.md },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
+  },
   backText: { fontSize: 15, fontWeight: '500', color: colors.black },
+  btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
   btnPrimary: {
     backgroundColor: colors.black,
     paddingVertical: 16,
@@ -185,6 +213,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   methodTab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: radius.pill },
+  methodTabContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   methodTabActive: { backgroundColor: colors.white },
   methodTabText: { fontSize: 14, fontWeight: '600', color: colors.gray500 },
   methodTabTextActive: { color: colors.black },
