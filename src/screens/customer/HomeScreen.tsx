@@ -8,7 +8,7 @@ import { useApp } from '../../context/AppContext'
 import { colors, radius, spacing } from '../../theme'
 
 export function HomeScreen() {
-  const { showMap, setShowMap } = useApp()
+  const { showMap, setShowMap, viewHostProfile } = useApp()
   const hosts = getAvailableHosts()
 
   return (
@@ -33,11 +33,15 @@ export function HomeScreen() {
       {showMap ? (
         <View style={styles.map}>
           {hosts.map((host, i) => (
-            <View key={host.id} style={[styles.pin, pinPositions[i % 4]]}>
+            <Pressable
+              key={host.id}
+              style={[styles.pin, pinPositions[i % 4]]}
+              onPress={() => viewHostProfile(host)}
+            >
               <AppIcon name="map-pin" size={14} color={colors.accent} />
               <Text style={styles.pinName}>{host.name}</Text>
               <Text style={styles.pinDist}>{host.distanceKm} km</Text>
-            </View>
+            </Pressable>
           ))}
         </View>
       ) : (
