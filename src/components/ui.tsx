@@ -1,6 +1,5 @@
 import { ReactNode, type ComponentProps } from 'react'
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,6 +12,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
+import { SplashWasherAnimation } from './SplashWasherAnimation'
 import { colors, radius, spacing } from '../theme'
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
@@ -250,7 +250,7 @@ export function BrandSwitch({
 export function LoadingScreen() {
   return (
     <View style={styles.loading}>
-      <ActivityIndicator size="large" color={colors.accent} />
+      <SplashWasherAnimation />
     </View>
   )
 }

@@ -1,4 +1,5 @@
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
+import { SplashWasherAnimation } from './SplashWasherAnimation'
 import { colors, spacing } from '../theme'
 
 type Props = {
@@ -8,8 +9,8 @@ type Props = {
 export function SplashLoading({ message = 'Dry laundry, rain or shine' }: Props) {
   return (
     <View style={styles.container}>
+      <SplashWasherAnimation />
       <Text style={styles.title}>{message}</Text>
-      <ActivityIndicator size="large" color={colors.accent} style={styles.spinner} />
     </View>
   )
 }
@@ -23,14 +24,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
   },
   title: {
+    marginTop: spacing.lg,
     fontSize: 28,
     fontWeight: '700',
     color: colors.black,
     textAlign: 'center',
     letterSpacing: -0.5,
     lineHeight: 36,
-  },
-  spinner: {
-    marginTop: spacing.xl,
   },
 })
