@@ -371,6 +371,160 @@ export const SEED_CUSTOMER_BOOKINGS: Record<string, Booking> = {
   },
 }
 
+export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
+  'user-ana': [
+    {
+      id: 'past-ana-1',
+      hostId: 'lopez',
+      hostName: 'Mr. Lopez',
+      customerId: 'user-ana',
+      customerName: 'Ana',
+      location: 'Las Flores',
+      loads: 1,
+      dropOffTime: '2pm-4pm',
+      sheetsOption: 'own',
+      notes: '',
+      stage: 'ready',
+      address: '15 Pine St.',
+      gateCode: '1122',
+      stageTimes: { 'got-bag': '2:10pm', waiting: '2:30pm', drying: '3:00pm', ready: '4:15pm' },
+      completedAt: 'Jul 8, 2026',
+    },
+    {
+      id: 'past-ana-2',
+      hostId: 'maria',
+      hostName: 'Maria',
+      customerId: 'user-ana',
+      customerName: 'Ana',
+      location: 'Las Flores',
+      loads: 2,
+      dropOffTime: 'before-10',
+      sheetsOption: 'none',
+      notes: '',
+      stage: 'ready',
+      address: '22 Coconut St.',
+      gateCode: '4421',
+      stageTimes: { 'got-bag': '8:45am', waiting: '9:00am', drying: '9:30am', ready: '11:00am' },
+      completedAt: 'Jun 29, 2026',
+    },
+  ],
+  'user-carlos': [
+    {
+      id: 'past-carlos-1',
+      hostId: 'castillo',
+      hostName: 'Mrs. Castillo',
+      customerId: 'user-carlos',
+      customerName: 'Carlos',
+      location: 'Belmopan City',
+      loads: 1,
+      dropOffTime: 'after-4',
+      sheetsOption: 'buy',
+      notes: '',
+      stage: 'ready',
+      address: '8 Main St.',
+      gateCode: '9012',
+      stageTimes: { 'got-bag': '4:30pm', waiting: '5:00pm', drying: '5:20pm', ready: '6:45pm' },
+      completedAt: 'Jul 1, 2026',
+    },
+  ],
+  'user-keisha': [
+    {
+      id: 'past-keisha-1',
+      hostId: 'maria',
+      hostName: 'Maria',
+      customerId: 'user-keisha',
+      customerName: 'Keisha',
+      location: 'Las Flores',
+      loads: 1,
+      dropOffTime: '2pm-4pm',
+      sheetsOption: 'own',
+      notes: '',
+      stage: 'ready',
+      address: '22 Coconut St.',
+      gateCode: '4421',
+      stageTimes: { 'got-bag': '2:00pm', waiting: '2:20pm', drying: '2:45pm', ready: '4:00pm' },
+      completedAt: 'Jul 10, 2026',
+    },
+  ],
+}
+
+export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
+  'user-maria': [
+    {
+      id: 'past-maria-1',
+      hostId: 'maria',
+      hostName: 'Maria',
+      customerId: 'user-rosa',
+      customerName: 'Rosa',
+      location: 'Las Flores',
+      loads: 1,
+      dropOffTime: 'before-10',
+      sheetsOption: 'own',
+      notes: '',
+      stage: 'ready',
+      address: '22 Coconut St.',
+      gateCode: '4421',
+      stageTimes: { 'got-bag': '8:00am', waiting: '8:30am', drying: '9:00am', ready: '10:30am' },
+      completedAt: 'Jul 11, 2026',
+    },
+    {
+      id: 'past-maria-2',
+      hostId: 'maria',
+      hostName: 'Maria',
+      customerId: 'user-ana',
+      customerName: 'Ana',
+      location: 'Las Flores',
+      loads: 2,
+      dropOffTime: '2pm-4pm',
+      sheetsOption: 'none',
+      notes: '',
+      stage: 'ready',
+      address: '22 Coconut St.',
+      gateCode: '4421',
+      stageTimes: { 'got-bag': '2:15pm', waiting: '2:40pm', drying: '3:10pm', ready: '4:30pm' },
+      completedAt: 'Jun 29, 2026',
+    },
+  ],
+  'user-lopez': [
+    {
+      id: 'past-lopez-1',
+      hostId: 'lopez',
+      hostName: 'Mr. Lopez',
+      customerId: 'user-james-guest',
+      customerName: 'James',
+      location: 'Las Flores',
+      loads: 1,
+      dropOffTime: 'after-4',
+      sheetsOption: 'own',
+      notes: '',
+      stage: 'ready',
+      address: '15 Pine St.',
+      gateCode: '1122',
+      stageTimes: { 'got-bag': '4:00pm', waiting: '4:30pm', drying: '5:00pm', ready: '6:15pm' },
+      completedAt: 'Jul 6, 2026',
+    },
+  ],
+  'user-rupert': [
+    {
+      id: 'past-rupert-1',
+      hostId: 'rupert',
+      hostName: 'Don Rupert',
+      customerId: 'user-carlos',
+      customerName: 'Carlos',
+      location: 'Roaring Creek',
+      loads: 1,
+      dropOffTime: 'before-10',
+      sheetsOption: 'own',
+      notes: '',
+      stage: 'ready',
+      address: '3 Mile Roaring Creek',
+      gateCode: '7733',
+      stageTimes: { 'got-bag': '7:45am', waiting: '8:15am', drying: '8:45am', ready: '10:00am' },
+      completedAt: 'Jul 9, 2026',
+    },
+  ],
+}
+
 export const TRAINING_ACCOUNTS = [
   { label: 'Ana (guest)', login: '6001111', type: 'phone' as const },
   { label: 'Carlos (guest, active load)', login: 'carlos@gmail.com', type: 'email' as const },
@@ -410,4 +564,12 @@ export function getHostDashboardSeed(userId: string): HostDashboardSeed {
 
 export function getCustomerSeedBooking(userId: string): Booking | null {
   return SEED_CUSTOMER_BOOKINGS[userId] ?? null
+}
+
+export function getCustomerHistory(userId: string): Booking[] {
+  return SEED_CUSTOMER_HISTORY[userId] ?? []
+}
+
+export function getHostHistory(userId: string): Booking[] {
+  return SEED_HOST_HISTORY[userId] ?? []
 }

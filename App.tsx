@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
+import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
@@ -13,7 +14,9 @@ import { MarkDryScreen } from './src/screens/host/MarkDryScreen'
 import { WelcomeScreen } from './src/screens/auth/WelcomeScreen'
 import { LoginScreen } from './src/screens/auth/LoginScreen'
 import { SignupScreen } from './src/screens/auth/SignupScreen'
+import { HeaderMenu } from './src/components/HeaderMenu'
 import { HostVerificationScreen } from './src/screens/auth/HostVerificationScreen'
+import { HistoryScreen } from './src/screens/shared/HistoryScreen'
 import { colors, spacing } from './src/theme'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
@@ -21,9 +24,11 @@ SplashScreen.preventAutoHideAsync().catch(() => {})
 function AppShell() {
   const { user, logout } = useAuth()
   const { screen, booking, navigate } = useApp()
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const isCustomer = user!.role === 'customer'
-  const showTabBar = isCustomer && booking && screen !== 'customer-tracking'
+  const showTabBar =
+    isCustomer && booking && screen !== 'customer-tracking' && screen !== 'history'
   const exploreActive = screen === 'customer-home' || screen === 'customer-booking'
 
   return (
@@ -41,12 +46,19 @@ function AppShell() {
             </View>
             <Text style={styles.greeting}>{user!.name}</Text>
           </View>
-          <Pressable onPress={logout} style={styles.logout}>
-            <AppIcon name="log-out" size={14} />
-            <Text style={styles.logoutText}>Log out</Text>
+          <Pressable onPress={() => setMenuOpen(true)} style={styles.menuBtn} hitSlop={8}>
+            <AppIcon name="menu" size={22} />
           </Pressable>
         </View>
       </View>
+
+      <HeaderMenu
+        visible={menuOpen}
+        user={user!}
+        onClose={() => setMenuOpen(false)}
+        onPastLoads={() => navigate('history')}
+        onLogout={logout}
+      />
 
       <View style={[styles.main, showTabBar && styles.mainWithTab]}>
         {screen === 'customer-home' && <HomeScreen />}
@@ -54,6 +66,7 @@ function AppShell() {
         {screen === 'customer-tracking' && <TrackingScreen />}
         {screen === 'host-dashboard' && <DashboardScreen />}
         {screen === 'host-mark-dry' && <MarkDryScreen />}
+        {screen === 'history' && <HistoryScreen />}
       </View>
 
       {showTabBar && (
@@ -140,18 +153,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   greeting: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-  logout: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  menuBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: colors.gray50,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.gray100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  logoutText: { fontSize: 12, fontWeight: '600' },
   main: { flex: 1 },
   mainWithTab: { marginBottom: 0 },
   tabBar: {

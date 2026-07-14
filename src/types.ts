@@ -13,6 +13,7 @@ export type Screen =
   | 'customer-tracking'
   | 'host-dashboard'
   | 'host-mark-dry'
+  | 'history'
 
 export interface HostVerification {
   status: VerificationStatus
@@ -69,6 +70,7 @@ export interface Booking {
   gateCode: string
   stageTimes: Partial<Record<BookingStage, string>>
   isNew?: boolean
+  completedAt?: string
 }
 
 export interface HostRequest {

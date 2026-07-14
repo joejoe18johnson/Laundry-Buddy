@@ -7,6 +7,8 @@ export {
   getHostByUserId,
   getHostDashboardSeed,
   getCustomerSeedBooking,
+  getCustomerHistory,
+  getHostHistory,
   TRAINING_ACCOUNTS,
   TRAINING_PASSWORD,
 } from './seedData'
