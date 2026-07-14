@@ -18,6 +18,7 @@ export function HostCard({ host }: { host: Host }) {
       <Pressable onPress={() => setExpanded(!expanded)}>
         <LinearGradient colors={gradient} style={styles.cover} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={styles.badge}>
+            <AppIcon name="gift" size={12} />
             <Text style={styles.badgeText}>Free</Text>
           </View>
         </LinearGradient>
@@ -26,25 +27,39 @@ export function HostCard({ host }: { host: Host }) {
       <View style={styles.body}>
         <Pressable onPress={() => setExpanded(!expanded)}>
           <View style={styles.row}>
-            <Text style={styles.title}>{host.location}</Text>
-            <Text style={styles.rating}>
-              ★ {host.rating > 0 ? host.rating.toFixed(1) : 'New'}
-              {host.reviewCount ? ` (${host.reviewCount})` : ''}
+            <View style={styles.titleRow}>
+              <AppIcon name="map-pin" size={16} color={colors.black} />
+              <Text style={styles.title}>{host.location}</Text>
+            </View>
+            <View style={styles.ratingRow}>
+              <AppIcon name="star" size={14} color={colors.black} />
+              <Text style={styles.rating}>
+                {host.rating > 0 ? host.rating.toFixed(1) : 'New'}
+                {host.reviewCount ? ` (${host.reviewCount})` : ''}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.metaRow}>
+            <AppIcon name="user" size={14} color={colors.gray500} />
+            <Text style={styles.subtitle}>Hosted by {host.name}</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <AppIcon name="clock" size={14} color={colors.gray500} />
+            <Text style={styles.meta}>
+              {host.slotsLeft} slots · ~{host.turnaroundHours} hr · {host.dryerType}
+              {host.distanceKm != null ? ` · ${host.distanceKm} km` : ''}
             </Text>
           </View>
-          <Text style={styles.subtitle}>Hosted by {host.name}</Text>
-          <Text style={styles.meta}>
-            {host.slotsLeft} slots · ~{host.turnaroundHours} hr · {host.dryerType}
-            {host.distanceKm != null ? ` · ${host.distanceKm} km` : ''}
-          </Text>
           <View style={styles.tags}>
             {host.hasGenerator && (
               <Pressable onPress={() => setShowGenerator(true)} style={styles.tagAccent}>
+                <AppIcon name="zap" size={12} />
                 <Text style={styles.tagAccentText}>Generator</Text>
               </Pressable>
             )}
             {host.foldingExtra != null && (
               <View style={styles.tag}>
+                <AppIcon name="layers" size={12} color={colors.gray600} />
                 <Text style={styles.tagText}>Folding +${host.foldingExtra}</Text>
               </View>
             )}
@@ -64,7 +79,7 @@ export function HostCard({ host }: { host: Host }) {
           </View>
         )}
 
-        <PrimaryButton title="Book slot" onPress={() => selectHost(host)} full />
+        <PrimaryButton title="Book slot" icon="calendar" onPress={() => selectHost(host)} full />
       </View>
 
       <Modal visible={showGenerator} transparent animationType="slide">
@@ -86,21 +101,30 @@ const styles = StyleSheet.create({
   card: { marginBottom: spacing.xl },
   cover: { height: 180, borderRadius: radius.lg, justifyContent: 'flex-start', padding: spacing.md },
   badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.white,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: spacing.sm,
     borderRadius: radius.sm,
     alignSelf: 'flex-start',
   },
   badgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   body: { paddingTop: spacing.md, gap: spacing.md },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 16, fontWeight: '600' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  title: { fontSize: 16, fontWeight: '600', flexShrink: 1 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   rating: { fontSize: 14, fontWeight: '500' },
-  subtitle: { fontSize: 14, color: colors.gray500, marginTop: spacing.sm, lineHeight: 20 },
-  meta: { fontSize: 14, color: colors.gray500, marginTop: spacing.sm, lineHeight: 20 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  subtitle: { fontSize: 14, color: colors.gray500, lineHeight: 20, flex: 1 },
+  meta: { fontSize: 14, color: colors.gray500, lineHeight: 20, flex: 1 },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.gray50,
     borderWidth: 1,
     borderColor: colors.gray100,
@@ -110,6 +134,9 @@ const styles = StyleSheet.create({
   },
   tagText: { fontSize: 12, color: colors.gray600 },
   tagAccent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     borderWidth: 1,
     borderColor: colors.gray200,
     paddingHorizontal: 12,

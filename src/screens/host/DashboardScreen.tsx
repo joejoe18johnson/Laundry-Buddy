@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native'
+import { AppIcon } from '../../components/AppIcon'
 import { DROP_OFF_LABELS, SHEETS_LABELS } from '../../types'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -23,8 +24,16 @@ export function DashboardScreen() {
   return (
     <Screen>
       <View style={styles.header}>
-        <Text style={styles.title}>{hostProfile?.name ?? user?.name}'s dryer</Text>
+        <View style={styles.titleRow}>
+          <AppIcon name="wind" size={20} />
+          <Text style={styles.title}>{hostProfile?.name ?? user?.name}'s dryer</Text>
+        </View>
         <View style={[styles.pill, hostStats.accepting ? styles.pillLive : null]}>
+          <AppIcon
+            name={hostStats.accepting ? 'check-circle' : 'x-circle'}
+            size={12}
+            color={hostStats.accepting ? colors.green : colors.gray600}
+          />
           <Text style={[styles.pillText, hostStats.accepting ? styles.pillLiveText : null]}>
             {hostStats.accepting ? 'Accepting' : 'Full today'}
           </Text>
@@ -37,11 +46,14 @@ export function DashboardScreen() {
 
       {hostRequests.map((request) => (
         <View key={request.id} style={styles.section}>
-          <Text style={styles.sectionLabel}>New request</Text>
+          <View style={styles.sectionLabelRow}>
+            <AppIcon name="inbox" size={12} color={colors.gray500} />
+            <Text style={styles.sectionLabel}>New request</Text>
+          </View>
           <View style={styles.card}>
             <View style={styles.row}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{request.customerName[0]}</Text>
+                <AppIcon name="user" size={18} color={colors.gray600} />
               </View>
               <View>
                 <Text style={styles.cardTitle}>{request.customerName}</Text>
@@ -64,11 +76,14 @@ export function DashboardScreen() {
 
       {activeLoads.map((load) => (
         <View key={load.id} style={styles.section}>
-          <Text style={styles.sectionLabel}>Active load</Text>
+          <View style={styles.sectionLabelRow}>
+            <AppIcon name="package" size={12} color={colors.gray500} />
+            <Text style={styles.sectionLabel}>Active load</Text>
+          </View>
           <View style={styles.card}>
             <View style={styles.row}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{load.customerName[0]}</Text>
+                <AppIcon name="user" size={18} color={colors.gray600} />
               </View>
               <View>
                 <Text style={styles.cardTitle}>{load.customerName}</Text>
@@ -92,6 +107,7 @@ export function DashboardScreen() {
 
       {hostRequests.length === 0 && activeLoads.length === 0 && (
         <View style={styles.empty}>
+          <AppIcon name="check-circle" size={32} color={colors.gray400} />
           <Text style={styles.emptyTitle}>All caught up</Text>
           <Text style={styles.emptySub}>No pending requests right now</Text>
         </View>
@@ -102,8 +118,12 @@ export function DashboardScreen() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   title: { fontSize: 22, fontWeight: '700', flex: 1, lineHeight: 28 },
   pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.gray50,
     paddingHorizontal: 12,
     paddingVertical: 6,
@@ -117,13 +137,13 @@ const styles = StyleSheet.create({
   stats: { fontSize: 15, fontWeight: '500', marginBottom: spacing.sm, lineHeight: 22 },
   sub: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 20 },
   section: { marginBottom: spacing.lg },
+  sectionLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray500,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: spacing.sm,
   },
   card: {
     borderWidth: 1,
@@ -157,7 +177,7 @@ const styles = StyleSheet.create({
   },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   done: { color: colors.green, fontWeight: '600', fontSize: 15, lineHeight: 22 },
-  empty: { alignItems: 'center', paddingVertical: spacing.xxl },
+  empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
   emptyTitle: { fontSize: 18, fontWeight: '600' },
   emptySub: { fontSize: 14, color: colors.gray500, marginTop: spacing.sm, lineHeight: 20 },
 })

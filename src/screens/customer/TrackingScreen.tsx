@@ -1,15 +1,16 @@
 import { Linking, StyleSheet, Text, View } from 'react-native'
+import { AppIcon } from '../../components/AppIcon'
 import { useApp } from '../../context/AppContext'
 import { SEED_HOSTS } from '../../data/seedData'
 import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
 
-const STAGES: { key: BookingStage; label: string; desc: string }[] = [
-  { key: 'got-bag', label: 'Got bag', desc: 'Host received your laundry' },
-  { key: 'waiting', label: 'Waiting', desc: 'Queued for the dryer' },
-  { key: 'drying', label: 'Drying', desc: 'Your load is in the dryer' },
-  { key: 'ready', label: 'Ready', desc: 'Pick up anytime' },
+const STAGES: { key: BookingStage; label: string; desc: string; icon: 'shopping-bag' | 'clock' | 'wind' | 'check-circle' }[] = [
+  { key: 'got-bag', label: 'Got bag', desc: 'Host received your laundry', icon: 'shopping-bag' },
+  { key: 'waiting', label: 'Waiting', desc: 'Queued for the dryer', icon: 'clock' },
+  { key: 'drying', label: 'Drying', desc: 'Your load is in the dryer', icon: 'wind' },
+  { key: 'ready', label: 'Ready', desc: 'Pick up anytime', icon: 'check-circle' },
 ]
 
 export function TrackingScreen() {
@@ -20,7 +21,7 @@ export function TrackingScreen() {
       <Screen style={styles.empty}>
         <Text style={styles.emptyTitle}>No active booking</Text>
         <Text style={styles.emptySub}>Find a host to get started</Text>
-        <PrimaryButton title="Explore dryers" onPress={() => navigate('customer-home')} full />
+        <PrimaryButton title="Explore dryers" icon="search" onPress={() => navigate('customer-home')} full />
       </Screen>
     )
   }
@@ -36,7 +37,9 @@ export function TrackingScreen() {
 
       {booking.isNew && (
         <View style={styles.success}>
-          <Text style={styles.successCheck}>✓</Text>
+          <View style={styles.successIcon}>
+            <AppIcon name="check" size={18} color={colors.white} />
+          </View>
           <View>
             <Text style={styles.successTitle}>Booking confirmed</Text>
             <Text style={styles.successSub}>Drop off at {booking.address}</Text>
@@ -44,7 +47,10 @@ export function TrackingScreen() {
         </View>
       )}
 
-      <Text style={styles.eyebrow}>Your load</Text>
+      <View style={styles.statusHeader}>
+        <AppIcon name="package" size={20} color={colors.gray500} />
+        <Text style={styles.eyebrow}>Your load</Text>
+      </View>
       <Text style={styles.statusTitle}>{current.label}</Text>
       <Text style={styles.statusSub}>{current.desc} · with {booking.hostName}</Text>
 
@@ -68,9 +74,16 @@ export function TrackingScreen() {
                 )}
               </View>
               <View style={styles.timelineContent}>
-                <Text style={[styles.timelineLabel, (done || active) && styles.timelineLabelActive]}>
-                  {stage.label}
-                </Text>
+                <View style={styles.timelineLabelRow}>
+                  <AppIcon
+                    name={stage.icon}
+                    size={16}
+                    color={done || active ? colors.black : colors.gray400}
+                  />
+                  <Text style={[styles.timelineLabel, (done || active) && styles.timelineLabelActive]}>
+                    {stage.label}
+                  </Text>
+                </View>
                 {time && <Text style={styles.timelineTime}>{time}</Text>}
               </View>
             </View>
@@ -79,18 +92,33 @@ export function TrackingScreen() {
       </View>
 
       <View style={styles.infoCard}>
+        <AppIcon name="message-circle" size={18} color={colors.gray600} />
         <Text style={styles.infoText}>We'll notify you on WhatsApp when it's ready.</Text>
       </View>
 
       <View style={styles.pickupCard}>
-        <Text style={styles.pickupTitle}>Pickup details</Text>
-        <Text style={styles.pickupLabel}>Address</Text>
-        <Text style={styles.pickupValue}>{booking.address}</Text>
-        <Text style={[styles.pickupLabel, { marginTop: spacing.md }]}>Gate code</Text>
-        <Text style={styles.pickupValue}>{booking.gateCode}</Text>
+        <View style={styles.pickupTitleRow}>
+          <AppIcon name="map-pin" size={18} />
+          <Text style={styles.pickupTitle}>Pickup details</Text>
+        </View>
+        <View style={styles.pickupField}>
+          <AppIcon name="home" size={14} color={colors.gray500} />
+          <View style={styles.pickupFieldText}>
+            <Text style={styles.pickupLabel}>Address</Text>
+            <Text style={styles.pickupValue}>{booking.address}</Text>
+          </View>
+        </View>
+        <View style={styles.pickupField}>
+          <AppIcon name="key" size={14} color={colors.gray500} />
+          <View style={styles.pickupFieldText}>
+            <Text style={styles.pickupLabel}>Gate code</Text>
+            <Text style={styles.pickupValue}>{booking.gateCode}</Text>
+          </View>
+        </View>
         <View style={{ height: spacing.md }} />
         <OutlineButton
           title="Message host"
+          icon="message-circle"
           full
           onPress={() =>
             Linking.openURL(
@@ -110,6 +138,7 @@ const styles = StyleSheet.create({
   success: {
     flexDirection: 'row',
     gap: spacing.md,
+    alignItems: 'center',
     backgroundColor: colors.greenBg,
     padding: spacing.md,
     borderRadius: radius.md,
@@ -117,18 +146,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,138,5,0.15)',
   },
-  successCheck: {
+  successIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: colors.green,
-    color: colors.white,
-    textAlign: 'center',
-    lineHeight: 36,
-    fontWeight: '700',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   successTitle: { fontWeight: '600', fontSize: 15, lineHeight: 20 },
   successSub: { fontSize: 13, color: colors.gray600, marginTop: spacing.sm, lineHeight: 18 },
+  statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', letterSpacing: 0.4 },
   statusTitle: { fontSize: 32, fontWeight: '700', marginVertical: spacing.sm, lineHeight: 38 },
   statusSub: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
@@ -157,22 +185,30 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     paddingLeft: spacing.md,
   },
+  timelineLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   timelineLabel: { fontSize: 15, color: colors.gray400, fontWeight: '500' },
   timelineLabelActive: { color: colors.black, fontWeight: '600' },
   timelineTime: { fontSize: 13, color: colors.gray500 },
   infoCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
     backgroundColor: colors.gray50,
     padding: spacing.md,
     borderRadius: radius.md,
     marginBottom: spacing.md,
   },
-  infoText: { fontSize: 14, color: colors.gray600, lineHeight: 22 },
+  infoText: { fontSize: 14, color: colors.gray600, lineHeight: 22, flex: 1 },
   pickupCard: {
     backgroundColor: colors.gray50,
     padding: spacing.lg,
     borderRadius: radius.md,
+    gap: spacing.md,
   },
-  pickupTitle: { fontSize: 16, fontWeight: '600', marginBottom: spacing.md },
+  pickupTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  pickupTitle: { fontSize: 16, fontWeight: '600' },
+  pickupField: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  pickupFieldText: { flex: 1 },
   pickupLabel: {
     fontSize: 11,
     fontWeight: '600',
