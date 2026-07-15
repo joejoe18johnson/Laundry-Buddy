@@ -14,9 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { IntroArtEarn } from '../../components/intro/IntroArtEarn'
 import { IntroArtEasy } from '../../components/intro/IntroArtEasy'
-import { IntroArtTrusted } from '../../components/intro/IntroArtTrusted'
+import { IntroArtRain } from '../../components/intro/IntroArtRain'
 import { GhostButton, PrimaryButton } from '../../components/ui'
-import { ACTIVE_REGION_LABEL } from '../../data/seedData'
 import { colors, radius, spacing } from '../../theme'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
@@ -33,26 +32,26 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     id: 'easy',
-    eyebrow: 'Easy to use',
+    eyebrow: 'Simple & convenient',
     title: 'Book a dryer in minutes',
-    body: `Open the map, pick a drop-off hour, and confirm — no chasing down numbers or waiting on replies in the ${ACTIVE_REGION_LABEL}.`,
+    body: 'See nearby hosts on the map, pick a drop-off hour, and confirm — no phone tag, no guesswork. Laundry sorted before your coffee cools.',
     highlight: '3 taps to book',
     Art: IntroArtEasy,
   },
   {
-    id: 'trusted',
-    eyebrow: 'People you trust',
-    title: 'Real neighbors, verified hosts',
-    body: 'Every host verifies their address and ID. See ratings, house rules, and prices before you drop off a single sock.',
-    highlight: 'Verified · Rated · Local',
-    Art: IntroArtTrusted,
+    id: 'rain',
+    eyebrow: 'Any weather',
+    title: 'Rainy day? Still dry.',
+    body: 'When hanging laundry isn’t an option, drop your wet load with a neighbor who has a dryer. You stay inside — they handle the tumble.',
+    highlight: 'Dry even when it pours',
+    Art: IntroArtRain,
   },
   {
     id: 'earn',
     eyebrow: 'Extra income',
-    title: 'Turn your dryer into side money',
-    body: 'Already running loads at home? Set your hours, choose your price, and earn per load between chores — cash or bank transfer.',
-    highlight: 'Hosts keep what they charge',
+    title: 'Make money from your dryer',
+    body: 'Already running loads at home? List your machine, set your hours and price, and earn per load between chores — cash or bank transfer.',
+    highlight: 'Side income on your schedule',
     Art: IntroArtEarn,
   },
 ]

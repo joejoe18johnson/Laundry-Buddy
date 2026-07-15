@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-const INTRO_SEEN_KEY = 'laundry-buddy-intro-seen-v2'
+const INTRO_SEEN_KEY = 'laundry-buddy-intro-seen-v3'
 
 export async function hasSeenIntro(): Promise<boolean> {
   const value = await AsyncStorage.getItem(INTRO_SEEN_KEY)
