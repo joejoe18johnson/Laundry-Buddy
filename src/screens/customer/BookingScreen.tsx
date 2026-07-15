@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { ClothesListEditor } from '../../components/ClothesListEditor'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
@@ -20,6 +21,9 @@ import type { ClothesListItem, PaymentMethod, SheetsOption } from '../../types'
 
 export function BookingScreen() {
   const { selectedHost, navigate, confirmBooking, getSettingsForHost } = useApp()
+  const insets = useSafeAreaInsets()
+  const footerBottomPad =
+    Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 12) + spacing.md
   const [dropOffTime, setDropOffTime] = useState<DropOffHour>(14)
   const [loads, setLoads] = useState(1)
   const [sheetsOption, setSheetsOption] = useState<SheetsOption>('own')
@@ -228,33 +232,37 @@ export function BookingScreen() {
           onChangeText={setNotes}
           placeholder="Any special instructions..."
         />
-        <View style={{ height: 120 }} />
+        <View style={{ height: 148 }} />
       </Screen>
 
-      <View style={styles.footer}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.price, totalPrice <= 0 && styles.priceFree]}>
-            {formatMoney(totalPrice)}
-          </Text>
-          <Text style={styles.priceSub}>{priceBreakdown}</Text>
-          {validationHint && <Text style={styles.validationHint}>{validationHint}</Text>}
+      <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
+        <View style={styles.footer}>
+          <View style={styles.footerInfo}>
+            <Text style={[styles.price, totalPrice <= 0 && styles.priceFree]}>
+              {formatMoney(totalPrice)}
+            </Text>
+            <Text style={styles.priceSub} numberOfLines={2}>
+              {priceBreakdown}
+            </Text>
+            {validationHint && <Text style={styles.validationHint}>{validationHint}</Text>}
+          </View>
+          <PrimaryButton
+            title="Confirm booking"
+            disabled={!canConfirm}
+            onPress={() =>
+              confirmBooking({
+                dropOffTime,
+                loads,
+                sheetsOption,
+                notes,
+                clothesList,
+                paymentMethod,
+                foldingService: showFolding && foldingService,
+                loadPhotoUri: loadPhotoUri ?? undefined,
+              })
+            }
+          />
         </View>
-        <PrimaryButton
-          title="Confirm booking"
-          disabled={!canConfirm}
-          onPress={() =>
-            confirmBooking({
-              dropOffTime,
-              loads,
-              sheetsOption,
-              notes,
-              clothesList,
-              paymentMethod,
-              foldingService: showFolding && foldingService,
-              loadPhotoUri: loadPhotoUri ?? undefined,
-            })
-          }
-        />
       </View>
     </View>
   )
@@ -335,21 +343,30 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     lineHeight: 22,
   },
-  footer: {
+  footerShell: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.screen,
-    paddingVertical: spacing.md,
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  price: { fontSize: 18, fontWeight: '700', marginBottom: 2 },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingHorizontal: spacing.screen,
+    paddingTop: spacing.lg,
+  },
+  footerInfo: { flex: 1, minWidth: 0, gap: 2 },
+  price: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4, lineHeight: 26 },
   priceFree: { color: colors.green },
   priceSub: { fontSize: 12, color: colors.gray500, lineHeight: 18 },
   validationHint: { fontSize: 12, color: colors.danger, marginTop: 4, fontWeight: '600' },

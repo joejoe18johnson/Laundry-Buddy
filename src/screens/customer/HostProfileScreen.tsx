@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
-import { StyleSheet, Text, View } from 'react-native'
+import { Platform, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
@@ -80,6 +80,8 @@ function InfoSection({ title, icon, children }: { title: string; icon: 'info' | 
 export function HostProfileScreen() {
   const { selectedHost, navigate, selectHost, getSettingsForHost } = useApp()
   const insets = useSafeAreaInsets()
+  const footerBottomPad =
+    Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 12) + spacing.md
 
   if (!selectedHost) return null
 
@@ -210,27 +212,22 @@ export function HostProfileScreen() {
           )}
         </View>
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 148 }} />
       </Screen>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <View style={styles.footerInfo}>
-          <View style={styles.footerPriceRow}>
+      <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
+        <View style={styles.footer}>
+          <View style={styles.footerInfo}>
             <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
               {formatHostPrice(host.price)}
             </Text>
-            <Text style={styles.footerPerLoad}>per load</Text>
-          </View>
-          <View style={styles.footerMetaRow}>
-            <Text style={styles.footerMeta}>
-              {host.slotsLeft} slot{host.slotsLeft === 1 ? '' : 's'} left
+            <Text style={styles.footerMeta} numberOfLines={2}>
+              per load · {host.slotsLeft} slot{host.slotsLeft === 1 ? '' : 's'} · ~{host.turnaroundHours} hr dry
             </Text>
-            <Text style={styles.footerMetaDot}>·</Text>
-            <Text style={styles.footerMeta}>~{host.turnaroundHours} hr turnaround</Text>
           </View>
-        </View>
-        <View style={styles.footerAction}>
-          <PrimaryButton title="Book slot" icon="calendar" onPress={() => selectHost(host)} />
+          <View style={styles.footerAction}>
+            <PrimaryButton title="Book slot" icon="calendar" onPress={() => selectHost(host)} />
+          </View>
         </View>
       </View>
     </View>
@@ -333,12 +330,7 @@ const styles = StyleSheet.create({
   reviewDate: { fontSize: 12, color: colors.gray400, marginTop: 2 },
   reviewComment: { fontSize: 14, color: colors.gray600, lineHeight: 22 },
   emptyReviews: { fontSize: 14, color: colors.gray500, fontStyle: 'italic', lineHeight: 22 },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.screen,
-    paddingTop: spacing.md,
+  footerShell: {
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
@@ -348,13 +340,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  footerInfo: { flex: 1, minWidth: 0, gap: 6 },
-  footerPriceRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 },
-  footerPrice: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
+  footer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.screen,
+    paddingTop: spacing.lg,
+  },
+  footerInfo: { flex: 1, minWidth: 0, gap: 4, paddingBottom: 2 },
+  footerPrice: { fontSize: 26, fontWeight: '700', letterSpacing: -0.5, lineHeight: 30 },
   footerPriceFree: { color: colors.green },
-  footerPerLoad: { fontSize: 14, fontWeight: '500', color: colors.gray500 },
-  footerMetaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   footerMeta: { fontSize: 13, fontWeight: '500', color: colors.gray500, lineHeight: 18 },
-  footerMetaDot: { fontSize: 13, color: colors.gray400, lineHeight: 18 },
-  footerAction: { flexShrink: 0 },
+  footerAction: { flexShrink: 0, alignSelf: 'center' },
 })
