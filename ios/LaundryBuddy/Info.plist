@@ -40,14 +40,6 @@
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
-    <key>NSCameraUsageDescription</key>
-    <string>Allow Laundry Buddy to use your camera to photograph your load for the host.</string>
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Allow Laundry Buddy to use your location to find nearby dryers across Belize.</string>
-    <key>NSPhotoLibraryAddUsageDescription</key>
-    <string>Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.</string>
-    <key>NSPhotoLibraryUsageDescription</key>
-    <string>Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
       <key>NSAllowsArbitraryLoads</key>
@@ -55,6 +47,22 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSCameraUsageDescription</key>
+    <string>Allow Laundry Buddy to use your camera to photograph your load for the host.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your location</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your location</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Allow Laundry Buddy to use your location to find nearby dryers across Belize.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your microphone</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.</string>
+    <key>RCTNewArchEnabled</key>
+    <true/>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>

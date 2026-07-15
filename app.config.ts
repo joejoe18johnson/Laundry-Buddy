@@ -7,6 +7,8 @@ const CAMERA_PERMISSION =
 const PHOTOS_PERMISSION =
   'Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.'
 
+const EAS_PROJECT_ID = '2bd26f4b-fcfc-43c4-8dd2-da21eef995e6'
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Laundry Buddy',
@@ -101,11 +103,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
       },
     ],
+    'expo-updates',
   ],
-  runtimeVersion: {
-    policy: 'appVersion',
+  updates: {
+    url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
   },
+  runtimeVersion: '1.0.0',
   extra: {
     ...config?.extra,
+    eas: {
+      projectId: EAS_PROJECT_ID,
+    },
   },
+  owner: 'joejoe18johnson',
 })
