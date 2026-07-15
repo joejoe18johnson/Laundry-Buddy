@@ -21,6 +21,9 @@ import {
 import { calculateBookingTotal, applyHostPricing, getHostPricing } from '../lib/hostPricing'
 import { formatMoney } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
+import { resolveGuestFacingHostSettings } from '../lib/defaultHostSettings'
+import { scheduleDropOffReminder } from '../lib/pushNotifications'
+import { formatClothesListSummary, hasDelicates } from '../lib/clothesList'
 import {
   saveCompletedCustomerPayment,
   saveCompletedHostPayment,
@@ -57,6 +60,7 @@ import {
   type Host,
   type HostRequest,
   type HostSettings,
+  type ClothesListItem,
   type PaymentMethod,
   type Screen,
   type SheetsOption,
@@ -93,6 +97,7 @@ interface AppState {
     loads: number
     sheetsOption: SheetsOption
     notes: string
+    clothesList: ClothesListItem[]
     paymentMethod: PaymentMethod
     foldingService: boolean
     loadPhotoUri?: string
@@ -269,8 +274,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const getSettingsForHost = useCallback(
     (hostUserId?: string) => {
-      if (!hostUserId) return { ...DEFAULT_HOST_SETTINGS }
-      return hostSettingsMap[hostUserId] ?? { ...DEFAULT_HOST_SETTINGS }
+      const host = hostUserId ? getHostByUserId(hostUserId) : undefined
+      return resolveGuestFacingHostSettings(hostUserId, hostSettingsMap, host)
     },
     [hostSettingsMap],
   )
@@ -362,6 +367,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loads: number
       sheetsOption: SheetsOption
       notes: string
+      clothesList: ClothesListItem[]
       paymentMethod: PaymentMethod
       foldingService: boolean
       loadPhotoUri?: string
@@ -399,6 +405,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         paymentStatus: totalAmount <= 0 ? 'paid' : 'pending',
         requestStatus: 'pending',
         loadPhotoUri: details.loadPhotoUri,
+        clothesList: details.clothesList.length > 0 ? details.clothesList : undefined,
         stage: 'got-bag',
         address: selectedHost.address,
         gateCode: selectedHost.gateCode,
@@ -422,16 +429,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
           foldingService: details.foldingService,
           totalAmount,
           loadPhotoUri: details.loadPhotoUri,
+          clothesList: details.clothesList.length > 0 ? details.clothesList : undefined,
           status: 'pending',
           createdAt: new Date().toISOString(),
         }
         void appendHostRequest(selectedHost.hostUserId, hostRequest)
       }
 
+      const clothesSummary = formatClothesListSummary(details.clothesList)
+      const delicateNote = hasDelicates(details.clothesList) ? ' · Delicates included' : ''
+
       notifyHost(
         selectedHost.hostUserId,
         'New booking',
-        `${user.name} · ${formatDropOffHour(details.dropOffTime)}${details.notes.trim() ? ` · "${details.notes.trim()}"` : ''}${details.loadPhotoUri ? ' · Photo attached' : ''}`,
+        `${user.name} · ${formatDropOffHour(details.dropOffTime)}${clothesSummary ? ` · ${clothesSummary}` : ''}${details.notes.trim() ? ` · "${details.notes.trim()}"` : ''}${delicateNote}${details.loadPhotoUri ? ' · Photo attached' : ''}`,
       )
       notifyCustomer(
         user.id,
@@ -470,6 +481,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         foldingService: request.foldingService,
         totalAmount: request.totalAmount,
         loadPhotoUri: request.loadPhotoUri,
+        clothesList: request.clothesList,
         pricePerLoad: pricing.dryPrice,
         dryPrice: pricing.dryPrice,
         foldingPrice: pricing.foldingPrice,
@@ -503,6 +515,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ? `${hostName} accepted your load! Transfer ${formatMoney(request.totalAmount ?? 0)} to ${bank.bankName} · ${bank.accountNumber}, then send proof on WhatsApp. Drop off at ${hostProfile?.address ?? 'the address shown in the app'}.`
           : `${hostName} accepted your load! Drop off at ${hostProfile?.address ?? 'the address shown in the app'}.`
         notifyCustomer(request.customerId, 'Load accepted', body)
+        void scheduleDropOffReminder(request.id, hostName, request.dropOffTime)
         showToast('Guest notified', { icon: 'check-circle' })
       }
     },

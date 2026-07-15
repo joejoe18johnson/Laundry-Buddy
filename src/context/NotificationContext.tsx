@@ -9,6 +9,11 @@ import {
   type ReactNode,
 } from 'react'
 import type { AppNotification } from '../types'
+import {
+  initPushNotifications,
+  showLocalNotification,
+  updateBadgeCount,
+} from '../lib/pushNotifications'
 
 const NOTIFICATIONS_KEY = 'laundry-buddy-notifications'
 
@@ -23,7 +28,7 @@ function nowLabel() {
 interface NotificationState {
   notifications: AppNotification[]
   unreadCount: number
-  push: (userId: string, title: string, body: string) => Promise<void>
+  push: (userId: string, title: string, body: string, data?: Record<string, unknown>) => Promise<void>
   markRead: (id: string) => Promise<void>
   markAllRead: (userId: string) => Promise<void>
 }
@@ -40,28 +45,42 @@ async function writeAll(notifications: AppNotification[]) {
   await AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications))
 }
 
-export function NotificationProvider({ children }: { children: ReactNode }) {
+export function NotificationProvider({
+  children,
+  activeUserId,
+}: {
+  children: ReactNode
+  activeUserId?: string
+}) {
   const [notifications, setNotifications] = useState<AppNotification[]>([])
 
   useEffect(() => {
     readAll().then(setNotifications)
+    void initPushNotifications()
   }, [])
 
-  const push = useCallback(async (userId: string, title: string, body: string) => {
-    const item: AppNotification = {
-      id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      userId,
-      title,
-      body,
-      time: nowLabel(),
-      read: false,
-    }
-    setNotifications((prev) => {
-      const next = [item, ...prev].slice(0, 100)
-      writeAll(next)
-      return next
-    })
-  }, [])
+  const push = useCallback(
+    async (userId: string, title: string, body: string, data?: Record<string, unknown>) => {
+      const item: AppNotification = {
+        id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        userId,
+        title,
+        body,
+        time: nowLabel(),
+        read: false,
+      }
+      setNotifications((prev) => {
+        const next = [item, ...prev].slice(0, 100)
+        writeAll(next)
+        return next
+      })
+
+      if (userId === activeUserId) {
+        await showLocalNotification(title, body, data)
+      }
+    },
+    [activeUserId],
+  )
 
   const markRead = useCallback(async (id: string) => {
     setNotifications((prev) => {
@@ -83,6 +102,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     () => notifications.filter((n) => !n.read).length,
     [notifications],
   )
+
+  useEffect(() => {
+    if (!activeUserId) return
+    const mineUnread = notifications.filter((n) => n.userId === activeUserId && !n.read).length
+    void updateBadgeCount(mineUnread)
+  }, [notifications, activeUserId])
 
   const value = useMemo(
     () => ({ notifications, unreadCount, push, markRead, markAllRead }),

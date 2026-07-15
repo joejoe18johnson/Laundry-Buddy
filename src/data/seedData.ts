@@ -1182,7 +1182,10 @@ export function getAvailableHosts(): Host[] {
 }
 
 export function getHostByUserId(userId: string): Host | undefined {
-  return SEED_HOSTS.find((h) => h.hostUserId === userId)
+  return (
+    SEED_HOSTS.find((h) => h.hostUserId === userId) ??
+    GENERATED_SEED_HOSTS.find((h) => h.hostUserId === userId)
+  )
 }
 
 export function getHostById(hostId: string): Host | undefined {

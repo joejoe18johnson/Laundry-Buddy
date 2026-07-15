@@ -28,7 +28,15 @@ import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
 import { colors, spacing } from './src/theme'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
 import { SplashLoading } from './src/components/SplashLoading'
+import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
 import { ToastProvider } from './src/context/ToastContext'
+import { getNotificationScreen } from './src/lib/notificationRoutes'
+import {
+  addNotificationResponseListener,
+  markPermissionPrompted,
+  requestPushPermissions,
+  shouldShowPermissionPrompt,
+} from './src/lib/pushNotifications'
 import type { Screen } from './src/types'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
@@ -57,6 +65,7 @@ function AppShell() {
   } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false)
 
   const isCustomer = user!.role === 'customer'
   const firstName = user!.name.split(' ')[0]
@@ -132,6 +141,28 @@ function AppShell() {
   const tabs = isCustomer ? customerTabs : hostTabs
   const showBottomNav = !HIDE_BOTTOM_NAV.includes(screen)
 
+  useEffect(() => {
+    shouldShowPermissionPrompt().then(setShowNotifPrompt)
+  }, [])
+
+  useEffect(() => {
+    const subscription = addNotificationResponseListener((title) => {
+      const target = getNotificationScreen(title, user!.role)
+      navigate(target ?? 'notifications')
+    })
+    return () => subscription.remove()
+  }, [navigate, user])
+
+  const enableNotifications = async () => {
+    await requestPushPermissions()
+    setShowNotifPrompt(false)
+  }
+
+  const dismissNotifications = async () => {
+    await markPermissionPrompted()
+    setShowNotifPrompt(false)
+  }
+
   return (
     <SafeAreaView style={styles.app} edges={['top']}>
       <StatusBar style="dark" />
@@ -192,6 +223,12 @@ function AppShell() {
           <BottomNav tabs={tabs} currentScreen={screen} onNavigate={navigate} />
         </SafeAreaView>
       )}
+
+      <NotificationPermissionPrompt
+        visible={showNotifPrompt}
+        onEnable={enableNotifications}
+        onDismiss={dismissNotifications}
+      />
     </SafeAreaView>
   )
 }
@@ -248,7 +285,7 @@ function AuthenticatedApp() {
   }
 
   return (
-    <NotificationProvider>
+    <NotificationProvider activeUserId={user!.id}>
       <ToastProvider>
         <AppProvider>
           <AppShell />

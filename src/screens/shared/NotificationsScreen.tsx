@@ -1,10 +1,16 @@
+import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { BackButton, GhostButton, PrimaryButton, Screen } from '../../components/ui'
+import { BackButton, GhostButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useUserNotifications } from '../../context/NotificationContext'
 import { getNotificationScreen } from '../../lib/notificationRoutes'
+import {
+  getPushPermissionStatus,
+  requestPushPermissions,
+  type PushPermissionStatus,
+} from '../../lib/pushNotifications'
 import { colors, radius, spacing } from '../../theme'
 import type { AppNotification } from '../../types'
 
@@ -32,6 +38,11 @@ export function NotificationsScreen() {
   const { user } = useAuth()
   const { navigate } = useApp()
   const { notifications, unreadCount, markRead, markAllRead } = useUserNotifications(user?.id)
+  const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
+
+  useEffect(() => {
+    getPushPermissionStatus().then(setPermission)
+  }, [])
 
   if (!user) return null
 
@@ -59,6 +70,29 @@ export function NotificationsScreen() {
       <Text style={styles.subtitle}>
         {unreadCount > 0 ? `${unreadCount} unread · tap to open` : 'You are all caught up'}
       </Text>
+
+      <Text style={styles.subtitle}>
+        {unreadCount > 0 ? `${unreadCount} unread · tap to open` : 'You are all caught up'}
+      </Text>
+
+      {permission !== 'granted' && permission !== 'unsupported' && (
+        <View style={styles.permissionCard}>
+          <AppIcon name="bell" size={18} color={colors.black} />
+          <View style={styles.permissionBody}>
+            <Text style={styles.permissionTitle}>Phone alerts are off</Text>
+            <Text style={styles.permissionSub}>
+              Enable notifications for host responses, ready-for-pickup alerts, and drop-off reminders.
+            </Text>
+          </View>
+          <OutlineButton
+            title="Enable"
+            onPress={async () => {
+              const granted = await requestPushPermissions()
+              setPermission(granted ? 'granted' : 'denied')
+            }}
+          />
+        </View>
+      )}
 
       {notifications.length === 0 ? (
         <View style={styles.empty}>
@@ -119,6 +153,20 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { fontSize: 26, fontWeight: '700', lineHeight: 32 },
   subtitle: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg },
+  permissionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.gray50,
+  },
+  permissionBody: { flex: 1, gap: 4 },
+  permissionTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
+  permissionSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',

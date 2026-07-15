@@ -130,6 +130,12 @@ export interface HostProfileDetails {
   reviews: HostReview[]
 }
 
+export interface ClothesListItem {
+  id: string
+  label: string
+  quantity: number
+}
+
 export interface Booking {
   id: string
   hostId: string
@@ -157,6 +163,7 @@ export interface Booking {
   paymentStatus?: 'paid' | 'pending'
   requestStatus?: 'pending' | 'accepted' | 'declined'
   loadPhotoUri?: string
+  clothesList?: ClothesListItem[]
 }
 
 export interface HostRequest {
@@ -174,6 +181,7 @@ export interface HostRequest {
   status: 'pending' | 'accepted' | 'declined'
   createdAt?: string
   loadPhotoUri?: string
+  clothesList?: ClothesListItem[]
 }
 
 export function sheetsOptionLabel(option: SheetsOption, sheetsPrice: number): string {

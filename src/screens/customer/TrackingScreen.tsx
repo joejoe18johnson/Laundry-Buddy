@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
+import { TransferProofCapture } from '../../components/TransferProofCapture'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostById } from '../../data/mockData'
 import { applyHostListing } from '../../lib/hostListing'
 import { getBookingAmount, formatMoney, formatPaymentMethod } from '../../lib/bookingPayments'
-import { buildTransferProofMessage, sendTransferProofViaWhatsApp } from '../../lib/whatsapp'
+import {
+  buildTransferProofMessage,
+  formatWhatsAppDisplay,
+  sendTransferProofViaWhatsApp,
+} from '../../lib/whatsapp'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
+import { ClothesListDisplay } from '../../components/ClothesListDisplay'
 import { colors, radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
 
@@ -23,10 +29,12 @@ export function TrackingScreen() {
   const { user } = useAuth()
   const { booking, navigate, getSettingsForHost } = useApp()
   const [bannerVisible, setBannerVisible] = useState(true)
+  const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
   const pulse = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
     setBannerVisible(true)
+    setTransferProofUri(null)
   }, [booking?.id])
 
   useEffect(() => {
@@ -97,18 +105,17 @@ export function TrackingScreen() {
 
   const sendTransferProof = () => {
     if (!whatsapp || !user) return
-    sendTransferProofViaWhatsApp(
-      whatsapp,
-      buildTransferProofMessage({
-        guestName: user.name,
-        hostName: booking.hostName,
-        amount,
-        loads: booking.loads,
-        bookingId: booking.id,
-        bankName: hostSettings.bankDetails.bankName,
-        accountNumber: hostSettings.bankDetails.accountNumber,
-      }),
-    )
+    const message = buildTransferProofMessage({
+      guestName: user.name,
+      hostName: booking.hostName,
+      amount,
+      loads: booking.loads,
+      bookingId: booking.id,
+      bankName: hostSettings.bankDetails.bankName,
+      accountNumber: hostSettings.bankDetails.accountNumber,
+      hasScreenshot: !!transferProofUri,
+    })
+    void sendTransferProofViaWhatsApp(whatsapp, message, transferProofUri)
   }
 
   return (
@@ -184,11 +191,13 @@ export function TrackingScreen() {
             </View>
           ) : null}
           <Text style={styles.paymentSub}>
-            Transfer the amount above, then send {booking.hostName} your proof on WhatsApp.
+            Transfer the amount above, add your receipt screenshot, then send proof to {booking.hostName} on WhatsApp
+            {whatsapp ? ` (${formatWhatsAppDisplay(whatsapp)}).` : '.'}
           </Text>
+          <TransferProofCapture photoUri={transferProofUri} onPhotoChange={setTransferProofUri} />
           {whatsapp ? (
-            <OutlineButton
-              title="Send proof via WhatsApp"
+            <PrimaryButton
+              title={transferProofUri ? 'Send proof on WhatsApp' : 'Open WhatsApp to send proof'}
               icon="message-circle"
               full
               onPress={sendTransferProof}
@@ -196,6 +205,11 @@ export function TrackingScreen() {
           ) : (
             <Text style={styles.paymentWarn}>Host has not added a WhatsApp number yet.</Text>
           )}
+          {transferProofUri ? (
+            <Text style={styles.paymentHint}>
+              Choose WhatsApp on the share sheet, then send the screenshot to your host.
+            </Text>
+          ) : null}
         </View>
       )}
 
@@ -257,6 +271,12 @@ export function TrackingScreen() {
         })}
       </View>
         </>
+      )}
+
+      {!isDeclined && booking.clothesList && booking.clothesList.length > 0 && (
+        <View style={styles.clothesSection}>
+          <ClothesListDisplay items={booking.clothesList} />
+        </View>
       )}
 
       {!isDeclined && (
@@ -379,6 +399,7 @@ const styles = StyleSheet.create({
   paymentHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   paymentTitle: { fontSize: 16, fontWeight: '700' },
   paymentSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+  paymentHint: { fontSize: 12, color: colors.gray500, lineHeight: 18, textAlign: 'center' },
   paymentWarn: { fontSize: 13, color: colors.danger },
   paidCard: {
     flexDirection: 'row',
@@ -394,6 +415,7 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', letterSpacing: 0.4 },
   statusTitle: { fontSize: 32, fontWeight: '700', marginVertical: spacing.sm, lineHeight: 38 },
   statusSub: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
+  clothesSection: { marginBottom: spacing.lg },
   timeline: { marginBottom: spacing.lg },
   timelineRow: { flexDirection: 'row', minHeight: 56 },
   timelineLeft: { width: 24, alignItems: 'center' },

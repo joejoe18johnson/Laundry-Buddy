@@ -1,6 +1,8 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { sheetsOptionLabel } from '../../types'
+import type { ClothesListItem } from '../../types'
+import { ClothesListDisplay } from '../../components/ClothesListDisplay'
 import { formatDropOffAvailability, formatDropOffHour, type DropOffHour } from '../../lib/dropOffAvailability'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -40,14 +42,17 @@ function OrderDetails({
   paymentMethod,
   totalAmount,
   loadPhotoUri,
+  clothesList,
 }: {
   dropOffTime: DropOffHour
   notes?: string
   paymentMethod?: 'cash' | 'bank_transfer'
   totalAmount?: number
   loadPhotoUri?: string
+  clothesList?: ClothesListItem[]
 }) {
   const trimmedNotes = notes?.trim()
+  const hasClothes = clothesList && clothesList.length > 0
 
   return (
     <View style={styles.orderDetails}>
@@ -60,6 +65,7 @@ function OrderDetails({
           <Image source={{ uri: loadPhotoUri }} style={styles.loadPhoto} resizeMode="cover" />
         </View>
       ) : null}
+      {hasClothes ? <ClothesListDisplay items={clothesList} /> : null}
       <View style={styles.detailRow}>
         <View style={styles.detailIcon}>
           <AppIcon name="clock" size={16} color={colors.black} />
@@ -217,6 +223,7 @@ export function DashboardScreen() {
               paymentMethod={request.paymentMethod}
               totalAmount={request.totalAmount}
               loadPhotoUri={request.loadPhotoUri}
+              clothesList={request.clothesList}
             />
             <View style={styles.tags}>
               <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption, hostProfile?.sheetsPrice ?? 1)}</Text>
@@ -263,6 +270,7 @@ export function DashboardScreen() {
               paymentMethod={load.paymentMethod}
               totalAmount={load.totalAmount}
               loadPhotoUri={load.loadPhotoUri}
+              clothesList={load.clothesList}
             />
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
               <>

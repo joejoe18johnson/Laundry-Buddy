@@ -1,4 +1,4 @@
-import { Linking } from 'react-native'
+import { Linking, Platform, Share } from 'react-native'
 import { formatMoney } from './bookingPayments'
 
 export function normalizeWhatsAppPhone(phone: string): string {
@@ -23,6 +23,7 @@ export function buildTransferProofMessage({
   bookingId,
   bankName,
   accountNumber,
+  hasScreenshot,
 }: {
   guestName: string
   hostName: string
@@ -31,6 +32,7 @@ export function buildTransferProofMessage({
   bookingId?: string
   bankName?: string
   accountNumber?: string
+  hasScreenshot?: boolean
 }): string {
   const lines = [
     `Hi ${hostName}! This is ${guestName}.`,
@@ -43,10 +45,40 @@ export function buildTransferProofMessage({
   if (bankName && accountNumber) {
     lines.push(`Transferred to: ${bankName} · ${accountNumber}`)
   }
-  lines.push(``, `Please confirm when received. I can send a screenshot of the transfer.`)
+  lines.push(
+    ``,
+    hasScreenshot
+      ? `I am sending my transfer screenshot in this chat — please confirm when received.`
+      : `Please confirm when received. I will send my transfer screenshot next.`,
+  )
   return lines.join('\n')
 }
 
-export function sendTransferProofViaWhatsApp(hostWhatsApp: string, message: string): void {
+export async function sendTransferProofViaWhatsApp(
+  hostWhatsApp: string,
+  message: string,
+  screenshotUri?: string | null,
+): Promise<void> {
+  if (screenshotUri) {
+    try {
+      const result = await Share.share(
+        Platform.OS === 'ios'
+          ? { url: screenshotUri, message }
+          : { message, url: screenshotUri },
+      )
+      if (result.action === Share.sharedAction) return
+    } catch {
+      // fall back to opening WhatsApp chat below
+    }
+  }
+
   openWhatsAppChat(hostWhatsApp, message)
+}
+
+export function formatWhatsAppDisplay(phone: string): string {
+  const normalized = normalizeWhatsAppPhone(phone)
+  if (normalized.length === 10 && normalized.startsWith('501')) {
+    return `+${normalized.slice(0, 3)} ${normalized.slice(3, 6)}-${normalized.slice(6)}`
+  }
+  return phone
 }

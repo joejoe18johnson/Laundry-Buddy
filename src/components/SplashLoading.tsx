@@ -1,16 +1,18 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { SplashWasherAnimation } from './SplashWasherAnimation'
+import { SplashDryerAnimation } from './SplashDryerAnimation'
 import { colors, spacing } from '../theme'
 
 type Props = {
   message?: string
+  showTagline?: boolean
 }
 
-export function SplashLoading({ message = 'Dry laundry, rain or shine' }: Props) {
+export function SplashLoading({ message = 'Laundry Buddy', showTagline = true }: Props) {
   return (
     <View style={styles.container}>
-      <SplashWasherAnimation />
-      <Text style={styles.title}>{message}</Text>
+      <SplashDryerAnimation />
+      <Text style={styles.brand}>{message}</Text>
+      {showTagline && <Text style={styles.tagline}>Dry laundry, rain or shine</Text>}
     </View>
   )
 }
@@ -23,13 +25,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     paddingHorizontal: spacing.xl,
   },
-  title: {
+  brand: {
     marginTop: spacing.lg,
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 30,
+    fontWeight: '800',
     color: colors.black,
     textAlign: 'center',
-    letterSpacing: -0.5,
-    lineHeight: 36,
+    letterSpacing: -0.6,
+  },
+  tagline: {
+    marginTop: spacing.sm,
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.gray500,
+    textAlign: 'center',
   },
 })

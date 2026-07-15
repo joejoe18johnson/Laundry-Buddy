@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
+import { ClothesListEditor } from '../../components/ClothesListEditor'
 import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
 import { useApp } from '../../context/AppContext'
 import { BackButton, ChoiceChip, OptionRow, PrimaryButton, Screen, StepIndicator } from '../../components/ui'
@@ -14,7 +15,7 @@ import {
 import { formatMoney } from '../../lib/bookingPayments'
 import { sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
 import { colors, radius, spacing } from '../../theme'
-import type { PaymentMethod, SheetsOption } from '../../types'
+import type { ClothesListItem, PaymentMethod, SheetsOption } from '../../types'
 
 export function BookingScreen() {
   const { selectedHost, navigate, confirmBooking, getSettingsForHost } = useApp()
@@ -23,6 +24,7 @@ export function BookingScreen() {
   const [sheetsOption, setSheetsOption] = useState<SheetsOption>('own')
   const [foldingService, setFoldingService] = useState(false)
   const [notes, setNotes] = useState('')
+  const [clothesList, setClothesList] = useState<ClothesListItem[]>([])
   const [loadPhotoUri, setLoadPhotoUri] = useState<string | null>(null)
 
   const hostSettings = selectedHost ? getSettingsForHost(selectedHost.hostUserId) : null
@@ -95,7 +97,12 @@ export function BookingScreen() {
       ? 'Host has no payment methods'
       : null
 
-  const bookingStep = paymentMethod && loads >= 1 ? (loadPhotoUri || notes.trim() ? 4 : 3) : 2
+  const bookingStep =
+    paymentMethod && loads >= 1
+      ? loadPhotoUri || notes.trim() || clothesList.length > 0
+        ? 4
+        : 3
+      : 2
 
   return (
     <View style={styles.wrapper}>
@@ -105,7 +112,7 @@ export function BookingScreen() {
         <Text style={styles.title}>Book with {selectedHost.name}</Text>
 
         <StepIndicator
-          steps={['Time', 'Loads', 'Pay', 'Photo', 'Review']}
+          steps={['Time', 'Loads', 'Pay', 'Clothes', 'Review']}
           current={Math.min(bookingStep, 4)}
         />
 
@@ -167,7 +174,7 @@ export function BookingScreen() {
             </View>
             {paymentMethod === 'bank_transfer' && (
               <Text style={styles.paymentNote}>
-                Bank details will be shared after {selectedHost.name} accepts your request.
+                After {selectedHost.name} accepts, you'll get bank details on My Load. Pay by transfer, then send your receipt screenshot on WhatsApp using the host's number.
               </Text>
             )}
             {paymentMethod === 'cash' && (
@@ -198,6 +205,10 @@ export function BookingScreen() {
             />
           </>
         )}
+
+        <Text style={styles.section}>What's in your load?</Text>
+        <Text style={styles.sectionHint}>Optional — helps your host prepare</Text>
+        <ClothesListEditor items={clothesList} onChange={setClothesList} />
 
         <Text style={styles.section}>Photo of your load</Text>
         <Text style={styles.sectionHint}>Show the host what you're dropping off</Text>
@@ -232,6 +243,7 @@ export function BookingScreen() {
               loads,
               sheetsOption,
               notes,
+              clothesList,
               paymentMethod,
               foldingService: showFolding && foldingService,
               loadPhotoUri: loadPhotoUri ?? undefined,

@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
-import { SplashWasherAnimation } from './SplashWasherAnimation'
+import { SplashDryerAnimation } from './SplashDryerAnimation'
 import { colors, radius, spacing } from '../theme'
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
@@ -250,7 +250,7 @@ export function BrandSwitch({
 export function LoadingScreen() {
   return (
     <View style={styles.loading}>
-      <SplashWasherAnimation />
+      <SplashDryerAnimation />
     </View>
   )
 }
