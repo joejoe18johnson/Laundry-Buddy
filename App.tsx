@@ -238,7 +238,7 @@ function AuthenticatedApp() {
   const { user, authScreen, ready, biometricEnabled, biometricSupport, logout } = useAuth()
   const [introSeen, setIntroSeen] = useState<boolean | null>(null)
   const [biometricLocked, setBiometricLocked] = useState(false)
-  const skipNextLock = useRef(true)
+  const appState = useRef(AppState.currentState)
 
   useEffect(() => {
     if (!ready) return
@@ -252,21 +252,14 @@ function AuthenticatedApp() {
   useEffect(() => {
     if (!user || !biometricEnabled || !biometricSupport.available) {
       setBiometricLocked(false)
-      skipNextLock.current = true
       return
     }
 
-    setBiometricLocked(true)
-    skipNextLock.current = true
-
     const subscription = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        if (skipNextLock.current) {
-          skipNextLock.current = false
-          return
-        }
+      if (appState.current.match(/inactive|background/) && nextState === 'active') {
         setBiometricLocked(true)
       }
+      appState.current = nextState
     })
 
     return () => subscription.remove()
@@ -274,12 +267,10 @@ function AuthenticatedApp() {
 
   const handleBiometricUnlock = () => {
     setBiometricLocked(false)
-    skipNextLock.current = true
   }
 
   const handleUsePasswordInstead = async () => {
     setBiometricLocked(false)
-    skipNextLock.current = true
     await logout()
   }
 
