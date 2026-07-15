@@ -65,6 +65,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: colors.white,
   },
-  label: { fontSize: 11, fontWeight: '600', color: colors.gray400 },
+  label: { fontSize: 11, fontWeight: '600', color: colors.gray400, textTransform: 'capitalize' },
   labelActive: { color: colors.black, fontWeight: '700' },
 })

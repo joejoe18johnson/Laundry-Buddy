@@ -257,7 +257,7 @@ export function BookingScreen() {
 
 const styles = StyleSheet.create({
   wrapper: { flex: 1, backgroundColor: colors.white },
-  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', marginTop: spacing.sm, letterSpacing: 0.4 },
+  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'capitalize', marginTop: spacing.sm, letterSpacing: 0.4 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.lg, lineHeight: 30 },
   rateCard: {
     borderWidth: 1,
@@ -267,10 +267,10 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: spacing.sm,
   },
-  rateTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, textTransform: 'uppercase', marginBottom: 4 },
+  rateTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, textTransform: 'capitalize', marginBottom: 4 },
   rateLine: { fontSize: 14, color: colors.gray600, fontWeight: '500' },
-  section: { fontSize: 16, fontWeight: '600', marginTop: spacing.lg, marginBottom: spacing.md },
-  sectionHint: { fontSize: 13, color: colors.gray500, marginTop: -spacing.sm, marginBottom: spacing.md },
+  section: { fontSize: 16, fontWeight: '600', marginTop: spacing.lg, marginBottom: spacing.md, textTransform: 'capitalize' },
+  sectionHint: { fontSize: 13, color: colors.gray500, marginTop: -spacing.sm, marginBottom: spacing.md, textTransform: 'capitalize' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     borderWidth: 1,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     gap: 4,
   },
-  bankTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, textTransform: 'uppercase', marginBottom: 4 },
+  bankTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, textTransform: 'capitalize', marginBottom: 4 },
   bankLine: { fontSize: 15, fontWeight: '600' },
   bankAccount: { fontSize: 18, fontWeight: '700', letterSpacing: 0.5, marginVertical: 4 },
   bankHint: { fontSize: 12, color: colors.gray500, lineHeight: 17, marginTop: 4 },

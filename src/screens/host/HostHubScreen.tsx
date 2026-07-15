@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: colors.gray500,
-    textTransform: 'uppercase',
+    textTransform: 'capitalize',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
   },

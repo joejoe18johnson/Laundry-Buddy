@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   section: { marginBottom: spacing.lg },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.gray600, textTransform: 'uppercase', letterSpacing: 0.4 },
+  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.gray600, textTransform: 'capitalize', letterSpacing: 0.4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   footer: {
     flexDirection: 'row',

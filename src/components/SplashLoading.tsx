@@ -12,7 +12,7 @@ export function SplashLoading({ message = 'Laundry Buddy', showTagline = true }:
     <View style={styles.container}>
       <SplashDryerAnimation />
       <Text style={styles.brand}>{message}</Text>
-      {showTagline && <Text style={styles.tagline}>Dry laundry, rain or shine</Text>}
+      {showTagline && <Text style={styles.tagline}>Dry Laundry, Rain or Shine</Text>}
     </View>
   )
 }

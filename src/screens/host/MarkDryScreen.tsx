@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   empty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
   emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: spacing.lg },
   statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'uppercase', letterSpacing: 0.4 },
+  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'capitalize', letterSpacing: 0.4 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.lg, lineHeight: 30 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   section: { fontSize: 20, fontWeight: '700', lineHeight: 26 },

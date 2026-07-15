@@ -19,7 +19,7 @@ export function WelcomeScreen() {
   return (
     <Screen style={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.title}>Dry laundry, rain or shine</Text>
+        <Text style={styles.title}>Dry Laundry, Rain or Shine</Text>
         <Text style={styles.tagline}>
           Book a neighbor's dryer in the {ACTIVE_REGION_LABEL} — free for the community.
         </Text>
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: colors.gray600,
-    textTransform: 'uppercase',
+    textTransform: 'capitalize',
     letterSpacing: 0.4,
   },
   trainingRow: {

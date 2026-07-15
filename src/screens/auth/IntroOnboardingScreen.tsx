@@ -32,26 +32,26 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     id: 'easy',
-    eyebrow: 'Simple & convenient',
-    title: 'Book a dryer in minutes',
-    body: 'See nearby hosts on the map, pick a drop-off hour, and confirm — no phone tag, no guesswork. Laundry sorted before your coffee cools.',
-    highlight: '3 taps to book',
+    eyebrow: 'Simple & Convenient',
+    title: 'Book a Dryer in Minutes',
+    body: 'See Nearby Hosts on the Map, Pick a Drop-Off Hour, and Confirm — No Phone Tag, No Guesswork. Laundry Sorted Before Your Coffee Cools.',
+    highlight: '3 Taps to Book',
     Art: IntroArtEasy,
   },
   {
     id: 'rain',
-    eyebrow: 'Any weather',
-    title: 'Rainy day? Still dry.',
-    body: 'When hanging laundry isn’t an option, drop your wet load with a neighbor who has a dryer. You stay inside — they handle the tumble.',
-    highlight: 'Dry even when it pours',
+    eyebrow: 'Any Weather',
+    title: 'Rainy Day? Still Dry.',
+    body: 'When Hanging Laundry Isn’t an Option, Drop Your Wet Load With a Neighbor Who Has a Dryer. You Stay Inside — They Handle the Tumble.',
+    highlight: 'Dry Even When It Pours',
     Art: IntroArtRain,
   },
   {
     id: 'earn',
-    eyebrow: 'Extra income',
-    title: 'Make money from your dryer',
-    body: 'Already running loads at home? List your machine, set your hours and price, and earn per load between chores — cash or bank transfer.',
-    highlight: 'Side income on your schedule',
+    eyebrow: 'Extra Income',
+    title: 'Make Money From Your Dryer',
+    body: 'Already Running Loads at Home? List Your Machine, Set Your Hours and Price, and Earn Per Load Between Chores — Cash or Bank Transfer.',
+    highlight: 'Side Income on Your Schedule',
     Art: IntroArtEarn,
   },
 ]
@@ -139,8 +139,8 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
         </View>
         {isLast ? (
           <View style={styles.ctaBlock}>
-            <PrimaryButton title="Get started" icon="arrow-right" onPress={onComplete} full />
-            <Text style={styles.ctaSub}>Find a host or list your dryer — same app.</Text>
+            <PrimaryButton title="Get Started" icon="arrow-right" onPress={onComplete} full />
+            <Text style={styles.ctaSub}>Find a Host or List Your Dryer — Same App.</Text>
           </View>
         ) : (
           <GhostButton title="Next" icon="arrow-right" onPress={goNext} full />
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray600,
-    textTransform: 'uppercase',
+    textTransform: 'capitalize',
     letterSpacing: 0.6,
   },
   artWrap: {

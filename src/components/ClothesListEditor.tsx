@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
   },
-  listTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600, textTransform: 'uppercase', letterSpacing: 0.4 },
+  listTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600, textTransform: 'capitalize', letterSpacing: 0.4 },
   listCount: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
   row: {
     flexDirection: 'row',

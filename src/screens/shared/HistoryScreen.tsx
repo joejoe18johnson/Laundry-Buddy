@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   summaryMain: { gap: 4 },
-  summaryLabel: { fontSize: 13, fontWeight: '600', color: colors.gray500, textTransform: 'uppercase', letterSpacing: 0.4 },
+  summaryLabel: { fontSize: 13, fontWeight: '600', color: colors.gray500, textTransform: 'capitalize', letterSpacing: 0.4 },
   summaryAmount: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5 },
   summaryMeta: { flexDirection: 'row', gap: spacing.lg },
   summaryMetaText: { fontSize: 13, color: colors.gray600, fontWeight: '500' },

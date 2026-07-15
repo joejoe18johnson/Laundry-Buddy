@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
   },
-  label: { flex: 1, fontSize: 12, fontWeight: '700', color: colors.gray600, textTransform: 'uppercase', letterSpacing: 0.4 },
+  label: { flex: 1, fontSize: 12, fontWeight: '700', color: colors.gray600, textTransform: 'capitalize', letterSpacing: 0.4 },
   count: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
   items: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: 6 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
