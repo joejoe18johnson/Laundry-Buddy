@@ -1,196 +1,199 @@
 import { useEffect, useRef } from 'react'
 import { Animated, Easing, StyleSheet, View } from 'react-native'
-import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg'
+import Svg, { Circle, Line, Path, Rect } from 'react-native-svg'
 import { colors } from '../theme'
 
 const SIZE = 220
+const DOOR_CX = 110
+const DOOR_CY = 162
+const DOOR_R = 46
 
-function WasherSvg() {
+/** Dark navy ink from the reference illustration */
+const INK = '#242C34'
+const GREEN = colors.green
+const STROKE = 2.6
+
+function WasherFrame() {
   return (
     <Svg width={SIZE} height={SIZE} viewBox="0 0 220 220" fill="none">
-      <Ellipse cx="110" cy="198" rx="52" ry="6" fill="rgba(0,0,0,0.08)" />
-
-      <Rect x="52" y="58" width="116" height="132" rx="18" fill={colors.white} stroke={colors.black} strokeWidth={2.5} />
-      <Rect x="62" y="68" width="96" height="18" rx="6" fill={colors.gray75} stroke={colors.black} strokeWidth={1.5} />
-      <Circle cx="82" cy="77" r="4" fill={colors.black} />
-      <Circle cx="98" cy="77" r="4" fill={colors.black} />
-      <Rect x="118" y="72" width="30" height="10" rx={5} fill={colors.gray200} />
-
-      <Circle cx="110" cy="132" r="38" fill={colors.gray50} stroke={colors.black} strokeWidth={2.5} />
-      <Circle cx="110" cy="132" r="30" fill={colors.mapBg} stroke={colors.gray200} strokeWidth={1.5} />
-      <Path
-        d="M110 108 C122 116 122 148 110 156 C98 148 98 116 110 108Z"
-        fill={colors.gray100}
-        stroke={colors.gray200}
-        strokeWidth={1}
+      {/* Body */}
+      <Rect x="48" y="36" width="124" height="158" rx="14" fill={colors.white} stroke={INK} strokeWidth={STROKE} />
+      {/* Control panel divider */}
+      <Line x1="58" y1="68" x2="162" y2="68" stroke={INK} strokeWidth={STROKE} strokeLinecap="round" />
+      {/* Detergent drawer */}
+      <Rect x="64" y="46" width="34" height="16" rx="8" fill={colors.white} stroke={INK} strokeWidth={STROKE} />
+      {/* Dial */}
+      <Circle cx="98" cy="54" r="11" fill={colors.white} stroke={INK} strokeWidth={STROKE} />
+      {/* Green indicator (static base — animated overlay sits on top) */}
+      <Rect x="82" y="51" width="10" height="3" rx="1.5" fill={GREEN} opacity={0.35} />
+      {/* Settings lines */}
+      <Line x1="138" y1="49" x2="154" y2="49" stroke={INK} strokeWidth={STROKE} strokeLinecap="round" />
+      <Line x1="138" y1="54" x2="154" y2="54" stroke={INK} strokeWidth={STROKE} strokeLinecap="round" />
+      <Line x1="138" y1="59" x2="154" y2="59" stroke={INK} strokeWidth={STROKE} strokeLinecap="round" />
+      {/* Door rings */}
+      <Circle
+        cx={DOOR_CX}
+        cy={DOOR_CY}
+        r={DOOR_R + 5}
+        fill={colors.white}
+        stroke={INK}
+        strokeWidth={STROKE}
       />
-
-      <Rect x="68" y="182" width="14" height="8" rx={3} fill={colors.black} />
-      <Rect x="138" y="182" width="14" height="8" rx={3} fill={colors.black} />
+      <Circle
+        cx={DOOR_CX}
+        cy={DOOR_CY}
+        r={DOOR_R}
+        fill={colors.white}
+        stroke={INK}
+        strokeWidth={STROKE}
+      />
+      {/* Filter hatch */}
+      <Rect x="134" y="168" width="24" height="16" rx="4" fill={colors.white} stroke={INK} strokeWidth={STROKE} />
+      {/* Feet */}
+      <Rect x="62" y="194" width="16" height="7" rx="2" fill={INK} />
+      <Rect x="142" y="194" width="16" height="7" rx="2" fill={INK} />
     </Svg>
   )
 }
 
-function ShirtSvg() {
+/** Swirling drum strokes — green and ink curves from the reference art */
+function DrumSwirl() {
   return (
-    <Svg width={36} height={36} viewBox="0 0 36 36" fill="none">
+    <Svg width={DOOR_R * 2} height={DOOR_R * 2} viewBox="0 0 92 92" fill="none">
       <Path
-        d="M18 6 L24 10 L28 8 L30 14 L26 16 L26 30 L10 30 L10 16 L6 14 L8 8 L12 10 Z"
-        fill={colors.black}
+        d="M46 46 C46 28 62 24 68 38 C74 52 58 62 46 46Z"
+        stroke={INK}
+        strokeWidth={STROKE}
+        strokeLinecap="round"
+        fill="none"
       />
-      <Path d="M14 16 H22" stroke={colors.white} strokeWidth={1.5} strokeLinecap="round" />
-    </Svg>
-  )
-}
-
-function SockSvg() {
-  return (
-    <Svg width={28} height={28} viewBox="0 0 28 28" fill="none">
       <Path
-        d="M10 4 H18 C20 4 21 6 21 8 V14 C21 18 18 20 14 22 L8 24 C6 24 5 22 6 20 L10 14 V4Z"
-        fill={colors.gray500}
+        d="M46 46 C54 62 72 58 74 44 C76 30 58 28 46 46Z"
+        stroke={GREEN}
+        strokeWidth={STROKE}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M46 46 C28 50 24 66 38 72 C52 78 62 58 46 46Z"
+        stroke={GREEN}
+        strokeWidth={STROKE}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M46 46 C30 38 38 22 54 24 C70 26 66 42 46 46Z"
+        stroke={INK}
+        strokeWidth={STROKE}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M46 46 C62 38 78 46 76 60 C74 74 54 68 46 46Z"
+        stroke={GREEN}
+        strokeWidth={STROKE}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M46 46 C58 30 74 34 72 50 C70 66 50 64 46 46Z"
+        stroke={INK}
+        strokeWidth={STROKE}
+        strokeLinecap="round"
+        fill="none"
       />
     </Svg>
   )
 }
 
 export function SplashWasherAnimation() {
-  const bounce = useRef(new Animated.Value(0)).current
-  const shirtX = useRef(new Animated.Value(0)).current
-  const shirtY = useRef(new Animated.Value(0)).current
-  const shirtRot = useRef(new Animated.Value(0)).current
-  const shirtOpacity = useRef(new Animated.Value(0)).current
-  const sockX = useRef(new Animated.Value(0)).current
-  const sockY = useRef(new Animated.Value(0)).current
-  const sockRot = useRef(new Animated.Value(0)).current
-  const sockOpacity = useRef(new Animated.Value(0)).current
+  const spin = useRef(new Animated.Value(0)).current
+  const pulse = useRef(new Animated.Value(0)).current
+  const breathe = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    const bounceLoop = Animated.loop(
+    const spinLoop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 2800,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    )
+
+    const pulseLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(bounce, {
+        Animated.timing(pulse, {
           toValue: 1,
-          duration: 520,
-          easing: Easing.out(Easing.quad),
+          duration: 700,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
-        Animated.timing(bounce, {
+        Animated.timing(pulse, {
           toValue: 0,
-          duration: 520,
-          easing: Easing.in(Easing.quad),
+          duration: 700,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ]),
     )
 
-    const throwItem = (
-      x: Animated.Value,
-      y: Animated.Value,
-      rot: Animated.Value,
-      opacity: Animated.Value,
-      delay: number,
-    ) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.parallel([
-            Animated.timing(opacity, { toValue: 1, duration: 120, useNativeDriver: true }),
-            Animated.timing(x, {
-              toValue: 1,
-              duration: 680,
-              easing: Easing.inOut(Easing.cubic),
-              useNativeDriver: true,
-            }),
-            Animated.timing(y, {
-              toValue: 1,
-              duration: 680,
-              easing: Easing.in(Easing.quad),
-              useNativeDriver: true,
-            }),
-            Animated.timing(rot, {
-              toValue: 1,
-              duration: 680,
-              easing: Easing.inOut(Easing.quad),
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.timing(opacity, { toValue: 0, duration: 160, useNativeDriver: true }),
-          Animated.parallel([
-            Animated.timing(x, { toValue: 0, duration: 0, useNativeDriver: true }),
-            Animated.timing(y, { toValue: 0, duration: 0, useNativeDriver: true }),
-            Animated.timing(rot, { toValue: 0, duration: 0, useNativeDriver: true }),
-          ]),
-          Animated.delay(420),
-        ]),
-      )
+    const breatheLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(breathe, {
+          toValue: 0,
+          duration: 1400,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+    )
 
-    const shirtLoop = throwItem(shirtX, shirtY, shirtRot, shirtOpacity, 0)
-    const sockLoop = throwItem(sockX, sockY, sockRot, sockOpacity, 340)
-
-    bounceLoop.start()
-    shirtLoop.start()
-    sockLoop.start()
+    spinLoop.start()
+    pulseLoop.start()
+    breatheLoop.start()
 
     return () => {
-      bounceLoop.stop()
-      shirtLoop.stop()
-      sockLoop.stop()
+      spinLoop.stop()
+      pulseLoop.stop()
+      breatheLoop.stop()
     }
-  }, [bounce, shirtOpacity, shirtRot, shirtX, shirtY, sockOpacity, sockRot, sockX, sockY])
+  }, [breathe, pulse, spin])
 
-  const washerTranslateY = bounce.interpolate({ inputRange: [0, 1], outputRange: [0, -10] })
-  const washerScale = bounce.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.02, 1] })
-
-  const shirtTranslateX = shirtX.interpolate({ inputRange: [0, 1], outputRange: [72, 0] })
-  const shirtTranslateY = shirtY.interpolate({ inputRange: [0, 0.45, 1], outputRange: [-28, -52, 8] })
-  const shirtRotate = shirtRot.interpolate({ inputRange: [0, 1], outputRange: ['-35deg', '18deg'] })
-
-  const sockTranslateX = sockX.interpolate({ inputRange: [0, 1], outputRange: [88, 6] })
-  const sockTranslateY = sockY.interpolate({ inputRange: [0, 0.5, 1], outputRange: [-40, -58, 12] })
-  const sockRotate = sockRot.interpolate({ inputRange: [0, 1], outputRange: ['25deg', '-12deg'] })
+  const drumRotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] })
+  const indicatorOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] })
+  const machineScale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] })
 
   return (
     <View style={styles.wrap}>
-      <Animated.View
-        style={[
-          styles.laundry,
-          styles.shirt,
-          {
-            opacity: shirtOpacity,
-            transform: [
-              { translateX: shirtTranslateX },
-              { translateY: shirtTranslateY },
-              { rotate: shirtRotate },
-            ],
-          },
-        ]}
-      >
-        <ShirtSvg />
-      </Animated.View>
+      <Animated.View style={{ transform: [{ scale: machineScale }] }}>
+        <WasherFrame />
 
-      <Animated.View
-        style={[
-          styles.laundry,
-          styles.sock,
-          {
-            opacity: sockOpacity,
-            transform: [
-              { translateX: sockTranslateX },
-              { translateY: sockTranslateY },
-              { rotate: sockRotate },
-            ],
-          },
-        ]}
-      >
-        <SockSvg />
-      </Animated.View>
+        <View style={styles.drumClip}>
+          <Animated.View style={[styles.drumSpin, { transform: [{ rotate: drumRotate }] }]}>
+            <DrumSwirl />
+          </Animated.View>
+        </View>
 
-      <Animated.View
-        style={{
-          transform: [{ translateY: washerTranslateY }, { scale: washerScale }],
-        }}
-      >
-        <WasherSvg />
+        <Animated.View style={[styles.indicator, { opacity: indicatorOpacity }]} />
+
+        <Svg width={SIZE} height={SIZE} viewBox="0 0 220 220" style={styles.doorRing} pointerEvents="none">
+          <Circle
+            cx={DOOR_CX}
+            cy={DOOR_CY}
+            r={DOOR_R + 5}
+            fill="none"
+            stroke={INK}
+            strokeWidth={STROKE}
+          />
+          <Circle cx={DOOR_CX} cy={DOOR_CY} r={DOOR_R} fill="none" stroke={INK} strokeWidth={STROKE} />
+        </Svg>
       </Animated.View>
     </View>
   )
@@ -203,16 +206,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  laundry: {
+  drumClip: {
     position: 'absolute',
-    zIndex: 2,
+    top: DOOR_CY - DOOR_R,
+    left: DOOR_CX - DOOR_R,
+    width: DOOR_R * 2,
+    height: DOOR_R * 2,
+    borderRadius: DOOR_R,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  shirt: {
-    top: 18,
-    right: 28,
+  drumSpin: {
+    width: DOOR_R * 2,
+    height: DOOR_R * 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sock: {
-    top: 8,
-    right: 12,
+  indicator: {
+    position: 'absolute',
+    top: 51,
+    left: DOOR_CX - 28,
+    width: 10,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: GREEN,
+  },
+  doorRing: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
 })
