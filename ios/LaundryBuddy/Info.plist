@@ -27,16 +27,27 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
+          <string>laundrybuddy</string>
           <string>com.laundrybuddy.app</string>
         </array>
       </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
     <key>LSMinimumSystemVersion</key>
     <string>12.0</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>NSCameraUsageDescription</key>
+    <string>Allow Laundry Buddy to use your camera to photograph your load for the host.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Allow Laundry Buddy to use your location to find nearby dryers across Belize.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
       <key>NSAllowsArbitraryLoads</key>

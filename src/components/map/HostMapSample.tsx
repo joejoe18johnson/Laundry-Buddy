@@ -72,7 +72,7 @@ export function HostMapSample({ hosts, onHostPress }: Props) {
         </View>
       </View>
       <View style={styles.legend}>
-        <Text style={styles.legendText}>Preview map · Cayo Area</Text>
+        <Text style={styles.legendText}>Preview map · Belize</Text>
       </View>
     </View>
   )

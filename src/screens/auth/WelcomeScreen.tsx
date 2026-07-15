@@ -21,9 +21,9 @@ export function WelcomeScreen() {
       <View style={styles.hero}>
         <Text style={styles.title}>Dry Laundry, Rain or Shine</Text>
         <Text style={styles.tagline}>
-          Book a neighbor's dryer in the {ACTIVE_REGION_LABEL} — free for the community.
+          Book a neighbor's dryer anywhere in {ACTIVE_REGION_LABEL} — free for the community.
         </Text>
-        <Text style={styles.regionNote}>More districts coming soon.</Text>
+        <Text style={styles.regionNote}>All six districts · find hosts near you</Text>
       </View>
 
       <PrimaryButton title="Log in" icon="log-in" onPress={() => navigateAuth('login')} full />

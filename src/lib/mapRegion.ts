@@ -5,10 +5,10 @@ import { SEARCH_RADIUS_KM } from './geo'
 export { SEARCH_RADIUS_KM }
 export type { Coordinates } from './geo'
 
-/** Default guest search center — San Ignacio, Cayo */
+/** Default guest search center — Belmopan (central Belize). */
 export const USER_LOCATION: Coordinates = {
-  latitude: 17.156,
-  longitude: -89.069,
+  latitude: 17.251,
+  longitude: -88.759,
 }
 
 export interface MapRegion {

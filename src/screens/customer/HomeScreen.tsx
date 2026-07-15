@@ -324,7 +324,7 @@ export function HomeScreen() {
       </Text>
       {!allHosts.length && totalHosts > 0 && (
         <Text style={styles.emptyHint}>
-          {totalHosts} host{totalHosts === 1 ? '' : 's'} offline in {ACTIVE_REGION_LABEL}
+          {totalHosts} host{totalHosts === 1 ? '' : 's'} offline across {ACTIVE_REGION_LABEL}
         </Text>
       )}
     </View>

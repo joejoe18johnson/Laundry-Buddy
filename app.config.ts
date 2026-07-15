@@ -1,0 +1,111 @@
+import type { ConfigContext, ExpoConfig } from 'expo/config'
+
+const LOCATION_PERMISSION =
+  'Allow Laundry Buddy to use your location to find nearby dryers across Belize.'
+const CAMERA_PERMISSION =
+  'Allow Laundry Buddy to use your camera to photograph your load for the host.'
+const PHOTOS_PERMISSION =
+  'Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.'
+
+export default ({ config }: ConfigContext): ExpoConfig => ({
+  ...config,
+  name: 'Laundry Buddy',
+  slug: 'laundry-buddy',
+  version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/icon.png',
+  scheme: 'laundrybuddy',
+  userInterfaceStyle: 'light',
+  splash: {
+    image: './assets/splash-icon.png',
+    resizeMode: 'contain',
+    backgroundColor: '#ffffff',
+  },
+  ios: {
+    supportsTablet: false,
+    bundleIdentifier: 'com.laundrybuddy.app',
+    buildNumber: '1',
+    infoPlist: {
+      NSLocationWhenInUseUsageDescription: LOCATION_PERMISSION,
+      NSCameraUsageDescription: CAMERA_PERMISSION,
+      NSPhotoLibraryUsageDescription: PHOTOS_PERMISSION,
+      NSPhotoLibraryAddUsageDescription: PHOTOS_PERMISSION,
+      ITSAppUsesNonExemptEncryption: false,
+    },
+  },
+  android: {
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#000000',
+    },
+    package: 'com.laundrybuddy.app',
+    versionCode: 1,
+    permissions: [
+      'ACCESS_COARSE_LOCATION',
+      'ACCESS_FINE_LOCATION',
+      'CAMERA',
+      'READ_MEDIA_IMAGES',
+      'POST_NOTIFICATIONS',
+      'VIBRATE',
+    ],
+    blockedPermissions: ['RECORD_AUDIO'],
+  },
+  web: {
+    favicon: './assets/favicon.png',
+  },
+  plugins: [
+    [
+      'expo-splash-screen',
+      {
+        backgroundColor: '#ffffff',
+        image: './assets/splash-icon.png',
+        imageWidth: 200,
+        resizeMode: 'contain',
+      },
+    ],
+    'expo-font',
+    'expo-asset',
+    [
+      'expo-image-picker',
+      {
+        photosPermission: PHOTOS_PERMISSION,
+        cameraPermission: CAMERA_PERMISSION,
+      },
+    ],
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission: LOCATION_PERMISSION,
+      },
+    ],
+    [
+      'expo-notifications',
+      {
+        icon: './assets/icon.png',
+        color: '#000000',
+        sounds: [],
+        mode: 'production',
+      },
+    ],
+    '@maplibre/maplibre-react-native',
+    [
+      'expo-build-properties',
+      {
+        ios: {
+          deploymentTarget: '15.1',
+        },
+        android: {
+          minSdkVersion: 24,
+          compileSdkVersion: 35,
+          targetSdkVersion: 35,
+        },
+      },
+    ],
+  ],
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
+  extra: {
+    ...config?.extra,
+  },
+})

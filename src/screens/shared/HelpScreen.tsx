@@ -60,7 +60,7 @@ export function HelpScreen() {
       </View>
       <Text style={styles.subtitle}>
         {isCustomer
-          ? 'How to book a neighbor’s dryer in the Cayo Area'
+          ? 'How to book a neighbor’s dryer anywhere in Belize'
           : 'Build your reputation — every load logged on the app counts'}
       </Text>
 
@@ -80,7 +80,7 @@ export function HelpScreen() {
       <Text style={styles.section}>How it works</Text>
       {isCustomer ? (
         <>
-          <Step n={1} title="Find a host" body={`Search by area, price, or reviews in ${ACTIVE_REGION_LABEL}.`} />
+          <Step n={1} title="Find a host" body={`Search by district, town, price, or reviews anywhere in ${ACTIVE_REGION_LABEL}.`} />
           <Step n={2} title="Book a slot" body="Pick drop-off time, load count, and any notes for the host." />
           <Step n={3} title="Track your load" body="Follow each stage from bag received to ready for pickup." />
           <Step n={4} title="Pick up dry laundry" body="Message your host on WhatsApp if you need directions or timing." />

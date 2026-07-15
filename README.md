@@ -1,8 +1,8 @@
 # Laundry Buddy
 
-React Native mobile app for community dryer sharing in the **Cayo Area** (Belmopan, Roaring Creek, and nearby communities). Additional districts will be added in future releases.
+React Native mobile app for community dryer sharing **countrywide in Belize** — from Belize City and Orange Walk to Cayo, Stann Creek, Corozal, and Toledo.
 
-## Run
+## Run locally (Expo Go)
 
 ```bash
 npm install
@@ -10,6 +10,40 @@ npm start
 ```
 
 Then press `i` for iOS simulator, `a` for Android emulator, or scan the QR code with **Expo Go** on your phone.
+
+## EAS Preview Build
+
+Preview builds are internal, production-like installs (APK on Android, ad hoc on iOS) with native MapLibre maps, push notifications, camera, and location — features that Expo Go cannot fully exercise.
+
+### One-time setup
+
+1. Install dependencies: `npm install`
+2. Log in to Expo: `npx eas login`
+3. Link the project: `npx eas init` (writes your EAS project ID into `app.config.ts`)
+4. Configure Apple/Google credentials when prompted on first build
+
+### Build commands
+
+```bash
+# Android APK + iOS internal build
+npm run build:preview
+
+# Platform-specific
+npm run build:preview:android
+npm run build:preview:ios
+```
+
+Install the build from the link EAS prints when the build finishes, or open the build page on [expo.dev](https://expo.dev).
+
+### Sync native projects after config changes
+
+If you change plugins or permissions in `app.config.ts`, regenerate native folders locally:
+
+```bash
+npm run prebuild:clean
+```
+
+EAS cloud builds use the committed `ios/` and `android/` projects; run prebuild before pushing when native config changes.
 
 ## Training accounts
 

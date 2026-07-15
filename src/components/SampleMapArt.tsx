@@ -41,7 +41,7 @@ export function SampleMapArt() {
       <Rect x={180} y={300} width={64} height={40} rx={8} fill="#d4ead4" opacity={0.7} />
       <Circle cx={200} cy={200} r={120} fill="none" stroke="#c5d0bc" strokeWidth={1} strokeDasharray="6 8" opacity={0.6} />
       <SvgText x={200} y={36} textAnchor="middle" fill={colors.gray500} fontSize={11} fontWeight="600">
-        SAMPLE MAP · CAYO AREA
+        SAMPLE MAP · BELIZE
       </SvgText>
       <SvgText x={148} y={168} textAnchor="middle" fill={colors.gray600} fontSize={10} fontWeight="600">
         San Ignacio

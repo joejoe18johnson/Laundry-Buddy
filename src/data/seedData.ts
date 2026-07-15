@@ -6,13 +6,12 @@ export const SEED_DATA_VERSION = '14'
 
 export const TRAINING_PASSWORD = 'demo1234'
 
-/** Active service area — more districts (Orange Walk, Belize, etc.) coming later. */
-export const ACTIVE_DISTRICT = 'Cayo'
-export const ACTIVE_REGION_LABEL = 'Cayo Area'
+/** App coverage — community dryer sharing across all of Belize. */
+export const ACTIVE_REGION_LABEL = 'Belize'
 
 export const WEATHER = {
   headline: 'Rainy week ahead',
-  detail: `3 days of rain forecast · hosts across all Belize districts`,
+  detail: '3 days of rain forecast · hosts in every district',
 }
 
 export const SEED_USERS: User[] = [
@@ -1208,7 +1207,7 @@ export function getHostProfileDetails(hostId: string): HostProfileDetails {
 
   return (
     SEED_HOST_PROFILES[hostId] ?? {
-      bio: 'Community host in the Cayo Area.',
+      bio: 'Community host on Laundry Buddy.',
       memberSince: '2025',
       loadsHosted: 0,
       responseTime: '—',

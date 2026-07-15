@@ -1,7 +1,6 @@
 export {
   WEATHER,
   SEED_HOSTS as HOSTS,
-  ACTIVE_DISTRICT,
   ACTIVE_REGION_LABEL,
   getAvailableHosts,
   getHostByUserId,

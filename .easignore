@@ -1,0 +1,21 @@
+# Docs and local dev
+README.md
+**/*.md
+.cursor/
+.agent-tools/
+
+# Git metadata (EAS reads .gitignore too; this keeps uploads lean)
+.git/
+
+# Local native build outputs
+android/app/build/
+android/.gradle/
+android/build/
+ios/build/
+ios/Pods/
+ios/DerivedData/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store

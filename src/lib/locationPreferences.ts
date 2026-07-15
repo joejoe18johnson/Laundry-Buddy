@@ -4,7 +4,7 @@ import { USER_LOCATION } from './mapRegion'
 
 const PREFS_KEY = 'laundry-buddy-location-prefs'
 
-export const RADIUS_OPTIONS_KM = [3, 5, 10, 15, 20] as const
+export const RADIUS_OPTIONS_KM = [3, 5, 10, 15, 20, 30] as const
 export type RadiusOptionKm = (typeof RADIUS_OPTIONS_KM)[number]
 
 export interface LocationPreset {
@@ -13,15 +13,17 @@ export interface LocationPreset {
   longitude: number
 }
 
+/** Major towns across all six Belize districts. */
 export const LOCATION_PRESETS: LocationPreset[] = [
+  { label: 'Belize City', latitude: 17.5046, longitude: -88.1962 },
+  { label: 'Belmopan', latitude: 17.251, longitude: -88.759 },
   { label: 'San Ignacio', latitude: 17.156, longitude: -89.069 },
-  { label: 'UB / Santa Elena', latitude: 17.151, longitude: -89.064 },
-  { label: 'Las Flores', latitude: 17.158, longitude: -89.072 },
-  { label: 'Maya Mopan', latitude: 17.163, longitude: -89.076 },
-  { label: 'Cristo Rey', latitude: 17.17, longitude: -89.082 },
-  { label: 'Bullet Tree', latitude: 17.175, longitude: -89.058 },
-  { label: 'Esperanza', latitude: 17.14, longitude: -89.052 },
-  { label: 'Succotz', latitude: 17.148, longitude: -89.088 },
+  { label: 'Orange Walk', latitude: 18.0812, longitude: -88.563 },
+  { label: 'Corozal Town', latitude: 18.3938, longitude: -88.3885 },
+  { label: 'Dangriga', latitude: 16.9697, longitude: -88.2331 },
+  { label: 'Punta Gorda', latitude: 16.098, longitude: -88.8098 },
+  { label: 'Roaring Creek', latitude: 17.012, longitude: -88.901 },
+  { label: 'Santa Elena', latitude: 17.151, longitude: -89.064 },
 ]
 
 export interface LocationPreferences {
@@ -32,8 +34,8 @@ export interface LocationPreferences {
 
 export const DEFAULT_LOCATION_PREFS: LocationPreferences = {
   userLocation: USER_LOCATION,
-  userLocationLabel: 'San Ignacio',
-  searchRadiusKm: 5,
+  userLocationLabel: 'Belmopan',
+  searchRadiusKm: 10,
 }
 
 export async function loadLocationPreferences(): Promise<LocationPreferences> {

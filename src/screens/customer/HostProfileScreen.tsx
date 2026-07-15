@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
@@ -79,6 +79,7 @@ function InfoSection({ title, icon, children }: { title: string; icon: 'info' | 
 
 export function HostProfileScreen() {
   const { selectedHost, navigate, selectHost, getSettingsForHost } = useApp()
+  const insets = useSafeAreaInsets()
 
   if (!selectedHost) return null
 
@@ -209,20 +210,29 @@ export function HostProfileScreen() {
           )}
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </Screen>
 
-      <SafeAreaView edges={['bottom']} style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
         <View style={styles.footerInfo}>
-          <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
-            {formatHostPrice(host.price)}
-          </Text>
-          <Text style={styles.footerSub}>
-            per standard load · {host.slotsLeft} slots · ~{host.turnaroundHours} hr dry
-          </Text>
+          <View style={styles.footerPriceRow}>
+            <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
+              {formatHostPrice(host.price)}
+            </Text>
+            <Text style={styles.footerPerLoad}>per load</Text>
+          </View>
+          <View style={styles.footerMetaRow}>
+            <Text style={styles.footerMeta}>
+              {host.slotsLeft} slot{host.slotsLeft === 1 ? '' : 's'} left
+            </Text>
+            <Text style={styles.footerMetaDot}>·</Text>
+            <Text style={styles.footerMeta}>~{host.turnaroundHours} hr turnaround</Text>
+          </View>
         </View>
-        <PrimaryButton title="Book slot" icon="calendar" onPress={() => selectHost(host)} />
-      </SafeAreaView>
+        <View style={styles.footerAction}>
+          <PrimaryButton title="Book slot" icon="calendar" onPress={() => selectHost(host)} />
+        </View>
+      </View>
     </View>
   )
 }
@@ -326,15 +336,25 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: spacing.md,
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.md,
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  footerInfo: { flex: 1 },
-  footerPrice: { fontSize: 18, fontWeight: '700' },
+  footerInfo: { flex: 1, minWidth: 0, gap: 6 },
+  footerPriceRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 6 },
+  footerPrice: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
   footerPriceFree: { color: colors.green },
-  footerSub: { fontSize: 12, color: colors.gray500, marginTop: 2 },
+  footerPerLoad: { fontSize: 14, fontWeight: '500', color: colors.gray500 },
+  footerMetaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  footerMeta: { fontSize: 13, fontWeight: '500', color: colors.gray500, lineHeight: 18 },
+  footerMetaDot: { fontSize: 13, color: colors.gray400, lineHeight: 18 },
+  footerAction: { flexShrink: 0 },
 })
