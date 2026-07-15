@@ -70,7 +70,7 @@ export function ClothesListEditor({ items, onChange }: Props) {
       {items.length > 0 ? (
         <View style={styles.list}>
           <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>Your list</Text>
+            <Text style={styles.listTitle}>Item breakdown</Text>
             <Text style={styles.listCount}>{total} item{total === 1 ? '' : 's'}</Text>
           </View>
           {items.map((item) => (

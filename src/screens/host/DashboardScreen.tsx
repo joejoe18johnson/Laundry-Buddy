@@ -1,8 +1,7 @@
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { sheetsOptionLabel } from '../../types'
-import type { ClothesListItem } from '../../types'
-import { ClothesListDisplay } from '../../components/ClothesListDisplay'
+import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { formatDropOffAvailability, formatDropOffHour, type DropOffHour } from '../../lib/dropOffAvailability'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -42,17 +41,14 @@ function OrderDetails({
   paymentMethod,
   totalAmount,
   loadPhotoUri,
-  clothesList,
 }: {
   dropOffTime: DropOffHour
   notes?: string
   paymentMethod?: 'cash' | 'bank_transfer'
   totalAmount?: number
   loadPhotoUri?: string
-  clothesList?: ClothesListItem[]
 }) {
   const trimmedNotes = notes?.trim()
-  const hasClothes = clothesList && clothesList.length > 0
 
   return (
     <View style={styles.orderDetails}>
@@ -65,7 +61,6 @@ function OrderDetails({
           <Image source={{ uri: loadPhotoUri }} style={styles.loadPhoto} resizeMode="cover" />
         </View>
       ) : null}
-      {hasClothes ? <ClothesListDisplay items={clothesList} /> : null}
       <View style={styles.detailRow}>
         <View style={styles.detailIcon}>
           <AppIcon name="clock" size={16} color={colors.black} />
@@ -217,13 +212,15 @@ export function DashboardScreen() {
               </View>
               <DropOffBadge dropOffTime={request.dropOffTime} />
             </View>
+            {request.clothesList && request.clothesList.length > 0 ? (
+              <LoadListBreakdown items={request.clothesList} title="Guest's load list" />
+            ) : null}
             <OrderDetails
               dropOffTime={request.dropOffTime}
               notes={request.notes}
               paymentMethod={request.paymentMethod}
               totalAmount={request.totalAmount}
               loadPhotoUri={request.loadPhotoUri}
-              clothesList={request.clothesList}
             />
             <View style={styles.tags}>
               <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption, hostProfile?.sheetsPrice ?? 1)}</Text>
@@ -264,13 +261,15 @@ export function DashboardScreen() {
               <StatusBadge {...stageBadge(load.stage)} />
               <DropOffBadge dropOffTime={load.dropOffTime} />
             </View>
+            {load.clothesList && load.clothesList.length > 0 ? (
+              <LoadListBreakdown items={load.clothesList} title="Guest's load list" />
+            ) : null}
             <OrderDetails
               dropOffTime={load.dropOffTime}
               notes={load.notes}
               paymentMethod={load.paymentMethod}
               totalAmount={load.totalAmount}
               loadPhotoUri={load.loadPhotoUri}
-              clothesList={load.clothesList}
             />
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
               <>

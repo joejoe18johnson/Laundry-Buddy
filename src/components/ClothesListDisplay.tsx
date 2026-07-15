@@ -7,9 +7,11 @@ import { colors, radius, spacing } from '../theme'
 type Props = {
   items: ClothesListItem[]
   compact?: boolean
+  /** Drop outer border when nested inside LoadListBreakdown. */
+  embedded?: boolean
 }
 
-export function ClothesListDisplay({ items, compact }: Props) {
+export function ClothesListDisplay({ items, compact, embedded }: Props) {
   if (items.length === 0) return null
 
   const total = totalClothesCount(items)
@@ -36,10 +38,10 @@ export function ClothesListDisplay({ items, compact }: Props) {
   }
 
   return (
-    <View style={styles.box}>
+    <View style={[styles.box, embedded && styles.boxEmbedded]}>
       <View style={styles.header}>
         <AppIcon name="list" size={14} color={colors.gray600} />
-        <Text style={styles.label}>Clothes list</Text>
+        <Text style={styles.label}>Item breakdown</Text>
         <Text style={styles.count}>
           {total} item{total === 1 ? '' : 's'}
         </Text>
@@ -69,6 +71,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
     backgroundColor: colors.white,
+  },
+  boxEmbedded: {
+    borderWidth: 0,
+    borderRadius: radius.md,
   },
   header: {
     flexDirection: 'row',

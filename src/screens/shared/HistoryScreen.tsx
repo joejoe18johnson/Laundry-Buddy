@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
+import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { BackButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -75,6 +76,13 @@ function HistoryCard({ item, isCustomer }: { item: Booking; isCustomer: boolean 
       {bookingExtrasSummary(item) && (
         <Text style={styles.breakdown}>{bookingExtrasSummary(item)}</Text>
       )}
+
+      {item.clothesList && item.clothesList.length > 0 ? (
+        <LoadListBreakdown
+          items={item.clothesList}
+          title={isCustomer ? 'Your load list' : "Guest's load list"}
+        />
+      ) : null}
 
       {item.completedAt ? (
         <View style={styles.metaRow}>

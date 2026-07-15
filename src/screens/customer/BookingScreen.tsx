@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { ClothesListEditor } from '../../components/ClothesListEditor'
+import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
 import { useApp } from '../../context/AppContext'
 import { BackButton, ChoiceChip, OptionRow, PrimaryButton, Screen, StepIndicator } from '../../components/ui'
@@ -209,6 +210,10 @@ export function BookingScreen() {
         <Text style={styles.section}>What's in your load?</Text>
         <Text style={styles.sectionHint}>Optional — helps your host prepare</Text>
         <ClothesListEditor items={clothesList} onChange={setClothesList} />
+
+        {clothesList.length > 0 && (
+          <LoadListBreakdown items={clothesList} title="Your load list" />
+        )}
 
         <Text style={styles.section}>Photo of your load</Text>
         <Text style={styles.sectionHint}>Show the host what you're dropping off</Text>

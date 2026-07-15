@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
+import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { useApp } from '../../context/AppContext'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
@@ -29,6 +30,12 @@ export function MarkDryScreen() {
         <Text style={styles.eyebrow}>Active load</Text>
       </View>
       <Text style={styles.title}>{dryingLoad.customerName}'s laundry</Text>
+
+      {dryingLoad.clothesList && dryingLoad.clothesList.length > 0 ? (
+        <View style={styles.loadListSection}>
+          <LoadListBreakdown items={dryingLoad.clothesList} title="Guest's load list" />
+        </View>
+      ) : null}
 
       <View style={styles.sectionHeader}>
         <AppIcon name="check-circle" size={20} />
@@ -61,6 +68,7 @@ const styles = StyleSheet.create({
   statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'capitalize', letterSpacing: 0.4 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.lg, lineHeight: 30 },
+  loadListSection: { marginBottom: spacing.lg },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   section: { fontSize: 20, fontWeight: '700', lineHeight: 26 },
   sub: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },

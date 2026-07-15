@@ -14,7 +14,7 @@ import {
 } from '../../lib/whatsapp'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
-import { ClothesListDisplay } from '../../components/ClothesListDisplay'
+import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { colors, radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
 
@@ -275,7 +275,7 @@ export function TrackingScreen() {
 
       {!isDeclined && booking.clothesList && booking.clothesList.length > 0 && (
         <View style={styles.clothesSection}>
-          <ClothesListDisplay items={booking.clothesList} />
+          <LoadListBreakdown items={booking.clothesList} title="Your load list" />
         </View>
       )}
 

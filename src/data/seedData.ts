@@ -861,6 +861,10 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
         paymentMethod: 'cash',
         totalAmount: 0,
         status: 'pending',
+        clothesList: [
+          { id: 'seed-ana-towels', label: 'Towels', quantity: 4 },
+          { id: 'seed-ana-delicates', label: 'Delicates', quantity: 2 },
+        ],
       },
       {
         id: 'req-rosa',
@@ -874,6 +878,11 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
         paymentMethod: 'bank_transfer',
         totalAmount: 8,
         status: 'pending',
+        clothesList: [
+          { id: 'seed-rosa-jeans', label: 'Jeans', quantity: 3 },
+          { id: 'seed-rosa-tees', label: 'T-shirts', quantity: 6 },
+          { id: 'seed-rosa-sheets', label: 'Bed sheets', quantity: 2 },
+        ],
       },
     ],
     activeLoads: [
@@ -892,6 +901,11 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
         address: '22 Coconut St.',
         gateCode: '4421',
         stageTimes: { 'got-bag': '9:12am', waiting: '9:45am', drying: '10:05am' },
+        clothesList: [
+          { id: 'seed-carlos-gym', label: 'Gym clothes', quantity: 2 },
+          { id: 'seed-carlos-socks', label: 'Socks', quantity: 5 },
+          { id: 'seed-carlos-hoodie', label: 'Hoodie', quantity: 1 },
+        ],
       },
     ],
   },
