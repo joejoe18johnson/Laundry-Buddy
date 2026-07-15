@@ -12,6 +12,7 @@
       }
     },
     "preview": {
+      "node": "22.14.0",
       "distribution": "internal",
       "channel": "preview",
       "android": {
@@ -22,6 +23,12 @@
       },
       "env": {
         "EXPO_PUBLIC_APP_VARIANT": "preview"
+      }
+    },
+    "preview-ios-simulator": {
+      "extends": "preview",
+      "ios": {
+        "simulator": true
       }
     },
     "production": {

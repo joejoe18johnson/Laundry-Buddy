@@ -25,12 +25,16 @@ Preview builds are internal, production-like installs (APK on Android, ad hoc on
 ### Build commands
 
 ```bash
-# Android APK + iOS internal build
+# Android APK (works without Apple Developer account)
 npm run build:preview
+
+# Both platforms — iOS requires paid Apple Developer Program ($99/yr)
+npm run build:preview:all
 
 # Platform-specific
 npm run build:preview:android
-npm run build:preview:ios
+npm run build:preview:ios          # physical iPhone — needs Apple Developer
+npm run build:preview:ios-simulator  # Mac Simulator only — free, no Apple Developer
 ```
 
 Install the build from the link EAS prints when the build finishes, or open the build page on [expo.dev](https://expo.dev).
