@@ -5,6 +5,7 @@ import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
 import { BiometricLockScreen } from './src/components/BiometricLockScreen'
+import { BiometricSetupPrompt } from './src/components/BiometricSetupPrompt'
 import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, needsHostVerification, useAuth } from './src/context/AuthContext'
@@ -28,6 +29,7 @@ import { HelpScreen } from './src/screens/shared/HelpScreen'
 import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
 import { colors, spacing } from './src/theme'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
+import { isFullFlowTesting, TESTING_SPLASH_MS } from './src/lib/testingFlow'
 import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
 import { ToastProvider } from './src/context/ToastContext'
@@ -234,26 +236,36 @@ function AppShell() {
   )
 }
 
-function AuthenticatedApp() {
-  const { user, authScreen, ready, biometricEnabled, biometricSupport, logout } = useAuth()
-  const [introSeen, setIntroSeen] = useState<boolean | null>(null)
+function BiometricOverlays() {
+  const {
+    user,
+    biometricEnabled,
+    biometricSupport,
+    showBiometricSetupPrompt,
+    biometricSetupLoading,
+    acceptBiometricSetup,
+    dismissBiometricSetup,
+    logout,
+  } = useAuth()
   const [biometricLocked, setBiometricLocked] = useState(false)
   const appState = useRef(AppState.currentState)
-
-  useEffect(() => {
-    if (!ready) return
-    if (user) {
-      setIntroSeen(true)
-      return
-    }
-    hasSeenIntro().then(setIntroSeen)
-  }, [ready, user])
+  const lockedOnLaunch = useRef(false)
 
   useEffect(() => {
     if (!user || !biometricEnabled || !biometricSupport.available) {
+      lockedOnLaunch.current = false
       setBiometricLocked(false)
       return
     }
+
+    if (!lockedOnLaunch.current) {
+      lockedOnLaunch.current = true
+      setBiometricLocked(true)
+    }
+  }, [user, biometricEnabled, biometricSupport.available])
+
+  useEffect(() => {
+    if (!user || !biometricEnabled || !biometricSupport.available) return
 
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (appState.current.match(/inactive|background/) && nextState === 'active') {
@@ -265,14 +277,71 @@ function AuthenticatedApp() {
     return () => subscription.remove()
   }, [user, biometricEnabled, biometricSupport.available])
 
-  const handleBiometricUnlock = () => {
-    setBiometricLocked(false)
-  }
+  if (!user) return null
 
-  const handleUsePasswordInstead = async () => {
-    setBiometricLocked(false)
-    await logout()
-  }
+  return (
+    <>
+      <BiometricSetupPrompt
+        visible={showBiometricSetupPrompt}
+        support={biometricSupport}
+        loading={biometricSetupLoading}
+        onEnable={() => void acceptBiometricSetup()}
+        onSkip={dismissBiometricSetup}
+      />
+      <BiometricLockScreen
+        visible={biometricLocked}
+        support={biometricSupport}
+        onUnlock={() => setBiometricLocked(false)}
+        onUsePassword={async () => {
+          setBiometricLocked(false)
+          await logout()
+        }}
+      />
+    </>
+  )
+}
+
+function AuthenticatedApp() {
+  const { user, authScreen, ready } = useAuth()
+  const [introSeen, setIntroSeen] = useState<boolean | null>(null)
+  const [splashDone, setSplashDone] = useState(!isFullFlowTesting())
+
+  useEffect(() => {
+    if (!ready) return
+
+    if (user) {
+      setIntroSeen(true)
+      setSplashDone(true)
+      return
+    }
+
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const boot = async () => {
+      const seen = await hasSeenIntro()
+      if (cancelled) return
+
+      if (isFullFlowTesting()) {
+        timer = setTimeout(() => {
+          if (!cancelled) {
+            setIntroSeen(seen)
+            setSplashDone(true)
+          }
+        }, TESTING_SPLASH_MS)
+        return
+      }
+
+      setIntroSeen(seen)
+      setSplashDone(true)
+    }
+
+    void boot()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [ready, user])
 
   const completeIntro = async () => {
     await markIntroSeen()
@@ -280,7 +349,7 @@ function AuthenticatedApp() {
   }
 
   if (!user) {
-    if (!ready || introSeen === null) {
+    if (!ready || introSeen === null || !splashDone) {
       return <SplashLoading />
     }
 
@@ -305,10 +374,13 @@ function AuthenticatedApp() {
 
   if (needsHostVerification(user)) {
     return (
-      <SafeAreaView style={styles.app} edges={['top', 'bottom']}>
-        <StatusBar style="dark" />
-        <HostVerificationScreen />
-      </SafeAreaView>
+      <>
+        <SafeAreaView style={styles.app} edges={['top', 'bottom']}>
+          <StatusBar style="dark" />
+          <HostVerificationScreen />
+        </SafeAreaView>
+        <BiometricOverlays />
+      </>
     )
   }
 
@@ -321,12 +393,7 @@ function AuthenticatedApp() {
           </AppProvider>
         </ToastProvider>
       </NotificationProvider>
-      <BiometricLockScreen
-        visible={biometricLocked}
-        support={biometricSupport}
-        onUnlock={handleBiometricUnlock}
-        onUsePassword={handleUsePasswordInstead}
-      />
+      <BiometricOverlays />
     </>
   )
 }

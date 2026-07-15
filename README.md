@@ -49,6 +49,14 @@ npm run prebuild:clean
 
 EAS cloud builds use the committed `ios/` and `android/` projects; run prebuild before pushing when native config changes.
 
+### App icons
+
+Source artwork lives in `assets/icon.svg` and `assets/logo-mark.svg` (line-art washer, black/white brand). Regenerate all Expo and native launcher/splash/notification assets with:
+
+```bash
+npm run generate-assets
+```
+
 ## Training accounts
 
 All passwords: `demo1234`

@@ -28,6 +28,7 @@ import {
   authenticateBiometric,
   type BiometricSupport,
 } from '../lib/biometricAuth'
+import { isFullFlowTesting } from '../lib/testingFlow'
 import * as SplashScreen from 'expo-splash-screen'
 import type { AppRole, AuthScreen, HostVerification, LoginMethod, User } from '../types'
 
@@ -47,6 +48,8 @@ interface AuthState {
   authError: string | null
   biometricSupport: BiometricSupport
   biometricEnabled: boolean
+  showBiometricSetupPrompt: boolean
+  biometricSetupLoading: boolean
   navigateAuth: (screen: AuthScreen) => void
   login: (method: LoginMethod, identifier: string, password: string) => Promise<boolean>
   loginWithBiometrics: () => Promise<boolean>
@@ -54,6 +57,8 @@ interface AuthState {
   logout: () => Promise<void>
   enableBiometricLogin: () => Promise<boolean>
   disableBiometricLogin: () => Promise<void>
+  acceptBiometricSetup: () => Promise<boolean>
+  dismissBiometricSetup: () => void
   submitHostVerification: (data: {
     address: string
     idUploaded: boolean
@@ -76,6 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     icon: 'smartphone',
   })
   const [biometricEnabled, setBiometricEnabled] = useState(false)
+  const [showBiometricSetupPrompt, setShowBiometricSetupPrompt] = useState(false)
+  const [biometricSetupLoading, setBiometricSetupLoading] = useState(false)
 
   const refreshBiometricState = useCallback(async () => {
     const [support, enabled] = await Promise.all([
@@ -87,10 +94,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    getCurrentUser().then((u) => {
+    async function init() {
+      if (isFullFlowTesting()) {
+        await setSessionUserId(null)
+        setUser(null)
+        setReady(true)
+        return
+      }
+      const u = await getCurrentUser()
       setUser(u)
       setReady(true)
-    })
+    }
+    void init()
     void refreshBiometricState()
   }, [refreshBiometricState])
 
@@ -107,6 +122,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearAuthError = useCallback(() => setAuthError(null), [])
 
+  const maybeOfferBiometricSetup = useCallback(async () => {
+    const [support, enabled] = await Promise.all([
+      getBiometricSupport(),
+      isBiometricLoginEnabled(),
+    ])
+    if (support.available && !enabled) {
+      setShowBiometricSetupPrompt(true)
+    }
+  }, [])
+
   const restoreUserSession = useCallback(async (userId: string) => {
     const found = await getUserById(userId)
     if (!found) {
@@ -120,25 +145,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthError(null)
     return true
   }, [refreshBiometricState])
-
-  const offerBiometricEnrollment = useCallback(
-    async (userId: string) => {
-      const support = await getBiometricSupport()
-      if (!support.available) return
-      const enabled = await isBiometricLoginEnabled()
-      if (enabled) {
-        const storedId = await getBiometricUserId()
-        if (storedId !== userId) {
-          await enableBiometricLogin(userId)
-          await refreshBiometricState()
-        }
-        return
-      }
-      const enrolled = await enableBiometricLogin(userId)
-      if (enrolled) await refreshBiometricState()
-    },
-    [refreshBiometricState],
-  )
 
   const loginWithBiometrics = useCallback(async () => {
     clearAuthError()
@@ -172,9 +178,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setSessionUserId(found.id)
     setUser(found)
     setAuthError(null)
-    void offerBiometricEnrollment(found.id)
+    void maybeOfferBiometricSetup()
     return true
-  }, [offerBiometricEnrollment])
+  }, [maybeOfferBiometricSetup])
 
   const signup = useCallback(async (input: SignupInput) => {
     if (input.method === 'phone') {
@@ -219,9 +225,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setSessionUserId(newUser.id)
     setUser(newUser)
     setAuthError(null)
-    void offerBiometricEnrollment(newUser.id)
+    void maybeOfferBiometricSetup()
     return true
-  }, [offerBiometricEnrollment])
+  }, [maybeOfferBiometricSetup])
 
   const enableBiometricLoginForUser = useCallback(async () => {
     if (!user) return false
@@ -235,11 +241,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await refreshBiometricState()
   }, [refreshBiometricState])
 
+  const acceptBiometricSetup = useCallback(async () => {
+    if (!user) return false
+    setBiometricSetupLoading(true)
+    try {
+      const ok = await enableBiometricLogin(user.id)
+      if (ok) await refreshBiometricState()
+      setShowBiometricSetupPrompt(false)
+      return ok
+    } finally {
+      setBiometricSetupLoading(false)
+    }
+  }, [user, refreshBiometricState])
+
+  const dismissBiometricSetup = useCallback(() => {
+    setShowBiometricSetupPrompt(false)
+  }, [])
+
   const logout = useCallback(async () => {
     await setSessionUserId(null)
     setUser(null)
     setAuthScreen('welcome')
     setAuthError(null)
+    setShowBiometricSetupPrompt(false)
   }, [])
 
   const submitHostVerification = useCallback(
@@ -269,6 +293,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authError,
       biometricSupport,
       biometricEnabled,
+      showBiometricSetupPrompt,
+      biometricSetupLoading,
       navigateAuth,
       login,
       loginWithBiometrics,
@@ -276,6 +302,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       enableBiometricLogin: enableBiometricLoginForUser,
       disableBiometricLogin: disableBiometricLoginForUser,
+      acceptBiometricSetup,
+      dismissBiometricSetup,
       submitHostVerification,
       clearAuthError,
     }),
@@ -286,6 +314,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authError,
       biometricSupport,
       biometricEnabled,
+      showBiometricSetupPrompt,
+      biometricSetupLoading,
       navigateAuth,
       login,
       loginWithBiometrics,
@@ -293,6 +323,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       enableBiometricLoginForUser,
       disableBiometricLoginForUser,
+      acceptBiometricSetup,
+      dismissBiometricSetup,
       submitHostVerification,
       clearAuthError,
     ],

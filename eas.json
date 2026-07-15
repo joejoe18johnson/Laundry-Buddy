@@ -23,7 +23,8 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_APP_VARIANT": "preview"
+        "EXPO_PUBLIC_APP_VARIANT": "preview",
+        "EXPO_PUBLIC_START_AT_INTRO": "true"
       }
     },
     "preview-ios-simulator": {

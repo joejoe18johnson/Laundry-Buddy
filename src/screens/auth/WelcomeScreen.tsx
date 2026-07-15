@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { TRAINING_ACCOUNTS, TRAINING_PASSWORD, ACTIVE_REGION_LABEL } from '../../data/seedData'
+import { isFullFlowTesting } from '../../lib/testingFlow'
+import { AppLogoMark } from '../../components/AppLogoMark'
 import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
 import { OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
@@ -12,7 +14,7 @@ export function WelcomeScreen() {
   const [signingIn, setSigningIn] = useState<string | null>(null)
   const [biometricLoading, setBiometricLoading] = useState(false)
 
-  const showBiometric = biometricSupport.available && biometricEnabled
+  const showBiometric = biometricSupport.available && biometricEnabled && !isFullFlowTesting()
 
   useEffect(() => {
     if (!showBiometric) return
@@ -43,6 +45,7 @@ export function WelcomeScreen() {
   return (
     <Screen style={styles.container}>
       <View style={styles.hero}>
+        <AppLogoMark size={72} style={styles.logo} />
         <Text style={styles.title}>Dry Laundry, Rain or Shine</Text>
         <Text style={styles.tagline}>
           Book a neighbor's dryer anywhere in {ACTIVE_REGION_LABEL} — free for the community.
@@ -60,6 +63,13 @@ export function WelcomeScreen() {
           />
           <BiometricDivider />
         </>
+      ) : biometricSupport.available ? (
+        <View style={styles.biometricHint}>
+          <AppIcon name={biometricSupport.icon} size={16} color={colors.gray600} />
+          <Text style={styles.biometricHintText}>
+            Sign in once with your password — then enable {biometricSupport.label} for quick access.
+          </Text>
+        </View>
       ) : null}
 
       <PrimaryButton title="Log in" icon="log-in" onPress={() => navigateAuth('login')} full />
@@ -95,11 +105,29 @@ export function WelcomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flexGrow: 1 },
-  hero: { flex: 1, justifyContent: 'center', paddingVertical: spacing.xxl },
-  title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, marginBottom: spacing.md, lineHeight: 40 },
-  tagline: { fontSize: 16, color: colors.gray500, lineHeight: 26 },
-  regionNote: { fontSize: 13, color: colors.gray400, marginTop: spacing.sm, fontStyle: 'italic' },
+  hero: { flex: 1, justifyContent: 'center', paddingVertical: spacing.xxl, alignItems: 'center' },
+  logo: { marginBottom: spacing.lg },
+  title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, marginBottom: spacing.md, lineHeight: 40, textAlign: 'center' },
+  tagline: { fontSize: 16, color: colors.gray500, lineHeight: 26, textAlign: 'center' },
+  regionNote: { fontSize: 13, color: colors.gray400, marginTop: spacing.sm, fontStyle: 'italic', textAlign: 'center' },
   gap: { height: spacing.md },
+  biometricHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: colors.gray50,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  biometricHintText: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.gray600,
+    lineHeight: 19,
+  },
   training: {
     marginTop: spacing.xl,
     padding: spacing.md,

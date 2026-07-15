@@ -5,6 +5,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -12,17 +13,18 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
+import { AppLogoMark } from '../../components/AppLogoMark'
 import { IntroArtEarn } from '../../components/intro/IntroArtEarn'
 import { IntroArtEasy } from '../../components/intro/IntroArtEasy'
 import { IntroArtRain } from '../../components/intro/IntroArtRain'
 import { GhostButton, PrimaryButton } from '../../components/ui'
-import { colors, radius, spacing } from '../../theme'
+import { colors, spacing } from '../../theme'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
+const ART_SIZE = Math.round(252 * 0.9)
 
 interface Slide {
   id: string
-  eyebrow: string
   title: string
   body: string
   highlight?: string
@@ -32,7 +34,6 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     id: 'easy',
-    eyebrow: 'Simple & Convenient',
     title: 'Book a Dryer in Minutes',
     body: 'See Nearby Hosts on the Map, Pick a Drop-Off Hour, and Confirm — No Phone Tag, No Guesswork. Laundry Sorted Before Your Coffee Cools.',
     highlight: '3 Taps to Book',
@@ -40,7 +41,6 @@ const SLIDES: Slide[] = [
   },
   {
     id: 'rain',
-    eyebrow: 'Any Weather',
     title: 'Rainy Day? Still Dry.',
     body: 'When Hanging Laundry Isn’t an Option, Drop Your Wet Load With a Neighbor Who Has a Dryer. You Stay Inside — They Handle the Tumble.',
     highlight: 'Dry Even When It Pours',
@@ -48,7 +48,6 @@ const SLIDES: Slide[] = [
   },
   {
     id: 'earn',
-    eyebrow: 'Extra Income',
     title: 'Make Money From Your Dryer',
     body: 'Already Running Loads at Home? List Your Machine, Set Your Hours and Price, and Earn Per Load Between Chores — Cash or Bank Transfer.',
     highlight: 'Side Income on Your Schedule',
@@ -80,12 +79,14 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
   const renderSlide: ListRenderItem<Slide> = ({ item }) => {
     const Art = item.Art
     return (
-      <View style={[styles.slide, { width: SCREEN_WIDTH }]}>
-        <View style={styles.eyebrowPill}>
-          <Text style={styles.eyebrowText}>{item.eyebrow}</Text>
-        </View>
+      <ScrollView
+        style={[styles.slide, { width: SCREEN_WIDTH }]}
+        contentContainerStyle={styles.slideContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         <View style={styles.artWrap}>
-          <Art size={252} />
+          <Art size={ART_SIZE} />
         </View>
         {item.highlight ? (
           <View style={styles.highlightRow}>
@@ -95,7 +96,7 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
         ) : null}
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.body}>{item.body}</Text>
-      </View>
+      </ScrollView>
     )
   }
 
@@ -105,9 +106,7 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
         <View style={styles.brandRow}>
-          <View style={styles.brandMark}>
-            <AppIcon name="wind" size={16} color={colors.white} />
-          </View>
+          <AppLogoMark size={32} />
           <Text style={styles.brand}>Laundry Buddy</Text>
         </View>
         {!isLast && (
@@ -128,6 +127,7 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
         onScroll={onScroll}
         scrollEventThrottle={16}
         bounces={false}
+        style={styles.list}
         getItemLayout={(_, i) => ({ length: SCREEN_WIDTH, offset: SCREEN_WIDTH * i, index: i })}
       />
 
@@ -162,39 +162,18 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.gray100,
   },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  brandMark: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.black,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   brand: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
   skip: { fontSize: 15, fontWeight: '600', color: colors.gray500 },
-  slide: {
+  list: { flex: 1 },
+  slide: { flex: 1 },
+  slideContent: {
     paddingHorizontal: spacing.screen,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     alignItems: 'center',
   },
-  eyebrowPill: {
-    backgroundColor: colors.gray50,
-    borderWidth: 1,
-    borderColor: colors.gray100,
-    borderRadius: radius.pill,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    marginBottom: spacing.lg,
-  },
-  eyebrowText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.gray600,
-    textTransform: 'capitalize',
-    letterSpacing: 0.6,
-  },
   artWrap: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -210,20 +189,21 @@ const styles = StyleSheet.create({
     color: colors.green,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
     textAlign: 'center',
     letterSpacing: -0.5,
-    lineHeight: 34,
-    marginBottom: spacing.md,
+    lineHeight: 32,
+    marginBottom: spacing.sm,
     color: colors.black,
   },
   body: {
-    fontSize: 16,
-    lineHeight: 24,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: 'center',
     color: colors.gray500,
     maxWidth: 320,
+    paddingBottom: spacing.sm,
   },
   footer: {
     paddingHorizontal: spacing.screen,

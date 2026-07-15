@@ -1,24 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
-  <defs>
-    <linearGradient id="drum" x1="96" y1="96" x2="416" y2="416" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#ff385c"/>
-      <stop offset="1" stop-color="#e31c5f"/>
-    </linearGradient>
-  </defs>
-  <rect x="64" y="48" width="384" height="416" rx="48" fill="#ffffff" stroke="#ffd6df" stroke-width="8"/>
-  <rect x="88" y="72" width="336" height="56" rx="16" fill="#ffe8ee"/>
-  <circle cx="128" cy="100" r="10" fill="#ff385c"/>
-  <circle cx="168" cy="100" r="10" fill="#ffb347"/>
-  <circle cx="208" cy="100" r="10" fill="#276ef1"/>
-  <rect x="352" y="84" width="48" height="32" rx="8" fill="#f0f0f0" stroke="#dddddd" stroke-width="3"/>
-  <circle cx="256" cy="272" r="112" fill="#fff5f7" stroke="url(#drum)" stroke-width="10"/>
-  <circle cx="256" cy="272" r="80" fill="#ffffff" stroke="#ffd6df" stroke-width="6"/>
-  <circle cx="208" cy="240" r="18" fill="#ff385c"/>
-  <circle cx="276" cy="256" r="14" fill="#276ef1"/>
-  <circle cx="244" cy="308" r="16" fill="#ffb347"/>
-  <circle cx="296" cy="296" r="12" fill="#008a05"/>
-  <path d="M256 192v28" stroke="#ff385c" stroke-width="6" stroke-linecap="round" stroke-opacity="0.45"/>
-  <path d="M256 324v28" stroke="#ff385c" stroke-width="6" stroke-linecap="round" stroke-opacity="0.45"/>
-  <path d="M184 272h28" stroke="#ff385c" stroke-width="6" stroke-linecap="round" stroke-opacity="0.45"/>
-  <path d="M300 272h28" stroke="#ff385c" stroke-width="6" stroke-linecap="round" stroke-opacity="0.45"/>
+  <g transform="translate(256 256)">
+    <!-- Washer body -->
+    <rect x="-100" y="-130" width="200" height="260" rx="22" fill="#FFFFFF" stroke="#242C34" stroke-width="5"/>
+    <!-- Control panel -->
+    <line x1="-85" y1="-90" x2="85" y2="-90" stroke="#242C34" stroke-width="5" stroke-linecap="round"/>
+    <!-- Detergent drawer -->
+    <rect x="-75" y="-124" width="55" height="26" rx="13" fill="#FFFFFF" stroke="#242C34" stroke-width="5"/>
+    <!-- Dial -->
+    <circle cx="-47" cy="-111" r="18" fill="#FFFFFF" stroke="#242C34" stroke-width="5"/>
+    <rect x="-59" y="-116" width="16" height="5" rx="2.5" fill="#05944F"/>
+    <!-- Settings lines -->
+    <line x1="35" y1="-119" x2="65" y2="-119" stroke="#242C34" stroke-width="5" stroke-linecap="round"/>
+    <line x1="35" y1="-109" x2="65" y2="-109" stroke="#242C34" stroke-width="5" stroke-linecap="round"/>
+    <line x1="35" y1="-99" x2="65" y2="-99" stroke="#242C34" stroke-width="5" stroke-linecap="round"/>
+    <!-- Door -->
+    <circle cx="0" cy="30" r="74" fill="#FFFFFF" stroke="#242C34" stroke-width="5"/>
+    <circle cx="0" cy="30" r="59" fill="#FFFFFF" stroke="#242C34" stroke-width="5"/>
+    <!-- Drum swirl -->
+    <path d="M0 30 C0 -10 40 -15 49 5 C58 25 20 35 0 30Z" stroke="#242C34" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <path d="M0 30 C10 45 45 40 48 20 C51 0 15 -5 0 30Z" stroke="#05944F" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <path d="M0 30 C-35 35 -45 65 -25 74 C-5 83 10 45 0 30Z" stroke="#05944F" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <!-- Filter hatch -->
+    <rect x="35" y="95" width="39" height="26" rx="6" fill="#FFFFFF" stroke="#242C34" stroke-width="5"/>
+    <!-- Feet -->
+    <rect x="-60" y="134" width="26" height="11" rx="3" fill="#242C34"/>
+    <rect x="34" y="134" width="26" height="11" rx="3" fill="#242C34"/>
+  </g>
 </svg>

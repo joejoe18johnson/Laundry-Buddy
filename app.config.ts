@@ -42,9 +42,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#000000',
+      monochromeImage: './assets/adaptive-icon.png',
     },
     package: 'com.laundrybuddy.app',
-    versionCode: 1,
+    versionCode: 2,
     permissions: [
       'ACCESS_COARSE_LOCATION',
       'ACCESS_FINE_LOCATION',
@@ -89,7 +90,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-notifications',
       {
-        icon: './assets/icon.png',
+        icon: './assets/notification-icon.png',
         color: '#000000',
         sounds: [],
         mode: 'production',
