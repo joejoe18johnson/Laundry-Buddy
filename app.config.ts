@@ -98,8 +98,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
         android: {
           minSdkVersion: 24,
-          compileSdkVersion: 35,
-          targetSdkVersion: 35,
+          compileSdkVersion: 36,
+          targetSdkVersion: 36,
         },
       },
     ],
@@ -109,6 +109,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
   },
   runtimeVersion: '1.0.0',
+  newArchEnabled: false,
   extra: {
     ...config?.extra,
     eas: {

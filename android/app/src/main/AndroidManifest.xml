@@ -37,12 +37,7 @@
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="laundrybuddy"/>
-      </intent-filter>
-      <intent-filter>
-        <action android:name="android.intent.action.VIEW"/>
-        <category android:name="android.intent.category.DEFAULT"/>
-        <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="com.laundrybuddy.app"/>
+        <data android:scheme="exp+laundry-buddy"/>
       </intent-filter>
     </activity>
   </application>

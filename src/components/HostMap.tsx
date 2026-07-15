@@ -1,7 +1,6 @@
 import { Component, type ReactNode } from 'react'
 import { NativeModules } from 'react-native'
 import { HostMapLeaflet } from './map/HostMapLeaflet'
-import { HostMapLibre } from './map/HostMapLibre'
 import type { Host } from '../types'
 
 export interface HostMapProps {
@@ -38,6 +37,9 @@ export function HostMap(props: HostMapProps) {
   const hasMapLibre = NativeModules.MLRNModule != null
 
   if (!hasMapLibre) return leaflet
+
+  // Lazy-load MapLibre so Expo Go (no native module) never imports it.
+  const { HostMapLibre } = require('./map/HostMapLibre') as typeof import('./map/HostMapLibre')
 
   return (
     <MapErrorBoundary fallback={leaflet}>
