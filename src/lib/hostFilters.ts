@@ -1,5 +1,5 @@
 import type { Host } from '../types'
-import { BELIZE_DISTRICTS } from './belizeDistricts'
+import { BELIZE_FILTER_AREAS, hostMatchesFilterArea } from './belizeDistricts'
 
 export type HostSort = 'nearest' | 'cheapest' | 'rating' | 'fastest'
 
@@ -78,6 +78,9 @@ export function matchesHostSearch(host: Host, query: string): boolean {
   const q = query.trim().toLowerCase()
   if (!q) return true
 
+  const filterArea = BELIZE_FILTER_AREAS.find((area) => area.toLowerCase() === q)
+  if (filterArea && hostMatchesFilterArea(host, filterArea)) return true
+
   const haystack = hostSearchHaystack(host)
   const tokens = q.split(/\s+/).filter(Boolean)
   return tokens.every((token) => haystack.includes(token))
@@ -114,7 +117,7 @@ export function filterAndSortHosts(
 
   let result = hosts.filter((host) => {
     if (!matchesHostSearch(host, query)) return false
-    if (filters.location && host.location !== filters.location) return false
+    if (filters.location && !hostMatchesFilterArea(host, filters.location)) return false
     if (filters.maxPrice != null && host.price > filters.maxPrice) return false
     if (filters.minRating != null) {
       if (host.rating <= 0) return false
@@ -125,11 +128,12 @@ export function filterAndSortHosts(
   })
 
   result = [...result].sort((a, b) => {
+    const bySort = compareHosts(a, b, sort)
+    if (bySort !== 0) return bySort
     if (query) {
-      const rel = getSearchRelevance(b, query) - getSearchRelevance(a, query)
-      if (rel !== 0) return rel
+      return getSearchRelevance(b, query) - getSearchRelevance(a, query)
     }
-    return compareHosts(a, b, sort)
+    return 0
   })
 
   return result
@@ -159,7 +163,7 @@ export function getSearchSuggestionItems(hosts: Host[], query: string, limit = 8
   }
 
   if (!q) {
-    BELIZE_DISTRICTS.forEach(addPlace)
+    BELIZE_FILTER_AREAS.forEach(addPlace)
     hosts.slice(0, Math.max(0, limit - items.length)).forEach(addHost)
     return items.slice(0, limit)
   }
@@ -187,6 +191,11 @@ export function getSearchSuggestionItems(hosts: Host[], query: string, limit = 8
   return items.slice(0, limit)
 }
 
-export function getHostLocations(hosts: Host[]): string[] {
-  return [...new Set(hosts.map((h) => h.location))].sort()
+export function getFilterAreas(): string[] {
+  return [...BELIZE_FILTER_AREAS]
+}
+
+/** @deprecated Use getFilterAreas() */
+export function getHostLocations(_hosts: Host[]): string[] {
+  return getFilterAreas()
 }

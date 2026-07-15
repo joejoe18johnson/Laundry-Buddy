@@ -15,7 +15,7 @@ import { HostAvatar } from './HostAvatar'
 import { HostSearchBar } from './HostSearchBar'
 import { ChoiceChip } from './ui'
 import { useApp } from '../context/AppContext'
-import { BELIZE_DISTRICTS } from '../lib/belizeDistricts'
+import { BELIZE_FILTER_AREAS } from '../lib/belizeDistricts'
 import {
   DEFAULT_HOST_FILTERS,
   filterAndSortHosts,
@@ -186,15 +186,15 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
       )}
 
       <View style={styles.districtSection}>
-        <Text style={styles.sectionLabelInline}>Districts</Text>
+        <Text style={styles.sectionLabelInline}>Areas</Text>
         <View style={styles.quickAreas}>
-          {BELIZE_DISTRICTS.map((district) => (
+          {BELIZE_FILTER_AREAS.map((area) => (
             <ChoiceChip
-              key={district}
-              label={district}
+              key={area}
+              label={area}
               size="compact"
-              selected={trimmed.toLowerCase() === district.toLowerCase()}
-              onPress={() => handleQueryChange(district)}
+              selected={trimmed.toLowerCase() === area.toLowerCase()}
+              onPress={() => handleQueryChange(area)}
             />
           ))}
         </View>
@@ -209,7 +209,7 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
         <Text style={styles.resultsSub}>
           {trimmed
             ? 'Searching all online hosts — includes towns outside your radius'
-            : 'Pick a district or search by host name and town'}
+            : 'Pick an area or search by host name and town'}
         </Text>
       </View>
     </View>

@@ -407,8 +407,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         loadPhotoUri: details.loadPhotoUri,
         clothesList: details.clothesList.length > 0 ? details.clothesList : undefined,
         stage: 'got-bag',
-        address: selectedHost.address,
-        gateCode: selectedHost.gateCode,
+        address: '',
+        gateCode: '',
         stageTimes: {},
         isNew: true,
       }
@@ -512,8 +512,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const needsTransfer =
           request.paymentMethod === 'bank_transfer' && (request.totalAmount ?? 0) > 0
         const body = needsTransfer
-          ? `${hostName} accepted your load! Transfer ${formatMoney(request.totalAmount ?? 0)} to ${bank.bankName} · ${bank.accountNumber}, then send proof on WhatsApp. Drop off at ${hostProfile?.address ?? 'the address shown in the app'}.`
-          : `${hostName} accepted your load! Drop off at ${hostProfile?.address ?? 'the address shown in the app'}.`
+          ? `${hostName} accepted your load! Transfer ${formatMoney(request.totalAmount ?? 0)} to ${bank.bankName} · ${bank.accountNumber}, then send proof on WhatsApp. Open the app for drop-off directions.`
+          : `${hostName} accepted your load! Open the app for drop-off directions and gate details.`
         notifyCustomer(request.customerId, 'Load accepted', body)
         void scheduleDropOffReminder(request.id, hostName, request.dropOffTime)
         showToast('Guest notified', { icon: 'check-circle' })

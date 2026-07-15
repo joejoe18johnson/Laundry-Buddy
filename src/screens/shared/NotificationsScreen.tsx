@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { BackButton, GhostButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
+import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useUserNotifications } from '../../context/NotificationContext'
@@ -59,21 +59,25 @@ export function NotificationsScreen() {
     <Screen>
       <BackButton onPress={() => navigate(backScreen)} label="Back" />
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <AppIcon name="bell" size={22} />
-          <Text style={styles.title}>Notifications</Text>
+        <View style={styles.titleBlock}>
+          <View style={styles.titleRow}>
+            <AppIcon name="bell" size={22} />
+            <Text style={styles.title}>Notifications</Text>
+          </View>
+          <Text style={styles.subtitle}>
+            {unreadCount > 0 ? `${unreadCount} unread · tap to open` : 'You are all caught up'}
+          </Text>
         </View>
         {unreadCount > 0 && (
-          <GhostButton title="Mark all read" onPress={() => markAllRead(user.id)} />
+          <Pressable
+            onPress={() => markAllRead(user.id)}
+            hitSlop={8}
+            style={({ pressed }) => [styles.markAllBtn, pressed && styles.markAllBtnPressed]}
+          >
+            <Text style={styles.markAllText}>Mark all read</Text>
+          </Pressable>
         )}
       </View>
-      <Text style={styles.subtitle}>
-        {unreadCount > 0 ? `${unreadCount} unread · tap to open` : 'You are all caught up'}
-      </Text>
-
-      <Text style={styles.subtitle}>
-        {unreadCount > 0 ? `${unreadCount} unread · tap to open` : 'You are all caught up'}
-      </Text>
 
       {permission !== 'granted' && permission !== 'unsupported' && (
         <View style={styles.permissionCard}>
@@ -146,13 +150,22 @@ export function NotificationsScreen() {
 const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
+  titleBlock: { flex: 1, gap: 4 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { fontSize: 26, fontWeight: '700', lineHeight: 32 },
-  subtitle: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg },
+  subtitle: { fontSize: 14, color: colors.gray500, lineHeight: 20 },
+  markAllBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    marginTop: 2,
+  },
+  markAllBtnPressed: { opacity: 0.7 },
+  markAllText: { fontSize: 14, fontWeight: '600', color: colors.black },
   permissionCard: {
     flexDirection: 'row',
     alignItems: 'center',

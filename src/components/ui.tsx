@@ -10,12 +10,14 @@ import {
   View,
   ViewStyle,
 } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
 import { SplashDryerAnimation } from './SplashDryerAnimation'
+import { bottomSafePadding } from '../lib/safeAreaInsets'
 import { colors, radius, spacing } from '../theme'
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+  const insets = useSafeAreaInsets()
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <KeyboardAvoidingView
@@ -23,7 +25,11 @@ export function Screen({ children, style }: { children: ReactNode; style?: ViewS
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={[styles.scroll, style]}
+          contentContainerStyle={[
+            styles.scroll,
+            { paddingBottom: bottomSafePadding(insets.bottom, spacing.lg) },
+            style,
+          ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -78,22 +84,32 @@ export function PrimaryButton({
 export function OutlineButton({
   title,
   onPress,
+  disabled,
   full,
   icon,
 }: {
   title: string
   onPress: () => void
+  disabled?: boolean
   full?: boolean
   icon?: IconName
 }) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.btnOutline, full && styles.btnFull, pressed && styles.btnPressed]}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.btnOutline,
+        full && styles.btnFull,
+        disabled && styles.btnOutlineDisabled,
+        pressed && !disabled && styles.btnPressed,
+      ]}
     >
       <View style={styles.btnContent}>
-        {icon && <AppIcon name={icon} size={18} />}
-        <Text style={styles.btnOutlineText}>{title}</Text>
+        {icon && (
+          <AppIcon name={icon} size={18} color={disabled ? colors.gray400 : colors.black} />
+        )}
+        <Text style={[styles.btnOutlineText, disabled && styles.btnOutlineTextDisabled]}>{title}</Text>
       </View>
     </Pressable>
   )
@@ -324,7 +340,6 @@ const styles = StyleSheet.create({
   scroll: {
     padding: spacing.screen,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
   },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   backBtn: {
@@ -353,6 +368,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnOutlineText: { color: colors.black, fontSize: 16, fontWeight: '600', textTransform: 'capitalize' },
+  btnOutlineDisabled: { borderColor: colors.gray200, backgroundColor: colors.gray50 },
+  btnOutlineTextDisabled: { color: colors.gray400 },
   btnGhost: {
     borderWidth: 1,
     borderColor: colors.gray200,

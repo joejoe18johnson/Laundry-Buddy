@@ -26,12 +26,11 @@ import {
   countActiveFilters,
   DEFAULT_HOST_FILTERS,
   filterAndSortHosts,
-  getHostLocations,
+  getFilterAreas,
   getSearchSuggestions,
   type HostFilters,
   type HostSort,
 } from '../../lib/hostFilters'
-import { BELIZE_DISTRICTS } from '../../lib/belizeDistricts'
 import type { Host } from '../../types'
 import { colors, radius, spacing } from '../../theme'
 
@@ -53,7 +52,7 @@ const SNAP_RATIOS: Record<SnapPoint, number> = {
 const SNAP_ORDER: SnapPoint[] = ['map', 'half', 'full']
 
 function getPopularAreas(): string[] {
-  return [...BELIZE_DISTRICTS]
+  return getFilterAreas()
 }
 
 function nearestSnap(height: number, containerHeight: number, velocityY: number): SnapPoint {
@@ -107,7 +106,7 @@ export function HomeScreen() {
     () => filterAndSortHosts(hostSource, filters, sort, searchQuery),
     [hostSource, filters, sort, searchQuery],
   )
-  const locations = useMemo(() => getHostLocations(allOnlineHosts), [allOnlineHosts])
+  const locations = useMemo(() => getFilterAreas(), [])
   const activeFilterCount = countActiveFilters(filters)
   const popularAreas = useMemo(() => getPopularAreas(), [])
 

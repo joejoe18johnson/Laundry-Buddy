@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { ClothesListEditor } from '../../components/ClothesListEditor'
@@ -16,14 +16,14 @@ import {
 } from '../../lib/hostPricing'
 import { formatMoney } from '../../lib/bookingPayments'
 import { sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
+import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { colors, radius, spacing } from '../../theme'
 import type { ClothesListItem, PaymentMethod, SheetsOption } from '../../types'
 
 export function BookingScreen() {
   const { selectedHost, navigate, confirmBooking, getSettingsForHost } = useApp()
   const insets = useSafeAreaInsets()
-  const footerBottomPad =
-    Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 12) + spacing.md
+  const footerBottomPad = bottomSafePadding(insets.bottom)
   const [dropOffTime, setDropOffTime] = useState<DropOffHour>(14)
   const [loads, setLoads] = useState(1)
   const [sheetsOption, setSheetsOption] = useState<SheetsOption>('own')
@@ -238,30 +238,33 @@ export function BookingScreen() {
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
         <View style={styles.footer}>
           <View style={styles.footerInfo}>
-            <Text style={[styles.price, totalPrice <= 0 && styles.priceFree]}>
+            <Text style={[styles.footerPrice, totalPrice <= 0 && styles.footerPriceFree]}>
               {formatMoney(totalPrice)}
             </Text>
-            <Text style={styles.priceSub} numberOfLines={2}>
+            <Text style={styles.footerMeta} numberOfLines={2}>
               {priceBreakdown}
             </Text>
-            {validationHint && <Text style={styles.validationHint}>{validationHint}</Text>}
+            {validationHint ? <Text style={styles.validationHint}>{validationHint}</Text> : null}
           </View>
-          <PrimaryButton
-            title="Confirm booking"
-            disabled={!canConfirm}
-            onPress={() =>
-              confirmBooking({
-                dropOffTime,
-                loads,
-                sheetsOption,
-                notes,
-                clothesList,
-                paymentMethod,
-                foldingService: showFolding && foldingService,
-                loadPhotoUri: loadPhotoUri ?? undefined,
-              })
-            }
-          />
+          <View style={styles.footerAction}>
+            <PrimaryButton
+              title="Confirm booking"
+              icon="check"
+              disabled={!canConfirm}
+              onPress={() =>
+                confirmBooking({
+                  dropOffTime,
+                  loads,
+                  sheetsOption,
+                  notes,
+                  clothesList,
+                  paymentMethod,
+                  foldingService: showFolding && foldingService,
+                  loadPhotoUri: loadPhotoUri ?? undefined,
+                })
+              }
+            />
+          </View>
         </View>
       </View>
     </View>
@@ -344,10 +347,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   footerShell: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: colors.white,
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
@@ -360,14 +359,14 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.md,
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.lg,
   },
-  footerInfo: { flex: 1, minWidth: 0, gap: 2 },
-  price: { fontSize: 22, fontWeight: '700', letterSpacing: -0.4, lineHeight: 26 },
-  priceFree: { color: colors.green },
-  priceSub: { fontSize: 12, color: colors.gray500, lineHeight: 18 },
-  validationHint: { fontSize: 12, color: colors.danger, marginTop: 4, fontWeight: '600' },
+  footerInfo: { flex: 1, minWidth: 0, gap: 4, paddingBottom: 2 },
+  footerPrice: { fontSize: 26, fontWeight: '700', letterSpacing: -0.5, lineHeight: 30 },
+  footerPriceFree: { color: colors.green },
+  footerMeta: { fontSize: 13, fontWeight: '500', color: colors.gray500, lineHeight: 18 },
+  footerAction: { flexShrink: 0, alignSelf: 'center' },
+  validationHint: { fontSize: 12, color: colors.danger, fontWeight: '600', lineHeight: 16 },
 })

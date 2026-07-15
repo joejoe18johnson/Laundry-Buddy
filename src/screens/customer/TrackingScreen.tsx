@@ -91,6 +91,7 @@ export function TrackingScreen() {
             : { label: 'Accepted', variant: 'accepted' as const }
 
   const handleDirections = () => {
+    if (!isAccepted) return
     if (host) {
       void openHostDirections({
         latitude: host.latitude,
@@ -147,22 +148,11 @@ export function TrackingScreen() {
           <View style={styles.pendingBody}>
             <Text style={styles.pendingTitle}>Awaiting host acceptance</Text>
             <Text style={styles.pendingSub}>
-              {booking.hostName} is reviewing your request. You'll get a notification when they accept — bank transfer details will appear then.
+              {booking.hostName} is reviewing your request. You'll get a notification when they accept — then bank details, drop-off address, and directions will appear here.
             </Text>
           </View>
         </View>
       )}
-
-      {!isDeclined && isPending && (
-        <PrimaryButton
-          title="Directions"
-          icon="navigation"
-          full
-          onPress={handleDirections}
-        />
-      )}
-
-      {!isDeclined && isPending && <View style={styles.directionsSpacer} />}
 
       {isDeclined && (
         <View style={styles.declinedCard}>
@@ -284,7 +274,7 @@ export function TrackingScreen() {
         <AppIcon name="message-circle" size={18} color={colors.gray600} />
         <Text style={styles.infoText}>
           {isPending
-            ? "We'll notify you as soon as the host accepts your request."
+            ? "We'll notify you when the host accepts. Drop-off directions stay hidden until then for your safety."
             : transferPending
               ? 'Message your host on WhatsApp with your transfer screenshot.'
               : "We'll notify you when your load is ready."}
@@ -330,6 +320,19 @@ export function TrackingScreen() {
         ) : null}
       </View>
       )}
+
+      {isPending && (
+        <View style={styles.pickupCard}>
+          <View style={styles.pickupTitleRow}>
+            <AppIcon name="map-pin" size={18} color={colors.gray400} />
+            <Text style={[styles.pickupTitle, styles.pickupTitleMuted]}>Pickup details</Text>
+          </View>
+          <Text style={styles.pendingDirectionsHint}>
+            Drop-off address and directions unlock after {booking.hostName} accepts your request.
+          </Text>
+          <OutlineButton title="Directions" icon="navigation" full disabled onPress={() => {}} />
+        </View>
+      )}
     </Screen>
   )
 }
@@ -373,7 +376,6 @@ const styles = StyleSheet.create({
   pendingBody: { flex: 1 },
   pendingTitle: { fontSize: 16, fontWeight: '700', marginBottom: 4 },
   pendingSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
-  directionsSpacer: { height: spacing.lg },
   declinedCard: {
     gap: spacing.md,
     backgroundColor: '#fff5f5',
@@ -463,6 +465,8 @@ const styles = StyleSheet.create({
   },
   pickupTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   pickupTitle: { fontSize: 16, fontWeight: '600' },
+  pickupTitleMuted: { color: colors.gray500 },
+  pendingDirectionsHint: { fontSize: 14, color: colors.gray500, lineHeight: 20 },
   pickupField: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   pickupFieldText: { flex: 1 },
   pickupLabel: {

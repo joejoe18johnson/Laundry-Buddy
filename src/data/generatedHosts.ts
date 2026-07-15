@@ -31,9 +31,9 @@ const DISTRICT_CONFIG: Record<BelizeDistrict, DistrictSeedConfig> = {
   Cayo: {
     center: { latitude: 17.156, longitude: -89.069 },
     areas: [
-      'San Ignacio', 'Santa Elena', 'UB Area', 'Las Flores', 'Maya Mopan',
+      'Belmopan', 'San Ignacio', 'Santa Elena', 'UB Area', 'Las Flores', 'Maya Mopan',
       'Cristo Rey', 'Bullet Tree', 'Esperanza', 'Georgeville', 'Succotz',
-      'Camalote', 'Teakettle',
+      'Camalote',
     ],
   },
   Corozal: {

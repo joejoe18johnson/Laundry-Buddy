@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
 import { LocationPreferencesCard } from './LocationPreferencesCard'
 import type { RadiusOptionKm } from '../lib/locationPreferences'
+import { bottomSafePadding } from '../lib/safeAreaInsets'
 import { colors, radius, spacing } from '../theme'
 import type { User } from '../types'
 
@@ -86,6 +87,7 @@ export function HeaderMenu({
   notificationCount,
   isHostOnline,
 }: Props) {
+  const insets = useSafeAreaInsets()
   const isCustomer = user.role === 'customer'
   const contact = user.email ?? user.phone
 
@@ -98,7 +100,7 @@ export function HeaderMenu({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
-          <SafeAreaView edges={['top', 'right']} style={styles.panelInner}>
+          <SafeAreaView edges={['top', 'right', 'bottom']} style={styles.panelInner}>
             <View style={styles.header}>
               <View style={styles.profileIcon}>
                 <AppIcon name="user" size={20} />
@@ -167,7 +169,7 @@ export function HeaderMenu({
               </MenuSection>
             </ScrollView>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: bottomSafePadding(insets.bottom, spacing.sm) }]}>
               <Pressable
                 style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
                 onPress={() => go(onLogout)}
@@ -257,7 +259,8 @@ const styles = StyleSheet.create({
   footer: {
     borderTopWidth: 1,
     borderTopColor: colors.gray100,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
   },
   logoutBtn: {
     flexDirection: 'row',

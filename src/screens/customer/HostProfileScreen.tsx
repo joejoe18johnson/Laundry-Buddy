@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Platform, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { getHostProfileDetails } from '../../data/mockData'
 import { formatHostPrice } from '../../lib/hostFilters'
+import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { formatServicePrice } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { colors, coverColors, radius, spacing } from '../../theme'
@@ -80,8 +81,7 @@ function InfoSection({ title, icon, children }: { title: string; icon: 'info' | 
 export function HostProfileScreen() {
   const { selectedHost, navigate, selectHost, getSettingsForHost } = useApp()
   const insets = useSafeAreaInsets()
-  const footerBottomPad =
-    Math.max(insets.bottom, Platform.OS === 'android' ? 28 : 12) + spacing.md
+  const footerBottomPad = bottomSafePadding(insets.bottom)
 
   if (!selectedHost) return null
 
