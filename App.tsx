@@ -1,9 +1,10 @@
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
-import { useMemo, useState, useEffect } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useMemo, useState, useEffect, useRef } from 'react'
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
+import { BiometricLockScreen } from './src/components/BiometricLockScreen'
 import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, needsHostVerification, useAuth } from './src/context/AuthContext'
@@ -234,8 +235,10 @@ function AppShell() {
 }
 
 function AuthenticatedApp() {
-  const { user, authScreen, ready } = useAuth()
+  const { user, authScreen, ready, biometricEnabled, biometricSupport, logout } = useAuth()
   const [introSeen, setIntroSeen] = useState<boolean | null>(null)
+  const [biometricLocked, setBiometricLocked] = useState(false)
+  const skipNextLock = useRef(true)
 
   useEffect(() => {
     if (!ready) return
@@ -245,6 +248,40 @@ function AuthenticatedApp() {
     }
     hasSeenIntro().then(setIntroSeen)
   }, [ready, user])
+
+  useEffect(() => {
+    if (!user || !biometricEnabled || !biometricSupport.available) {
+      setBiometricLocked(false)
+      skipNextLock.current = true
+      return
+    }
+
+    setBiometricLocked(true)
+    skipNextLock.current = true
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        if (skipNextLock.current) {
+          skipNextLock.current = false
+          return
+        }
+        setBiometricLocked(true)
+      }
+    })
+
+    return () => subscription.remove()
+  }, [user, biometricEnabled, biometricSupport.available])
+
+  const handleBiometricUnlock = () => {
+    setBiometricLocked(false)
+    skipNextLock.current = true
+  }
+
+  const handleUsePasswordInstead = async () => {
+    setBiometricLocked(false)
+    skipNextLock.current = true
+    await logout()
+  }
 
   const completeIntro = async () => {
     await markIntroSeen()
@@ -285,13 +322,21 @@ function AuthenticatedApp() {
   }
 
   return (
-    <NotificationProvider activeUserId={user!.id}>
-      <ToastProvider>
-        <AppProvider>
-          <AppShell />
-        </AppProvider>
-      </ToastProvider>
-    </NotificationProvider>
+    <>
+      <NotificationProvider activeUserId={user!.id}>
+        <ToastProvider>
+          <AppProvider>
+            <AppShell />
+          </AppProvider>
+        </ToastProvider>
+      </NotificationProvider>
+      <BiometricLockScreen
+        visible={biometricLocked}
+        support={biometricSupport}
+        onUnlock={handleBiometricUnlock}
+        onUsePassword={handleUsePasswordInstead}
+      />
+    </>
   )
 }
 

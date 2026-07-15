@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { HostAvatar } from './HostAvatar'
+import { CloseToMeButton } from './CloseToMeButton'
 import { HostSearchBar } from './HostSearchBar'
 import { ChoiceChip } from './ui'
 import { useApp } from '../context/AppContext'
@@ -110,7 +111,8 @@ function SuggestionRow({
 }
 
 export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, onQueryChange }: Props) {
-  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading } = useApp()
+  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, userLocationLabel } =
+    useApp()
   const [query, setQuery] = useState(initialQuery)
 
   useEffect(() => {
@@ -133,6 +135,11 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
   const handleQueryChange = (value: string) => {
     setQuery(value)
     onQueryChange?.(value)
+  }
+
+  const handleCloseToMe = () => {
+    void requestUserLocation()
+    handleQueryChange('')
   }
 
   const openHost = (host: Host) => {
@@ -230,10 +237,13 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
           <HostSearchBar
             value={query}
             onChange={handleQueryChange}
-            onLocate={requestUserLocation}
-            locating={locationLoading}
             placeholder="Name, town, or area"
             autoFocus
+          />
+          <CloseToMeButton
+            onPress={handleCloseToMe}
+            loading={locationLoading}
+            locationLabel={userLocationLabel}
           />
         </View>
 

@@ -1,14 +1,38 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { TRAINING_ACCOUNTS, TRAINING_PASSWORD, ACTIVE_REGION_LABEL } from '../../data/seedData'
+import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
 import { OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { colors, spacing } from '../../theme'
 
 export function WelcomeScreen() {
-  const { navigateAuth, login } = useAuth()
+  const { navigateAuth, login, loginWithBiometrics, biometricSupport, biometricEnabled } = useAuth()
   const [signingIn, setSigningIn] = useState<string | null>(null)
+  const [biometricLoading, setBiometricLoading] = useState(false)
+
+  const showBiometric = biometricSupport.available && biometricEnabled
+
+  useEffect(() => {
+    if (!showBiometric) return
+    let cancelled = false
+    const run = async () => {
+      setBiometricLoading(true)
+      await loginWithBiometrics()
+      if (!cancelled) setBiometricLoading(false)
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [showBiometric, loginWithBiometrics])
+
+  const handleBiometricLogin = async () => {
+    setBiometricLoading(true)
+    await loginWithBiometrics()
+    setBiometricLoading(false)
+  }
 
   const handleTrainingLogin = async (loginId: string, type: 'phone' | 'email') => {
     setSigningIn(loginId)
@@ -25,6 +49,18 @@ export function WelcomeScreen() {
         </Text>
         <Text style={styles.regionNote}>All six districts · find hosts near you</Text>
       </View>
+
+      {showBiometric ? (
+        <>
+          <BiometricLoginButton
+            support={biometricSupport}
+            onPress={handleBiometricLogin}
+            loading={biometricLoading}
+            variant="primary"
+          />
+          <BiometricDivider />
+        </>
+      ) : null}
 
       <PrimaryButton title="Log in" icon="log-in" onPress={() => navigateAuth('login')} full />
       <View style={styles.gap} />

@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { BackButton, Screen } from '../../components/ui'
+import { BackButton, BrandSwitch, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
@@ -29,7 +29,13 @@ function DetailRow({
 }
 
 export function AccountScreen() {
-  const { user } = useAuth()
+  const {
+    user,
+    biometricSupport,
+    biometricEnabled,
+    enableBiometricLogin,
+    disableBiometricLogin,
+  } = useAuth()
   const { navigate } = useApp()
 
   if (!user) return null
@@ -86,6 +92,27 @@ export function AccountScreen() {
         ) : null}
       </View>
 
+      {biometricSupport.available ? (
+        <View style={styles.securityCard}>
+          <View style={styles.securityHeader}>
+            <AppIcon name={biometricSupport.icon} size={18} />
+            <View style={styles.securityText}>
+              <Text style={styles.securityTitle}>{biometricSupport.label} sign-in</Text>
+              <Text style={styles.securitySub}>
+                Unlock the app quickly without typing your password each time
+              </Text>
+            </View>
+            <BrandSwitch
+              value={biometricEnabled}
+              onValueChange={(next) => {
+                if (next) void enableBiometricLogin()
+                else void disableBiometricLogin()
+              }}
+            />
+          </View>
+        </View>
+      ) : null}
+
       <Text style={styles.note}>
         {isCustomer
           ? 'Need to update your details? Contact support from the Help menu.'
@@ -121,6 +148,22 @@ const styles = StyleSheet.create({
     borderColor: colors.gray100,
   },
   roleText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+  securityCard: {
+    borderWidth: 1,
+    borderColor: colors.gray100,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.gray50,
+  },
+  securityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  securityText: { flex: 1, gap: 4 },
+  securityTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
+  securitySub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
   card: {
     borderWidth: 1,
     borderColor: colors.gray100,

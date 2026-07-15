@@ -1,21 +1,40 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
+import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
 import { BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
 import type { LoginMethod } from '../../types'
 
 export function LoginScreen() {
-  const { login, navigateAuth, authError, clearAuthError } = useAuth()
+  const {
+    login,
+    loginWithBiometrics,
+    navigateAuth,
+    authError,
+    clearAuthError,
+    biometricSupport,
+    biometricEnabled,
+  } = useAuth()
   const [method, setMethod] = useState<LoginMethod>('phone')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [biometricLoading, setBiometricLoading] = useState(false)
+
+  const showBiometric = biometricSupport.available && biometricEnabled
 
   const handleLogin = async () => {
     clearAuthError()
     await login(method, method === 'phone' ? phone : email, password)
+  }
+
+  const handleBiometricLogin = async () => {
+    clearAuthError()
+    setBiometricLoading(true)
+    await loginWithBiometrics()
+    setBiometricLoading(false)
   }
 
   return (
@@ -23,6 +42,18 @@ export function LoginScreen() {
       <BackButton onPress={() => navigateAuth('welcome')} />
       <Text style={styles.title}>Welcome back</Text>
       <Text style={styles.subtitle}>Log in with your phone or email</Text>
+
+      {showBiometric ? (
+        <>
+          <BiometricLoginButton
+            support={biometricSupport}
+            onPress={handleBiometricLogin}
+            loading={biometricLoading}
+            variant="primary"
+          />
+          <BiometricDivider />
+        </>
+      ) : null}
 
       <MethodTabs
         value={method}

@@ -17,6 +17,7 @@ import { AppIcon } from '../../components/AppIcon'
 import { HostCard } from '../../components/HostCard'
 import { HostFilterSheet } from '../../components/HostFilterSheet'
 import { HostMap } from '../../components/HostMap'
+import { CloseToMeButton } from '../../components/CloseToMeButton'
 import { HostSearchBar } from '../../components/HostSearchBar'
 import { HostSearchOverlay } from '../../components/HostSearchOverlay'
 import { ChoiceChip } from '../../components/ui'
@@ -203,6 +204,13 @@ export function HomeScreen() {
     setSearchQuery('')
   }
 
+  const handleCloseToMe = () => {
+    void requestUserLocation()
+    setSearchQuery('')
+    setFilters((prev) => ({ ...prev, location: null }))
+    setSort('nearest')
+  }
+
   const openSearch = () => {
     setSearchOpen(true)
     if (snapRef.current === 'map') animateToSnap('half')
@@ -380,13 +388,16 @@ export function HomeScreen() {
             <HostSearchBar
               value={searchQuery}
               onChange={setSearchQuery}
-              onLocate={requestUserLocation}
-              locating={locationLoading}
               placeholder="Search area, town, or host"
               editable={false}
             />
           </View>
         </Pressable>
+        <CloseToMeButton
+          onPress={handleCloseToMe}
+          loading={locationLoading}
+          locationLabel={userLocationLabel}
+        />
 
         <FlatList
           data={hosts}

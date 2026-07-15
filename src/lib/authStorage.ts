@@ -43,6 +43,10 @@ export async function setSessionUserId(id: string | null) {
 export async function getCurrentUser(): Promise<User | null> {
   const id = await getSessionUserId()
   if (!id) return null
+  return getUserById(id)
+}
+
+export async function getUserById(id: string): Promise<User | null> {
   const users = await readUsers()
   return users.find((u) => u.id === id) ?? null
 }

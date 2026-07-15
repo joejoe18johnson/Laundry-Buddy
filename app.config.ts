@@ -2,6 +2,8 @@ import type { ConfigContext, ExpoConfig } from 'expo/config'
 
 const LOCATION_PERMISSION =
   'Allow Laundry Buddy to use your location to find nearby dryers across Belize.'
+const BIOMETRIC_PERMISSION =
+  'Allow Laundry Buddy to use Face ID or fingerprint so you can sign in quickly.'
 const CAMERA_PERMISSION =
   'Allow Laundry Buddy to use your camera to photograph your load for the host.'
 const PHOTOS_PERMISSION =
@@ -29,6 +31,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     buildNumber: '1',
     infoPlist: {
       NSLocationWhenInUseUsageDescription: LOCATION_PERMISSION,
+      NSFaceIDUsageDescription: BIOMETRIC_PERMISSION,
       NSCameraUsageDescription: CAMERA_PERMISSION,
       NSPhotoLibraryUsageDescription: PHOTOS_PERMISSION,
       NSPhotoLibraryAddUsageDescription: PHOTOS_PERMISSION,
@@ -45,6 +48,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     permissions: [
       'ACCESS_COARSE_LOCATION',
       'ACCESS_FINE_LOCATION',
+      'USE_BIOMETRIC',
+      'USE_FINGERPRINT',
       'CAMERA',
       'READ_MEDIA_IMAGES',
       'POST_NOTIFICATIONS',
@@ -67,6 +72,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     'expo-font',
     'expo-asset',
+    'expo-local-authentication',
     [
       'expo-image-picker',
       {

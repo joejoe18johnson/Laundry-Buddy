@@ -14,10 +14,20 @@ import {
   findUserByEmail,
   findUserByPhone,
   getCurrentUser,
+  getUserById,
   phoneInUse,
   saveUser,
   setSessionUserId,
 } from '../lib/authStorage'
+import {
+  disableBiometricLogin,
+  enableBiometricLogin,
+  getBiometricSupport,
+  getBiometricUserId,
+  isBiometricLoginEnabled,
+  authenticateBiometric,
+  type BiometricSupport,
+} from '../lib/biometricAuth'
 import * as SplashScreen from 'expo-splash-screen'
 import type { AppRole, AuthScreen, HostVerification, LoginMethod, User } from '../types'
 
@@ -35,10 +45,15 @@ interface AuthState {
   ready: boolean
   authScreen: AuthScreen
   authError: string | null
+  biometricSupport: BiometricSupport
+  biometricEnabled: boolean
   navigateAuth: (screen: AuthScreen) => void
   login: (method: LoginMethod, identifier: string, password: string) => Promise<boolean>
+  loginWithBiometrics: () => Promise<boolean>
   signup: (input: SignupInput) => Promise<boolean>
   logout: () => Promise<void>
+  enableBiometricLogin: () => Promise<boolean>
+  disableBiometricLogin: () => Promise<void>
   submitHostVerification: (data: {
     address: string
     idUploaded: boolean
@@ -54,13 +69,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [authScreen, setAuthScreen] = useState<AuthScreen>('welcome')
   const [authError, setAuthError] = useState<string | null>(null)
+  const [biometricSupport, setBiometricSupport] = useState<BiometricSupport>({
+    available: false,
+    enrolled: false,
+    label: 'Biometrics',
+    icon: 'smartphone',
+  })
+  const [biometricEnabled, setBiometricEnabled] = useState(false)
+
+  const refreshBiometricState = useCallback(async () => {
+    const [support, enabled] = await Promise.all([
+      getBiometricSupport(),
+      isBiometricLoginEnabled(),
+    ])
+    setBiometricSupport(support)
+    setBiometricEnabled(enabled)
+  }, [])
 
   useEffect(() => {
     getCurrentUser().then((u) => {
       setUser(u)
       setReady(true)
     })
-  }, [])
+    void refreshBiometricState()
+  }, [refreshBiometricState])
 
   useEffect(() => {
     if (ready) {
@@ -75,6 +107,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearAuthError = useCallback(() => setAuthError(null), [])
 
+  const restoreUserSession = useCallback(async (userId: string) => {
+    const found = await getUserById(userId)
+    if (!found) {
+      await disableBiometricLogin()
+      await refreshBiometricState()
+      setAuthError('Saved account not found. Log in with your password.')
+      return false
+    }
+    await setSessionUserId(found.id)
+    setUser(found)
+    setAuthError(null)
+    return true
+  }, [refreshBiometricState])
+
+  const offerBiometricEnrollment = useCallback(
+    async (userId: string) => {
+      const support = await getBiometricSupport()
+      if (!support.available) return
+      const enabled = await isBiometricLoginEnabled()
+      if (enabled) {
+        const storedId = await getBiometricUserId()
+        if (storedId !== userId) {
+          await enableBiometricLogin(userId)
+          await refreshBiometricState()
+        }
+        return
+      }
+      const enrolled = await enableBiometricLogin(userId)
+      if (enrolled) await refreshBiometricState()
+    },
+    [refreshBiometricState],
+  )
+
+  const loginWithBiometrics = useCallback(async () => {
+    clearAuthError()
+    const support = await getBiometricSupport()
+    if (!support.available) {
+      setAuthError(`${support.label} is not available on this device.`)
+      return false
+    }
+
+    const userId = await getBiometricUserId()
+    if (!userId) {
+      setAuthError('Sign in with your password once to set up biometrics.')
+      return false
+    }
+
+    const ok = await authenticateBiometric(`Sign in with ${support.label}`)
+    if (!ok) return false
+
+    return restoreUserSession(userId)
+  }, [clearAuthError, restoreUserSession])
+
   const login = useCallback(async (method: LoginMethod, identifier: string, password: string) => {
     const found =
       method === 'phone' ? await findUserByPhone(identifier) : await findUserByEmail(identifier)
@@ -87,8 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setSessionUserId(found.id)
     setUser(found)
     setAuthError(null)
+    void offerBiometricEnrollment(found.id)
     return true
-  }, [])
+  }, [offerBiometricEnrollment])
 
   const signup = useCallback(async (input: SignupInput) => {
     if (input.method === 'phone') {
@@ -133,8 +219,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setSessionUserId(newUser.id)
     setUser(newUser)
     setAuthError(null)
+    void offerBiometricEnrollment(newUser.id)
     return true
-  }, [])
+  }, [offerBiometricEnrollment])
+
+  const enableBiometricLoginForUser = useCallback(async () => {
+    if (!user) return false
+    const ok = await enableBiometricLogin(user.id)
+    if (ok) await refreshBiometricState()
+    return ok
+  }, [user, refreshBiometricState])
+
+  const disableBiometricLoginForUser = useCallback(async () => {
+    await disableBiometricLogin()
+    await refreshBiometricState()
+  }, [refreshBiometricState])
 
   const logout = useCallback(async () => {
     await setSessionUserId(null)
@@ -168,10 +267,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       authScreen,
       authError,
+      biometricSupport,
+      biometricEnabled,
       navigateAuth,
       login,
+      loginWithBiometrics,
       signup,
       logout,
+      enableBiometricLogin: enableBiometricLoginForUser,
+      disableBiometricLogin: disableBiometricLoginForUser,
       submitHostVerification,
       clearAuthError,
     }),
@@ -180,10 +284,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       authScreen,
       authError,
+      biometricSupport,
+      biometricEnabled,
       navigateAuth,
       login,
+      loginWithBiometrics,
       signup,
       logout,
+      enableBiometricLoginForUser,
+      disableBiometricLoginForUser,
       submitHostVerification,
       clearAuthError,
     ],
