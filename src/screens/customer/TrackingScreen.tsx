@@ -83,7 +83,7 @@ export function TrackingScreen() {
   const handleConfirmPickup = () => {
     if (!booking) return
     confirmPickup(booking.id)
-    if (host) viewHostProfile(host)
+    if (host) viewHostProfile(host, { reviewPrompt: true })
   }
 
   const statusBadge = isDeclined

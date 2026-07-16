@@ -28,7 +28,16 @@ import { formatClothesListSummary, hasDelicates } from '../lib/clothesList'
 import {
   saveCompletedCustomerPayment,
   saveCompletedHostPayment,
+  loadCustomerPaymentHistory,
 } from '../lib/paymentHistoryStorage'
+import { loadActiveBooking, saveActiveBooking } from '../lib/bookingStorage'
+import {
+  bookingTrackingLink,
+  hostDashboardLink,
+  hostReviewLink,
+  linkFromPushData,
+  resolveNotificationLink,
+} from '../lib/notificationLinks'
 import {
   appendHostRequest,
   getHostOrders,
@@ -67,6 +76,8 @@ import {
   type PaymentMethod,
   type Screen,
   type SheetsOption,
+  type AppNotification,
+  type NotificationLink,
 } from '../types'
 
 interface AppState {
@@ -93,7 +104,7 @@ interface AppState {
   showMap: boolean
   refreshHostData: () => Promise<void>
   navigate: (screen: Screen) => void
-  viewHostProfile: (host: Host) => void
+  viewHostProfile: (host: Host, options?: { reviewPrompt?: boolean }) => void
   selectHost: (host: Host) => void
   setShowMap: (show: boolean) => void
   getSettingsForHost: (hostUserId?: string) => HostSettings
@@ -114,6 +125,10 @@ interface AppState {
   markDry: (loadId: string) => void
   confirmPickup: (loadId: string) => void
   confirmTransferPayment: (loadId: string) => void
+  openNotification: (notification: AppNotification) => Promise<void>
+  openNotificationFromPush: (title: string, data: Record<string, unknown>) => Promise<void>
+  reviewProfilePrompt: boolean
+  clearReviewProfilePrompt: () => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -168,6 +183,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userLocationLabel, setUserLocationLabel] = useState('San Ignacio')
   const [locationLoading, setLocationLoading] = useState(false)
   const [searchRadiusKm, setSearchRadiusKmState] = useState(10)
+  const [reviewProfilePrompt, setReviewProfilePrompt] = useState(false)
 
   const bookingRef = useRef(booking)
   const activeLoadsRef = useRef(activeLoads)
@@ -212,9 +228,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })
       })
     } else {
-      setBooking(getCustomerSeedBooking(user!.id))
+      void loadActiveBooking(user!.id).then((stored) => {
+        setBooking(stored ?? getCustomerSeedBooking(user!.id))
+      })
     }
   }, [role, user!.id])
+
+  useEffect(() => {
+    if (role === 'customer' && user) {
+      void saveActiveBooking(user.id, booking)
+    }
+  }, [booking, role, user])
 
   useEffect(() => {
     if (role === 'host') {
@@ -363,16 +387,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback((next: Screen) => setScreen(next), [])
 
   const viewHostProfile = useCallback(
-    (host: Host) => {
+    (host: Host, options?: { reviewPrompt?: boolean }) => {
       const resolved = applyHostSettings(
         host,
         host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined,
       )
       setSelectedHost(resolved)
+      setReviewProfilePrompt(options?.reviewPrompt ?? false)
       setScreen('customer-host-profile')
     },
     [hostSettingsMap],
   )
+
+  const clearReviewProfilePrompt = useCallback(() => {
+    setReviewProfilePrompt(false)
+  }, [])
 
   const selectHost = useCallback(
     (host: Host) => {
@@ -387,22 +416,103 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const notifyHost = useCallback(
-    async (hostUserId: string | undefined, title: string, body: string) => {
+    async (hostUserId: string | undefined, title: string, body: string, link?: NotificationLink) => {
       if (!hostUserId) return
       const settings = hostSettingsMap[hostUserId]
       if (settings?.notifyNewRequests !== false) {
-        await push(hostUserId, title, body)
+        await push(hostUserId, title, body, link)
       }
     },
     [hostSettingsMap, push],
   )
 
   const notifyCustomer = useCallback(
-    async (customerId: string | undefined, title: string, body: string) => {
+    async (customerId: string | undefined, title: string, body: string, link?: NotificationLink) => {
       if (!customerId) return
-      await push(customerId, title, body)
+      await push(customerId, title, body, link)
     },
     [push],
+  )
+
+  const restoreBookingForGuest = useCallback(
+    async (bookingId?: string): Promise<Booking | null> => {
+      const current = bookingRef.current
+      if (bookingId && current?.id === bookingId) return current
+      if (!bookingId && current) return current
+      if (current && current.customerId === user?.id && current.requestStatus !== 'declined') {
+        return current
+      }
+
+      if (!user) return null
+
+      const stored = await loadActiveBooking(user.id)
+      if (stored && (!bookingId || stored.id === bookingId)) return stored
+
+      const history = await loadCustomerPaymentHistory(user.id)
+      const fromHistory = bookingId
+        ? history.find((entry) => entry.id === bookingId)
+        : history[0]
+      if (fromHistory) return fromHistory
+
+      const seed = getCustomerSeedBooking(user.id)
+      if (seed && (!bookingId || seed.id === bookingId)) return seed
+
+      return null
+    },
+    [user],
+  )
+
+  const openNotification = useCallback(
+    async (notification: AppNotification) => {
+      const link = resolveNotificationLink(notification, role)
+      if (!link) {
+        setScreen('notifications')
+        return
+      }
+
+      if (link.screen === 'customer-tracking') {
+        const restored = await restoreBookingForGuest(link.bookingId || undefined)
+        if (restored) setBooking(restored)
+        setScreen('customer-tracking')
+        return
+      }
+
+      if (link.screen === 'customer-host-profile') {
+        const host = getHostById(link.hostId)
+        if (host) {
+          viewHostProfile(host, { reviewPrompt: true })
+          return
+        }
+        showToast('Host profile unavailable', { icon: 'info' })
+        setScreen('customer-home')
+        return
+      }
+
+      if (link.screen === 'host-dashboard') {
+        setScreen('host-dashboard')
+        return
+      }
+
+      if (link.screen === 'history') {
+        setScreen('history')
+        return
+      }
+
+      setScreen('customer-home')
+    },
+    [restoreBookingForGuest, role, showToast, viewHostProfile],
+  )
+
+  const openNotificationFromPush = useCallback(
+    async (title: string, data: Record<string, unknown>) => {
+      const link = linkFromPushData(data) ?? resolveNotificationLink({ title } as AppNotification, role)
+      if (!link) {
+        setScreen('notifications')
+        return
+      }
+      await openNotification({ id: '', userId: user!.id, title, body: '', time: '', read: true, link })
+    },
+    [openNotification, role, user],
   )
 
   const confirmBooking = useCallback(
@@ -487,11 +597,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         selectedHost.hostUserId,
         'New booking',
         `${user.name} · ${formatDropOffHour(details.dropOffTime)}${clothesSummary ? ` · ${clothesSummary}` : ''}${details.notes.trim() ? ` · "${details.notes.trim()}"` : ''}${delicateNote}${details.loadPhotoUri ? ' · Photo attached' : ''}`,
+        hostDashboardLink(bookingId),
       )
       notifyCustomer(
         user.id,
         'Request sent',
         `${selectedHost.name} will review your load request. We'll notify you when they accept.`,
+        bookingTrackingLink(bookingId),
       )
       showToast('Request sent to host', { icon: 'send' })
     },
@@ -558,8 +670,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const body = needsTransfer
           ? `${hostName} accepted your load! Transfer ${formatMoney(request.totalAmount ?? 0)} to ${bank.bankName} · ${bank.accountNumber}, then send proof on WhatsApp. Open the app for drop-off directions.`
           : `${hostName} accepted your load! Open the app for drop-off directions and gate details.`
-        notifyCustomer(request.customerId, 'Load accepted', body)
-        void scheduleDropOffReminder(request.id, hostName, request.dropOffTime)
+        notifyCustomer(request.customerId, 'Load accepted', body, bookingTrackingLink(load.id))
+        void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
         showToast('Guest notified', { icon: 'check-circle' })
       }
     },
@@ -579,6 +691,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           request.customerId,
           'Request declined',
           'The host could not take your load this time. Try another nearby host.',
+          bookingTrackingLink(requestId),
         )
       }
       setBooking((prev) =>
@@ -647,6 +760,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           notifyTarget.customerId,
           STAGE_LABELS[stage],
           `${notifyTarget.hostName} updated your load — ${STAGE_LABELS[stage].toLowerCase()}.`,
+          bookingTrackingLink(notifyTarget.id),
         )
       }
     },
@@ -666,6 +780,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           pickedUp.customerId,
           'Leave A Review',
           `Thanks for picking up from ${pickedUp.hostName}! Leave a review to help others find great hosts.`,
+          hostReviewLink(pickedUp.hostId),
         )
       }
 
@@ -675,6 +790,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           host.hostUserId,
           'Ask For A Review',
           `${pickedUp.customerName} picked up their load. Ask them to leave a review on Laundry Buddy — it helps you get more bookings.`,
+          hostDashboardLink(),
         )
       }
 
@@ -725,6 +841,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           target.customerId,
           'Payment verified',
           `${target.hostName} confirmed your bank transfer of ${formatMoney(target.totalAmount ?? 0)}.`,
+          bookingTrackingLink(target.id),
         )
         showToast('Payment marked received', { icon: 'check-circle' })
       }
@@ -769,6 +886,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDry,
       confirmPickup,
       confirmTransferPayment,
+      openNotification,
+      openNotificationFromPush,
+      reviewProfilePrompt,
+      clearReviewProfilePrompt,
     }),
     [
       screen,
@@ -805,6 +926,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDry,
       confirmPickup,
       confirmTransferPayment,
+      openNotification,
+      openNotificationFromPush,
+      reviewProfilePrompt,
+      clearReviewProfilePrompt,
     ],
   )
 

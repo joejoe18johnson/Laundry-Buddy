@@ -34,7 +34,6 @@ import { isFullFlowTesting, TESTING_SPLASH_MS } from './src/lib/testingFlow'
 import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
 import { ToastProvider } from './src/context/ToastContext'
-import { getNotificationScreen } from './src/lib/notificationRoutes'
 import {
   addNotificationResponseListener,
   requestPushPermissions,
@@ -128,6 +127,7 @@ function AppShell() {
     locationLoading,
     fetchGpsLocation,
     applyLocationPreferences,
+    openNotificationFromPush,
   } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -208,12 +208,11 @@ function AppShell() {
   const showBottomNav = !HIDE_BOTTOM_NAV.includes(screen)
 
   useEffect(() => {
-    const subscription = addNotificationResponseListener((title) => {
-      const target = getNotificationScreen(title, user!.role)
-      navigate(target ?? 'notifications')
+    const subscription = addNotificationResponseListener((title, data) => {
+      void openNotificationFromPush(title, data)
     })
     return () => subscription.remove()
-  }, [navigate, user])
+  }, [openNotificationFromPush])
 
   return (
     <SafeAreaView style={shellStyles.app} edges={['top']}>

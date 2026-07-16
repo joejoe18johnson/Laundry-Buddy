@@ -8,12 +8,13 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { AppNotification } from '../types'
+import type { AppNotification, NotificationLink } from '../types'
 import {
   initPushNotifications,
   showLocalNotification,
   updateBadgeCount,
 } from '../lib/pushNotifications'
+import { linkToPushData } from '../lib/notificationLinks'
 
 const NOTIFICATIONS_KEY = 'laundry-buddy-notifications'
 
@@ -28,7 +29,7 @@ function nowLabel() {
 interface NotificationState {
   notifications: AppNotification[]
   unreadCount: number
-  push: (userId: string, title: string, body: string, data?: Record<string, unknown>) => Promise<void>
+  push: (userId: string, title: string, body: string, link?: NotificationLink) => Promise<void>
   markRead: (id: string) => Promise<void>
   markAllRead: (userId: string) => Promise<void>
 }
@@ -60,7 +61,7 @@ export function NotificationProvider({
   }, [])
 
   const push = useCallback(
-    async (userId: string, title: string, body: string, data?: Record<string, unknown>) => {
+    async (userId: string, title: string, body: string, link?: NotificationLink) => {
       const item: AppNotification = {
         id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         userId,
@@ -68,6 +69,7 @@ export function NotificationProvider({
         body,
         time: nowLabel(),
         read: false,
+        link,
       }
       setNotifications((prev) => {
         const next = [item, ...prev].slice(0, 100)
@@ -76,7 +78,7 @@ export function NotificationProvider({
       })
 
       if (userId === activeUserId) {
-        await showLocalNotification(title, body, data)
+        await showLocalNotification(title, body, link ? linkToPushData(link) : undefined)
       }
     },
     [activeUserId],

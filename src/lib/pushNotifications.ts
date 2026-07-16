@@ -3,6 +3,7 @@ import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
 import { Platform } from 'react-native'
 import { formatDropOffHour, type DropOffHour } from './dropOffAvailability'
+import { bookingTrackingLink, linkToPushData } from './notificationLinks'
 
 const PERMISSION_PROMPT_KEY = 'laundry-buddy-notif-permission-prompted'
 const ANDROID_CHANNEL_ID = 'laundry-buddy-updates'
@@ -129,7 +130,7 @@ export async function scheduleDropOffReminder(
     content: {
       title: 'Drop-off reminder',
       body: `Head to ${hostName} — your window starts at ${formatDropOffHour(dropOffHour)}.`,
-      data: { bookingId, screen: 'customer-tracking' },
+      data: linkToPushData(bookingTrackingLink(bookingId)),
       sound: 'default',
       ...(Platform.OS === 'android' ? { channelId: ANDROID_CHANNEL_ID } : {}),
     },

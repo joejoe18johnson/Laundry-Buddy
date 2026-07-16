@@ -62,6 +62,24 @@ export function getThemeColors(scheme: ColorScheme): ThemeColors {
   return scheme === 'dark' ? darkColors : lightColors
 }
 
+export const spacing = {
+  screen: 24,
+  sm: 10,
+  md: 18,
+  lg: 28,
+  xl: 36,
+  xxl: 56,
+}
+
+export const radius = {
+  sm: 10,
+  md: 14,
+  lg: 18,
+  xl: 22,
+  sheet: 28,
+  pill: 999,
+}
+
 export type FormStyles = {
   input: {
     borderWidth: number
@@ -132,24 +150,6 @@ export const coverColors: Record<string, [string, string]> = {
   pedro: ['#303030', '#5a5a5a'],
   lucia: ['#353535', '#606060'],
   miguel: ['#282828', '#525252'],
-}
-
-export const spacing = {
-  screen: 24,
-  sm: 10,
-  md: 18,
-  lg: 28,
-  xl: 36,
-  xxl: 56,
-}
-
-export const radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 22,
-  sheet: 28,
-  pill: 999,
 }
 
 export const typography = {

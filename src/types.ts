@@ -69,7 +69,15 @@ export interface AppNotification {
   body: string
   time: string
   read: boolean
+  link?: NotificationLink
 }
+
+export type NotificationLink =
+  | { screen: 'customer-tracking'; bookingId: string }
+  | { screen: 'customer-host-profile'; hostId: string }
+  | { screen: 'host-dashboard'; bookingId?: string }
+  | { screen: 'customer-home' }
+  | { screen: 'history'; bookingId?: string }
 
 export interface HostVerification {
   status: VerificationStatus

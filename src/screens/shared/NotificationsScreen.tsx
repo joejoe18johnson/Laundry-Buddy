@@ -5,7 +5,7 @@ import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../componen
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useUserNotifications } from '../../context/NotificationContext'
-import { getNotificationScreen } from '../../lib/notificationRoutes'
+import { notificationHasDestination } from '../../lib/notificationLinks'
 import {
   getPushPermissionStatus,
   requestPushPermissions,
@@ -36,7 +36,7 @@ function groupNotifications(items: AppNotification[]) {
 
 export function NotificationsScreen() {
   const { user } = useAuth()
-  const { navigate } = useApp()
+  const { navigate, openNotification } = useApp()
   const { notifications, unreadCount, markRead, markAllRead } = useUserNotifications(user?.id)
   const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
 
@@ -49,10 +49,9 @@ export function NotificationsScreen() {
   const backScreen = user.role === 'customer' ? 'customer-home' : 'host-dashboard'
   const sections = groupNotifications(notifications)
 
-  const openNotification = (item: AppNotification) => {
+  const openNotificationItem = (item: AppNotification) => {
     markRead(item.id)
-    const target = getNotificationScreen(item.title, user.role)
-    if (target) navigate(target)
+    void openNotification(item)
   }
 
   return (
@@ -116,12 +115,12 @@ export function NotificationsScreen() {
           <View key={section.title}>
             <Text style={styles.sectionLabel}>{section.title}</Text>
             {section.data.map((item) => {
-              const target = getNotificationScreen(item.title, user.role)
+              const hasDestination = notificationHasDestination(item, user.role)
               return (
                 <Pressable
                   key={item.id}
                   style={[styles.card, !item.read && styles.cardUnread]}
-                  onPress={() => openNotification(item)}
+                  onPress={() => openNotificationItem(item)}
                 >
                   <View style={styles.cardTop}>
                     <Text style={styles.cardTitle}>{item.title}</Text>
@@ -130,7 +129,7 @@ export function NotificationsScreen() {
                   <Text style={styles.cardBody}>{item.body}</Text>
                   <View style={styles.cardFooter}>
                     {!item.read && <View style={styles.unreadDot} />}
-                    {target && (
+                    {hasDestination && (
                       <View style={styles.openHint}>
                         <Text style={styles.openHintText}>Open</Text>
                         <AppIcon name="chevron-right" size={14} color={colors.gray500} />

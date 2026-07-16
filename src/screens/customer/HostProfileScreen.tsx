@@ -80,7 +80,14 @@ function InfoSection({ title, icon, children }: { title: string; icon: 'info' | 
 }
 
 export function HostProfileScreen() {
-  const { selectedHost, navigate, selectHost, getSettingsForHost } = useApp()
+  const {
+    selectedHost,
+    navigate,
+    selectHost,
+    getSettingsForHost,
+    reviewProfilePrompt,
+    clearReviewProfilePrompt,
+  } = useApp()
   const insets = useSafeAreaInsets()
   const footerBottomPad = bottomSafePadding(insets.bottom)
 
@@ -97,10 +104,27 @@ export function HostProfileScreen() {
   ].filter(Boolean)
   const gradient = coverColors[host.id] ?? ['#667eea', '#764ba2']
 
+  const goBack = () => {
+    clearReviewProfilePrompt()
+    navigate('customer-home')
+  }
+
   return (
     <View style={styles.wrapper}>
       <Screen style={styles.scroll}>
-        <BackButton onPress={() => navigate('customer-home')} label="Explore Dryers" />
+        <BackButton onPress={goBack} label="Explore Dryers" />
+
+        {reviewProfilePrompt && (
+          <View style={styles.reviewPrompt}>
+            <AppIcon name="star" size={18} color={colors.black} />
+            <View style={styles.reviewPromptBody}>
+              <Text style={styles.reviewPromptTitle}>Leave A Review For {host.name}</Text>
+              <Text style={styles.reviewPromptSub}>
+                Share how your pickup went — reviews help guests find trusted hosts.
+              </Text>
+            </View>
+          </View>
+        )}
 
         <LinearGradient colors={gradient} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={styles.avatar}>
@@ -241,6 +265,20 @@ export function HostProfileScreen() {
 const styles = StyleSheet.create({
   wrapper: { flex: 1, backgroundColor: colors.white },
   scroll: { paddingTop: spacing.sm },
+  reviewPrompt: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    backgroundColor: colors.gray50,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  reviewPromptBody: { flex: 1, gap: 4 },
+  reviewPromptTitle: { fontSize: 15, fontWeight: '700', lineHeight: 20 },
+  reviewPromptSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
   hero: {
     borderRadius: radius.lg,
     padding: spacing.xl,
