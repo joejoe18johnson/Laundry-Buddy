@@ -52,6 +52,7 @@ import {
   saveLocationPreferences,
   type RadiusOptionKm,
 } from '../lib/locationPreferences'
+import { FILTER_AREA_RADIUS_KM, getFilterAreaCenter } from '../lib/belizeDistricts'
 import * as Location from 'expo-location'
 import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
 import {
@@ -83,6 +84,7 @@ interface AppState {
   searchRadiusKm: number
   requestUserLocation: () => Promise<void>
   setLocationPreset: (label: string, latitude: number, longitude: number) => void
+  focusSearchOnArea: (area: string) => void
   setSearchRadiusKm: (km: RadiusOptionKm) => void
   showMap: boolean
   refreshHostData: () => Promise<void>
@@ -159,7 +161,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userLocation, setUserLocation] = useState<Coordinates>(USER_LOCATION)
   const [userLocationLabel, setUserLocationLabel] = useState('San Ignacio')
   const [locationLoading, setLocationLoading] = useState(false)
-  const [searchRadiusKm, setSearchRadiusKmState] = useState(5)
+  const [searchRadiusKm, setSearchRadiusKmState] = useState(10)
 
   useEffect(() => {
     loadLocationPreferences().then((prefs) => {
@@ -232,6 +234,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       showToast(`Searching near ${label}`, { icon: 'map-pin' })
     },
     [persistLocationPrefs, searchRadiusKm, showToast],
+  )
+
+  const focusSearchOnArea = useCallback(
+    (area: string) => {
+      const center = getFilterAreaCenter(area)
+      if (!center) return
+      const coords = { latitude: center.latitude, longitude: center.longitude }
+      const km = FILTER_AREA_RADIUS_KM as RadiusOptionKm
+      setUserLocation(coords)
+      setUserLocationLabel(center.label)
+      setSearchRadiusKmState(km)
+      persistLocationPrefs(coords, center.label, km)
+      showToast(`Showing hosts within ${km} km of ${center.label}`, { icon: 'map-pin' })
+    },
+    [persistLocationPrefs, showToast],
   )
 
   const setSearchRadiusKm = useCallback(
@@ -671,6 +688,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       searchRadiusKm,
       requestUserLocation,
       setLocationPreset,
+      focusSearchOnArea,
       setSearchRadiusKm,
       showMap,
       refreshHostData,
@@ -704,6 +722,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       searchRadiusKm,
       requestUserLocation,
       setLocationPreset,
+      focusSearchOnArea,
       setSearchRadiusKm,
       showMap,
       refreshHostData,

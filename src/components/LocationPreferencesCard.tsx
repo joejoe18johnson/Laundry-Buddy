@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
-import { LOCATION_PRESETS, RADIUS_OPTIONS_KM, type RadiusOptionKm } from '../lib/locationPreferences'
+import { BELIZE_FILTER_AREAS } from '../lib/belizeDistricts'
+import { RADIUS_OPTIONS_KM, type RadiusOptionKm } from '../lib/locationPreferences'
 import { colors, radius, spacing } from '../theme'
 
 type Props = {
@@ -8,7 +9,7 @@ type Props = {
   radiusKm: number
   locating: boolean
   onUseGps: () => void
-  onSelectPreset: (label: string, latitude: number, longitude: number) => void
+  onSelectArea: (area: string) => void
   onSelectRadius: (km: RadiusOptionKm) => void
   embedded?: boolean
 }
@@ -18,7 +19,7 @@ export function LocationPreferencesCard({
   radiusKm,
   locating,
   onUseGps,
-  onSelectPreset,
+  onSelectArea,
   onSelectRadius,
   embedded = false,
 }: Props) {
@@ -55,15 +56,15 @@ export function LocationPreferencesCard({
 
       <Text style={styles.sectionLabel}>Areas</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-        {LOCATION_PRESETS.map((preset) => {
-          const selected = locationLabel === preset.label
+        {BELIZE_FILTER_AREAS.map((area) => {
+          const selected = locationLabel === area
           return (
             <Pressable
-              key={preset.label}
-              onPress={() => onSelectPreset(preset.label, preset.latitude, preset.longitude)}
+              key={area}
+              onPress={() => onSelectArea(area)}
               style={[styles.chip, selected && styles.chipSelected]}
             >
-              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{preset.label}</Text>
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{area}</Text>
             </Pressable>
           )
         })}

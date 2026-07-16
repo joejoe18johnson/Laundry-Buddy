@@ -1,30 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none">
   <rect width="1024" height="1024" rx="224" fill="#000000"/>
-  <g transform="translate(512 512)">
-    <!-- Washer body -->
-    <rect x="-200" y="-260" width="400" height="520" rx="44" fill="#FFFFFF"/>
-    <!-- Control panel -->
-    <line x1="-170" y1="-180" x2="170" y2="-180" stroke="#242C34" stroke-width="10" stroke-linecap="round"/>
-    <!-- Detergent drawer -->
-    <rect x="-150" y="-248" width="110" height="52" rx="26" fill="#FFFFFF" stroke="#242C34" stroke-width="10"/>
-    <!-- Dial -->
-    <circle cx="-95" cy="-222" r="36" fill="#FFFFFF" stroke="#242C34" stroke-width="10"/>
-    <rect x="-118" y="-232" width="32" height="10" rx="5" fill="#05944F"/>
-    <!-- Settings lines -->
-    <line x1="70" y1="-238" x2="130" y2="-238" stroke="#242C34" stroke-width="10" stroke-linecap="round"/>
-    <line x1="70" y1="-218" x2="130" y2="-218" stroke="#242C34" stroke-width="10" stroke-linecap="round"/>
-    <line x1="70" y1="-198" x2="130" y2="-198" stroke="#242C34" stroke-width="10" stroke-linecap="round"/>
-    <!-- Door -->
-    <circle cx="0" cy="60" r="148" fill="#FFFFFF" stroke="#242C34" stroke-width="10"/>
-    <circle cx="0" cy="60" r="118" fill="#FFFFFF" stroke="#242C34" stroke-width="10"/>
-    <!-- Drum swirl -->
-    <path d="M0 60 C0 -20 80 -30 98 10 C116 50 40 70 0 60Z" stroke="#242C34" stroke-width="10" stroke-linecap="round" fill="none"/>
-    <path d="M0 60 C20 90 90 80 96 40 C102 0 30 -10 0 60Z" stroke="#05944F" stroke-width="10" stroke-linecap="round" fill="none"/>
-    <path d="M0 60 C-70 70 -90 130 -50 148 C-10 166 20 90 0 60Z" stroke="#05944F" stroke-width="10" stroke-linecap="round" fill="none"/>
-    <!-- Filter hatch -->
-    <rect x="70" y="190" width="78" height="52" rx="12" fill="#FFFFFF" stroke="#242C34" stroke-width="10"/>
-    <!-- Feet -->
-    <rect x="-120" y="268" width="52" height="22" rx="6" fill="#242C34"/>
-    <rect x="68" y="268" width="52" height="22" rx="6" fill="#242C34"/>
+  <g transform="translate(512 512) scale(3.5) translate(-110 -110)">
+    <rect x="48" y="36" width="124" height="158" rx="14" fill="#ffffff" stroke="#ffffff" stroke-width="2.6"/>
+    <line x1="58" y1="68" x2="162" y2="68" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+    <rect x="64" y="46" width="34" height="16" rx="8" fill="#000000" stroke="#ffffff" stroke-width="2.6"/>
+    <circle cx="98" cy="54" r="11" fill="#000000" stroke="#ffffff" stroke-width="2.6"/>
+    <rect x="82" y="51" width="10" height="3" rx="1.5" fill="#05944f"/>
+    <line x1="138" y1="49" x2="154" y2="49" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+    <line x1="138" y1="54" x2="154" y2="54" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+    <line x1="138" y1="59" x2="154" y2="59" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="110" cy="162" r="51" fill="#000000" stroke="#ffffff" stroke-width="2.6"/>
+    <circle cx="110" cy="162" r="46" fill="#000000" stroke="#ffffff" stroke-width="2.6"/>
+    <g transform="translate(64 116)">
+      <path d="M46 46 C46 28 62 24 68 38 C74 52 58 62 46 46Z" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <path d="M46 46 C54 62 72 58 74 44 C76 30 58 28 46 46Z" stroke="#05944f" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <path d="M46 46 C28 50 24 66 38 72 C52 78 62 58 46 46Z" stroke="#05944f" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <path d="M46 46 C30 38 38 22 54 24 C70 26 66 42 46 46Z" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <path d="M46 46 C62 38 78 46 76 60 C74 74 54 68 46 46Z" stroke="#05944f" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <path d="M46 46 C58 30 74 34 72 50 C70 66 50 64 46 46Z" stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+    </g>
+    <rect x="134" y="168" width="24" height="16" rx="4" fill="#000000" stroke="#ffffff" stroke-width="2.6"/>
+    <rect x="62" y="194" width="16" height="7" rx="2" fill="#ffffff"/>
+    <rect x="142" y="194" width="16" height="7" rx="2" fill="#ffffff"/>
   </g>
 </svg>

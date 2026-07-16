@@ -16,7 +16,7 @@ import { CloseToMeButton } from './CloseToMeButton'
 import { HostSearchBar } from './HostSearchBar'
 import { ChoiceChip } from './ui'
 import { useApp } from '../context/AppContext'
-import { BELIZE_FILTER_AREAS } from '../lib/belizeDistricts'
+import { BELIZE_FILTER_AREAS, isBelizeFilterArea } from '../lib/belizeDistricts'
 import {
   DEFAULT_HOST_FILTERS,
   filterAndSortHosts,
@@ -111,7 +111,7 @@ function SuggestionRow({
 }
 
 export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, onQueryChange }: Props) {
-  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, userLocationLabel } =
+  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, userLocationLabel, focusSearchOnArea, searchRadiusKm } =
     useApp()
   const [query, setQuery] = useState(initialQuery)
 
@@ -120,11 +120,12 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
   }, [visible, initialQuery])
 
   const trimmed = query.trim()
+  const areaSearchActive = trimmed.length > 0 && isBelizeFilterArea(trimmed)
   const nearbyIds = useMemo(() => new Set(onlineHosts.map((h) => h.id)), [onlineHosts])
 
   const results = useMemo(
-    () => filterAndSortHosts(allOnlineHosts, DEFAULT_HOST_FILTERS, sort, query),
-    [allOnlineHosts, sort, query],
+    () => filterAndSortHosts(areaSearchActive ? onlineHosts : allOnlineHosts, DEFAULT_HOST_FILTERS, sort, query),
+    [allOnlineHosts, areaSearchActive, onlineHosts, sort, query],
   )
 
   const suggestions = useMemo(
@@ -153,7 +154,15 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
       openHost(item.host)
       return
     }
+    if (isBelizeFilterArea(item.label)) {
+      focusSearchOnArea(item.label)
+    }
     handleQueryChange(item.label)
+  }
+
+  const selectFilterArea = (area: string) => {
+    focusSearchOnArea(area)
+    handleQueryChange(area)
   }
 
   const renderResult: ListRenderItem<Host> = ({ item }) => (
@@ -201,7 +210,7 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
               label={area}
               size="compact"
               selected={trimmed.toLowerCase() === area.toLowerCase()}
-              onPress={() => handleQueryChange(area)}
+              onPress={() => selectFilterArea(area)}
             />
           ))}
         </View>
@@ -215,7 +224,9 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
         </Text>
         <Text style={styles.resultsSub}>
           {trimmed
-            ? 'Searching all online hosts — includes towns outside your radius'
+            ? areaSearchActive
+              ? `Hosts within ${searchRadiusKm} km of ${trimmed}`
+              : 'Searching all online hosts — includes towns outside your radius'
             : 'Pick an area or search by host name and town'}
         </Text>
       </View>

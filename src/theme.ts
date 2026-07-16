@@ -16,6 +16,13 @@ export const colors = {
   mapBg: '#e9ecef',
 }
 
+/** Shared brand marks — washer line art (app icon, splash, loading). */
+export const brand = {
+  ink: '#242C34',
+  green: '#05944f',
+  iconBg: '#000000',
+} as const
+
 export const coverColors: Record<string, [string, string]> = {
   maria: ['#1a1a1a', '#404040'],
   lopez: ['#2d2d2d', '#525252'],

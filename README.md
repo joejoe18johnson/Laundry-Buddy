@@ -51,7 +51,7 @@ EAS cloud builds use the committed `ios/` and `android/` projects; run prebuild 
 
 ### App icons
 
-Source artwork lives in `assets/logo-source.png`. Regenerate all Expo and native launcher/splash/notification assets with:
+Source artwork: `assets/icon.svg` (launcher, black + white washer) and `assets/logo-mark.svg` (ink `#242C34` + green `#05944f`). In-app loading uses the same `BrandWasherIcon` / `SplashWasherAnimation`. Regenerate PNGs with:
 
 ```bash
 npm run generate-assets

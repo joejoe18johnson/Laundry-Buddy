@@ -62,7 +62,7 @@ function AppShell() {
     searchRadiusKm,
     locationLoading,
     requestUserLocation,
-    setLocationPreset,
+    focusSearchOnArea,
     setSearchRadiusKm,
   } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
@@ -193,7 +193,7 @@ function AppShell() {
         radiusKm={searchRadiusKm}
         locationLoading={locationLoading}
         onUseGps={requestUserLocation}
-        onSelectPreset={setLocationPreset}
+        onSelectArea={focusSearchOnArea}
         onSelectRadius={setSearchRadiusKm}
         hasActiveLoad={!!booking}
         isHostOnline={hostSettings?.isOnline}

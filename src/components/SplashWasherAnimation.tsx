@@ -1,16 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { Animated, Easing, StyleSheet, View } from 'react-native'
 import Svg, { Circle, Line, Path, Rect } from 'react-native-svg'
-import { colors } from '../theme'
+import { colors, brand } from '../theme'
 
 const SIZE = 220
 const DOOR_CX = 110
 const DOOR_CY = 162
 const DOOR_R = 46
 
-/** Dark navy ink from the reference illustration */
-const INK = '#242C34'
-const GREEN = colors.green
+const INK = brand.ink
+const GREEN = brand.green
 const STROKE = 2.6
 
 function WasherFrame() {

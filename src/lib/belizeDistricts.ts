@@ -12,6 +12,37 @@ export const BELIZE_FILTER_AREAS = [
 
 export type BelizeFilterArea = (typeof BELIZE_FILTER_AREAS)[number]
 
+/** Default search radius when a guest picks one of the curated areas. */
+export const FILTER_AREA_RADIUS_KM = 10
+
+/** Approximate map center for each curated filter area. */
+export const FILTER_AREA_CENTERS: Record<
+  BelizeFilterArea,
+  { latitude: number; longitude: number }
+> = {
+  Belmopan: { latitude: 17.251, longitude: -88.759 },
+  'San Ignacio': { latitude: 17.156, longitude: -89.069 },
+  'Santa Elena': { latitude: 17.151, longitude: -89.064 },
+  'Corozal Town': { latitude: 18.3938, longitude: -88.3885 },
+  'Orange Walk Town': { latitude: 18.0812, longitude: -88.563 },
+  'Belize City': { latitude: 17.5046, longitude: -88.1962 },
+  'San Pedro': { latitude: 17.9214, longitude: -87.9611 },
+  'Caye Caulker': { latitude: 17.7612, longitude: -88.0277 },
+}
+
+export function isBelizeFilterArea(label: string): label is BelizeFilterArea {
+  const key = label.trim().toLowerCase()
+  return BELIZE_FILTER_AREAS.some((area) => area.toLowerCase() === key)
+}
+
+export function getFilterAreaCenter(
+  label: string,
+): ({ label: BelizeFilterArea } & (typeof FILTER_AREA_CENTERS)[BelizeFilterArea]) | null {
+  const match = BELIZE_FILTER_AREAS.find((area) => area.toLowerCase() === label.trim().toLowerCase())
+  if (!match) return null
+  return { label: match, ...FILTER_AREA_CENTERS[match] }
+}
+
 /** The six administrative districts of Belize (legacy / search suggestions). */
 export const BELIZE_DISTRICTS = [
   'Belize',

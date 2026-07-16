@@ -162,15 +162,14 @@ export function buildLeafletMapHtml(
       '</div>';
     }
 
-    const map = L.map('map', { zoomControl: true, attributionControl: true })
-      .setView([you.lat, you.lng], 13);
+    const map = L.map('map', { zoomControl: true, attributionControl: true });
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    L.circle([you.lat, you.lng], {
+    const searchCircle = L.circle([you.lat, you.lng], {
       radius: radiusM,
       color: '#000000',
       weight: 1.5,
@@ -209,6 +208,8 @@ export function buildLeafletMapHtml(
       const bounds = L.latLngBounds([[you.lat, you.lng]]);
       hosts.forEach(function(h) { bounds.extend([h.lat, h.lng]); });
       map.fitBounds(bounds, { padding: [52, 52], maxZoom: 14 });
+    } else {
+      map.fitBounds(searchCircle.getBounds(), { padding: [48, 48], maxZoom: 13 });
     }
 
     setTimeout(function() { map.invalidateSize(); }, 250);

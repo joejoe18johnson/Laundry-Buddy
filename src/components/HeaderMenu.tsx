@@ -24,7 +24,7 @@ type Props = {
   radiusKm?: number
   locationLoading?: boolean
   onUseGps?: () => void
-  onSelectPreset?: (label: string, latitude: number, longitude: number) => void
+  onSelectArea?: (area: string) => void
   onSelectRadius?: (km: RadiusOptionKm) => void
   hasActiveLoad?: boolean
   onExplore?: () => void
@@ -74,7 +74,7 @@ export function HeaderMenu({
   radiusKm,
   locationLoading,
   onUseGps,
-  onSelectPreset,
+  onSelectArea,
   onSelectRadius,
   hasActiveLoad,
   onExplore,
@@ -125,7 +125,7 @@ export function HeaderMenu({
               locationLabel != null &&
               radiusKm != null &&
               onUseGps &&
-              onSelectPreset &&
+              onSelectArea &&
               onSelectRadius ? (
                 <MenuSection title="Location Settings">
                   <View style={styles.locationWrap}>
@@ -135,7 +135,7 @@ export function HeaderMenu({
                       radiusKm={radiusKm}
                       locating={locationLoading ?? false}
                       onUseGps={onUseGps}
-                      onSelectPreset={onSelectPreset}
+                      onSelectArea={onSelectArea}
                       onSelectRadius={onSelectRadius}
                     />
                   </View>

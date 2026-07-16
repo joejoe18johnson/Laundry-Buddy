@@ -32,6 +32,7 @@ import {
   type HostFilters,
   type HostSort,
 } from '../../lib/hostFilters'
+import { isBelizeFilterArea } from '../../lib/belizeDistricts'
 import type { Host } from '../../types'
 import { colors, radius, spacing } from '../../theme'
 
@@ -81,7 +82,7 @@ function nearestSnap(height: number, containerHeight: number, velocityY: number)
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets()
-  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm } = useApp()
+  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm, focusSearchOnArea } = useApp()
   const allHosts = onlineHosts
   const totalHosts = getAvailableHosts().length
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
@@ -101,7 +102,8 @@ export function HomeScreen() {
   const snapRef = useRef<SnapPoint>('half')
 
   const trimmedSearch = searchQuery.trim()
-  const hostSource = trimmedSearch ? allOnlineHosts : allHosts
+  const areaSearchActive = trimmedSearch.length > 0 && isBelizeFilterArea(trimmedSearch)
+  const hostSource = areaSearchActive ? onlineHosts : trimmedSearch ? allOnlineHosts : allHosts
 
   const hosts = useMemo(
     () => filterAndSortHosts(hostSource, filters, sort, searchQuery),
@@ -222,9 +224,18 @@ export function HomeScreen() {
   }
 
   const selectArea = (area: string) => {
+    focusSearchOnArea(area)
     setSearchQuery(area)
     setFilters((prev) => ({ ...prev, location: null }))
     if (snapRef.current === 'map') animateToSnap('half')
+  }
+
+  const handleFiltersChange = (next: HostFilters) => {
+    setFilters(next)
+    if (next.location) {
+      focusSearchOnArea(next.location)
+      setSearchQuery(next.location)
+    }
   }
 
   const renderHost = useCallback<ListRenderItem<Host>>(
@@ -345,7 +356,7 @@ export function HomeScreen() {
           onHostPress={viewHostProfile}
           userLocation={userLocation}
           radiusKm={searchRadiusKm}
-          fitToResults={!!trimmedSearch}
+          fitToResults={!!trimmedSearch && !isBelizeFilterArea(trimmedSearch)}
         />
         {snap !== 'full' && hosts.length > 0 && (
           <View style={styles.mapBadgeWrap} pointerEvents="box-none">
@@ -423,7 +434,7 @@ export function HomeScreen() {
         visible={filtersOpen}
         filters={filters}
         locations={locations}
-        onChange={setFilters}
+        onChange={handleFiltersChange}
         onClose={() => setFiltersOpen(false)}
       />
 
