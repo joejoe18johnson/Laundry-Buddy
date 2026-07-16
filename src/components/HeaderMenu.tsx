@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
+import { LocationPreferencesCard } from './LocationPreferencesCard'
+import type { RadiusOptionKm } from '../lib/locationPreferences'
 import { bottomSafePadding } from '../lib/safeAreaInsets'
 import { colors, radius, spacing } from '../theme'
 import type { User } from '../types'
@@ -18,6 +20,12 @@ type Props = {
   user: User
   onClose: () => void
   onLogout: () => void
+  locationLabel?: string
+  radiusKm?: number
+  locationLoading?: boolean
+  onUseGps?: () => void
+  onSelectPreset?: (label: string, latitude: number, longitude: number) => void
+  onSelectRadius?: (km: RadiusOptionKm) => void
   hasActiveLoad?: boolean
   onExplore?: () => void
   onMyLoad?: () => void
@@ -62,6 +70,12 @@ export function HeaderMenu({
   user,
   onClose,
   onLogout,
+  locationLabel,
+  radiusKm,
+  locationLoading,
+  onUseGps,
+  onSelectPreset,
+  onSelectRadius,
   hasActiveLoad,
   onExplore,
   onMyLoad,
@@ -107,6 +121,27 @@ export function HeaderMenu({
             </View>
 
             <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
+              {isCustomer &&
+              locationLabel != null &&
+              radiusKm != null &&
+              onUseGps &&
+              onSelectPreset &&
+              onSelectRadius ? (
+                <MenuSection title="Location Settings">
+                  <View style={styles.locationWrap}>
+                    <LocationPreferencesCard
+                      embedded
+                      locationLabel={locationLabel}
+                      radiusKm={radiusKm}
+                      locating={locationLoading ?? false}
+                      onUseGps={onUseGps}
+                      onSelectPreset={onSelectPreset}
+                      onSelectRadius={onSelectRadius}
+                    />
+                  </View>
+                </MenuSection>
+              ) : null}
+
               <MenuSection title={isCustomer ? 'Browse' : 'Hosting'}>
                 {isCustomer && onExplore ? (
                   <MenuItem icon="search" label="Explore dryers" onPress={() => go(onExplore)} />
@@ -208,6 +243,7 @@ const styles = StyleSheet.create({
   contact: { fontSize: 12, color: colors.gray400, marginTop: spacing.sm },
   closeBtn: { padding: spacing.sm },
   menu: { flex: 1, paddingVertical: spacing.sm },
+  locationWrap: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   section: { paddingBottom: spacing.sm },
   sectionTitle: {
     fontSize: 11,

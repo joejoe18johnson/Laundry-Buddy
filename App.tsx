@@ -58,6 +58,12 @@ function AppShell() {
     booking,
     navigate,
     hostSettings,
+    userLocationLabel,
+    searchRadiusKm,
+    locationLoading,
+    requestUserLocation,
+    setLocationPreset,
+    setSearchRadiusKm,
   } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -183,6 +189,12 @@ function AppShell() {
         visible={menuOpen}
         user={user!}
         onClose={() => setMenuOpen(false)}
+        locationLabel={userLocationLabel}
+        radiusKm={searchRadiusKm}
+        locationLoading={locationLoading}
+        onUseGps={requestUserLocation}
+        onSelectPreset={setLocationPreset}
+        onSelectRadius={setSearchRadiusKm}
         hasActiveLoad={!!booking}
         isHostOnline={hostSettings?.isOnline}
         notificationCount={unreadCount}

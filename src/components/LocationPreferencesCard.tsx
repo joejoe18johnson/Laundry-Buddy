@@ -10,6 +10,7 @@ type Props = {
   onUseGps: () => void
   onSelectPreset: (label: string, latitude: number, longitude: number) => void
   onSelectRadius: (km: RadiusOptionKm) => void
+  embedded?: boolean
 }
 
 export function LocationPreferencesCard({
@@ -19,9 +20,10 @@ export function LocationPreferencesCard({
   onUseGps,
   onSelectPreset,
   onSelectRadius,
+  embedded = false,
 }: Props) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, embedded && styles.cardEmbedded]}>
       <View style={styles.cardHeader}>
         <AppIcon name="map-pin" size={18} color={colors.gray600} />
         <View style={styles.headerText}>
@@ -97,6 +99,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     backgroundColor: colors.gray50,
     gap: spacing.sm,
+  },
+  cardEmbedded: {
+    marginBottom: 0,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   headerText: { flex: 1, gap: 2 },

@@ -1,5 +1,4 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { LocationPreferencesCard } from '../../components/LocationPreferencesCard'
 import { AppIcon } from '../../components/AppIcon'
 import { BackButton, BrandSwitch, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
@@ -37,7 +36,7 @@ export function AccountScreen() {
     enableBiometricLogin,
     disableBiometricLogin,
   } = useAuth()
-  const { navigate, userLocationLabel, searchRadiusKm, locationLoading, requestUserLocation, setLocationPreset, setSearchRadiusKm } = useApp()
+  const { navigate } = useApp()
 
   if (!user) return null
 
@@ -92,17 +91,6 @@ export function AccountScreen() {
           />
         ) : null}
       </View>
-
-      {isCustomer ? (
-        <LocationPreferencesCard
-          locationLabel={userLocationLabel}
-          radiusKm={searchRadiusKm}
-          locating={locationLoading}
-          onUseGps={requestUserLocation}
-          onSelectPreset={setLocationPreset}
-          onSelectRadius={setSearchRadiusKm}
-        />
-      ) : null}
 
       {biometricSupport.available ? (
         <View style={styles.securityCard}>
