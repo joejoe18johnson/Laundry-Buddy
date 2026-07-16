@@ -50,7 +50,6 @@ export function WelcomeScreen() {
         <Text style={styles.tagline}>
           Book a neighbor's dryer anywhere in {ACTIVE_REGION_LABEL} — free for the community.
         </Text>
-        <Text style={styles.regionNote}>All six districts · find hosts near you</Text>
       </View>
 
       {showBiometric ? (
@@ -109,7 +108,6 @@ const styles = StyleSheet.create({
   logo: { marginBottom: spacing.lg },
   title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, marginBottom: spacing.md, lineHeight: 40, textAlign: 'center' },
   tagline: { fontSize: 16, color: colors.gray500, lineHeight: 26, textAlign: 'center' },
-  regionNote: { fontSize: 13, color: colors.gray400, marginTop: spacing.sm, fontStyle: 'italic', textAlign: 'center' },
   gap: { height: spacing.md },
   biometricHint: {
     flexDirection: 'row',

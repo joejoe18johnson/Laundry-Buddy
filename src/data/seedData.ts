@@ -2,7 +2,7 @@ import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '14'
+export const SEED_DATA_VERSION = '15'
 
 export const TRAINING_PASSWORD = 'demo1234'
 
@@ -15,7 +15,6 @@ export const WEATHER = {
 }
 
 export const SEED_USERS: User[] = [
-  // ── Customers ──
   {
     id: 'user-ana',
     name: 'Ana',
@@ -24,37 +23,6 @@ export const SEED_USERS: User[] = [
     password: TRAINING_PASSWORD,
     role: 'customer',
   },
-  {
-    id: 'user-carlos',
-    name: 'Carlos',
-    phone: '5016002222',
-    email: 'carlos@gmail.com',
-    password: TRAINING_PASSWORD,
-    role: 'customer',
-  },
-  {
-    id: 'user-keisha',
-    name: 'Keisha',
-    phone: '5016003333',
-    email: 'keisha@ub.edu.bz',
-    password: TRAINING_PASSWORD,
-    role: 'customer',
-  },
-  {
-    id: 'user-james-guest',
-    name: 'James',
-    phone: '5016004444',
-    password: TRAINING_PASSWORD,
-    role: 'customer',
-  },
-  {
-    id: 'user-rosa',
-    name: 'Rosa',
-    email: 'rosa.mopan@gmail.com',
-    password: TRAINING_PASSWORD,
-    role: 'customer',
-  },
-  // ── Hosts (verified) ──
   {
     id: 'user-maria',
     name: 'Maria',
@@ -68,171 +36,6 @@ export const SEED_USERS: User[] = [
       addressUploaded: true,
       address: '22 Coconut St., Las Flores, Cayo',
       submittedAt: '2026-06-15T10:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-lopez',
-    name: 'Mr. Lopez',
-    email: 'lopez@example.com',
-    phone: '5016005678',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '14 University Drive, UB Area, Cayo',
-      submittedAt: '2026-06-20T14:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-castillo',
-    name: 'Mrs. Castillo',
-    email: 'castillo@example.com',
-    phone: '5016007890',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '8 Hattieville Rd., Cayo',
-      submittedAt: '2026-07-01T09:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-rupert',
-    name: 'Don Rupert',
-    phone: '5016009012',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '3 Mile Roaring Creek, Cayo',
-      submittedAt: '2026-07-05T11:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-elena',
-    name: 'Elena',
-    email: 'elena.ow@example.com',
-    phone: '5016007788',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '15 Main St., Orange Walk Town',
-      submittedAt: '2026-06-28T12:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-marcus',
-    name: 'Marcus',
-    email: 'marcus.bze@example.com',
-    phone: '5016008899',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '8 North Front St., Belize City',
-      submittedAt: '2026-07-02T15:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-carmen',
-    name: 'Carmen',
-    email: 'carmen@example.com',
-    phone: '5016002468',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '6 Cristo Rey Rd., Cayo',
-      submittedAt: '2026-06-25T10:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-pedro',
-    name: 'Pedro',
-    email: 'pedro@example.com',
-    phone: '5016003579',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '12 Bullet Tree Rd., Cayo',
-      submittedAt: '2026-06-27T11:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-lucia',
-    name: 'Lucía',
-    email: 'lucia@example.com',
-    phone: '5016004680',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '4 Esperanza St., Cayo',
-      submittedAt: '2026-07-03T09:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-miguel',
-    name: 'Miguel',
-    email: 'miguel@example.com',
-    phone: '5016005791',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '9 Georgeville Rd., Cayo',
-      submittedAt: '2026-07-06T14:00:00.000Z',
-    },
-  },
-  // ── Hosts (verification states for training) ──
-  {
-    id: 'user-sandra',
-    name: 'Sandra',
-    phone: '5016003456',
-    email: 'sandra@example.com',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'pending',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '5 Salvapan Lane, Cayo',
-      submittedAt: '2026-07-12T16:00:00.000Z',
-    },
-  },
-  {
-    id: 'user-james-host',
-    name: 'James',
-    email: 'james.host@example.com',
-    phone: '5016004567',
-    password: TRAINING_PASSWORD,
-    role: 'host',
-    hostVerification: {
-      status: 'rejected',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '12 Maya Mopan Blvd., Cayo',
-      submittedAt: '2026-07-10T08:00:00.000Z',
     },
   },
 ]
