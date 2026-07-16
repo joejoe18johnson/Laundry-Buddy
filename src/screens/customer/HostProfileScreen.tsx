@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, Text, View } from 'react-native'
@@ -6,6 +7,7 @@ import { AppIcon } from '../../components/AppIcon'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { getHostProfileDetails } from '../../data/mockData'
+import { summarizeRatings } from '../../lib/reviewStorage'
 import { formatHostFooterMeta, formatHostPrice } from '../../lib/hostFilters'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
@@ -80,22 +82,23 @@ function InfoSection({ title, icon, children }: { title: string; icon: 'info' | 
 }
 
 export function HostProfileScreen() {
-  const {
-    selectedHost,
-    navigate,
-    selectHost,
-    getSettingsForHost,
-    reviewProfilePrompt,
-    clearReviewProfilePrompt,
-  } = useApp()
+  const { selectedHost, navigate, selectHost, getSettingsForHost, getReviewsForHost, refreshHostReviews } =
+    useApp()
   const insets = useSafeAreaInsets()
   const footerBottomPad = bottomSafePadding(insets.bottom)
+
+  useEffect(() => {
+    if (!selectedHost) return
+    void refreshHostReviews(selectedHost.id)
+  }, [selectedHost?.id, refreshHostReviews])
 
   if (!selectedHost) return null
 
   const host = selectedHost
   const profile = getHostProfileDetails(host.id)
   const settings = getSettingsForHost(host.hostUserId)
+  const reviews = getReviewsForHost(host.id)
+  const ratingSummary = summarizeRatings(reviews)
   const paymentMethods = [
     settings.acceptCash ? 'Cash' : null,
     settings.acceptBankTransfer && settings.bankDetails.accountNumber.trim()
@@ -104,27 +107,10 @@ export function HostProfileScreen() {
   ].filter(Boolean)
   const gradient = coverColors[host.id] ?? ['#667eea', '#764ba2']
 
-  const goBack = () => {
-    clearReviewProfilePrompt()
-    navigate('customer-home')
-  }
-
   return (
     <View style={styles.wrapper}>
       <Screen style={styles.scroll}>
-        <BackButton onPress={goBack} label="Explore Dryers" />
-
-        {reviewProfilePrompt && (
-          <View style={styles.reviewPrompt}>
-            <AppIcon name="star" size={18} color={colors.black} />
-            <View style={styles.reviewPromptBody}>
-              <Text style={styles.reviewPromptTitle}>Leave A Review For {host.name}</Text>
-              <Text style={styles.reviewPromptSub}>
-                Share how your pickup went — reviews help guests find trusted hosts.
-              </Text>
-            </View>
-          </View>
-        )}
+        <BackButton onPress={() => navigate('customer-home')} label="Explore Dryers" />
 
         <LinearGradient colors={gradient} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={styles.avatar}>
@@ -142,10 +128,19 @@ export function HostProfileScreen() {
             <Text style={styles.heroLocationText}>{host.location}{host.district ? ` · ${host.district}` : ''}</Text>
           </View>
           <View style={styles.heroRating}>
-            <Stars rating={host.rating || 5} size={16} filledColor={colors.white} emptyColor="rgba(255,255,255,0.35)" />
+            <Stars
+              rating={ratingSummary.rating || host.rating || 5}
+              size={16}
+              filledColor={colors.white}
+              emptyColor="rgba(255,255,255,0.35)"
+            />
             <Text style={styles.heroRatingText}>
-              {host.rating > 0 ? host.rating.toFixed(1) : 'New'}
-              {host.reviewCount ? ` · ${host.reviewCount} reviews` : ''}
+              {(ratingSummary.rating || host.rating) > 0
+                ? (ratingSummary.rating || host.rating).toFixed(1)
+                : 'New'}
+              {ratingSummary.reviewCount || host.reviewCount
+                ? ` · ${ratingSummary.reviewCount || host.reviewCount} reviews`
+                : ''}
             </Text>
           </View>
         </LinearGradient>
@@ -227,13 +222,13 @@ export function HostProfileScreen() {
           <View style={styles.sectionHeader}>
             <AppIcon name="message-circle" size={18} />
             <Text style={styles.sectionTitle}>
-              Reviews{profile.reviews.length ? ` (${profile.reviews.length})` : ''}
+              Reviews{reviews.length ? ` (${reviews.length})` : ''}
             </Text>
           </View>
-          {profile.reviews.length === 0 ? (
+          {reviews.length === 0 ? (
             <Text style={styles.emptyReviews}>No Reviews Yet — Be The First To Book.</Text>
           ) : (
-            profile.reviews.map((review) => <ReviewCard key={review.id} review={review} />)
+            reviews.map((review) => <ReviewCard key={review.id} review={review} />)
           )}
         </View>
 
@@ -265,20 +260,6 @@ export function HostProfileScreen() {
 const styles = StyleSheet.create({
   wrapper: { flex: 1, backgroundColor: colors.white },
   scroll: { paddingTop: spacing.sm },
-  reviewPrompt: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    backgroundColor: colors.gray50,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  reviewPromptBody: { flex: 1, gap: 4 },
-  reviewPromptTitle: { fontSize: 15, fontWeight: '700', lineHeight: 20 },
-  reviewPromptSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
   hero: {
     borderRadius: radius.lg,
     padding: spacing.xl,

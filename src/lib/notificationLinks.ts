@@ -4,8 +4,8 @@ export function bookingTrackingLink(bookingId: string): NotificationLink {
   return { screen: 'customer-tracking', bookingId }
 }
 
-export function hostReviewLink(hostId: string): NotificationLink {
-  return { screen: 'customer-host-profile', hostId }
+export function hostReviewLink(hostId: string, bookingId?: string): NotificationLink {
+  return { screen: 'customer-leave-review', hostId, bookingId }
 }
 
 export function hostDashboardLink(bookingId?: string): NotificationLink {
@@ -18,6 +18,13 @@ export function linkFromPushData(data: Record<string, unknown>): NotificationLin
 
   if (screen === 'customer-tracking' && typeof data.bookingId === 'string') {
     return { screen, bookingId: data.bookingId }
+  }
+  if (screen === 'customer-leave-review' && typeof data.hostId === 'string') {
+    return {
+      screen,
+      hostId: data.hostId,
+      bookingId: typeof data.bookingId === 'string' ? data.bookingId : undefined,
+    }
   }
   if (screen === 'customer-host-profile' && typeof data.hostId === 'string') {
     return { screen, hostId: data.hostId }
@@ -50,7 +57,7 @@ export function inferNotificationLink(title: string, role: AppRole): Notificatio
   }
 
   if (lower.includes('review')) {
-    return { screen: 'customer-home' }
+    return { screen: 'customer-leave-review', hostId: '' }
   }
 
   if (

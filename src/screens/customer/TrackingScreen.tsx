@@ -6,28 +6,22 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostById } from '../../data/mockData'
 import { applyHostListing } from '../../lib/hostListing'
-import { getBookingAmount, formatMoney, formatPaymentMethod } from '../../lib/bookingPayments'
+import { getBookingAmount, formatMoney } from '../../lib/bookingPayments'
 import {
   buildTransferProofMessage,
   formatWhatsAppDisplay,
   sendTransferProofViaWhatsApp,
 } from '../../lib/whatsapp'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
+import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
+import { getGuestProgressStep } from '../../lib/loadProgress'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { colors, radius, spacing } from '../../theme'
-import type { BookingStage } from '../../types'
-
-const STAGES: { key: BookingStage; label: string; desc: string; icon: 'shopping-bag' | 'clock' | 'wind' | 'check-circle' }[] = [
-  { key: 'got-bag', label: 'Got bag', desc: 'Host received your laundry', icon: 'shopping-bag' },
-  { key: 'waiting', label: 'Waiting', desc: 'Queued for the dryer', icon: 'clock' },
-  { key: 'drying', label: 'Drying', desc: 'Your load is in the dryer', icon: 'wind' },
-  { key: 'ready', label: 'Ready', desc: 'Pick up anytime', icon: 'check-circle' },
-]
 
 export function TrackingScreen() {
   const { user } = useAuth()
-  const { booking, navigate, getSettingsForHost, confirmPickup, viewHostProfile } = useApp()
+  const { booking, navigate, getSettingsForHost, confirmPickup, openLeaveReview } = useApp()
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
   const pulse = useRef(new Animated.Value(1)).current
@@ -64,8 +58,7 @@ export function TrackingScreen() {
     )
   }
 
-  const stageIndex = STAGES.findIndex((s) => s.key === booking.stage)
-  const current = STAGES[stageIndex]
+  const progressStep = getGuestProgressStep(booking)
   const host = getHostById(booking.hostId)
   const hostSettings = getSettingsForHost(host?.hostUserId)
   const resolvedHost = host ? applyHostListing(host, hostSettings) : null
@@ -82,8 +75,10 @@ export function TrackingScreen() {
 
   const handleConfirmPickup = () => {
     if (!booking) return
-    confirmPickup(booking.id)
-    if (host) viewHostProfile(host, { reviewPrompt: true })
+    const bookingId = booking.id
+    const hostId = booking.hostId
+    confirmPickup(bookingId)
+    openLeaveReview(hostId, bookingId)
   }
 
   const statusBadge = isDeclined
@@ -150,18 +145,6 @@ export function TrackingScreen() {
         </Pressable>
       )}
 
-      {isPending && (
-        <View style={styles.pendingCard}>
-          <AppIcon name="clock" size={18} color={colors.gray600} />
-          <View style={styles.pendingBody}>
-            <Text style={styles.pendingTitle}>Awaiting host acceptance</Text>
-            <Text style={styles.pendingSub}>
-              {booking.hostName} is reviewing your request. You'll get a notification when they accept — then bank details, drop-off address, and directions will appear here.
-            </Text>
-          </View>
-        </View>
-      )}
-
       {isDeclined && (
         <View style={styles.declinedCard}>
           <AppIcon name="x-circle" size={18} color={colors.danger} />
@@ -218,57 +201,25 @@ export function TrackingScreen() {
         </View>
       )}
 
-      {!isPending && !isDeclined && (
+      {!isDeclined && (
         <>
-      <View style={styles.statusHeader}>
-        <AppIcon name="package" size={20} color={colors.gray500} />
-        <Text style={styles.eyebrow}>Your load</Text>
-        <StatusBadge label={statusBadge.label} variant={statusBadge.variant} />
-      </View>
-      <Text style={styles.statusTitle}>{current.label}</Text>
-      <Text style={styles.statusSub}>
-        {current.desc} · with {booking.hostName}
-        {booking.paymentMethod ? ` · ${formatPaymentMethod(booking.paymentMethod)}` : ''}
-      </Text>
+          <View style={styles.statusHeader}>
+            <AppIcon name="package" size={20} color={colors.gray500} />
+            <Text style={styles.eyebrow}>Load progress</Text>
+            <StatusBadge label={statusBadge.label} variant={statusBadge.variant} />
+          </View>
 
-      <View style={styles.timeline}>
-        {STAGES.map((stage, i) => {
-          const done = i < stageIndex
-          const active = i === stageIndex
-          const time = booking.stageTimes[stage.key]
-          return (
-            <View key={stage.key} style={styles.timelineRow}>
-              <View style={styles.timelineLeft}>
-                <Animated.View
-                  style={[
-                    styles.dot,
-                    done && styles.dotDone,
-                    active && styles.dotActive,
-                    active && { transform: [{ scale: pulse }] },
-                  ]}
-                />
-                {i < STAGES.length - 1 && (
-                  <View style={[styles.line, done && styles.lineDone]} />
-                )}
-              </View>
-              <View style={styles.timelineContent}>
-                <View style={styles.timelineLabelRow}>
-                  <AppIcon
-                    name={stage.icon}
-                    size={16}
-                    color={done || active ? colors.black : colors.gray400}
-                  />
-                  <Text style={[styles.timelineLabel, (done || active) && styles.timelineLabelActive]}>
-                    {stage.label}
-                  </Text>
-                </View>
-                {time && <Text style={styles.timelineTime}>{time}</Text>}
-              </View>
-            </View>
-          )
-        })}
-      </View>
+          <LoadProgressTracker booking={booking} pulse={pulse} />
         </>
+      )}
+
+      {!isDeclined && isPending && (
+        <View style={styles.infoCard}>
+          <AppIcon name="message-circle" size={18} color={colors.gray600} />
+          <Text style={styles.infoText}>
+            Step 1 is complete once {booking.hostName} accepts. You'll see drop-off details and live updates here.
+          </Text>
+        </View>
       )}
 
       {!isDeclined && booking.clothesList && booking.clothesList.length > 0 && (
@@ -277,17 +228,15 @@ export function TrackingScreen() {
         </View>
       )}
 
-      {!isDeclined && (
+      {!isDeclined && !isPending && (
       <View style={styles.infoCard}>
         <AppIcon name="message-circle" size={18} color={colors.gray600} />
         <Text style={styles.infoText}>
-          {isPending
-            ? "We'll notify you when the host accepts. Drop-off directions stay hidden until then for your safety."
-            : isReadyForPickup
-              ? 'Your load is ready! Pick it up, then confirm below so we can close out your booking.'
-              : transferPending
-                ? 'Message your host on WhatsApp with your transfer screenshot.'
-                : "We'll notify you when your load is ready."}
+          {isReadyForPickup
+            ? 'Your load is ready! Pick it up, then confirm below so we can close out your booking.'
+            : transferPending
+              ? 'Message your host on WhatsApp with your transfer screenshot.'
+              : `Currently at step ${progressStep.number}: ${progressStep.description}`}
         </Text>
       </View>
       )}
@@ -438,38 +387,7 @@ const styles = StyleSheet.create({
   paidText: { fontSize: 14, fontWeight: '600', color: colors.green },
   statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'capitalize', letterSpacing: 0.4 },
-  statusTitle: { fontSize: 32, fontWeight: '700', marginVertical: spacing.sm, lineHeight: 38 },
-  statusSub: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
   clothesSection: { marginBottom: spacing.lg },
-  timeline: { marginBottom: spacing.lg },
-  timelineRow: { flexDirection: 'row', minHeight: 56 },
-  timelineLeft: { width: 24, alignItems: 'center' },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.gray200,
-    marginTop: 4,
-  },
-  dotDone: { backgroundColor: colors.black },
-  dotActive: {
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.black,
-  },
-  line: { flex: 1, width: 2, backgroundColor: colors.gray100, marginVertical: 4 },
-  lineDone: { backgroundColor: colors.black },
-  timelineContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingBottom: spacing.md,
-    paddingLeft: spacing.md,
-  },
-  timelineLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  timelineLabel: { fontSize: 15, color: colors.gray400, fontWeight: '500' },
-  timelineLabelActive: { color: colors.black, fontWeight: '600' },
-  timelineTime: { fontSize: 13, color: colors.gray500 },
   infoCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',

@@ -32,6 +32,12 @@ import {
 } from '../lib/paymentHistoryStorage'
 import { loadActiveBooking, saveActiveBooking } from '../lib/bookingStorage'
 import {
+  loadStoredReviewsForHost,
+  markBookingReviewed,
+  mergeHostReviews,
+  saveReviewForHost,
+} from '../lib/reviewStorage'
+import {
   bookingTrackingLink,
   hostDashboardLink,
   hostReviewLink,
@@ -78,6 +84,7 @@ import {
   type SheetsOption,
   type AppNotification,
   type NotificationLink,
+  type HostReview,
 } from '../types'
 
 interface AppState {
@@ -104,7 +111,18 @@ interface AppState {
   showMap: boolean
   refreshHostData: () => Promise<void>
   navigate: (screen: Screen) => void
-  viewHostProfile: (host: Host, options?: { reviewPrompt?: boolean }) => void
+  viewHostProfile: (host: Host) => void
+  openLeaveReview: (hostId: string, bookingId?: string) => void
+  submitHostReview: (input: {
+    hostId: string
+    bookingId?: string | null
+    rating: number
+    comment: string
+  }) => Promise<void>
+  getReviewsForHost: (hostId: string) => HostReview[]
+  refreshHostReviews: (hostId: string) => Promise<void>
+  reviewHostId: string | null
+  reviewBookingId: string | null
   selectHost: (host: Host) => void
   setShowMap: (show: boolean) => void
   getSettingsForHost: (hostUserId?: string) => HostSettings
@@ -127,8 +145,6 @@ interface AppState {
   confirmTransferPayment: (loadId: string) => void
   openNotification: (notification: AppNotification) => Promise<void>
   openNotificationFromPush: (title: string, data: Record<string, unknown>) => Promise<void>
-  reviewProfilePrompt: boolean
-  clearReviewProfilePrompt: () => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -183,7 +199,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userLocationLabel, setUserLocationLabel] = useState('San Ignacio')
   const [locationLoading, setLocationLoading] = useState(false)
   const [searchRadiusKm, setSearchRadiusKmState] = useState(10)
-  const [reviewProfilePrompt, setReviewProfilePrompt] = useState(false)
+  const [reviewHostId, setReviewHostId] = useState<string | null>(null)
+  const [reviewBookingId, setReviewBookingId] = useState<string | null>(null)
+  const [hostReviewsMap, setHostReviewsMap] = useState<Record<string, HostReview[]>>({})
 
   const bookingRef = useRef(booking)
   const activeLoadsRef = useRef(activeLoads)
@@ -387,21 +405,70 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback((next: Screen) => setScreen(next), [])
 
   const viewHostProfile = useCallback(
-    (host: Host, options?: { reviewPrompt?: boolean }) => {
+    (host: Host) => {
       const resolved = applyHostSettings(
         host,
         host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined,
       )
       setSelectedHost(resolved)
-      setReviewProfilePrompt(options?.reviewPrompt ?? false)
       setScreen('customer-host-profile')
     },
     [hostSettingsMap],
   )
 
-  const clearReviewProfilePrompt = useCallback(() => {
-    setReviewProfilePrompt(false)
+  const refreshHostReviews = useCallback(async (hostId: string) => {
+    const stored = await loadStoredReviewsForHost(hostId)
+    setHostReviewsMap((prev) => ({ ...prev, [hostId]: stored }))
   }, [])
+
+  const getReviewsForHost = useCallback(
+    (hostId: string) => mergeHostReviews(hostId, hostReviewsMap[hostId] ?? []),
+    [hostReviewsMap],
+  )
+
+  const openLeaveReview = useCallback(
+    (hostId: string, bookingId?: string) => {
+      setReviewHostId(hostId)
+      setReviewBookingId(bookingId ?? null)
+      void refreshHostReviews(hostId)
+      setScreen('customer-leave-review')
+    },
+    [refreshHostReviews],
+  )
+
+  const submitHostReview = useCallback(
+    async ({
+      hostId,
+      bookingId,
+      rating,
+      comment,
+    }: {
+      hostId: string
+      bookingId?: string | null
+      rating: number
+      comment: string
+    }) => {
+      if (!user) return
+      const review: HostReview = {
+        id: `rev-${Date.now()}`,
+        author: user.name,
+        rating,
+        comment,
+        date: new Date().toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+      }
+      await saveReviewForHost(hostId, review)
+      if (bookingId) await markBookingReviewed(user.id, bookingId)
+      await refreshHostReviews(hostId)
+      setReviewHostId(null)
+      setReviewBookingId(null)
+      showToast('Review submitted', { icon: 'star' })
+    },
+    [refreshHostReviews, showToast, user],
+  )
 
   const selectHost = useCallback(
     (host: Host) => {
@@ -477,10 +544,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      if (link.screen === 'customer-leave-review') {
+        if (!link.hostId) {
+          showToast('Review link expired — open your latest pickup alert', { icon: 'info' })
+          setScreen('notifications')
+          return
+        }
+        openLeaveReview(link.hostId, link.bookingId)
+        return
+      }
+
       if (link.screen === 'customer-host-profile') {
         const host = getHostById(link.hostId)
         if (host) {
-          viewHostProfile(host, { reviewPrompt: true })
+          viewHostProfile(host)
           return
         }
         showToast('Host profile unavailable', { icon: 'info' })
@@ -500,7 +577,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setScreen('customer-home')
     },
-    [restoreBookingForGuest, role, showToast, viewHostProfile],
+    [openLeaveReview, restoreBookingForGuest, role, showToast, viewHostProfile],
   )
 
   const openNotificationFromPush = useCallback(
@@ -780,7 +857,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           pickedUp.customerId,
           'Leave A Review',
           `Thanks for picking up from ${pickedUp.hostName}! Leave a review to help others find great hosts.`,
-          hostReviewLink(pickedUp.hostId),
+          hostReviewLink(pickedUp.hostId, pickedUp.id),
         )
       }
 
@@ -875,6 +952,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refreshHostData,
       navigate,
       viewHostProfile,
+      openLeaveReview,
+      submitHostReview,
+      getReviewsForHost,
+      refreshHostReviews,
+      reviewHostId,
+      reviewBookingId,
       selectHost,
       setShowMap,
       getSettingsForHost,
@@ -888,8 +971,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       confirmTransferPayment,
       openNotification,
       openNotificationFromPush,
-      reviewProfilePrompt,
-      clearReviewProfilePrompt,
     }),
     [
       screen,
@@ -916,6 +997,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refreshHostData,
       navigate,
       viewHostProfile,
+      openLeaveReview,
+      submitHostReview,
+      getReviewsForHost,
+      refreshHostReviews,
+      reviewHostId,
+      reviewBookingId,
       selectHost,
       getSettingsForHost,
       updateHostSettings,
@@ -928,8 +1015,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       confirmTransferPayment,
       openNotification,
       openNotificationFromPush,
-      reviewProfilePrompt,
-      clearReviewProfilePrompt,
     ],
   )
 

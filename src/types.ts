@@ -14,6 +14,7 @@ export type Screen =
   | 'customer-booking'
   | 'customer-host-profile'
   | 'customer-tracking'
+  | 'customer-leave-review'
   | 'host-dashboard'
   | 'host-mark-dry'
   | 'history'
@@ -74,6 +75,7 @@ export interface AppNotification {
 
 export type NotificationLink =
   | { screen: 'customer-tracking'; bookingId: string }
+  | { screen: 'customer-leave-review'; hostId: string; bookingId?: string }
   | { screen: 'customer-host-profile'; hostId: string }
   | { screen: 'host-dashboard'; bookingId?: string }
   | { screen: 'customer-home' }

@@ -13,6 +13,7 @@ import { HomeScreen } from './src/screens/customer/HomeScreen'
 import { BookingScreen } from './src/screens/customer/BookingScreen'
 import { HostProfileScreen } from './src/screens/customer/HostProfileScreen'
 import { TrackingScreen } from './src/screens/customer/TrackingScreen'
+import { LeaveReviewScreen } from './src/screens/customer/LeaveReviewScreen'
 import { DashboardScreen } from './src/screens/host/DashboardScreen'
 import { HostHubScreen } from './src/screens/host/HostHubScreen'
 import { MarkDryScreen } from './src/screens/host/MarkDryScreen'
@@ -47,6 +48,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {})
 const HIDE_BOTTOM_NAV: Screen[] = [
   'customer-booking',
   'customer-host-profile',
+  'customer-leave-review',
   'host-mark-dry',
   'notifications',
   'help',
@@ -274,6 +276,7 @@ function AppShell() {
         {screen === 'customer-host-profile' && <HostProfileScreen />}
         {screen === 'customer-booking' && <BookingScreen />}
         {screen === 'customer-tracking' && <TrackingScreen />}
+        {screen === 'customer-leave-review' && <LeaveReviewScreen />}
         {screen === 'host-dashboard' && <DashboardScreen />}
         {screen === 'host-mark-dry' && <MarkDryScreen />}
         {screen === 'history' && <HistoryScreen />}
