@@ -1,5 +1,6 @@
 import type { Coordinates } from './geo'
 import type { Host } from '../types'
+import { POSITRON_TILE_ATTRIBUTION, POSITRON_TILE_URL } from './mapRegion'
 
 const CORE = 42
 const HALO = 56
@@ -29,7 +30,7 @@ export function buildLeafletMapHtml(
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #map { width: 100%; height: 100%; background: #e9ecef; }
+    html, body, #map { width: 100%; height: 100%; background: #f2f2f2; }
 
     /* Reset Leaflet divIcon defaults that stretch markers into pills */
     .leaflet-div-icon {
@@ -173,9 +174,10 @@ export function buildLeafletMapHtml(
     const map = L.map('map', { zoomControl: true, attributionControl: true })
       .setView([you.lat, you.lng], zoomForRadiusM(radiusM));
 
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap'
+    L.tileLayer('${POSITRON_TILE_URL}', {
+      subdomains: 'abcd',
+      maxZoom: 20,
+      attribution: '${POSITRON_TILE_ATTRIBUTION}'
     }).addTo(map);
 
     const searchCircle = L.circle([you.lat, you.lng], {

@@ -63,11 +63,15 @@ export function buildSampleMapUrl(region: MapRegion, width = 800, height = 800):
   )
 }
 
-/** OpenFreeMap vector style — free, no API key (MapLibre). */
+/** OpenFreeMap Positron — light gray vector style (MapLibre). */
 export const OPENFREEMAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 
-/** OpenStreetMap raster tiles — free, no API key required. */
-export const OSM_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+/** Carto Positron raster tiles — same look for Leaflet / WebView fallback. */
+export const POSITRON_TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+export const POSITRON_TILE_ATTRIBUTION = '&copy; OpenStreetMap &copy; CARTO'
+
+/** @deprecated Use POSITRON_TILE_URL — kept for legacy references. */
+export const OSM_TILE_URL = POSITRON_TILE_URL
 
 export function regionToBounds(region: MapRegion) {
   return {

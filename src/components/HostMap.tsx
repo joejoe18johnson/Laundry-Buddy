@@ -30,8 +30,8 @@ class MapErrorBoundary extends Component<
 }
 
 /**
- * Home map — Leaflet + OpenStreetMap in Expo Go (default).
- * MapLibre + OpenFreeMap when a native dev build includes MapLibre.
+ * Home map — Positron light style everywhere.
+ * Leaflet + Carto Positron in Expo Go; MapLibre + OpenFreeMap Positron in native builds.
  */
 export function HostMap(props: HostMapProps) {
   const leaflet = <HostMapLeaflet {...props} />

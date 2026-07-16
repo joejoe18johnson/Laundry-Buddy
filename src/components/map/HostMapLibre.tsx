@@ -7,7 +7,7 @@ import { zoomLevelForRadiusKm, OPENFREEMAP_STYLE_URL } from '../../lib/mapRegion
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
 import type { HostMapProps } from '../HostMap'
 
-/** MapLibre + OpenFreeMap — free OSM vector maps (dev/production builds). */
+/** MapLibre + OpenFreeMap Positron — light gray map (native builds). */
 export function HostMapLibre({
   hosts,
   onHostPress,

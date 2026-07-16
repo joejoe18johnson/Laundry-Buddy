@@ -13,7 +13,7 @@ export const colors = {
   green: '#05944f',
   greenBg: '#ecfdf3',
   danger: '#c13515',
-  mapBg: '#e9ecef',
+  mapBg: '#f2f2f2',
 }
 
 /** Shared brand marks — laundry basket icon (app icon, splash, loading). */

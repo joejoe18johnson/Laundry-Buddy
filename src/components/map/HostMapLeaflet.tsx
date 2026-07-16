@@ -7,8 +7,8 @@ import { colors } from '../../theme'
 import type { HostMapProps } from '../HostMap'
 
 /**
- * Interactive OpenStreetMap via Leaflet in a WebView.
- * Works in Expo Go, web, and simulators — no native map build required.
+ * Interactive Positron map via Leaflet in a WebView.
+ * Works in Expo Go, web, and simulators — matches MapLibre Positron styling.
  */
 export function HostMapLeaflet({ hosts, onHostPress, userLocation, radiusKm = SEARCH_RADIUS_KM, fitToResults = false }: HostMapProps) {
   const webRef = useRef<WebView>(null)
