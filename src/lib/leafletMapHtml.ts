@@ -7,9 +7,11 @@ const HALO = 56
 
 export function buildLeafletMapHtml(
   hosts: Host[],
+  nearbyHostIds: ReadonlySet<string>,
   userLocation: Coordinates,
   radiusKm: number,
   fitToResults = false,
+  fitToHosts?: Host[],
 ): string {
   const payload = JSON.stringify(
     hosts.map((h) => ({
@@ -18,7 +20,11 @@ export function buildLeafletMapHtml(
       lng: h.longitude,
       price: h.price,
       name: h.name,
+      inRadius: nearbyHostIds.has(h.id),
     })),
+  )
+  const fitPayload = JSON.stringify(
+    (fitToHosts ?? hosts).map((h) => ({ lat: h.latitude, lng: h.longitude })),
   )
 
   return `<!DOCTYPE html>
@@ -62,6 +68,26 @@ export function buildLeafletMapHtml(
       will-change: transform, opacity;
     }
 
+    .marker-pulse-white {
+      position: absolute;
+      width: ${CORE}px;
+      height: ${CORE}px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.92);
+      border: 2px solid #ffffff;
+      animation: marker-pulse-white 2s ease-out infinite;
+      will-change: transform, opacity;
+    }
+
+    .marker-wrap.distant {
+      opacity: 0.72;
+    }
+
+    .marker-wrap.distant .marker-pulse,
+    .marker-wrap.distant .marker-pulse-white {
+      display: none;
+    }
+
     .marker-core {
       position: relative;
       z-index: 2;
@@ -94,6 +120,25 @@ export function buildLeafletMapHtml(
       letter-spacing: 0;
     }
 
+    .marker-core.distant {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+      min-height: 34px;
+      max-width: 34px;
+      max-height: 34px;
+      background: #9ca3af;
+      border-color: #e5e7eb;
+      border-width: 2px;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+    }
+
+    .marker-core.distant.free {
+      font-size: 9px;
+    }
+
     @keyframes marker-pulse {
       0% {
         transform: scale(0.82);
@@ -105,6 +150,21 @@ export function buildLeafletMapHtml(
       }
       100% {
         transform: scale(1.48);
+        opacity: 0;
+      }
+    }
+
+    @keyframes marker-pulse-white {
+      0% {
+        transform: scale(0.88);
+        opacity: 0.55;
+      }
+      65% {
+        transform: scale(1.62);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1.62);
         opacity: 0;
       }
     }
@@ -151,15 +211,23 @@ export function buildLeafletMapHtml(
   <div id="map"></div>
   <script>
     const hosts = ${payload};
+    const fitHosts = ${fitPayload};
     const you = { lat: ${userLocation.latitude}, lng: ${userLocation.longitude} };
     const radiusM = ${radiusKm * 1000};
     const HALO = ${HALO};
+    const HALO_DISTANT = 44;
     const fitToResults = ${fitToResults ? 'true' : 'false'};
 
-    function hostMarkerHtml(label, isFree) {
-      return '<div class="marker-wrap">' +
-        '<div class="marker-pulse"></div>' +
-        '<div class="marker-core' + (isFree ? ' free' : '') + '">' + label + '</div>' +
+    function hostMarkerHtml(label, isFree, inRadius) {
+      const wrapClass = inRadius ? 'marker-wrap nearby' : 'marker-wrap distant';
+      const coreClass = 'marker-core' + (isFree ? ' free' : '') + (inRadius ? '' : ' distant');
+      const pulseHtml = inRadius
+        ? '<div class="marker-pulse-white"></div><div class="marker-pulse"></div>'
+        : '';
+      const halo = inRadius ? HALO : HALO_DISTANT;
+      return '<div class="' + wrapClass + '" style="width:' + halo + 'px;height:' + halo + 'px">' +
+        pulseHtml +
+        '<div class="' + coreClass + '">' + label + '</div>' +
       '</div>';
     }
 
@@ -207,13 +275,17 @@ export function buildLeafletMapHtml(
     hosts.forEach(function(h) {
       const isFree = h.price <= 0;
       const label = isFree ? 'Free' : ('$' + h.price);
+      const halo = h.inRadius ? HALO : HALO_DISTANT;
       const icon = L.divIcon({
-        html: hostMarkerHtml(label, isFree),
+        html: hostMarkerHtml(label, isFree, h.inRadius),
         className: 'host-marker-icon',
-        iconSize: [HALO, HALO],
-        iconAnchor: [HALO / 2, HALO / 2]
+        iconSize: [halo, halo],
+        iconAnchor: [halo / 2, halo / 2]
       });
-      const marker = L.marker([h.lat, h.lng], { icon: icon }).addTo(map);
+      const marker = L.marker([h.lat, h.lng], {
+        icon: icon,
+        zIndexOffset: h.inRadius ? 500 : 100
+      }).addTo(map);
       marker.on('click', function() {
         if (window.ReactNativeWebView) {
           window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'host', hostId: h.id }));
@@ -221,9 +293,9 @@ export function buildLeafletMapHtml(
       });
     });
 
-    if (fitToResults && hosts.length > 0) {
+    if (fitToResults && fitHosts.length > 0) {
       const bounds = L.latLngBounds([[you.lat, you.lng]]);
-      hosts.forEach(function(h) { bounds.extend([h.lat, h.lng]); });
+      fitHosts.forEach(function(h) { bounds.extend([h.lat, h.lng]); });
       map.fitBounds(bounds, { padding: [52, 52], maxZoom: 14 });
     } else {
       fitSearchArea();
@@ -231,7 +303,7 @@ export function buildLeafletMapHtml(
 
     setTimeout(function() {
       map.invalidateSize();
-      if (!fitToResults || hosts.length === 0) {
+      if (!fitToResults || fitHosts.length === 0) {
         fitSearchArea();
       }
     }, 300);

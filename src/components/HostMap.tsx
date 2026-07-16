@@ -6,10 +6,14 @@ import type { Host } from '../types'
 
 export interface HostMapProps {
   hosts: Host[]
+  /** Host IDs within the guest search radius — shown prominently on the map. */
+  nearbyHostIds: ReadonlySet<string>
   onHostPress: (host: Host) => void
   userLocation: { latitude: number; longitude: number }
   radiusKm?: number
   fitToResults?: boolean
+  /** When set with fitToResults, map bounds fit these hosts (e.g. search matches). */
+  fitToHosts?: Host[]
 }
 
 /** Catches native map crashes and falls back to Leaflet. */

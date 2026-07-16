@@ -59,6 +59,46 @@ export function isBelizeDistrict(label: string): label is BelizeDistrict {
   return (BELIZE_DISTRICTS as readonly string[]).includes(label)
 }
 
+/** District for each curated filter area (search subtitle). */
+export const FILTER_AREA_DISTRICT: Record<BelizeFilterArea, BelizeDistrict> = {
+  Belmopan: 'Cayo',
+  'San Ignacio': 'Cayo',
+  'Santa Elena': 'Cayo',
+  'Corozal Town': 'Corozal',
+  'Orange Walk Town': 'Orange Walk',
+  'Belize City': 'Belize',
+  'San Pedro': 'Belize',
+  'Caye Caulker': 'Belize',
+}
+
+/** Resolve a town/area label to its Belize district for search subtitles. */
+export function getDistrictForSearchPlace(label: string): BelizeDistrict | null {
+  const trimmed = label.trim()
+  if (isBelizeFilterArea(trimmed)) return FILTER_AREA_DISTRICT[trimmed]
+  if (isBelizeDistrict(trimmed)) return trimmed
+
+  const key = trimmed.toLowerCase()
+  for (const district of BELIZE_DISTRICTS) {
+    if (key === district.toLowerCase()) return district
+  }
+
+  for (const [areaKey, aliases] of Object.entries(FILTER_ALIASES)) {
+    const filterArea = BELIZE_FILTER_AREAS.find((a) => a.toLowerCase() === areaKey)
+    if (!filterArea) continue
+    if (key === areaKey || aliases.some((alias) => key === alias || key.includes(alias))) {
+      return FILTER_AREA_DISTRICT[filterArea]
+    }
+  }
+
+  return null
+}
+
+export function getPlaceSearchSubtitle(label: string, district?: string): string {
+  const resolved =
+    (district && isBelizeDistrict(district) ? district : null) ?? getDistrictForSearchPlace(label)
+  return resolved ? `Search in ${resolved}` : `Search in ${label.trim()}`
+}
+
 const FILTER_ALIASES: Record<string, string[]> = {
   belmopan: ['belmopan'],
   'san ignacio': [

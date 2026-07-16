@@ -1,5 +1,5 @@
 import type { Host } from '../types'
-import { BELIZE_FILTER_AREAS, hostMatchesFilterArea } from './belizeDistricts'
+import { BELIZE_FILTER_AREAS, FILTER_AREA_DISTRICT, hostMatchesFilterArea } from './belizeDistricts'
 
 export type HostSort = 'nearest' | 'cheapest' | 'rating' | 'fastest'
 
@@ -12,7 +12,7 @@ export interface HostFilters {
 
 export type SearchSuggestion =
   | { type: 'host'; host: Host; label: string }
-  | { type: 'place'; label: string }
+  | { type: 'place'; label: string; district?: string }
 
 export const DEFAULT_HOST_FILTERS: HostFilters = {
   location: null,
@@ -153,11 +153,11 @@ export function getSearchSuggestionItems(hosts: Host[], query: string, limit = 8
   const items: SearchSuggestion[] = []
   const seen = new Set<string>()
 
-  const addPlace = (label: string) => {
+  const addPlace = (label: string, district?: string) => {
     const key = label.toLowerCase()
     if (seen.has(key)) return
     seen.add(key)
-    items.push({ type: 'place', label })
+    items.push({ type: 'place', label, district })
   }
 
   const addHost = (host: Host) => {
@@ -168,7 +168,7 @@ export function getSearchSuggestionItems(hosts: Host[], query: string, limit = 8
   }
 
   if (!q) {
-    BELIZE_FILTER_AREAS.forEach(addPlace)
+    BELIZE_FILTER_AREAS.forEach((area) => addPlace(area, FILTER_AREA_DISTRICT[area]))
     hosts.slice(0, Math.max(0, limit - items.length)).forEach(addHost)
     return items.slice(0, limit)
   }
@@ -184,8 +184,8 @@ export function getSearchSuggestionItems(hosts: Host[], query: string, limit = 8
 
   for (const host of hosts) {
     if (items.length >= limit) break
-    if (host.district?.toLowerCase().includes(q)) addPlace(host.district)
-    if (host.location.toLowerCase().includes(q)) addPlace(host.location)
+    if (host.district?.toLowerCase().includes(q)) addPlace(host.district, host.district)
+    if (host.location.toLowerCase().includes(q)) addPlace(host.location, host.district)
   }
 
   for (const host of rankedHosts) {

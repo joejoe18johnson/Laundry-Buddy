@@ -16,7 +16,7 @@ import { CloseToMeButton } from './CloseToMeButton'
 import { HostSearchBar } from './HostSearchBar'
 import { ChoiceChip } from './ui'
 import { useApp } from '../context/AppContext'
-import { BELIZE_FILTER_AREAS, isBelizeFilterArea } from '../lib/belizeDistricts'
+import { BELIZE_FILTER_AREAS, getPlaceSearchSubtitle, isBelizeFilterArea } from '../lib/belizeDistricts'
 import {
   DEFAULT_HOST_FILTERS,
   filterAndSortHosts,
@@ -103,7 +103,7 @@ function SuggestionRow({
       </View>
       <View style={styles.rowBody}>
         <Text style={styles.rowName}>{item.label}</Text>
-        <Text style={styles.rowMeta}>Belize district</Text>
+        <Text style={styles.rowMeta}>{getPlaceSearchSubtitle(item.label, item.district)}</Text>
       </View>
       <AppIcon name="chevron-right" size={18} color={colors.gray400} />
     </Pressable>

@@ -85,7 +85,6 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets()
   const { showToast } = useToast()
   const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm, focusSearchOnArea } = useApp()
-  const allHosts = onlineHosts
   const totalHosts = getAvailableHosts().length
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
   const [sort, setSort] = useState<HostSort>('nearest')
@@ -105,7 +104,9 @@ export function HomeScreen() {
 
   const trimmedSearch = searchQuery.trim()
   const areaSearchActive = trimmedSearch.length > 0 && isBelizeFilterArea(trimmedSearch)
-  const hostSource = areaSearchActive ? onlineHosts : trimmedSearch ? allOnlineHosts : allHosts
+  const hostSource = areaSearchActive ? onlineHosts : trimmedSearch ? allOnlineHosts : onlineHosts
+
+  const nearbyHostIds = useMemo(() => new Set(onlineHosts.map((h) => h.id)), [onlineHosts])
 
   const hosts = useMemo(
     () => filterAndSortHosts(hostSource, filters, sort, searchQuery),
@@ -339,11 +340,18 @@ export function HomeScreen() {
       <Text style={styles.emptySub}>
         {trimmedSearch
           ? 'Try another area or host name.'
-          : allHosts.length === 0
-            ? 'No hosts are online right now.'
-            : 'Try different filters or sort.'}
+          : onlineHosts.length === 0 && allOnlineHosts.length > 0
+            ? `No hosts within ${searchRadiusKm} km — check the map for hosts outside your radius.`
+            : onlineHosts.length === 0
+              ? 'No hosts are online right now.'
+              : 'Try different filters or sort.'}
       </Text>
-      {!allHosts.length && totalHosts > 0 && (
+      {!onlineHosts.length && allOnlineHosts.length > 0 && (
+        <Text style={styles.emptyHint}>
+          {allOnlineHosts.length} host{allOnlineHosts.length === 1 ? '' : 's'} shown on the map outside your radius
+        </Text>
+      )}
+      {!allOnlineHosts.length && totalHosts > 0 && (
         <Text style={styles.emptyHint}>
           {totalHosts} host{totalHosts === 1 ? '' : 's'} offline across {ACTIVE_REGION_LABEL}
         </Text>
@@ -355,11 +363,13 @@ export function HomeScreen() {
     <View style={styles.container} onLayout={onContainerLayout}>
       <View style={styles.map} pointerEvents="box-none">
         <HostMap
-          hosts={hosts}
+          hosts={allOnlineHosts}
+          nearbyHostIds={nearbyHostIds}
           onHostPress={viewHostProfile}
           userLocation={userLocation}
           radiusKm={searchRadiusKm}
           fitToResults={!!trimmedSearch && !isBelizeFilterArea(trimmedSearch)}
+          fitToHosts={trimmedSearch && !isBelizeFilterArea(trimmedSearch) ? hosts : undefined}
         />
         {snap !== 'full' && hosts.length > 0 && (
           <View style={styles.mapBadgeWrap} pointerEvents="box-none">

@@ -10,11 +10,19 @@ import type { HostMapProps } from '../HostMap'
  * Interactive Positron map via Leaflet in a WebView.
  * Works in Expo Go, web, and simulators — matches MapLibre Positron styling.
  */
-export function HostMapLeaflet({ hosts, onHostPress, userLocation, radiusKm = SEARCH_RADIUS_KM, fitToResults = false }: HostMapProps) {
+export function HostMapLeaflet({
+  hosts,
+  nearbyHostIds,
+  onHostPress,
+  userLocation,
+  radiusKm = SEARCH_RADIUS_KM,
+  fitToResults = false,
+  fitToHosts,
+}: HostMapProps) {
   const webRef = useRef<WebView>(null)
   const html = useMemo(
-    () => buildLeafletMapHtml(hosts, userLocation, radiusKm, fitToResults),
-    [hosts, userLocation, radiusKm, fitToResults],
+    () => buildLeafletMapHtml(hosts, nearbyHostIds, userLocation, radiusKm, fitToResults, fitToHosts),
+    [hosts, nearbyHostIds, userLocation, radiusKm, fitToResults, fitToHosts],
   )
 
   const mapKey = `${userLocation.latitude.toFixed(3)}-${userLocation.longitude.toFixed(3)}-${radiusKm}-${fitToResults ? 'fit' : 'radius'}`

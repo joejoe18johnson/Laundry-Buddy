@@ -10,12 +10,23 @@ import type { HostMapProps } from '../HostMap'
 /** MapLibre + OpenFreeMap Positron — light gray map (native builds). */
 export function HostMapLibre({
   hosts,
+  nearbyHostIds,
   onHostPress,
   userLocation,
   radiusKm = SEARCH_RADIUS_KM,
 }: HostMapProps) {
   const zoomLevel = useMemo(() => zoomLevelForRadiusKm(radiusKm), [radiusKm])
   const cameraKey = `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}-${radiusKm}`
+
+  const sortedHosts = useMemo(
+    () =>
+      [...hosts].sort((a, b) => {
+        const aNear = nearbyHostIds.has(a.id) ? 1 : 0
+        const bNear = nearbyHostIds.has(b.id) ? 1 : 0
+        return aNear - bNear
+      }),
+    [hosts, nearbyHostIds],
+  )
 
   const circleGeo = useMemo(
     () => ({
@@ -67,13 +78,17 @@ export function HostMapLibre({
         >
           <YouMarker />
         </MarkerView>
-        {hosts.map((host) => (
+        {sortedHosts.map((host) => (
           <MarkerView
             key={host.id}
             coordinate={[host.longitude, host.latitude]}
             anchor={{ x: 0.5, y: 0.5 }}
           >
-            <HostPricePin price={host.price} onPress={() => onHostPress(host)} />
+            <HostPricePin
+              price={host.price}
+              inRadius={nearbyHostIds.has(host.id)}
+              onPress={() => onHostPress(host)}
+            />
           </MarkerView>
         ))}
       </MapView>
