@@ -1,10 +1,9 @@
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
-import { useMemo, useState, useEffect, useRef } from 'react'
-import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useMemo, useState, useEffect } from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
-import { BiometricLockScreen } from './src/components/BiometricLockScreen'
 import { BiometricSetupPrompt } from './src/components/BiometricSetupPrompt'
 import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
@@ -59,12 +58,6 @@ function AppShell() {
     booking,
     navigate,
     hostSettings,
-    userLocationLabel,
-    searchRadiusKm,
-    locationLoading,
-    requestUserLocation,
-    setLocationPreset,
-    setSearchRadiusKm,
   } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -190,12 +183,6 @@ function AppShell() {
         visible={menuOpen}
         user={user!}
         onClose={() => setMenuOpen(false)}
-        locationLabel={userLocationLabel}
-        radiusKm={searchRadiusKm}
-        locationLoading={locationLoading}
-        onUseGps={requestUserLocation}
-        onSelectPreset={setLocationPreset}
-        onSelectRadius={setSearchRadiusKm}
         hasActiveLoad={!!booking}
         isHostOnline={hostSettings?.isOnline}
         notificationCount={unreadCount}
@@ -203,6 +190,7 @@ function AppShell() {
         onMyLoad={isCustomer ? () => navigate('customer-tracking') : undefined}
         onPastLoads={() => navigate('history')}
         onDashboard={!isCustomer ? () => navigate('host-dashboard') : undefined}
+        onAccount={() => navigate('account')}
         onHelp={() => navigate('help')}
         onNotifications={() => navigate('notifications')}
         onLogout={logout}
@@ -239,65 +227,23 @@ function AppShell() {
 function BiometricOverlays() {
   const {
     user,
-    biometricEnabled,
-    biometricSupport,
     showBiometricSetupPrompt,
+    biometricSupport,
     biometricSetupLoading,
     acceptBiometricSetup,
     dismissBiometricSetup,
-    logout,
   } = useAuth()
-  const [biometricLocked, setBiometricLocked] = useState(false)
-  const appState = useRef(AppState.currentState)
-  const lockedOnLaunch = useRef(false)
-
-  useEffect(() => {
-    if (!user || !biometricEnabled || !biometricSupport.available) {
-      lockedOnLaunch.current = false
-      setBiometricLocked(false)
-      return
-    }
-
-    if (!lockedOnLaunch.current) {
-      lockedOnLaunch.current = true
-      setBiometricLocked(true)
-    }
-  }, [user, biometricEnabled, biometricSupport.available])
-
-  useEffect(() => {
-    if (!user || !biometricEnabled || !biometricSupport.available) return
-
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      if (appState.current.match(/inactive|background/) && nextState === 'active') {
-        setBiometricLocked(true)
-      }
-      appState.current = nextState
-    })
-
-    return () => subscription.remove()
-  }, [user, biometricEnabled, biometricSupport.available])
 
   if (!user) return null
 
   return (
-    <>
-      <BiometricSetupPrompt
-        visible={showBiometricSetupPrompt}
-        support={biometricSupport}
-        loading={biometricSetupLoading}
-        onEnable={() => void acceptBiometricSetup()}
-        onSkip={dismissBiometricSetup}
-      />
-      <BiometricLockScreen
-        visible={biometricLocked}
-        support={biometricSupport}
-        onUnlock={() => setBiometricLocked(false)}
-        onUsePassword={async () => {
-          setBiometricLocked(false)
-          await logout()
-        }}
-      />
-    </>
+    <BiometricSetupPrompt
+      visible={showBiometricSetupPrompt}
+      support={biometricSupport}
+      loading={biometricSetupLoading}
+      onEnable={() => void acceptBiometricSetup()}
+      onSkip={dismissBiometricSetup}
+    />
   )
 }
 

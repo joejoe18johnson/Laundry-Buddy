@@ -23,23 +23,19 @@ export function LocationPreferencesCard({
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <View style={styles.iconCircle}>
-          <AppIcon name="map-pin" size={22} color={colors.white} />
-        </View>
+        <AppIcon name="map-pin" size={18} color={colors.gray600} />
         <View style={styles.headerText}>
-          <Text style={styles.cardTitle}>Your search area</Text>
-          <Text style={styles.cardSub}>Hosts shown within your radius</Text>
+          <Text style={styles.cardTitle}>Search area</Text>
+          <Text style={styles.cardSub}>Hosts shown within your radius on the map</Text>
         </View>
       </View>
 
       <View style={styles.currentRow}>
-        <AppIcon name="navigation" size={16} color={colors.black} />
+        <AppIcon name="navigation" size={15} color={colors.gray500} />
         <Text style={styles.currentLabel} numberOfLines={1}>
           {locationLabel}
         </Text>
-        <View style={styles.radiusPill}>
-          <Text style={styles.radiusPillText}>{radiusKm} km</Text>
-        </View>
+        <Text style={styles.radiusMeta}>{radiusKm} km</Text>
       </View>
 
       <Pressable
@@ -48,14 +44,14 @@ export function LocationPreferencesCard({
         disabled={locating}
       >
         {locating ? (
-          <ActivityIndicator color={colors.white} size="small" />
+          <ActivityIndicator color={colors.black} size="small" />
         ) : (
-          <AppIcon name="crosshair" size={18} color={colors.black} />
+          <AppIcon name="crosshair" size={16} color={colors.black} />
         )}
-        <Text style={styles.gpsBtnText}>{locating ? 'Finding you…' : 'Use my GPS location'}</Text>
+        <Text style={styles.gpsBtnText}>{locating ? 'Finding you…' : 'Use my location'}</Text>
       </Pressable>
 
-      <Text style={styles.sectionLabel}>Or pick an area</Text>
+      <Text style={styles.sectionLabel}>Areas</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
         {LOCATION_PRESETS.map((preset) => {
           const selected = locationLabel === preset.label
@@ -63,17 +59,15 @@ export function LocationPreferencesCard({
             <Pressable
               key={preset.label}
               onPress={() => onSelectPreset(preset.label, preset.latitude, preset.longitude)}
-              style={[styles.areaChip, selected && styles.areaChipSelected]}
+              style={[styles.chip, selected && styles.chipSelected]}
             >
-              <Text style={[styles.areaChipText, selected && styles.areaChipTextSelected]}>
-                {preset.label}
-              </Text>
+              <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{preset.label}</Text>
             </Pressable>
           )
         })}
       </ScrollView>
 
-      <Text style={styles.sectionLabel}>Search radius</Text>
+      <Text style={styles.sectionLabel}>Radius</Text>
       <View style={styles.radiusRow}>
         {RADIUS_OPTIONS_KM.map((km) => {
           const selected = radiusKm === km
@@ -96,42 +90,31 @@ export function LocationPreferencesCard({
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    backgroundColor: colors.black,
+    borderWidth: 1,
+    borderColor: colors.gray100,
     borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.gray50,
     gap: spacing.sm,
   },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerText: { flex: 1 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: colors.white },
-  cardSub: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  headerText: { flex: 1, gap: 2 },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
+  cardSub: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
   currentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.white,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.gray100,
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
   },
-  currentLabel: { flex: 1, fontSize: 15, fontWeight: '700', color: colors.black },
-  radiusPill: {
-    backgroundColor: colors.gray100,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-  },
-  radiusPillText: { fontSize: 12, fontWeight: '700', color: colors.black },
+  currentLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.black },
+  radiusMeta: { fontSize: 13, fontWeight: '600', color: colors.gray500 },
   gpsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -139,40 +122,44 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     backgroundColor: colors.white,
     borderRadius: radius.pill,
-    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    paddingVertical: 12,
   },
-  gpsBtnPressed: { opacity: 0.9 },
-  gpsBtnText: { fontSize: 15, fontWeight: '700', color: colors.black },
+  gpsBtnPressed: { backgroundColor: colors.gray50 },
+  gpsBtnText: { fontSize: 14, fontWeight: '600', color: colors.black },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: 'rgba(255,255,255,0.65)',
+    color: colors.gray400,
     textTransform: 'capitalize',
     letterSpacing: 0.5,
-    marginTop: spacing.sm,
+    marginTop: 4,
   },
-  chipRow: { gap: spacing.sm, paddingVertical: 4 },
-  areaChip: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
+  chipRow: { gap: 8, paddingVertical: 4 },
+  chip: {
+    borderWidth: 1,
+    borderColor: colors.gray200,
     borderRadius: radius.pill,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 8,
+    backgroundColor: colors.white,
   },
-  areaChipSelected: { backgroundColor: colors.white, borderColor: colors.white },
-  areaChipText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
-  areaChipTextSelected: { color: colors.black },
-  radiusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, paddingBottom: 4 },
+  chipSelected: { borderColor: colors.black, backgroundColor: colors.black },
+  chipText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+  chipTextSelected: { color: colors.white },
+  radiusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 4 },
   radiusChip: {
     flex: 1,
     minWidth: 52,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.35)',
+    borderWidth: 1,
+    borderColor: colors.gray200,
     borderRadius: radius.md,
     paddingVertical: 10,
+    backgroundColor: colors.white,
   },
-  radiusChipSelected: { backgroundColor: colors.white, borderColor: colors.white },
-  radiusChipText: { fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.85)' },
-  radiusChipTextSelected: { color: colors.black },
+  radiusChipSelected: { borderColor: colors.black, backgroundColor: colors.black },
+  radiusChipText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+  radiusChipTextSelected: { color: colors.white },
 })

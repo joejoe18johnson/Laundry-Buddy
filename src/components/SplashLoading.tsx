@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native'
-import { SplashWasherAnimation } from './SplashWasherAnimation'
+import { AppLogoMark } from './AppLogoMark'
 import { colors, spacing } from '../theme'
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
 export function SplashLoading({ message = 'Laundry Buddy', showTagline = true }: Props) {
   return (
     <View style={styles.container}>
-      <SplashWasherAnimation />
+      <AppLogoMark size={120} style={styles.logo} />
       <Text style={styles.brand}>{message}</Text>
       {showTagline && <Text style={styles.tagline}>Dry Laundry, Rain or Shine</Text>}
     </View>
@@ -25,8 +25,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     paddingHorizontal: spacing.xl,
   },
+  logo: { marginBottom: spacing.lg },
   brand: {
-    marginTop: spacing.lg,
     fontSize: 30,
     fontWeight: '800',
     color: colors.black,

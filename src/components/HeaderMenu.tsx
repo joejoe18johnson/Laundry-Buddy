@@ -2,8 +2,6 @@ import type { ReactNode } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
-import { LocationPreferencesCard } from './LocationPreferencesCard'
-import type { RadiusOptionKm } from '../lib/locationPreferences'
 import { bottomSafePadding } from '../lib/safeAreaInsets'
 import { colors, radius, spacing } from '../theme'
 import type { User } from '../types'
@@ -20,12 +18,6 @@ type Props = {
   user: User
   onClose: () => void
   onLogout: () => void
-  locationLabel: string
-  radiusKm: number
-  locationLoading: boolean
-  onUseGps: () => void
-  onSelectPreset: (label: string, latitude: number, longitude: number) => void
-  onSelectRadius: (km: RadiusOptionKm) => void
   hasActiveLoad?: boolean
   onExplore?: () => void
   onMyLoad?: () => void
@@ -70,12 +62,6 @@ export function HeaderMenu({
   user,
   onClose,
   onLogout,
-  locationLabel,
-  radiusKm,
-  locationLoading,
-  onUseGps,
-  onSelectPreset,
-  onSelectRadius,
   hasActiveLoad,
   onExplore,
   onMyLoad,
@@ -121,15 +107,6 @@ export function HeaderMenu({
             </View>
 
             <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
-              <LocationPreferencesCard
-                locationLabel={locationLabel}
-                radiusKm={radiusKm}
-                locating={locationLoading}
-                onUseGps={onUseGps}
-                onSelectPreset={onSelectPreset}
-                onSelectRadius={onSelectRadius}
-              />
-
               <MenuSection title={isCustomer ? 'Browse' : 'Hosting'}>
                 {isCustomer && onExplore ? (
                   <MenuItem icon="search" label="Explore dryers" onPress={() => go(onExplore)} />
@@ -155,6 +132,9 @@ export function HeaderMenu({
               </MenuSection>
 
               <MenuSection title="Account">
+                {onAccount ? (
+                  <MenuItem icon="user" label="Profile" onPress={() => go(onAccount)} />
+                ) : null}
                 {onNotifications ? (
                   <MenuItem
                     icon="bell"

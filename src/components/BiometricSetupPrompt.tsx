@@ -24,8 +24,7 @@ export function BiometricSetupPrompt({ visible, support, loading, onEnable, onSk
             </View>
             <Text style={styles.title}>Use {support.label} next time?</Text>
             <Text style={styles.subtitle}>
-              Skip typing your password — unlock Laundry Buddy with {support.label} when you open
-              the app.
+              Skip typing your password — use {support.label} when you log back in after signing out.
             </Text>
             <PrimaryButton
               title={loading ? 'Setting up…' : `Enable ${support.label}`}
