@@ -21,6 +21,7 @@ import { IntroOnboardingScreen } from './src/screens/auth/IntroOnboardingScreen'
 import { LoginScreen } from './src/screens/auth/LoginScreen'
 import { SignupScreen } from './src/screens/auth/SignupScreen'
 import { HeaderMenu } from './src/components/HeaderMenu'
+import { LocationSettingsSheet } from './src/components/LocationSettingsSheet'
 import { HostVerificationScreen } from './src/screens/auth/HostVerificationScreen'
 import { HistoryScreen } from './src/screens/shared/HistoryScreen'
 import { AccountScreen } from './src/screens/shared/AccountScreen'
@@ -67,6 +68,7 @@ function AppShell() {
   } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [locationSettingsOpen, setLocationSettingsOpen] = useState(false)
   const [showNotifPrompt, setShowNotifPrompt] = useState(false)
 
   const isCustomer = user!.role === 'customer'
@@ -191,10 +193,7 @@ function AppShell() {
         onClose={() => setMenuOpen(false)}
         locationLabel={userLocationLabel}
         radiusKm={searchRadiusKm}
-        locationLoading={locationLoading}
-        onUseGps={requestUserLocation}
-        onSelectArea={focusSearchOnArea}
-        onSelectRadius={setSearchRadiusKm}
+        onOpenLocationSettings={isCustomer ? () => setLocationSettingsOpen(true) : undefined}
         hasActiveLoad={!!booking}
         isHostOnline={hostSettings?.isOnline}
         notificationCount={unreadCount}
@@ -207,6 +206,19 @@ function AppShell() {
         onNotifications={() => navigate('notifications')}
         onLogout={logout}
       />
+
+      {isCustomer ? (
+        <LocationSettingsSheet
+          visible={locationSettingsOpen}
+          onClose={() => setLocationSettingsOpen(false)}
+          locationLabel={userLocationLabel}
+          radiusKm={searchRadiusKm}
+          locating={locationLoading}
+          onUseGps={requestUserLocation}
+          onSelectArea={focusSearchOnArea}
+          onSelectRadius={setSearchRadiusKm}
+        />
+      ) : null}
 
       <View style={styles.main}>
         {screen === 'customer-home' && <HomeScreen />}

@@ -162,7 +162,15 @@ export function buildLeafletMapHtml(
       '</div>';
     }
 
-    const map = L.map('map', { zoomControl: true, attributionControl: true });
+    function zoomForRadiusM(radiusM) {
+      if (radiusM >= 25000) return 10;
+      if (radiusM >= 15000) return 11;
+      if (radiusM >= 8000) return 12;
+      return 13;
+    }
+
+    const map = L.map('map', { zoomControl: true, attributionControl: true })
+      .setView([you.lat, you.lng], zoomForRadiusM(radiusM));
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -178,6 +186,12 @@ export function buildLeafletMapHtml(
       fillOpacity: 0.06,
       dashArray: '7 6'
     }).addTo(map);
+
+    function fitSearchArea() {
+      try {
+        map.fitBounds(searchCircle.getBounds(), { padding: [48, 48], maxZoom: 13 });
+      } catch (e) {}
+    }
 
     const youIcon = L.divIcon({
       html: '<div class="you-wrap"><div class="you-pulse"></div><div class="you-core"></div></div>',
@@ -209,10 +223,15 @@ export function buildLeafletMapHtml(
       hosts.forEach(function(h) { bounds.extend([h.lat, h.lng]); });
       map.fitBounds(bounds, { padding: [52, 52], maxZoom: 14 });
     } else {
-      map.fitBounds(searchCircle.getBounds(), { padding: [48, 48], maxZoom: 13 });
+      fitSearchArea();
     }
 
-    setTimeout(function() { map.invalidateSize(); }, 250);
+    setTimeout(function() {
+      map.invalidateSize();
+      if (!fitToResults || hosts.length === 0) {
+        fitSearchArea();
+      }
+    }, 300);
     window.addEventListener('resize', function() { map.invalidateSize(); });
   </script>
 </body>

@@ -85,3 +85,7 @@ export function regionToBounds(region: MapRegion) {
 export function regionToZoom(latitudeDelta: number): number {
   return Math.max(8, Math.min(14, Math.round(Math.log2(360 / latitudeDelta) - 0.5)))
 }
+
+export function zoomLevelForRadiusKm(radiusKm: number): number {
+  return regionToZoom(getMapRegionForRadius(USER_LOCATION, radiusKm).latitudeDelta)
+}

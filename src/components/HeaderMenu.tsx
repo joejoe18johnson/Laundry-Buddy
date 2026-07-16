@@ -2,8 +2,6 @@ import type { ReactNode } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
-import { LocationPreferencesCard } from './LocationPreferencesCard'
-import type { RadiusOptionKm } from '../lib/locationPreferences'
 import { bottomSafePadding } from '../lib/safeAreaInsets'
 import { colors, radius, spacing } from '../theme'
 import type { User } from '../types'
@@ -13,6 +11,7 @@ type MenuAction = {
   label: string
   onPress: () => void
   badge?: string
+  hint?: string
 }
 
 type Props = {
@@ -22,10 +21,7 @@ type Props = {
   onLogout: () => void
   locationLabel?: string
   radiusKm?: number
-  locationLoading?: boolean
-  onUseGps?: () => void
-  onSelectArea?: (area: string) => void
-  onSelectRadius?: (km: RadiusOptionKm) => void
+  onOpenLocationSettings?: () => void
   hasActiveLoad?: boolean
   onExplore?: () => void
   onMyLoad?: () => void
@@ -38,14 +34,17 @@ type Props = {
   isHostOnline?: boolean
 }
 
-function MenuItem({ icon, label, onPress, badge }: MenuAction) {
+function MenuItem({ icon, label, onPress, badge, hint }: MenuAction) {
   return (
     <Pressable
       style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
       onPress={onPress}
     >
       <AppIcon name={icon} size={20} />
-      <Text style={styles.menuLabel}>{label}</Text>
+      <View style={styles.menuItemBody}>
+        <Text style={styles.menuLabel}>{label}</Text>
+        {hint ? <Text style={styles.menuHint}>{hint}</Text> : null}
+      </View>
       {badge ? (
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badge}</Text>
@@ -72,10 +71,7 @@ export function HeaderMenu({
   onLogout,
   locationLabel,
   radiusKm,
-  locationLoading,
-  onUseGps,
-  onSelectArea,
-  onSelectRadius,
+  onOpenLocationSettings,
   hasActiveLoad,
   onExplore,
   onMyLoad,
@@ -90,6 +86,8 @@ export function HeaderMenu({
   const insets = useSafeAreaInsets()
   const isCustomer = user.role === 'customer'
   const contact = user.email ?? user.phone
+  const locationHint =
+    locationLabel && radiusKm != null ? `${locationLabel} · ${radiusKm} km` : undefined
 
   const go = (action?: () => void) => {
     onClose()
@@ -121,24 +119,14 @@ export function HeaderMenu({
             </View>
 
             <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
-              {isCustomer &&
-              locationLabel != null &&
-              radiusKm != null &&
-              onUseGps &&
-              onSelectArea &&
-              onSelectRadius ? (
+              {isCustomer && onOpenLocationSettings ? (
                 <MenuSection title="Location Settings">
-                  <View style={styles.locationWrap}>
-                    <LocationPreferencesCard
-                      embedded
-                      locationLabel={locationLabel}
-                      radiusKm={radiusKm}
-                      locating={locationLoading ?? false}
-                      onUseGps={onUseGps}
-                      onSelectArea={onSelectArea}
-                      onSelectRadius={onSelectRadius}
-                    />
-                  </View>
+                  <MenuItem
+                    icon="map-pin"
+                    label="Search area"
+                    hint={locationHint}
+                    onPress={() => go(onOpenLocationSettings)}
+                  />
                 </MenuSection>
               ) : null}
 
@@ -243,7 +231,6 @@ const styles = StyleSheet.create({
   contact: { fontSize: 12, color: colors.gray400, marginTop: spacing.sm },
   closeBtn: { padding: spacing.sm },
   menu: { flex: 1, paddingVertical: spacing.sm },
-  locationWrap: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   section: { paddingBottom: spacing.sm },
   sectionTitle: {
     fontSize: 11,
@@ -262,7 +249,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   menuItemPressed: { backgroundColor: colors.gray50 },
-  menuLabel: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.black },
+  menuItemBody: { flex: 1, gap: 2 },
+  menuLabel: { fontSize: 16, fontWeight: '600', color: colors.black },
+  menuHint: { fontSize: 13, color: colors.gray500, fontWeight: '500' },
   badge: {
     backgroundColor: colors.greenBg,
     borderRadius: radius.pill,

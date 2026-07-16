@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
 import { BELIZE_FILTER_AREAS } from '../lib/belizeDistricts'
 import { RADIUS_OPTIONS_KM, type RadiusOptionKm } from '../lib/locationPreferences'
@@ -11,7 +11,7 @@ type Props = {
   onUseGps: () => void
   onSelectArea: (area: string) => void
   onSelectRadius: (km: RadiusOptionKm) => void
-  embedded?: boolean
+  variant?: 'screen' | 'embedded'
 }
 
 export function LocationPreferencesCard({
@@ -21,10 +21,11 @@ export function LocationPreferencesCard({
   onUseGps,
   onSelectArea,
   onSelectRadius,
-  embedded = false,
+  variant = 'screen',
 }: Props) {
+  const isScreen = variant === 'screen'
   return (
-    <View style={[styles.card, embedded && styles.cardEmbedded]}>
+    <View style={[styles.card, isScreen && styles.cardScreen]}>
       <View style={styles.cardHeader}>
         <AppIcon name="map-pin" size={18} color={colors.gray600} />
         <View style={styles.headerText}>
@@ -55,7 +56,7 @@ export function LocationPreferencesCard({
       </Pressable>
 
       <Text style={styles.sectionLabel}>Areas</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+      <View style={isScreen ? styles.areaGrid : styles.chipRowScroll}>
         {BELIZE_FILTER_AREAS.map((area) => {
           const selected = locationLabel === area
           return (
@@ -68,7 +69,7 @@ export function LocationPreferencesCard({
             </Pressable>
           )
         })}
-      </ScrollView>
+      </View>
 
       <Text style={styles.sectionLabel}>Radius</Text>
       <View style={styles.radiusRow}>
@@ -101,8 +102,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray50,
     gap: spacing.sm,
   },
-  cardEmbedded: {
+  cardScreen: {
     marginBottom: 0,
+    backgroundColor: colors.white,
+    borderColor: colors.gray100,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   headerText: { flex: 1, gap: 2 },
@@ -142,7 +145,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: 4,
   },
-  chipRow: { gap: 8, paddingVertical: 4 },
+  chipRowScroll: { flexDirection: 'row', flexWrap: 'nowrap', gap: 8, paddingVertical: 4 },
+  areaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 4 },
   chip: {
     borderWidth: 1,
     borderColor: colors.gray200,

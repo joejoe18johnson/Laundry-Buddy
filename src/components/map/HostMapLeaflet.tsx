@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { useMemo, useRef } from 'react'
+import { Platform, StyleSheet, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 import { buildLeafletMapHtml } from '../../lib/leafletMapHtml'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
@@ -11,14 +11,19 @@ import type { HostMapProps } from '../HostMap'
  * Works in Expo Go, web, and simulators — no native map build required.
  */
 export function HostMapLeaflet({ hosts, onHostPress, userLocation, radiusKm = SEARCH_RADIUS_KM, fitToResults = false }: HostMapProps) {
+  const webRef = useRef<WebView>(null)
   const html = useMemo(
     () => buildLeafletMapHtml(hosts, userLocation, radiusKm, fitToResults),
     [hosts, userLocation, radiusKm, fitToResults],
   )
 
+  const mapKey = `${userLocation.latitude.toFixed(3)}-${userLocation.longitude.toFixed(3)}-${radiusKm}-${fitToResults ? 'fit' : 'radius'}`
+
   return (
     <View style={styles.wrap}>
       <WebView
+        ref={webRef}
+        key={mapKey}
         style={styles.webview}
         originWhitelist={['*']}
         source={{ html, baseUrl: 'https://laundry-buddy.local' }}
@@ -28,6 +33,10 @@ export function HostMapLeaflet({ hosts, onHostPress, userLocation, radiusKm = SE
         javaScriptEnabled
         domStorageEnabled
         allowsInlineMediaPlayback
+        setSupportMultipleWindows={false}
+        mixedContentMode="always"
+        androidLayerType={Platform.OS === 'android' ? 'hardware' : undefined}
+        onContentProcessDidTerminate={() => webRef.current?.reload()}
         onMessage={(event) => {
           try {
             const data = JSON.parse(event.nativeEvent.data) as { type?: string; hostId?: string }
@@ -53,5 +62,6 @@ const styles = StyleSheet.create({
   webview: {
     flex: 1,
     backgroundColor: colors.mapBg,
+    opacity: 0.99,
   },
 })

@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import Constants from 'expo-constants'
 import { NativeModules } from 'react-native'
 import { HostMapLeaflet } from './map/HostMapLeaflet'
 import type { Host } from '../types'
@@ -35,8 +36,9 @@ class MapErrorBoundary extends Component<
 export function HostMap(props: HostMapProps) {
   const leaflet = <HostMapLeaflet {...props} />
   const hasMapLibre = NativeModules.MLRNModule != null
+  const isExpoGo = Constants.appOwnership === 'expo'
 
-  if (!hasMapLibre) return leaflet
+  if (!hasMapLibre || isExpoGo) return leaflet
 
   // Lazy-load MapLibre so Expo Go (no native module) never imports it.
   const { HostMapLibre } = require('./map/HostMapLibre') as typeof import('./map/HostMapLibre')

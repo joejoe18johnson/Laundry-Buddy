@@ -3,10 +3,7 @@ import { StyleSheet, View } from 'react-native'
 import { Camera, FillLayer, LineLayer, MapView, MarkerView, ShapeSource } from '@maplibre/maplibre-react-native'
 import { HostPricePin, YouMarker } from './MapPins'
 import { circleRing } from '../../lib/geo'
-import {
-  getMapRegionForRadius,
-  OPENFREEMAP_STYLE_URL,
-} from '../../lib/mapRegion'
+import { zoomLevelForRadiusKm, OPENFREEMAP_STYLE_URL } from '../../lib/mapRegion'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
 import type { HostMapProps } from '../HostMap'
 
@@ -17,11 +14,9 @@ export function HostMapLibre({
   userLocation,
   radiusKm = SEARCH_RADIUS_KM,
 }: HostMapProps) {
-  const region = useMemo(
-    () => getMapRegionForRadius(userLocation, radiusKm),
-    [userLocation, radiusKm],
-  )
-  void region
+  const zoomLevel = useMemo(() => zoomLevelForRadiusKm(radiusKm), [radiusKm])
+  const cameraKey = `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}-${radiusKm}`
+
   const circleGeo = useMemo(
     () => ({
       type: 'Feature' as const,
@@ -46,10 +41,10 @@ export function HostMapLibre({
         rotateEnabled={false}
       >
         <Camera
-          defaultSettings={{
-            centerCoordinate: [userLocation.longitude, userLocation.latitude],
-            zoomLevel: 12,
-          }}
+          key={cameraKey}
+          centerCoordinate={[userLocation.longitude, userLocation.latitude]}
+          zoomLevel={zoomLevel}
+          animationDuration={400}
         />
         <ShapeSource id="radius-circle" shape={circleGeo}>
           <FillLayer
