@@ -115,6 +115,61 @@ export function OutlineButton({
   )
 }
 
+export function SaveFooter({
+  dirty,
+  onSave,
+  saving = false,
+  saveLabel = 'Save changes',
+  savedLabel = 'All changes saved',
+  dirtyHint = 'Tap save when you are done',
+}: {
+  dirty: boolean
+  onSave: () => void
+  saving?: boolean
+  saveLabel?: string
+  savedLabel?: string
+  dirtyHint?: string
+}) {
+  return (
+    <View style={styles.saveFooter}>
+      {dirty ? (
+        <Text style={styles.saveFooterHint}>{dirtyHint}</Text>
+      ) : (
+        <View style={styles.saveFooterSavedRow}>
+          <AppIcon name="check" size={16} color={colors.green} />
+          <Text style={styles.saveFooterSavedText}>{savedLabel}</Text>
+        </View>
+      )}
+      <PrimaryButton
+        title={dirty ? saveLabel : 'Saved'}
+        onPress={onSave}
+        disabled={!dirty || saving}
+        full
+        icon={dirty ? undefined : 'check'}
+      />
+    </View>
+  )
+}
+
+export function StickySaveBar({
+  dirtyLabel = 'You have unsaved changes',
+  saveLabel = 'Save now',
+  onSave,
+  saving = false,
+}: {
+  dirtyLabel?: string
+  saveLabel?: string
+  onSave: () => void
+  saving?: boolean
+}) {
+  return (
+    <View style={styles.stickySaveBar}>
+      <Text style={styles.stickySaveText}>{dirtyLabel}</Text>
+      <PrimaryButton title={saveLabel} onPress={onSave} disabled={saving} />
+    </View>
+  )
+}
+
 export function GhostButton({
   title,
   onPress,
@@ -339,7 +394,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   scroll: {
     padding: spacing.screen,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
   },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   backBtn: {
@@ -468,6 +523,46 @@ const styles = StyleSheet.create({
   brandSwitch: {
     transform: [{ scaleX: 1.08 }, { scaleY: 1.08 }],
   },
+  saveFooter: {
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray100,
+  },
+  saveFooterHint: {
+    fontSize: 13,
+    color: colors.gray500,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  saveFooterSavedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  saveFooterSavedText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.green,
+  },
+  stickySaveBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingHorizontal: spacing.screen,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  stickySaveText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.gray600 },
   statusBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,

@@ -8,6 +8,7 @@ type Props = {
   locationLabel: string
   radiusKm: number
   locating: boolean
+  dirty?: boolean
   onUseGps: () => void
   onSelectArea: (area: string) => void
   onSelectRadius: (km: RadiusOptionKm) => void
@@ -18,6 +19,7 @@ export function LocationPreferencesCard({
   locationLabel,
   radiusKm,
   locating,
+  dirty = false,
   onUseGps,
   onSelectArea,
   onSelectRadius,
@@ -30,7 +32,11 @@ export function LocationPreferencesCard({
         <AppIcon name="map-pin" size={18} color={colors.gray600} />
         <View style={styles.headerText}>
           <Text style={styles.cardTitle}>Search area</Text>
-          <Text style={styles.cardSub}>Hosts shown within your radius on the map</Text>
+          <Text style={styles.cardSub}>
+            {dirty
+              ? 'You have unsaved changes — tap Save search area when ready'
+              : 'Hosts shown within your radius on the map'}
+          </Text>
         </View>
       </View>
 

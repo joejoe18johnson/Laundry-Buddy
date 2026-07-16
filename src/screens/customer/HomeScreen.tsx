@@ -22,6 +22,7 @@ import { HostSearchBar } from '../../components/HostSearchBar'
 import { HostSearchOverlay } from '../../components/HostSearchOverlay'
 import { ChoiceChip } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
+import { useToast } from '../../context/ToastContext'
 import { ACTIVE_REGION_LABEL, getAvailableHosts, WEATHER } from '../../data/mockData'
 import {
   countActiveFilters,
@@ -39,7 +40,7 @@ import { colors, radius, spacing } from '../../theme'
 const SORT_OPTIONS: { value: HostSort; label: string; icon: 'map-pin' | 'dollar-sign' | 'star' | 'clock' }[] = [
   { value: 'nearest', label: 'Nearest', icon: 'map-pin' },
   { value: 'cheapest', label: 'Cheapest', icon: 'dollar-sign' },
-  { value: 'rating', label: 'Top rated', icon: 'star' },
+  { value: 'rating', label: 'Top Rated', icon: 'star' },
   { value: 'fastest', label: 'Fastest', icon: 'clock' },
 ]
 
@@ -82,6 +83,7 @@ function nearestSnap(height: number, containerHeight: number, velocityY: number)
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets()
+  const { showToast } = useToast()
   const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm, focusSearchOnArea } = useApp()
   const allHosts = onlineHosts
   const totalHosts = getAvailableHosts().length
@@ -236,6 +238,7 @@ export function HomeScreen() {
       focusSearchOnArea(next.location)
       setSearchQuery(next.location)
     }
+    showToast('Filters saved', { icon: 'check' })
   }
 
   const renderHost = useCallback<ListRenderItem<Host>>(
@@ -316,7 +319,7 @@ export function HomeScreen() {
         </Text>
         {(trimmedSearch || activeFilterCount > 0) && (
           <Pressable onPress={clearAll} hitSlop={8}>
-            <Text style={styles.clearLink}>Clear all</Text>
+            <Text style={styles.clearLink}>Clear All</Text>
           </Pressable>
         )}
       </View>
@@ -381,7 +384,7 @@ export function HomeScreen() {
             <View style={styles.handle} />
           </Pressable>
           <View style={styles.sheetTitleRow}>
-            <Text style={styles.sheetTitle}>Select a host</Text>
+            <Text style={styles.sheetTitle}>Select A Host</Text>
           <Pressable onPress={cycleSnap} hitSlop={8} style={styles.snapBtn}>
             <Animated.View style={{ transform: [{ translateY: snap === 'map' ? chevronBounce : 0 }] }}>
               <AppIcon
@@ -434,7 +437,7 @@ export function HomeScreen() {
         visible={filtersOpen}
         filters={filters}
         locations={locations}
-        onChange={handleFiltersChange}
+        onSave={handleFiltersChange}
         onClose={() => setFiltersOpen(false)}
       />
 

@@ -6,7 +6,7 @@ import { AppIcon } from '../../components/AppIcon'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { getHostProfileDetails } from '../../data/mockData'
-import { formatHostPrice } from '../../lib/hostFilters'
+import { formatHostFooterMeta, formatHostPrice } from '../../lib/hostFilters'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { formatServicePrice } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
@@ -99,7 +99,7 @@ export function HostProfileScreen() {
   return (
     <View style={styles.wrapper}>
       <Screen style={styles.scroll}>
-        <BackButton onPress={() => navigate('customer-home')} label="Explore" />
+        <BackButton onPress={() => navigate('customer-home')} label="Explore Dryers" />
 
         <LinearGradient colors={gradient} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={styles.avatar}>
@@ -109,7 +109,7 @@ export function HostProfileScreen() {
           <View style={[styles.onlineBadge, !settings.isOnline && styles.offlineBadge]}>
             <View style={[styles.onlineDot, !settings.isOnline && styles.offlineDot]} />
             <Text style={[styles.onlineText, !settings.isOnline && styles.offlineText]}>
-              {settings.isOnline ? 'Online now' : 'Offline'}
+              {settings.isOnline ? 'Online Now' : 'Offline'}
             </Text>
           </View>
           <View style={styles.heroLocation}>
@@ -126,11 +126,11 @@ export function HostProfileScreen() {
         </LinearGradient>
 
         <View style={styles.statsRow}>
-          <Stat icon="package" label="Loads hosted" value={String(profile.loadsHosted)} />
+          <Stat icon="package" label="Loads Hosted" value={String(profile.loadsHosted)} />
           <View style={styles.statDivider} />
-          <Stat icon="clock" label="Response" value={profile.responseTime} />
+          <Stat icon="clock" label="Response Time" value={profile.responseTime} />
           <View style={styles.statDivider} />
-          <Stat icon="calendar" label="Member since" value={profile.memberSince} />
+          <Stat icon="calendar" label="Member Since" value={profile.memberSince} />
         </View>
 
         <InfoSection title="About" icon="info">
@@ -142,34 +142,34 @@ export function HostProfileScreen() {
         <View style={styles.detailsGrid}>
           <View style={styles.detailChip}>
             <AppIcon name="wind" size={16} />
-            <Text style={styles.detailText}>Drying — {formatHostPrice(host.price)} per load</Text>
+            <Text style={styles.detailText}>Drying — {formatHostPrice(host.price)} Per Load</Text>
           </View>
           {(host.foldingPrice ?? 0) > 0 && (
             <View style={styles.detailChip}>
               <AppIcon name="layers" size={16} />
-              <Text style={styles.detailText}>Folding — {formatHostPrice(host.foldingPrice!)} per load</Text>
+              <Text style={styles.detailText}>Folding — {formatHostPrice(host.foldingPrice!)} Per Load</Text>
             </View>
           )}
           <View style={styles.detailChip}>
             <AppIcon name="tag" size={16} />
             <Text style={styles.detailText}>
-              Dryer sheets — {formatServicePrice(host.sheetsPrice ?? 1)} if guest buys
+              Dryer Sheets — {formatServicePrice(host.sheetsPrice ?? 1)} If Guest Buys
             </Text>
           </View>
           <View style={styles.detailChip}>
             <AppIcon name="clock" size={16} />
-            <Text style={styles.detailText}>~{host.turnaroundHours} hr to dry</Text>
+            <Text style={styles.detailText}>~{host.turnaroundHours} Hr To Dry</Text>
           </View>
           <View style={styles.detailChip}>
             <AppIcon name="calendar" size={16} />
             <Text style={styles.detailText}>
-              Drop-off hours: {formatDropOffAvailability(settings.dropOffAvailability)}
+              Drop-Off Hours: {formatDropOffAvailability(settings.dropOffAvailability)}
             </Text>
           </View>
           {host.hasGenerator && (
             <View style={styles.detailChip}>
               <AppIcon name="zap" size={16} />
-              <Text style={styles.detailText}>Generator backup</Text>
+              <Text style={styles.detailText}>Generator Backup</Text>
             </View>
           )}
           {paymentMethods.length > 0 && (
@@ -189,7 +189,7 @@ export function HostProfileScreen() {
           ))}
         </InfoSection>
 
-        <InfoSection title="House rules" icon="list">
+        <InfoSection title="House Rules" icon="list">
           {host.rules.map((rule) => (
             <View key={rule} style={styles.listItem}>
               <Text style={styles.bullet}>·</Text>
@@ -206,27 +206,29 @@ export function HostProfileScreen() {
             </Text>
           </View>
           {profile.reviews.length === 0 ? (
-            <Text style={styles.emptyReviews}>No reviews yet — be the first to book.</Text>
+            <Text style={styles.emptyReviews}>No Reviews Yet — Be The First To Book.</Text>
           ) : (
             profile.reviews.map((review) => <ReviewCard key={review.id} review={review} />)
           )}
         </View>
 
-        <View style={{ height: 148 }} />
+        <View style={{ height: 160 }} />
       </Screen>
 
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
         <View style={styles.footer}>
           <View style={styles.footerInfo}>
-            <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
-              {formatHostPrice(host.price)}
-            </Text>
-            <Text style={styles.footerMeta} numberOfLines={2}>
-              per load · {host.slotsLeft} slot{host.slotsLeft === 1 ? '' : 's'} · ~{host.turnaroundHours} hr dry
-            </Text>
+            <View style={styles.footerPriceRow}>
+              <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
+                {formatHostPrice(host.price)}
+              </Text>
+              <Text style={styles.footerMeta} numberOfLines={1}>
+                {formatHostFooterMeta(host.slotsLeft, host.turnaroundHours)}
+              </Text>
+            </View>
           </View>
           <View style={styles.footerAction}>
-            <PrimaryButton title="Book slot" icon="calendar" onPress={() => selectHost(host)} />
+            <PrimaryButton title="Book Slot" icon="calendar" onPress={() => selectHost(host)} />
           </View>
         </View>
       </View>
@@ -239,9 +241,9 @@ const styles = StyleSheet.create({
   scroll: { paddingTop: spacing.sm },
   hero: {
     borderRadius: radius.lg,
-    padding: spacing.lg,
+    padding: spacing.xl,
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   avatar: {
     width: 72,
@@ -280,18 +282,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray100,
     borderRadius: radius.lg,
-    paddingVertical: spacing.md,
-    marginBottom: spacing.lg,
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.xl,
   },
-  stat: { flex: 1, alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm },
+  stat: { flex: 1, alignItems: 'center', gap: 6, paddingHorizontal: spacing.sm },
   statValue: { fontSize: 15, fontWeight: '700', color: colors.black },
-  statLabel: { fontSize: 11, color: colors.gray500, textAlign: 'center' },
+  statLabel: { fontSize: 11, color: colors.gray500, textAlign: 'center', fontWeight: '600' },
   statDivider: { width: 1, backgroundColor: colors.gray100 },
-  section: { marginBottom: spacing.lg },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  section: { marginBottom: spacing.xl },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.black },
-  bodyText: { fontSize: 15, color: colors.gray600, lineHeight: 24 },
-  detailsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+  bodyText: { fontSize: 15, color: colors.gray600, lineHeight: 24, marginBottom: spacing.sm },
+  detailsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.xl },
   detailChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -299,20 +301,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray50,
     borderWidth: 1,
     borderColor: colors.gray100,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: radius.pill,
   },
-  detailText: { fontSize: 13, fontWeight: '500', color: colors.gray600 },
-  listItem: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.sm },
+  detailText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+  listItem: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.md },
   bullet: { fontSize: 16, color: colors.gray400, lineHeight: 20 },
   listText: { flex: 1, fontSize: 15, color: colors.gray600, lineHeight: 22 },
   reviewCard: {
     borderWidth: 1,
     borderColor: colors.gray100,
     borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     backgroundColor: colors.white,
   },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
@@ -343,13 +345,27 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.lg,
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
-  footerInfo: { flex: 1, minWidth: 0, gap: 4, paddingBottom: 2 },
-  footerPrice: { fontSize: 26, fontWeight: '700', letterSpacing: -0.5, lineHeight: 30 },
+  footerInfo: { flex: 1, minWidth: 0 },
+  footerPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  footerPrice: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5, lineHeight: 28, flexShrink: 0 },
   footerPriceFree: { color: colors.green },
-  footerMeta: { fontSize: 13, fontWeight: '500', color: colors.gray500, lineHeight: 18 },
+  footerMeta: {
+    flex: 1,
+    minWidth: 120,
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.gray500,
+    lineHeight: 18,
+  },
   footerAction: { flexShrink: 0, alignSelf: 'center' },
 })

@@ -26,8 +26,8 @@ export function HostCard({ host }: { host: Host }) {
           {host.district ? ` · ${host.district}` : ''}
         </Text>
         <Text style={styles.subMeta}>
-          {host.rating > 0 ? `★ ${host.rating.toFixed(1)}` : 'New host'}
-          {' · '}{host.turnaroundHours} hr dry
+          {host.rating > 0 ? `★ ${host.rating.toFixed(1)}` : 'New Host'}
+          {' · '}{host.turnaroundHours} Hr Dry
           {host.foldingPrice != null && host.foldingPrice > 0 ? ' · Folding' : ''}
         </Text>
       </View>
@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.white,
     borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.gray100,
   },
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     borderColor: colors.black,
     backgroundColor: colors.gray50,
   },
-  body: { flex: 1, gap: 2, minWidth: 0 },
+  body: { flex: 1, gap: 4, minWidth: 0 },
   name: {
     fontSize: 16,
     fontWeight: '700',

@@ -3,6 +3,7 @@ import { AppIcon } from '../../components/AppIcon'
 import { BackButton, BrandSwitch, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import { getHostByUserId } from '../../data/mockData'
 import { colors, radius, spacing } from '../../theme'
 
@@ -36,6 +37,7 @@ export function AccountScreen() {
     enableBiometricLogin,
     disableBiometricLogin,
   } = useAuth()
+  const { showToast } = useToast()
   const { navigate } = useApp()
 
   if (!user) return null
@@ -105,8 +107,15 @@ export function AccountScreen() {
             <BrandSwitch
               value={biometricEnabled}
               onValueChange={(next) => {
-                if (next) void enableBiometricLogin()
-                else void disableBiometricLogin()
+                if (next) {
+                  void enableBiometricLogin().then((ok) => {
+                    if (ok) showToast('Biometric sign-in saved', { icon: 'check' })
+                  })
+                } else {
+                  void disableBiometricLogin().then(() => {
+                    showToast('Biometric sign-in turned off', { icon: 'check' })
+                  })
+                }
               }}
             />
           </View>

@@ -13,7 +13,7 @@ export const BELIZE_FILTER_AREAS = [
 export type BelizeFilterArea = (typeof BELIZE_FILTER_AREAS)[number]
 
 /** Default search radius when a guest picks one of the curated areas. */
-export const FILTER_AREA_RADIUS_KM = 10
+export const FILTER_AREA_RADIUS_KM = 3
 
 /** Approximate map center for each curated filter area. */
 export const FILTER_AREA_CENTERS: Record<

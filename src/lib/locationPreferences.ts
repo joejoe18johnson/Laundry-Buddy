@@ -4,7 +4,7 @@ import { USER_LOCATION } from './mapRegion'
 
 const PREFS_KEY = 'laundry-buddy-location-prefs'
 
-export const RADIUS_OPTIONS_KM = [3, 5, 10, 15, 20, 30] as const
+export const RADIUS_OPTIONS_KM = [1, 3, 5, 10, 15, 20, 30] as const
 export type RadiusOptionKm = (typeof RADIUS_OPTIONS_KM)[number]
 
 export interface LocationPreset {
@@ -30,6 +30,15 @@ export interface LocationPreferences {
   userLocation: Coordinates
   userLocationLabel: string
   searchRadiusKm: number
+}
+
+export function locationPreferencesEqual(a: LocationPreferences, b: LocationPreferences): boolean {
+  return (
+    a.userLocationLabel === b.userLocationLabel &&
+    a.searchRadiusKm === b.searchRadiusKm &&
+    a.userLocation.latitude === b.userLocation.latitude &&
+    a.userLocation.longitude === b.userLocation.longitude
+  )
 }
 
 export const DEFAULT_LOCATION_PREFS: LocationPreferences = {

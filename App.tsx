@@ -61,10 +61,10 @@ function AppShell() {
     hostSettings,
     userLocationLabel,
     searchRadiusKm,
+    userLocation,
     locationLoading,
-    requestUserLocation,
-    focusSearchOnArea,
-    setSearchRadiusKm,
+    fetchGpsLocation,
+    applyLocationPreferences,
   } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -211,12 +211,14 @@ function AppShell() {
         <LocationSettingsSheet
           visible={locationSettingsOpen}
           onClose={() => setLocationSettingsOpen(false)}
-          locationLabel={userLocationLabel}
-          radiusKm={searchRadiusKm}
+          saved={{
+            userLocation,
+            userLocationLabel,
+            searchRadiusKm,
+          }}
           locating={locationLoading}
-          onUseGps={requestUserLocation}
-          onSelectArea={focusSearchOnArea}
-          onSelectRadius={setSearchRadiusKm}
+          onFetchGps={fetchGpsLocation}
+          onSave={applyLocationPreferences}
         />
       ) : null}
 

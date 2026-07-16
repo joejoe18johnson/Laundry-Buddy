@@ -38,12 +38,12 @@ export const coverColors: Record<string, [string, string]> = {
 }
 
 export const spacing = {
-  screen: 20,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  screen: 24,
+  sm: 10,
+  md: 18,
+  lg: 28,
+  xl: 36,
+  xxl: 56,
 }
 
 export const radius = {
@@ -61,4 +61,6 @@ export const typography = {
   body: { fontSize: 15, fontWeight: '400' as const },
   caption: { fontSize: 13, fontWeight: '500' as const, color: colors.gray500 },
   label: { fontSize: 12, fontWeight: '600' as const, color: colors.gray500, letterSpacing: 0.2 },
+  /** Title Case for UI labels and supporting copy */
+  titleCase: { textTransform: 'capitalize' as const },
 }

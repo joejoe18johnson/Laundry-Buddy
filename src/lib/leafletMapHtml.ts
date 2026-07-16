@@ -166,7 +166,8 @@ export function buildLeafletMapHtml(
       if (radiusM >= 25000) return 10;
       if (radiusM >= 15000) return 11;
       if (radiusM >= 8000) return 12;
-      return 13;
+      if (radiusM >= 3000) return 13;
+      return 14;
     }
 
     const map = L.map('map', { zoomControl: true, attributionControl: true })
@@ -189,7 +190,7 @@ export function buildLeafletMapHtml(
 
     function fitSearchArea() {
       try {
-        map.fitBounds(searchCircle.getBounds(), { padding: [48, 48], maxZoom: 13 });
+        map.fitBounds(searchCircle.getBounds(), { padding: [48, 48], maxZoom: 15 });
       } catch (e) {}
     }
 

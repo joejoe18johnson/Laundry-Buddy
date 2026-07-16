@@ -50,6 +50,7 @@ import { USER_LOCATION } from '../lib/mapRegion'
 import {
   loadLocationPreferences,
   saveLocationPreferences,
+  type LocationPreferences,
   type RadiusOptionKm,
 } from '../lib/locationPreferences'
 import { FILTER_AREA_RADIUS_KM, getFilterAreaCenter } from '../lib/belizeDistricts'
@@ -83,6 +84,8 @@ interface AppState {
   locationLoading: boolean
   searchRadiusKm: number
   requestUserLocation: () => Promise<void>
+  fetchGpsLocation: () => Promise<Coordinates | null>
+  applyLocationPreferences: (prefs: LocationPreferences) => void
   setLocationPreset: (label: string, latitude: number, longitude: number) => void
   focusSearchOnArea: (area: string) => void
   setSearchRadiusKm: (km: RadiusOptionKm) => void
@@ -231,63 +234,79 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUserLocation(coords)
       setUserLocationLabel(label)
       persistLocationPrefs(coords, label, searchRadiusKm)
-      showToast(`Searching near ${label}`, { icon: 'map-pin' })
+      showToast('Search area saved', { icon: 'check' })
     },
     [persistLocationPrefs, searchRadiusKm, showToast],
+  )
+
+  const applyLocationPreferences = useCallback(
+    (prefs: LocationPreferences) => {
+      const km = prefs.searchRadiusKm as RadiusOptionKm
+      setUserLocation(prefs.userLocation)
+      setUserLocationLabel(prefs.userLocationLabel)
+      setSearchRadiusKmState(km)
+      persistLocationPrefs(prefs.userLocation, prefs.userLocationLabel, km)
+      showToast('Search area saved', { icon: 'check' })
+    },
+    [persistLocationPrefs, showToast],
   )
 
   const focusSearchOnArea = useCallback(
     (area: string) => {
       const center = getFilterAreaCenter(area)
       if (!center) return
-      const coords = { latitude: center.latitude, longitude: center.longitude }
-      const km = FILTER_AREA_RADIUS_KM as RadiusOptionKm
-      setUserLocation(coords)
-      setUserLocationLabel(center.label)
-      setSearchRadiusKmState(km)
-      persistLocationPrefs(coords, center.label, km)
-      showToast(`Showing hosts within ${km} km of ${center.label}`, { icon: 'map-pin' })
+      applyLocationPreferences({
+        userLocation: { latitude: center.latitude, longitude: center.longitude },
+        userLocationLabel: center.label,
+        searchRadiusKm: FILTER_AREA_RADIUS_KM as RadiusOptionKm,
+      })
     },
-    [persistLocationPrefs, showToast],
+    [applyLocationPreferences],
   )
 
   const setSearchRadiusKm = useCallback(
     (km: RadiusOptionKm) => {
-      setSearchRadiusKmState(km)
-      persistLocationPrefs(userLocation, userLocationLabel, km)
-      showToast(`Showing hosts within ${km} km`, { icon: 'target' })
+      applyLocationPreferences({
+        userLocation,
+        userLocationLabel,
+        searchRadiusKm: km,
+      })
     },
-    [persistLocationPrefs, userLocation, userLocationLabel, showToast],
+    [applyLocationPreferences, userLocation, userLocationLabel],
   )
 
-  const requestUserLocation = useCallback(async () => {
+  const fetchGpsLocation = useCallback(async (): Promise<Coordinates | null> => {
     setLocationLoading(true)
     try {
       const { status } = await Location.requestForegroundPermissionsAsync()
       if (status !== 'granted') {
         showToast('Location permission denied', { icon: 'map-pin' })
-        return
+        return null
       }
       const position = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       })
-      setUserLocation({
+      return {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
-      })
-      setUserLocationLabel('Your location')
-      persistLocationPrefs(
-        { latitude: position.coords.latitude, longitude: position.coords.longitude },
-        'Your location',
-        searchRadiusKm,
-      )
-      showToast('Showing hosts near you', { icon: 'navigation' })
+      }
     } catch {
       showToast('Could not get your location', { icon: 'map-pin' })
+      return null
     } finally {
       setLocationLoading(false)
     }
   }, [showToast])
+
+  const requestUserLocation = useCallback(async () => {
+    const coords = await fetchGpsLocation()
+    if (!coords) return
+    applyLocationPreferences({
+      userLocation: coords,
+      userLocationLabel: 'Your location',
+      searchRadiusKm,
+    })
+  }, [applyLocationPreferences, fetchGpsLocation, searchRadiusKm])
 
   const getSettingsForHost = useCallback(
     (hostUserId?: string) => {
@@ -687,6 +706,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       locationLoading,
       searchRadiusKm,
       requestUserLocation,
+      fetchGpsLocation,
+      applyLocationPreferences,
       setLocationPreset,
       focusSearchOnArea,
       setSearchRadiusKm,
@@ -721,6 +742,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       locationLoading,
       searchRadiusKm,
       requestUserLocation,
+      fetchGpsLocation,
+      applyLocationPreferences,
       setLocationPreset,
       focusSearchOnArea,
       setSearchRadiusKm,

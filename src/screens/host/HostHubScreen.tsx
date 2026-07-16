@@ -7,9 +7,10 @@ import {
   View,
 } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { BackButton, BrandSwitch, PrimaryButton, Screen } from '../../components/ui'
+import { BackButton, BrandSwitch, PrimaryButton, Screen, StickySaveBar } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import { getHostByUserId, getHostProfileDetails } from '../../data/mockData'
 import { formatHostPrice } from '../../lib/hostFilters'
 import { getHostPaymentMethods, normalizeHostSettings, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
@@ -157,6 +158,7 @@ export function HostHubScreen() {
     enableBiometricLogin,
     disableBiometricLogin,
   } = useAuth()
+  const { showToast } = useToast()
   const {
     navigate,
     hostSettings,
@@ -271,6 +273,7 @@ export function HostHubScreen() {
     setDraft(cleaned)
     await updateHostSettings(cleaned)
     setSaved(true)
+    showToast('Host profile saved', { icon: 'check' })
   }
 
   const paymentSummary = [
@@ -597,9 +600,8 @@ export function HostHubScreen() {
       </View>
     </Screen>
     {!saved && (
-      <View style={styles.stickySaveBar}>
-        <Text style={styles.stickySaveText}>You have unsaved changes</Text>
-        <PrimaryButton title="Save now" onPress={handleSave} />
+      <View style={styles.stickySaveWrap}>
+        <StickySaveBar onSave={() => void handleSave()} />
       </View>
     )}
     </View>
@@ -609,27 +611,12 @@ export function HostHubScreen() {
 const styles = StyleSheet.create({
   hubWrap: { flex: 1, backgroundColor: colors.white },
   hubScrollWithBar: { paddingBottom: 100 },
-  stickySaveBar: {
+  stickySaveWrap: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    paddingHorizontal: spacing.screen,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
   },
-  stickySaveText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.gray600 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   title: { fontSize: 26, fontWeight: '700', lineHeight: 32 },
   subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
