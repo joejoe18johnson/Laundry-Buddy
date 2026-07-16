@@ -38,7 +38,7 @@ export async function saveCompletedCustomerPayment(userId: string, booking: Book
   const map = await readMap(CUSTOMER_KEY)
   const list = map[userId] ?? []
   if (list.some((b) => b.id === booking.id)) return
-  map[userId] = [{ ...booking, stage: 'ready' }, ...list]
+  map[userId] = [{ ...booking, stage: booking.stage === 'picked-up' ? 'picked-up' : 'ready' }, ...list]
   await writeMap(CUSTOMER_KEY, map)
 }
 
@@ -46,6 +46,6 @@ export async function saveCompletedHostPayment(userId: string, booking: Booking)
   const map = await readMap(HOST_KEY)
   const list = map[userId] ?? []
   if (list.some((b) => b.id === booking.id)) return
-  map[userId] = [{ ...booking, stage: 'ready' }, ...list]
+  map[userId] = [{ ...booking, stage: booking.stage === 'picked-up' ? 'picked-up' : 'ready' }, ...list]
   await writeMap(HOST_KEY, map)
 }

@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -111,6 +112,7 @@ interface AppState {
   declineRequest: (requestId: string) => void
   advanceStage: (loadId: string, stage: BookingStage) => void
   markDry: (loadId: string) => void
+  confirmPickup: (loadId: string) => void
   confirmTransferPayment: (loadId: string) => void
 }
 
@@ -121,6 +123,7 @@ const STAGE_LABELS: Record<BookingStage, string> = {
   waiting: 'Waiting for dryer',
   drying: 'Drying',
   ready: 'Ready for pickup',
+  'picked-up': 'Picked up',
 }
 
 function nowTime() {
@@ -165,6 +168,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userLocationLabel, setUserLocationLabel] = useState('San Ignacio')
   const [locationLoading, setLocationLoading] = useState(false)
   const [searchRadiusKm, setSearchRadiusKmState] = useState(10)
+
+  const bookingRef = useRef(booking)
+  const activeLoadsRef = useRef(activeLoads)
+  bookingRef.current = booking
+  activeLoadsRef.current = activeLoads
 
   useEffect(() => {
     loadLocationPreferences().then((prefs) => {
@@ -594,13 +602,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...load,
         stage,
         stageTimes: { ...load.stageTimes, [stage]: time },
-        ...(stage === 'ready'
+        ...(stage === 'picked-up'
           ? { completedAt: completedDate, paymentStatus: 'paid' as const }
           : {}),
       })
 
-      const persistIfReady = (load: Booking) => {
-        if (stage !== 'ready') return
+      const persistIfPickedUp = (load: Booking) => {
+        if (stage !== 'picked-up') return
         const completed = patchLoad(load)
         if (completed.customerId) {
           saveCompletedCustomerPayment(completed.customerId, completed)
@@ -617,23 +625,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const next = prev.map((load) => {
           if (load.id !== loadId) return load
           notifyTarget = load
-          persistIfReady(load)
+          persistIfPickedUp(load)
           return patchLoad(load)
         })
         if (role === 'host' && user) {
           void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
-        return next
+        return stage === 'picked-up' ? next.filter((load) => load.id !== loadId) : next
       })
 
       setBooking((prev) => {
         if (prev?.id !== loadId) return prev
         notifyTarget = prev
-        persistIfReady(prev)
+        persistIfPickedUp(prev)
+        if (stage === 'picked-up') return null
         return patchLoad(prev)
       })
 
-      if (notifyTarget?.customerId) {
+      if (notifyTarget?.customerId && stage !== 'picked-up') {
         notifyCustomer(
           notifyTarget.customerId,
           STAGE_LABELS[stage],
@@ -642,6 +651,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     },
     [notifyCustomer, role, user, hostRequests],
+  )
+
+  const confirmPickup = useCallback(
+    (loadId: string) => {
+      const pickedUp =
+        activeLoadsRef.current.find((load) => load.id === loadId) ??
+        (bookingRef.current?.id === loadId ? bookingRef.current : undefined)
+
+      advanceStage(loadId, 'picked-up')
+
+      if (pickedUp?.customerId) {
+        void notifyCustomer(
+          pickedUp.customerId,
+          'Leave A Review',
+          `Thanks for picking up from ${pickedUp.hostName}! Leave a review to help others find great hosts.`,
+        )
+      }
+
+      const host = pickedUp ? getHostById(pickedUp.hostId) : undefined
+      if (host?.hostUserId && pickedUp) {
+        void notifyHost(
+          host.hostUserId,
+          'Ask For A Review',
+          `${pickedUp.customerName} picked up their load. Ask them to leave a review on Laundry Buddy — it helps you get more bookings.`,
+        )
+      }
+
+      if (role === 'host') {
+        showToast('Pickup confirmed — ask your guest for a review', { icon: 'star' })
+      } else {
+        showToast('Thanks! Leave a review for your host', { icon: 'star' })
+      }
+    },
+    [advanceStage, notifyCustomer, notifyHost, role, showToast],
   )
 
   const markDry = useCallback(
@@ -724,6 +767,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       declineRequest,
       advanceStage,
       markDry,
+      confirmPickup,
       confirmTransferPayment,
     }),
     [
@@ -759,6 +803,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       declineRequest,
       advanceStage,
       markDry,
+      confirmPickup,
       confirmTransferPayment,
     ],
   )

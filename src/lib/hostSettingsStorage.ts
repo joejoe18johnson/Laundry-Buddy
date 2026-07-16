@@ -118,5 +118,5 @@ export function getHostPaymentMethods(settings: HostSettings): PaymentMethod[] {
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Cash',
-  bank_transfer: 'Bank transfer',
+  bank_transfer: 'Bank Transfer',
 }

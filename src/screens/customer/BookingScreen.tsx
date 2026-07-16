@@ -6,6 +6,7 @@ import { ClothesListEditor } from '../../components/ClothesListEditor'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
 import { useApp } from '../../context/AppContext'
+import { useTheme } from '../../context/ThemeContext'
 import { BackButton, AppTextInput, ChoiceChip, OptionRow, PrimaryButton, Screen, StepIndicator } from '../../components/ui'
 import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import {
@@ -17,11 +18,14 @@ import {
 import { formatMoney } from '../../lib/bookingPayments'
 import { sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
-import { colors, radius, spacing } from '../../theme'
+import { titleCaseWithName } from '../../lib/titleCase'
+import { radius, spacing } from '../../theme'
 import type { ClothesListItem, PaymentMethod, SheetsOption } from '../../types'
 
 export function BookingScreen() {
   const { selectedHost, navigate, confirmBooking, getSettingsForHost } = useApp()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createBookingStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const footerBottomPad = bottomSafePadding(insets.bottom)
   const [dropOffTime, setDropOffTime] = useState<DropOffHour>(14)
@@ -68,13 +72,13 @@ export function BookingScreen() {
   })
 
   const sheets: { value: SheetsOption; label: string; sub?: string }[] = [
-    { value: 'own', label: "I'll bring my own" },
+    { value: 'own', label: "I'll Bring My Own" },
     {
       value: 'buy',
-      label: 'Buy from host',
-      sub: `${formatServicePrice(sheetsPrice)} per load`,
+      label: 'Buy From Host',
+      sub: `${formatServicePrice(sheetsPrice)} Per Load`,
     },
-    { value: 'none', label: 'No sheets' },
+    { value: 'none', label: 'No Sheets' },
   ]
 
   const totalPrice = calculateBookingTotal({
@@ -97,9 +101,9 @@ export function BookingScreen() {
 
   const canConfirm = paymentMethods.length > 0 && availableTimes.length > 0
   const validationHint = !availableTimes.length
-    ? 'Host has no drop-off hours set'
+    ? 'Host Has No Drop Off Hours Set'
     : !paymentMethods.length
-      ? 'Host has no payment methods'
+      ? 'Host Has No Payment Methods'
       : null
 
   const bookingStep =
@@ -114,7 +118,7 @@ export function BookingScreen() {
       <Screen>
         <BackButton onPress={() => navigate('customer-host-profile')} />
         <Text style={styles.eyebrow}>{selectedHost.location}</Text>
-        <Text style={styles.title}>Book with {selectedHost.name}</Text>
+        <Text style={styles.title}>Book With {selectedHost.name}</Text>
 
         <StepIndicator
           steps={['Time', 'Loads', 'Pay', 'Clothes', 'Review']}
@@ -122,18 +126,18 @@ export function BookingScreen() {
         />
 
         <View style={styles.rateCard}>
-          <Text style={styles.rateTitle}>Host rates (per load)</Text>
+          <Text style={styles.rateTitle}>Host Rates (Per Load)</Text>
           <Text style={styles.rateLine}>Drying — {formatServicePrice(dryPrice)}</Text>
           {showFolding && (
             <Text style={styles.rateLine}>Folding — {formatServicePrice(foldingPrice)}</Text>
           )}
-          <Text style={styles.rateLine}>Dryer sheets — {formatServicePrice(sheetsPrice)}</Text>
+          <Text style={styles.rateLine}>Dryer Sheets — {formatServicePrice(sheetsPrice)}</Text>
         </View>
 
-        <Text style={styles.section}>Drop-off time</Text>
-        <Text style={styles.sectionHint}>Pick an hour between 8am and 8pm</Text>
+        <Text style={styles.section}>Drop Off Time</Text>
+        <Text style={styles.sectionHint}>Pick An Hour Between 8am And 8pm</Text>
         {availableTimes.length === 0 ? (
-          <Text style={styles.paymentNote}>This host has not set drop-off hours yet.</Text>
+          <Text style={styles.paymentNote}>This Host Has Not Set Drop Off Hours Yet.</Text>
         ) : (
           <DropOffHourGrid
             mode="select"
@@ -159,7 +163,7 @@ export function BookingScreen() {
 
         <Text style={styles.section}>Payment</Text>
         {paymentMethods.length === 0 ? (
-          <Text style={styles.paymentNote}>This host has not set up payment options yet.</Text>
+          <Text style={styles.paymentNote}>This Host Has Not Set Up Payment Options Yet.</Text>
         ) : (
           <>
             <View style={styles.chips}>
@@ -179,16 +183,24 @@ export function BookingScreen() {
             </View>
             {paymentMethod === 'bank_transfer' && (
               <Text style={styles.paymentNote}>
-                After {selectedHost.name} accepts, you'll get bank details on My Load. Pay by transfer, then send your receipt screenshot on WhatsApp using the host's number.
+                {titleCaseWithName(
+                  `After ${selectedHost.name} accepts, you'll get bank details on My Load. Pay by transfer, then send your receipt screenshot on WhatsApp using the host's number.`,
+                  selectedHost.name,
+                )}
               </Text>
             )}
             {paymentMethod === 'cash' && (
-              <Text style={styles.paymentNote}>Bring cash to pay {selectedHost.name} at drop-off or pickup.</Text>
+              <Text style={styles.paymentNote}>
+                {titleCaseWithName(
+                  `Bring cash to pay ${selectedHost.name} at drop off or pick up.`,
+                  selectedHost.name,
+                )}
+              </Text>
             )}
           </>
         )}
 
-        <Text style={styles.section}>Dryer sheets</Text>
+        <Text style={styles.section}>Dryer Sheets</Text>
         {sheets.map((s) => (
           <OptionRow
             key={s.value}
@@ -201,29 +213,29 @@ export function BookingScreen() {
 
         {showFolding && (
           <>
-            <Text style={styles.section}>Folding service</Text>
+            <Text style={styles.section}>Folding Service</Text>
             <OptionRow
-              label={`Add folding — ${formatServicePrice(foldingPrice)} per load`}
-              sub="Host folds clothes after drying"
+              label={`Add Folding — ${formatServicePrice(foldingPrice)} Per Load`}
+              sub="Host Folds Clothes After Drying"
               selected={foldingService}
               onPress={() => setFoldingService(!foldingService)}
             />
           </>
         )}
 
-        <Text style={styles.section}>What's in your load?</Text>
-        <Text style={styles.sectionHint}>Optional — helps your host prepare</Text>
+        <Text style={styles.section}>What's In Your Load?</Text>
+        <Text style={styles.sectionHint}>Optional — Helps Your Host Prepare</Text>
         <ClothesListEditor items={clothesList} onChange={setClothesList} />
 
         {clothesList.length > 0 && (
-          <LoadListBreakdown items={clothesList} title="Your load list" />
+          <LoadListBreakdown items={clothesList} title="Your Load List" />
         )}
 
-        <Text style={styles.section}>Photo of your load</Text>
-        <Text style={styles.sectionHint}>Show the host what you're dropping off</Text>
+        <Text style={styles.section}>Photo Of Your Load</Text>
+        <Text style={styles.sectionHint}>Show The Host What You're Dropping Off</Text>
         <LoadPhotoCapture photoUri={loadPhotoUri} onPhotoChange={setLoadPhotoUri} />
 
-        <Text style={styles.section}>Special notes</Text>
+        <Text style={styles.section}>Special Notes</Text>
         <AppTextInput
           style={styles.notes}
           multiline
@@ -250,7 +262,7 @@ export function BookingScreen() {
           </View>
           <View style={styles.footerAction}>
             <PrimaryButton
-              title="Confirm booking"
+              title="Confirm Booking"
               icon="check"
               disabled={!canConfirm}
               onPress={() =>
@@ -273,9 +285,10 @@ export function BookingScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+function createBookingStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   wrapper: { flex: 1, backgroundColor: colors.white },
-  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'capitalize', marginTop: spacing.sm, letterSpacing: 0.4 },
+  eyebrow: { fontSize: 13, color: colors.gray500, marginTop: spacing.sm, letterSpacing: 0.4 },
   title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.lg, lineHeight: 30, color: colors.black },
   rateCard: {
     borderWidth: 1,
@@ -285,10 +298,10 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: spacing.sm,
   },
-  rateTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, textTransform: 'capitalize', marginBottom: 4 },
+  rateTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, marginBottom: 4 },
   rateLine: { fontSize: 14, color: colors.gray600, fontWeight: '500' },
-  section: { fontSize: 16, fontWeight: '600', marginTop: spacing.lg, marginBottom: spacing.md, textTransform: 'capitalize', color: colors.black },
-  sectionHint: { fontSize: 13, color: colors.gray500, marginTop: -spacing.sm, marginBottom: spacing.md, textTransform: 'capitalize' },
+  section: { fontSize: 16, fontWeight: '600', marginTop: spacing.lg, marginBottom: spacing.md, color: colors.black },
+  sectionHint: { fontSize: 13, color: colors.gray500, marginTop: -spacing.sm, marginBottom: spacing.md },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
     borderWidth: 1,
@@ -367,4 +380,5 @@ const styles = StyleSheet.create({
   footerMetaInline: { fontSize: 13, fontWeight: '500', color: colors.gray500 },
   footerAction: { flexShrink: 0, alignSelf: 'center' },
   validationHint: { fontSize: 12, color: colors.danger, fontWeight: '600', lineHeight: 16 },
-})
+  })
+}

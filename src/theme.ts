@@ -1,4 +1,24 @@
-export const colors = {
+export type ColorScheme = 'light' | 'dark'
+
+export type ThemeColors = {
+  black: string
+  white: string
+  gray50: string
+  gray75: string
+  gray100: string
+  gray200: string
+  gray400: string
+  gray500: string
+  gray600: string
+  accent: string
+  blue: string
+  green: string
+  greenBg: string
+  danger: string
+  mapBg: string
+}
+
+export const lightColors: ThemeColors = {
   black: '#000000',
   white: '#ffffff',
   gray50: '#f6f6f6',
@@ -15,6 +35,83 @@ export const colors = {
   danger: '#c13515',
   mapBg: '#f2f2f2',
 }
+
+/** Inverted semantic tokens — `black` is primary text, `white` is screen background. */
+export const darkColors: ThemeColors = {
+  black: '#f2f2f2',
+  white: '#121212',
+  gray50: '#1a1a1a',
+  gray75: '#222222',
+  gray100: '#2c2c2c',
+  gray200: '#3d3d3d',
+  gray400: '#8a8a8a',
+  gray500: '#a8a8a8',
+  gray600: '#c8c8c8',
+  accent: '#f2f2f2',
+  blue: '#5b9cf5',
+  green: '#34d399',
+  greenBg: '#0f2a1f',
+  danger: '#f87171',
+  mapBg: '#1a1a1a',
+}
+
+/** @deprecated Use useTheme().colors — static light palette for legacy imports. */
+export const colors = lightColors
+
+export function getThemeColors(scheme: ColorScheme): ThemeColors {
+  return scheme === 'dark' ? darkColors : lightColors
+}
+
+export type FormStyles = {
+  input: {
+    borderWidth: number
+    borderColor: string
+    borderRadius: number
+    padding: number
+    fontSize: number
+    color: string
+    backgroundColor: string
+  }
+  inputCompact: {
+    paddingHorizontal: number
+    paddingVertical: number
+    fontSize: number
+  }
+  inputMultiline: {
+    minHeight: number
+    textAlignVertical: 'top'
+    lineHeight: number
+  }
+  placeholderColor: string
+}
+
+export function getFormStyles(themeColors: ThemeColors): FormStyles {
+  return {
+    input: {
+      borderWidth: 1,
+      borderColor: themeColors.gray200,
+      borderRadius: radius.sm,
+      padding: 16,
+      fontSize: 16,
+      color: themeColors.black,
+      backgroundColor: themeColors.white,
+    },
+    inputCompact: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+      fontSize: 15,
+    },
+    inputMultiline: {
+      minHeight: 100,
+      textAlignVertical: 'top',
+      lineHeight: 22,
+    },
+    placeholderColor: themeColors.gray400,
+  }
+}
+
+/** @deprecated Use useTheme().formStyles */
+export const formStyles = getFormStyles(lightColors)
 
 /** Shared brand marks — laundry basket icon (app icon, splash, loading). */
 export const brand = {
@@ -57,34 +154,8 @@ export const radius = {
 
 export const typography = {
   title: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.4 },
-  subtitle: { fontSize: 15, fontWeight: '400' as const, color: colors.gray500 },
+  subtitle: { fontSize: 15, fontWeight: '400' as const, color: lightColors.gray500 },
   body: { fontSize: 15, fontWeight: '400' as const },
-  caption: { fontSize: 13, fontWeight: '500' as const, color: colors.gray500 },
-  label: { fontSize: 12, fontWeight: '600' as const, color: colors.gray500, letterSpacing: 0.2 },
-  /** Title Case for UI labels and supporting copy */
-  titleCase: { textTransform: 'capitalize' as const },
-}
-
-/** Shared form field styles — explicit colors for Android dark-mode safety. */
-export const formStyles = {
-  input: {
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderRadius: radius.sm,
-    padding: 16,
-    fontSize: 16,
-    color: colors.black,
-    backgroundColor: colors.white,
-  },
-  inputCompact: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
-    fontSize: 15,
-  },
-  inputMultiline: {
-    minHeight: 100,
-    textAlignVertical: 'top' as const,
-    lineHeight: 22,
-  },
-  placeholderColor: colors.gray400,
+  caption: { fontSize: 13, fontWeight: '500' as const, color: lightColors.gray500 },
+  label: { fontSize: 12, fontWeight: '600' as const, color: lightColors.gray500, letterSpacing: 0.2 },
 }

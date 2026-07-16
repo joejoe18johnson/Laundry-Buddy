@@ -23,7 +23,7 @@ export function getBookingAmount(booking: Booking): number {
 
 export function formatPaymentMethod(method?: Booking['paymentMethod']): string {
   if (!method) return '—'
-  return method === 'cash' ? 'Cash' : 'Bank transfer'
+  return method === 'cash' ? 'Cash' : 'Bank Transfer'
 }
 
 export function sumBookingAmounts(bookings: Booking[]): number {

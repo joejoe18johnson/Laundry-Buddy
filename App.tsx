@@ -28,6 +28,7 @@ import { AccountScreen } from './src/screens/shared/AccountScreen'
 import { HelpScreen } from './src/screens/shared/HelpScreen'
 import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
 import { colors, spacing } from './src/theme'
+import { ThemeProvider, useTheme } from './src/context/ThemeContext'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
 import { isFullFlowTesting, TESTING_SPLASH_MS } from './src/lib/testingFlow'
 import { SplashLoading } from './src/components/SplashLoading'
@@ -54,6 +55,68 @@ const HIDE_BOTTOM_NAV: Screen[] = [
 
 function AppShell() {
   const { user, logout } = useAuth()
+  const { colors, isDark } = useTheme()
+  const shellStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        app: { flex: 1, backgroundColor: colors.white },
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: spacing.screen,
+          paddingVertical: 14,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.gray100,
+          backgroundColor: colors.white,
+        },
+        headerHome: {
+          borderBottomWidth: 0,
+          paddingBottom: 8,
+        },
+        greetingLarge: {
+          fontSize: 22,
+          fontWeight: '700',
+          color: colors.black,
+          letterSpacing: -0.4,
+        },
+        headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+        bellBtn: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        bellBadge: {
+          position: 'absolute',
+          top: 2,
+          right: 2,
+          minWidth: 16,
+          height: 16,
+          borderRadius: 8,
+          backgroundColor: colors.black,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 3,
+        },
+        bellBadgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
+        menuBtn: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        main: { flex: 1 },
+        bottomNavWrap: {
+          borderTopWidth: 1,
+          borderTopColor: colors.gray100,
+          backgroundColor: colors.white,
+        },
+      }),
+    [colors],
+  )
   const {
     screen,
     booking,
@@ -153,21 +216,21 @@ function AppShell() {
   }, [navigate, user])
 
   return (
-    <SafeAreaView style={styles.app} edges={['top']}>
-      <StatusBar style="dark" />
-      <View style={[styles.header, isHome && styles.headerHome]}>
-        <Text style={styles.greetingLarge}>Hi {greetingName}</Text>
-        <View style={styles.headerRight}>
-          <Pressable onPress={() => navigate('notifications')} style={styles.bellBtn} hitSlop={8}>
-            <AppIcon name="bell" size={22} />
+    <SafeAreaView style={shellStyles.app} edges={['top']}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <View style={[shellStyles.header, isHome && shellStyles.headerHome]}>
+        <Text style={shellStyles.greetingLarge}>Hi {greetingName}</Text>
+        <View style={shellStyles.headerRight}>
+          <Pressable onPress={() => navigate('notifications')} style={shellStyles.bellBtn} hitSlop={8}>
+            <AppIcon name="bell" size={22} color={colors.black} />
             {unreadCount > 0 && (
-              <View style={styles.bellBadge}>
-                <Text style={styles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              <View style={shellStyles.bellBadge}>
+                <Text style={shellStyles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
               </View>
             )}
           </Pressable>
-          <Pressable onPress={() => setMenuOpen(true)} style={styles.menuBtn} hitSlop={8}>
-            <AppIcon name="menu" size={22} />
+          <Pressable onPress={() => setMenuOpen(true)} style={shellStyles.menuBtn} hitSlop={8}>
+            <AppIcon name="menu" size={22} color={colors.black} />
           </Pressable>
         </View>
       </View>
@@ -207,7 +270,7 @@ function AppShell() {
         />
       ) : null}
 
-      <View style={styles.main}>
+      <View style={shellStyles.main}>
         {screen === 'customer-home' && <HomeScreen />}
         {screen === 'customer-host-profile' && <HostProfileScreen />}
         {screen === 'customer-booking' && <BookingScreen />}
@@ -221,7 +284,7 @@ function AppShell() {
       </View>
 
       {showBottomNav && (
-        <SafeAreaView edges={['bottom']} style={styles.bottomNavWrap}>
+        <SafeAreaView edges={['bottom']} style={shellStyles.bottomNavWrap}>
           <BottomNav tabs={tabs} currentScreen={screen} onNavigate={navigate} />
         </SafeAreaView>
       )}
@@ -340,7 +403,7 @@ function AuthenticatedApp() {
 
     if (!introSeen) {
       return (
-        <SafeAreaView style={styles.app} edges={['top', 'bottom']}>
+        <SafeAreaView style={authStyles.app} edges={['top', 'bottom']}>
           <StatusBar style="dark" />
           <IntroOnboardingScreen onComplete={completeIntro} />
         </SafeAreaView>
@@ -348,7 +411,7 @@ function AuthenticatedApp() {
     }
 
     return (
-      <SafeAreaView style={styles.app} edges={['top', 'bottom']}>
+      <SafeAreaView style={authStyles.app} edges={['top', 'bottom']}>
         <StatusBar style="dark" />
         {authScreen === 'welcome' && <WelcomeScreen />}
         {authScreen === 'login' && <LoginScreen />}
@@ -360,7 +423,7 @@ function AuthenticatedApp() {
   if (needsHostVerification(user)) {
     return (
       <>
-        <SafeAreaView style={styles.app} edges={['top', 'bottom']}>
+        <SafeAreaView style={authStyles.app} edges={['top', 'bottom']}>
           <StatusBar style="dark" />
           <HostVerificationScreen />
         </SafeAreaView>
@@ -388,67 +451,15 @@ function AuthenticatedApp() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <AuthenticatedApp />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AuthenticatedApp />
+        </AuthProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   )
 }
 
-const styles = StyleSheet.create({
+const authStyles = StyleSheet.create({
   app: { flex: 1, backgroundColor: colors.white },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.screen,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
-    backgroundColor: colors.white,
-  },
-  headerHome: {
-    borderBottomWidth: 0,
-    paddingBottom: 8,
-  },
-  greetingLarge: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: colors.black,
-    letterSpacing: -0.4,
-  },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  bellBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bellBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.black,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 3,
-  },
-  bellBadgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
-  menuBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  main: { flex: 1 },
-  bottomNavWrap: {
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
-    backgroundColor: colors.white,
-  },
 })

@@ -4,9 +4,12 @@ export function getNotificationScreen(title: string, role: AppRole): Screen | nu
   const lower = title.toLowerCase()
 
   if (role === 'host') {
+    if (lower.includes('review')) return 'host-dashboard'
     if (lower.includes('booking') || lower.includes('request')) return 'host-dashboard'
     return 'host-dashboard'
   }
+
+  if (lower.includes('review')) return 'customer-home'
 
   if (
     lower.includes('accepted') ||

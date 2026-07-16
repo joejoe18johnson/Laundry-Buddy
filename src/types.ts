@@ -2,7 +2,7 @@ import type { DropOffHour } from './lib/dropOffAvailability'
 
 export type { DropOffHour }
 export type SheetsOption = 'own' | 'buy' | 'none'
-export type BookingStage = 'got-bag' | 'waiting' | 'drying' | 'ready'
+export type BookingStage = 'got-bag' | 'waiting' | 'drying' | 'ready' | 'picked-up'
 export type AppRole = 'customer' | 'host'
 export type LoginMethod = 'phone' | 'email'
 export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected'

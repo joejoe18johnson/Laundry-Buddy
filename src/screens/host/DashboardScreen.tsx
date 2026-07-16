@@ -106,6 +106,7 @@ export function DashboardScreen() {
     declineRequest,
     advanceStage,
     confirmTransferPayment,
+    confirmPickup,
   } = useApp()
 
   const rawHost = user ? getHostByUserId(user.id) : undefined
@@ -292,7 +293,17 @@ export function DashboardScreen() {
               <PrimaryButton title="Mark as dry" onPress={() => navigate('host-mark-dry')} full />
             )}
             {load.stage === 'ready' && (
-              <Text style={styles.done}>Load complete — guest notified</Text>
+              <View style={styles.pickupBlock}>
+                <Text style={styles.pickupHint}>
+                  Confirm once the guest has collected their laundry.
+                </Text>
+                <PrimaryButton
+                  title="Guest Picked Up"
+                  icon="check-circle"
+                  full
+                  onPress={() => confirmPickup(load.id)}
+                />
+              </View>
             )}
           </View>
         </View>
@@ -503,6 +514,8 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   actionBtn: { flex: 1 },
   done: { color: colors.green, fontWeight: '600', fontSize: 15, lineHeight: 22 },
+  pickupBlock: { gap: spacing.md, marginTop: spacing.sm },
+  pickupHint: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
   transferHint: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
   empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
   emptyTitle: { fontSize: 18, fontWeight: '600' },

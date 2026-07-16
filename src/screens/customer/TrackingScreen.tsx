@@ -27,7 +27,7 @@ const STAGES: { key: BookingStage; label: string; desc: string; icon: 'shopping-
 
 export function TrackingScreen() {
   const { user } = useAuth()
-  const { booking, navigate, getSettingsForHost } = useApp()
+  const { booking, navigate, getSettingsForHost, confirmPickup, viewHostProfile } = useApp()
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
   const pulse = useRef(new Animated.Value(1)).current
@@ -77,6 +77,14 @@ export function TrackingScreen() {
   const isDeclined = booking.requestStatus === 'declined'
   const transferPending = isAccepted && isBankTransfer && booking.paymentStatus === 'pending' && amount > 0
   const bank = hostSettings.bankDetails
+
+  const isReadyForPickup = isAccepted && booking.stage === 'ready'
+
+  const handleConfirmPickup = () => {
+    if (!booking) return
+    confirmPickup(booking.id)
+    if (host) viewHostProfile(host)
+  }
 
   const statusBadge = isDeclined
     ? { label: 'Declined', variant: 'declined' as const }
@@ -275,9 +283,11 @@ export function TrackingScreen() {
         <Text style={styles.infoText}>
           {isPending
             ? "We'll notify you when the host accepts. Drop-off directions stay hidden until then for your safety."
-            : transferPending
-              ? 'Message your host on WhatsApp with your transfer screenshot.'
-              : "We'll notify you when your load is ready."}
+            : isReadyForPickup
+              ? 'Your load is ready! Pick it up, then confirm below so we can close out your booking.'
+              : transferPending
+                ? 'Message your host on WhatsApp with your transfer screenshot.'
+                : "We'll notify you when your load is ready."}
         </Text>
       </View>
       )}
@@ -319,6 +329,19 @@ export function TrackingScreen() {
           />
         ) : null}
       </View>
+      )}
+
+      {isReadyForPickup && (
+        <View style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <AppIcon name="star" size={18} color={colors.black} />
+            <Text style={styles.reviewTitle}>Ready For Pickup</Text>
+          </View>
+          <Text style={styles.reviewSub}>
+            After you collect your laundry, confirm pickup and leave a review for {booking.hostName}.
+          </Text>
+          <PrimaryButton title="I Picked Up My Load" icon="check-circle" full onPress={handleConfirmPickup} />
+        </View>
       )}
 
       {isPending && (
@@ -477,4 +500,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   pickupValue: { fontSize: 16, fontWeight: '500', marginTop: spacing.sm, lineHeight: 22 },
+  reviewCard: {
+    backgroundColor: colors.white,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    gap: spacing.md,
+  },
+  reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  reviewTitle: { fontSize: 16, fontWeight: '700' },
+  reviewSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
 })
