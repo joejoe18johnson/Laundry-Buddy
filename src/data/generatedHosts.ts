@@ -1,7 +1,7 @@
 import type { Host } from '../types'
 import { BELIZE_DISTRICTS, type BelizeDistrict } from '../lib/belizeDistricts'
 
-const HOSTS_PER_DISTRICT = 12
+const HOSTS_PER_DISTRICT = 25
 
 const FIRST_NAMES = [
   'Sofia', 'Diego', 'Rosa', 'Carlos', 'Elena', 'Marco', 'Ana', 'Luis',
@@ -111,8 +111,8 @@ export function generateSeedHosts(perDistrict = HOSTS_PER_DISTRICT): Host[] {
       const name = FIRST_NAMES[(globalIndex + i) % FIRST_NAMES.length]
       const location = config.areas[i % config.areas.length]
       const { latitude, longitude } = coordAroundCenter(config.center, i + 1, spreadKm)
-      const price = [0, 0, 3, 4, 5, 6][globalIndex % 6]
-      const foldingPrice = price === 0 ? 2 : [0, 3, 4, 5][globalIndex % 4]
+      const price = [3, 4, 5, 6, 4, 5][globalIndex % 6]
+      const foldingPrice = [0, 2, 3, 4][globalIndex % 4]
       const rating = globalIndex % 7 === 0 ? 0 : 3.8 + (globalIndex % 12) * 0.1
 
       hosts.push({
