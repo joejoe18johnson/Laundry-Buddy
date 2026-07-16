@@ -2,7 +2,7 @@ import { Image, StyleSheet } from 'react-native'
 
 type Props = {
   size?: number
-  /** Kept for API compatibility — icon artwork is always the dark launcher mark. */
+  /** Kept for API compatibility — artwork is always the transparent PNG mark. */
   variant?: 'light' | 'app'
 }
 

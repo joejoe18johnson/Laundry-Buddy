@@ -51,7 +51,7 @@ EAS cloud builds use the committed `ios/` and `android/` projects; run prebuild 
 
 ### App icons
 
-Source artwork: `assets/icon-source.png` (laundry basket on black — launcher, splash, and in-app logo). Regenerate PNGs with:
+Source artwork: `assets/icon-source.png` (your laundry basket PNG). The build script strips the black background into `logo-mark.png` and generates launcher/splash sizes. Regenerate with:
 
 ```bash
 npm run generate-assets

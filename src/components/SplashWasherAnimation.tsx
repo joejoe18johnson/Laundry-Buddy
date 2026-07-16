@@ -47,7 +47,7 @@ export function SplashWasherAnimation() {
   return (
     <View style={styles.wrap}>
       <Animated.View style={{ opacity: fade, transform: [{ scale }] }}>
-        <BrandWasherIcon size={SIZE} variant="app" />
+        <BrandWasherIcon size={SIZE} variant="light" />
       </Animated.View>
     </View>
   )

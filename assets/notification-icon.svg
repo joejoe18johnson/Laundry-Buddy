@@ -1,7 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
-  <g transform="translate(48 48) scale(0.38) translate(-110 -110)">
-    <rect x="48" y="36" width="124" height="158" rx="14" fill="#ffffff" stroke="#ffffff" stroke-width="2.6"/>
-    <circle cx="110" cy="162" r="46" fill="none" stroke="#ffffff" stroke-width="2.6"/>
-    <rect x="82" y="51" width="10" height="3" rx="1.5" fill="#ffffff"/>
+  <g transform="translate(48 48) scale(0.15) translate(-256 -300)">
+    <path d="M 356 118 C 430 132, 452 214, 418 292" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+    <path d="M 156 356 C 188 412, 252 430, 312 404" stroke="#FFFFFF" stroke-width="18" stroke-linecap="round"/>
+    <path d="M 188 214 C 214 198, 244 192, 272 198 C 298 204, 322 220, 344 214" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <path d="M 176 226 C 206 210, 248 206, 286 214 C 314 220, 334 232, 352 226" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+    <path d="M 162 258 H 350 C 362 258, 368 264, 368 274 V 286 C 368 296, 362 302, 350 302 H 162 C 150 302, 144 296, 144 286 V 274 C 144 264, 150 258, 162 258 Z" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M 152 302 H 360 C 372 302, 378 310, 378 322 V 388 C 378 404, 366 416, 350 416 H 162 C 146 416, 134 404, 134 388 V 322 C 134 310, 140 302, 152 302 Z" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round"/>
   </g>
 </svg>

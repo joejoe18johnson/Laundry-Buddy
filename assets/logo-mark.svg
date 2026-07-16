@@ -1,23 +1,79 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" fill="none">
-  <rect x="48" y="36" width="124" height="158" rx="14" fill="#ffffff" stroke="#242C34" stroke-width="2.6"/>
-  <line x1="58" y1="68" x2="162" y2="68" stroke="#242C34" stroke-width="2.6" stroke-linecap="round"/>
-  <rect x="64" y="46" width="34" height="16" rx="8" fill="#ffffff" stroke="#242C34" stroke-width="2.6"/>
-  <circle cx="98" cy="54" r="11" fill="#ffffff" stroke="#242C34" stroke-width="2.6"/>
-  <rect x="82" y="51" width="10" height="3" rx="1.5" fill="#05944f"/>
-  <line x1="138" y1="49" x2="154" y2="49" stroke="#242C34" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="138" y1="54" x2="154" y2="54" stroke="#242C34" stroke-width="2.6" stroke-linecap="round"/>
-  <line x1="138" y1="59" x2="154" y2="59" stroke="#242C34" stroke-width="2.6" stroke-linecap="round"/>
-  <circle cx="110" cy="162" r="51" fill="#ffffff" stroke="#242C34" stroke-width="2.6"/>
-  <circle cx="110" cy="162" r="46" fill="#ffffff" stroke="#242C34" stroke-width="2.6"/>
-  <g transform="translate(64 116)">
-    <path d="M46 46 C46 28 62 24 68 38 C74 52 58 62 46 46Z" stroke="#242C34" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-    <path d="M46 46 C54 62 72 58 74 44 C76 30 58 28 46 46Z" stroke="#05944f" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-    <path d="M46 46 C28 50 24 66 38 72 C52 78 62 58 46 46Z" stroke="#05944f" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-    <path d="M46 46 C30 38 38 22 54 24 C70 26 66 42 46 46Z" stroke="#242C34" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-    <path d="M46 46 C62 38 78 46 76 60 C74 74 54 68 46 46Z" stroke="#05944f" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-    <path d="M46 46 C58 30 74 34 72 50 C70 66 50 64 46 46Z" stroke="#242C34" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-  </g>
-  <rect x="134" y="168" width="24" height="16" rx="4" fill="#ffffff" stroke="#242C34" stroke-width="2.6"/>
-  <rect x="62" y="194" width="16" height="7" rx="2" fill="#242C34"/>
-  <rect x="142" y="194" width="16" height="7" rx="2" fill="#242C34"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Soap bubbles -->
+  <circle cx="168" cy="188" r="5.5" fill="#B8B8B8"/>
+  <circle cx="148" cy="248" r="7" fill="#B8B8B8"/>
+  <circle cx="198" cy="152" r="4" fill="#B8B8B8"/>
+  <circle cx="248" cy="132" r="3.5" fill="#B8B8B8"/>
+  <circle cx="372" cy="168" r="4.5" fill="#B8B8B8"/>
+  <circle cx="392" cy="332" r="5" fill="#B8B8B8"/>
+
+  <!-- Green accent arcs -->
+  <path
+    d="M 356 118 C 430 132, 452 214, 418 292"
+    stroke="#1B833E"
+    stroke-width="15"
+    stroke-linecap="round"
+  />
+  <path
+    d="M 156 356 C 188 412, 252 430, 312 404"
+    stroke="#1B833E"
+    stroke-width="15"
+    stroke-linecap="round"
+  />
+
+  <!-- Laundry pile -->
+  <path
+    d="M 188 214 C 214 198, 244 192, 272 198 C 298 204, 322 220, 344 214"
+    stroke="#242C34"
+    stroke-width="3.2"
+    stroke-linecap="round"
+  />
+  <path
+    d="M 176 226 C 206 210, 248 206, 286 214 C 314 220, 334 232, 352 226"
+    stroke="#242C34"
+    stroke-width="3.2"
+    stroke-linecap="round"
+  />
+  <path
+    d="M 184 238 C 218 224, 256 222, 292 230 C 318 236, 338 246, 356 240"
+    stroke="#242C34"
+    stroke-width="3.2"
+    stroke-linecap="round"
+  />
+  <path
+    d="M 198 250 C 228 242, 262 244, 296 252"
+    stroke="#242C34"
+    stroke-width="3.2"
+    stroke-linecap="round"
+  />
+
+  <!-- Basket rim -->
+  <path
+    d="M 162 258 H 350 C 362 258, 368 264, 368 274 V 286 C 368 296, 362 302, 350 302 H 162 C 150 302, 144 296, 144 286 V 274 C 144 264, 150 258, 162 258 Z"
+    stroke="#242C34"
+    stroke-width="3.4"
+    stroke-linejoin="round"
+  />
+
+  <!-- Basket body -->
+  <path
+    d="M 152 302 H 360 C 372 302, 378 310, 378 322 V 388 C 378 404, 366 416, 350 416 H 162 C 146 416, 134 404, 134 388 V 322 C 134 310, 140 302, 152 302 Z"
+    stroke="#242C34"
+    stroke-width="3.4"
+    stroke-linejoin="round"
+  />
+
+  <!-- Vent holes (top row) -->
+  <ellipse cx="188" cy="348" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
+  <ellipse cx="222" cy="348" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
+  <ellipse cx="256" cy="348" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
+  <ellipse cx="290" cy="348" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
+  <ellipse cx="324" cy="348" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
+
+  <!-- Vent holes (bottom row) -->
+  <ellipse cx="188" cy="382" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
+  <ellipse cx="222" cy="382" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
+  <ellipse cx="256" cy="382" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
+  <ellipse cx="290" cy="382" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
+  <ellipse cx="324" cy="382" rx="10" ry="16" stroke="#242C34" stroke-width="3"/>
 </svg>
