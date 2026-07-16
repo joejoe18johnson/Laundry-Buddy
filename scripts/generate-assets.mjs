@@ -9,7 +9,7 @@ const assetsDir = path.join(root, 'assets')
 const androidRes = path.join(root, 'android', 'app', 'src', 'main', 'res')
 const iosDir = path.join(root, 'ios', 'LaundryBuddy', 'Images.xcassets')
 
-const BG_THRESHOLD = 42
+const BG_MAX_CHANNEL = 12
 const BRAND_WHITE = { r: 255, g: 255, b: 255, alpha: 1 }
 const BRAND_BLACK = { r: 0, g: 0, b: 0, alpha: 1 }
 
@@ -21,7 +21,7 @@ const DENSITIES = [
   { folder: 'xxxhdpi', scale: 4 },
 ]
 
-/** Strip near-black pixels from the user's PNG → transparent logo mark. */
+/** Strip pure-black background while keeping dark line art and green accents. */
 async function buildTransparentLogo(sourcePath) {
   const { data, info } = await sharp(sourcePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   const out = Buffer.alloc(data.length)
@@ -30,8 +30,10 @@ async function buildTransparentLogo(sourcePath) {
     const r = data[i]
     const g = data[i + 1]
     const b = data[i + 2]
-    const lum = (r + g + b) / 3
-    if (lum <= BG_THRESHOLD) {
+    const isGreen = g > r + 18 && g > b + 18 && g > 45
+    const isBackground = !isGreen && r <= BG_MAX_CHANNEL && g <= BG_MAX_CHANNEL && b <= BG_MAX_CHANNEL
+
+    if (isBackground) {
       out[i] = 0
       out[i + 1] = 0
       out[i + 2] = 0
