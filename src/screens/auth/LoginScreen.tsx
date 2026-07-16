@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
-import { BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
+import { AppTextInput, BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
 import type { LoginMethod } from '../../types'
@@ -83,7 +83,7 @@ export function LoginScreen() {
           </View>
           <View style={styles.phoneRow}>
             <Text style={styles.prefix}>+501</Text>
-            <TextInput
+            <AppTextInput
               style={styles.phoneInput}
               placeholder="600 1234"
               keyboardType="phone-pad"
@@ -98,8 +98,7 @@ export function LoginScreen() {
             <AppIcon name="mail" size={16} color={colors.gray600} />
             <Text style={styles.label}>Email</Text>
           </View>
-          <TextInput
-            style={styles.input}
+          <AppTextInput
             placeholder="you@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -114,8 +113,7 @@ export function LoginScreen() {
           <AppIcon name="lock" size={16} color={colors.gray600} />
           <Text style={styles.label}>Password</Text>
         </View>
-        <TextInput
-          style={styles.input}
+        <AppTextInput
           placeholder="Your password"
           secureTextEntry
           value={password}
@@ -137,7 +135,7 @@ export function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34 },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34, color: colors.black },
   subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
   biometricHint: {
     flexDirection: 'row',
@@ -159,19 +157,13 @@ const styles = StyleSheet.create({
   field: { marginBottom: spacing.md },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   label: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderRadius: radius.sm,
-    padding: 16,
-    fontSize: 16,
-  },
   phoneRow: {
     flexDirection: 'row',
     borderWidth: 1,
     borderColor: colors.gray200,
     borderRadius: radius.sm,
     overflow: 'hidden',
+    backgroundColor: colors.white,
   },
   prefix: {
     padding: 16,
@@ -181,7 +173,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.gray600,
   },
-  phoneInput: { flex: 1, padding: 16, fontSize: 16 },
+  phoneInput: {
+    flex: 1,
+    borderWidth: 0,
+    padding: 16,
+    backgroundColor: colors.white,
+  },
   error: {
     color: colors.danger,
     backgroundColor: '#fef2f2',

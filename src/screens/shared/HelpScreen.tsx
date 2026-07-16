@@ -4,10 +4,10 @@ import { BackButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { ACTIVE_REGION_LABEL } from '../../data/mockData'
+import { SUPPORT_EMAIL, SUPPORT_PHONE_DISPLAY, SUPPORT_PHONE_WHATSAPP } from '../../lib/supportContact'
 import { colors, radius, spacing } from '../../theme'
 
-const SUPPORT_PHONE = '5016220000'
-const SUPPORT_EMAIL = 'help@laundrybuddy.bz'
+const SUPPORT_PHONE = SUPPORT_PHONE_WHATSAPP
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   return (
@@ -144,7 +144,10 @@ export function HelpScreen() {
       <Text style={styles.section}>Contact us</Text>
       <Pressable style={styles.contactBtn} onPress={openWhatsApp}>
         <AppIcon name="message-circle" size={18} />
-        <Text style={styles.contactLabel}>WhatsApp support</Text>
+        <View style={styles.contactCopy}>
+          <Text style={styles.contactLabel}>WhatsApp Support</Text>
+          <Text style={styles.contactSub}>{SUPPORT_PHONE_DISPLAY}</Text>
+        </View>
         <AppIcon name="chevron-right" size={18} color={colors.gray400} />
       </Pressable>
       <Pressable style={styles.contactBtn} onPress={openEmail}>
@@ -208,5 +211,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
-  contactLabel: { flex: 1, fontSize: 15, fontWeight: '600' },
+  contactLabel: { fontSize: 15, fontWeight: '600' },
+  contactCopy: { flex: 1, gap: 2 },
+  contactSub: { fontSize: 13, fontWeight: '500', color: colors.gray500 },
 })

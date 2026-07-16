@@ -9,7 +9,6 @@ const assetsDir = path.join(root, 'assets')
 const androidRes = path.join(root, 'android', 'app', 'src', 'main', 'res')
 const iosDir = path.join(root, 'ios', 'LaundryBuddy', 'Images.xcassets')
 
-const BRAND_BLACK = { r: 0, g: 0, b: 0, alpha: 1 }
 const BRAND_WHITE = { r: 255, g: 255, b: 255, alpha: 1 }
 
 const DENSITIES = [
@@ -20,9 +19,8 @@ const DENSITIES = [
   { folder: 'xxxhdpi', scale: 4 },
 ]
 
-async function renderSvg(svgPath, size) {
-  const svg = await fs.readFile(svgPath)
-  return sharp(svg).resize(Math.round(size), Math.round(size))
+async function renderIcon(sourcePath, size) {
+  return sharp(sourcePath).resize(Math.round(size), Math.round(size), { fit: 'contain' })
 }
 
 async function writePng(pipeline, filePath) {
@@ -35,42 +33,52 @@ async function writeWebp(pipeline, filePath) {
   await pipeline.webp({ quality: 95 }).toFile(filePath)
 }
 
-async function adaptiveForeground(logoPath, size) {
-  const logoBuffer = await (await renderSvg(logoPath, Math.round(size * 0.62))).png().toBuffer()
-  return sharp({
-    create: {
-      width: size,
-      height: size,
-      channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    },
-  }).composite([{ input: logoBuffer, gravity: 'center' }])
-}
-
-async function splashScreen(logoPath, width, height) {
-  const logoSize = Math.round(Math.min(width, height) * 0.28)
-  const logoBuffer = await (await renderSvg(logoPath, logoSize)).png().toBuffer()
+async function splashScreen(sourcePath, width, height) {
+  const logoSize = Math.round(Math.min(width, height) * 0.32)
+  const logoBuffer = await (await renderIcon(sourcePath, logoSize)).png().toBuffer()
   return sharp({
     create: { width, height, channels: 4, background: BRAND_WHITE },
   }).composite([{ input: logoBuffer, gravity: 'center' }])
 }
 
+/** White silhouette for Android notification tray (non-black pixels → white). */
+async function notificationIcon(sourcePath, size) {
+  const { data, info } = await sharp(sourcePath)
+    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const out = Buffer.alloc(data.length)
+  for (let i = 0; i < info.width * info.height; i += 1) {
+    const offset = i * 4
+    const lum = (data[offset] + data[offset + 1] + data[offset + 2]) / 3
+    if (lum > 40) {
+      out[offset] = 255
+      out[offset + 1] = 255
+      out[offset + 2] = 255
+      out[offset + 3] = Math.min(255, Math.round((lum / 255) * 255))
+    }
+  }
+
+  return sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } })
+}
+
 async function main() {
-  const iconSvg = path.join(assetsDir, 'icon.svg')
-  const logoSvg = path.join(assetsDir, 'logo-mark.svg')
-  const notificationSvg = path.join(assetsDir, 'notification-icon.svg')
+  const iconSource = path.join(assetsDir, 'icon-source.png')
 
-  await writePng(await renderSvg(iconSvg, 1024), path.join(assetsDir, 'icon.png'))
-  await writePng(await renderSvg(logoSvg, 512), path.join(assetsDir, 'splash-icon.png'))
-  await writePng(await adaptiveForeground(logoSvg, 1024), path.join(assetsDir, 'adaptive-icon.png'))
-  await writePng(await renderSvg(logoSvg, 96), path.join(assetsDir, 'favicon.png'))
-  await writePng(await renderSvg(notificationSvg, 96), path.join(assetsDir, 'notification-icon.png'))
-  await writePng(await splashScreen(logoSvg, 1284, 2778), path.join(assetsDir, 'splash.png'))
+  await writePng(await renderIcon(iconSource, 1024), path.join(assetsDir, 'icon.png'))
+  await writePng(await renderIcon(iconSource, 512), path.join(assetsDir, 'logo-mark.png'))
+  await writePng(await renderIcon(iconSource, 512), path.join(assetsDir, 'splash-icon.png'))
+  await writePng(await renderIcon(iconSource, 1024), path.join(assetsDir, 'adaptive-icon.png'))
+  await writePng(await renderIcon(iconSource, 96), path.join(assetsDir, 'favicon.png'))
+  await writePng(await notificationIcon(iconSource, 96), path.join(assetsDir, 'notification-icon.png'))
+  await writePng(await splashScreen(iconSource, 1284, 2778), path.join(assetsDir, 'splash.png'))
 
-  await writePng(await renderSvg(iconSvg, 1024), path.join(iosDir, 'AppIcon.appiconset', 'App-Icon-1024x1024@1x.png'))
-  await writePng(await renderSvg(logoSvg, 200), path.join(iosDir, 'SplashScreenLogo.imageset', 'image.png'))
-  await writePng(await renderSvg(logoSvg, 400), path.join(iosDir, 'SplashScreenLogo.imageset', 'image@2x.png'))
-  await writePng(await renderSvg(logoSvg, 600), path.join(iosDir, 'SplashScreenLogo.imageset', 'image@3x.png'))
+  await writePng(await renderIcon(iconSource, 1024), path.join(iosDir, 'AppIcon.appiconset', 'App-Icon-1024x1024@1x.png'))
+  await writePng(await renderIcon(iconSource, 200), path.join(iosDir, 'SplashScreenLogo.imageset', 'image.png'))
+  await writePng(await renderIcon(iconSource, 400), path.join(iosDir, 'SplashScreenLogo.imageset', 'image@2x.png'))
+  await writePng(await renderIcon(iconSource, 600), path.join(iosDir, 'SplashScreenLogo.imageset', 'image@3x.png'))
 
   for (const { folder, scale } of DENSITIES) {
     const launcherSize = Math.round(48 * scale)
@@ -81,14 +89,14 @@ async function main() {
     const mipmapDir = path.join(androidRes, `mipmap-${folder}`)
     const drawableDir = path.join(androidRes, `drawable-${folder}`)
 
-    await writeWebp(await renderSvg(iconSvg, launcherSize), path.join(mipmapDir, 'ic_launcher.webp'))
-    await writeWebp(await renderSvg(iconSvg, launcherSize), path.join(mipmapDir, 'ic_launcher_round.webp'))
-    await writeWebp(await adaptiveForeground(logoSvg, foregroundSize), path.join(mipmapDir, 'ic_launcher_foreground.webp'))
-    await writePng(await renderSvg(logoSvg, splashLogoSize), path.join(drawableDir, 'splashscreen_logo.png'))
-    await writePng(await renderSvg(notificationSvg, notificationSize), path.join(drawableDir, 'notification_icon.png'))
+    await writeWebp(await renderIcon(iconSource, launcherSize), path.join(mipmapDir, 'ic_launcher.webp'))
+    await writeWebp(await renderIcon(iconSource, launcherSize), path.join(mipmapDir, 'ic_launcher_round.webp'))
+    await writeWebp(await renderIcon(iconSource, foregroundSize), path.join(mipmapDir, 'ic_launcher_foreground.webp'))
+    await writePng(await renderIcon(iconSource, splashLogoSize), path.join(drawableDir, 'splashscreen_logo.png'))
+    await writePng(await notificationIcon(iconSource, notificationSize), path.join(drawableDir, 'notification_icon.png'))
   }
 
-  console.log('Generated brand washer assets from assets/icon.svg + logo-mark.svg')
+  console.log('Generated app assets from assets/icon-source.png')
 }
 
 main().catch((error) => {

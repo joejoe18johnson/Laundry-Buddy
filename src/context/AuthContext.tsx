@@ -50,6 +50,7 @@ interface AuthState {
   biometricEnabled: boolean
   showBiometricSetupPrompt: boolean
   biometricSetupLoading: boolean
+  authSessionKey: number
   navigateAuth: (screen: AuthScreen) => void
   login: (method: LoginMethod, identifier: string, password: string) => Promise<boolean>
   loginWithBiometrics: () => Promise<boolean>
@@ -83,6 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [biometricEnabled, setBiometricEnabled] = useState(false)
   const [showBiometricSetupPrompt, setShowBiometricSetupPrompt] = useState(false)
   const [biometricSetupLoading, setBiometricSetupLoading] = useState(false)
+  const [authSessionKey, setAuthSessionKey] = useState(0)
+
+  const bumpAuthSession = useCallback(() => {
+    setAuthSessionKey((key) => key + 1)
+  }, [])
 
   const refreshBiometricState = useCallback(async () => {
     const [support, enabled] = await Promise.all([
@@ -143,8 +149,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setSessionUserId(found.id)
     setUser(found)
     setAuthError(null)
+    bumpAuthSession()
     return true
-  }, [refreshBiometricState])
+  }, [bumpAuthSession, refreshBiometricState])
 
   const loginWithBiometrics = useCallback(async () => {
     clearAuthError()
@@ -178,9 +185,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setSessionUserId(found.id)
     setUser(found)
     setAuthError(null)
+    bumpAuthSession()
     void maybeOfferBiometricSetup()
     return true
-  }, [maybeOfferBiometricSetup])
+  }, [bumpAuthSession, maybeOfferBiometricSetup])
 
   const signup = useCallback(async (input: SignupInput) => {
     if (input.method === 'phone') {
@@ -225,9 +233,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setSessionUserId(newUser.id)
     setUser(newUser)
     setAuthError(null)
+    bumpAuthSession()
     void maybeOfferBiometricSetup()
     return true
-  }, [maybeOfferBiometricSetup])
+  }, [bumpAuthSession, maybeOfferBiometricSetup])
 
   const enableBiometricLoginForUser = useCallback(async () => {
     if (!user) return false
@@ -295,6 +304,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       biometricEnabled,
       showBiometricSetupPrompt,
       biometricSetupLoading,
+      authSessionKey,
       navigateAuth,
       login,
       loginWithBiometrics,
@@ -316,6 +326,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       biometricEnabled,
       showBiometricSetupPrompt,
       biometricSetupLoading,
+      authSessionKey,
       navigateAuth,
       login,
       loginWithBiometrics,

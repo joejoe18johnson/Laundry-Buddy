@@ -7,6 +7,8 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
+  type TextInputProps,
   View,
   ViewStyle,
 } from 'react-native'
@@ -14,7 +16,18 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
 import { SplashWasherAnimation } from './SplashWasherAnimation'
 import { bottomSafePadding } from '../lib/safeAreaInsets'
-import { colors, radius, spacing } from '../theme'
+import { colors, formStyles, radius, spacing } from '../theme'
+
+export function AppTextInput({ style, multiline, placeholderTextColor, ...props }: TextInputProps) {
+  return (
+    <TextInput
+      {...props}
+      multiline={multiline}
+      placeholderTextColor={placeholderTextColor ?? formStyles.placeholderColor}
+      style={[styles.appInput, multiline && styles.appInputMultiline, style]}
+    />
+  )
+}
 
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const insets = useSafeAreaInsets()
@@ -614,4 +627,6 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   stepLineDone: { backgroundColor: colors.black },
+  appInput: { ...formStyles.input },
+  appInputMultiline: { ...formStyles.inputMultiline },
 })

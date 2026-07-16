@@ -72,11 +72,14 @@ export async function requestPushPermissions(): Promise<boolean> {
 }
 
 export async function shouldShowPermissionPrompt(): Promise<boolean> {
+  return shouldPromptForPushAfterAuth()
+}
+
+/** Show the in-app prompt after login/signup when push is not already granted. */
+export async function shouldPromptForPushAfterAuth(): Promise<boolean> {
   if (Platform.OS === 'web' || !Device.isDevice) return false
-  const prompted = await AsyncStorage.getItem(PERMISSION_PROMPT_KEY)
-  if (prompted === 'true') return false
   const status = await getPushPermissionStatus()
-  return status === 'undetermined'
+  return status !== 'granted'
 }
 
 export async function markPermissionPrompted(): Promise<void> {

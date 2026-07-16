@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { ClothesListEditor } from '../../components/ClothesListEditor'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
 import { useApp } from '../../context/AppContext'
-import { BackButton, ChoiceChip, OptionRow, PrimaryButton, Screen, StepIndicator } from '../../components/ui'
+import { BackButton, AppTextInput, ChoiceChip, OptionRow, PrimaryButton, Screen, StepIndicator } from '../../components/ui'
 import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import {
   calculateBookingTotal,
@@ -224,7 +224,7 @@ export function BookingScreen() {
         <LoadPhotoCapture photoUri={loadPhotoUri} onPhotoChange={setLoadPhotoUri} />
 
         <Text style={styles.section}>Special notes</Text>
-        <TextInput
+        <AppTextInput
           style={styles.notes}
           multiline
           numberOfLines={3}
@@ -238,11 +238,13 @@ export function BookingScreen() {
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
         <View style={styles.footer}>
           <View style={styles.footerInfo}>
-            <Text style={[styles.footerPrice, totalPrice <= 0 && styles.footerPriceFree]}>
-              {formatMoney(totalPrice)}
-            </Text>
-            <Text style={styles.footerMeta} numberOfLines={2}>
-              {priceBreakdown}
+            <Text style={styles.footerSummary} numberOfLines={2}>
+              <Text style={[styles.footerPrice, totalPrice <= 0 && styles.footerPriceFree]}>
+                {formatMoney(totalPrice)}
+              </Text>
+              {priceBreakdown ? (
+                <Text style={styles.footerMetaInline}> · {priceBreakdown}</Text>
+              ) : null}
             </Text>
             {validationHint ? <Text style={styles.validationHint}>{validationHint}</Text> : null}
           </View>
@@ -274,7 +276,7 @@ export function BookingScreen() {
 const styles = StyleSheet.create({
   wrapper: { flex: 1, backgroundColor: colors.white },
   eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'capitalize', marginTop: spacing.sm, letterSpacing: 0.4 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.lg, lineHeight: 30 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.lg, lineHeight: 30, color: colors.black },
   rateCard: {
     borderWidth: 1,
     borderColor: colors.black,
@@ -285,7 +287,7 @@ const styles = StyleSheet.create({
   },
   rateTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, textTransform: 'capitalize', marginBottom: 4 },
   rateLine: { fontSize: 14, color: colors.gray600, fontWeight: '500' },
-  section: { fontSize: 16, fontWeight: '600', marginTop: spacing.lg, marginBottom: spacing.md, textTransform: 'capitalize' },
+  section: { fontSize: 16, fontWeight: '600', marginTop: spacing.lg, marginBottom: spacing.md, textTransform: 'capitalize', color: colors.black },
   sectionHint: { fontSize: 13, color: colors.gray500, marginTop: -spacing.sm, marginBottom: spacing.md, textTransform: 'capitalize' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chip: {
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   chipSelected: { backgroundColor: colors.black, borderColor: colors.black },
-  chipText: { fontSize: 14, fontWeight: '500' },
+  chipText: { fontSize: 14, fontWeight: '500', color: colors.black },
   chipTextSelected: { color: colors.white },
   paymentNote: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
   bankCard: {
@@ -308,8 +310,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   bankTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, textTransform: 'capitalize', marginBottom: 4 },
-  bankLine: { fontSize: 15, fontWeight: '600' },
-  bankAccount: { fontSize: 18, fontWeight: '700', letterSpacing: 0.5, marginVertical: 4 },
+  bankLine: { fontSize: 15, fontWeight: '600', color: colors.black },
+  bankAccount: { fontSize: 18, fontWeight: '700', letterSpacing: 0.5, marginVertical: 4, color: colors.black },
   bankHint: { fontSize: 12, color: colors.gray500, lineHeight: 17, marginTop: 4 },
   stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', maxWidth: 280, marginVertical: spacing.sm },
   stepBtn: {
@@ -323,7 +325,7 @@ const styles = StyleSheet.create({
   },
   stepBtnText: { fontSize: 22, color: colors.black },
   stepValue: { alignItems: 'center' },
-  stepCount: { fontSize: 24, fontWeight: '700' },
+  stepCount: { fontSize: 24, fontWeight: '700', color: colors.black },
   stepLabel: { fontSize: 13, color: colors.gray500 },
   optionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   radio: {
@@ -334,17 +336,11 @@ const styles = StyleSheet.create({
     borderColor: colors.gray200,
   },
   radioSelected: { borderColor: colors.black, backgroundColor: colors.black },
-  optionLabel: { fontSize: 16, fontWeight: '500' },
+  optionLabel: { fontSize: 16, fontWeight: '500', color: colors.black },
   optionSub: { fontSize: 13, color: colors.gray500 },
   notes: {
-    borderWidth: 1,
-    borderColor: colors.gray200,
     borderRadius: radius.md,
-    padding: spacing.md,
-    fontSize: 16,
     minHeight: 100,
-    textAlignVertical: 'top',
-    lineHeight: 22,
   },
   footerShell: {
     backgroundColor: colors.white,
@@ -362,11 +358,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingHorizontal: spacing.screen,
     paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
   },
-  footerInfo: { flex: 1, minWidth: 0, gap: 4, paddingBottom: 2 },
-  footerPrice: { fontSize: 26, fontWeight: '700', letterSpacing: -0.5, lineHeight: 30 },
+  footerInfo: { flex: 1, minWidth: 0, gap: 4, justifyContent: 'center' },
+  footerSummary: { lineHeight: 22 },
+  footerPrice: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5, color: colors.black },
   footerPriceFree: { color: colors.green },
-  footerMeta: { fontSize: 13, fontWeight: '500', color: colors.gray500, lineHeight: 18 },
+  footerMetaInline: { fontSize: 13, fontWeight: '500', color: colors.gray500 },
   footerAction: { flexShrink: 0, alignSelf: 'center' },
   validationHint: { fontSize: 12, color: colors.danger, fontWeight: '600', lineHeight: 16 },
 })

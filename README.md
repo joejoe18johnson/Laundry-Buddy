@@ -51,7 +51,7 @@ EAS cloud builds use the committed `ios/` and `android/` projects; run prebuild 
 
 ### App icons
 
-Source artwork: `assets/icon.svg` (launcher, black + white washer) and `assets/logo-mark.svg` (ink `#242C34` + green `#05944f`). In-app loading uses the same `BrandWasherIcon` / `SplashWasherAnimation`. Regenerate PNGs with:
+Source artwork: `assets/icon-source.png` (laundry basket on black — launcher, splash, and in-app logo). Regenerate PNGs with:
 
 ```bash
 npm run generate-assets

@@ -49,6 +49,7 @@ function EditableLineList({
             value={item}
             onChangeText={(v) => onChange(index, v)}
             placeholder={placeholder}
+            placeholderTextColor={colors.gray400}
           />
           <Pressable onPress={() => onRemove(index)} hitSlop={8} style={styles.removeBtn}>
             <AppIcon name="x" size={18} color={colors.gray500} />
@@ -86,6 +87,7 @@ function Field({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
+        placeholderTextColor={colors.gray400}
         keyboardType={keyboardType}
         multiline={multiline}
         numberOfLines={multiline ? 4 : 1}
@@ -510,18 +512,21 @@ export function HostHubScreen() {
             <TextInput
               style={styles.input}
               placeholder="Bank name"
+              placeholderTextColor={colors.gray400}
               value={draft.bankDetails.bankName}
               onChangeText={(v) => patchBank('bankName', v)}
             />
             <TextInput
               style={styles.input}
               placeholder="Account holder name"
+              placeholderTextColor={colors.gray400}
               value={draft.bankDetails.accountName}
               onChangeText={(v) => patchBank('accountName', v)}
             />
             <TextInput
               style={styles.input}
               placeholder="Account number"
+              placeholderTextColor={colors.gray400}
               value={draft.bankDetails.accountNumber}
               onChangeText={(v) => patchBank('accountNumber', v)}
               keyboardType="number-pad"
@@ -700,7 +705,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   toggleText: { flex: 1, gap: 2 },
-  toggleLabel: { fontSize: 15, fontWeight: '600' },
+  toggleLabel: { fontSize: 15, fontWeight: '600', color: colors.black },
   toggleSub: { fontSize: 12, color: colors.gray500, lineHeight: 17 },
   bankForm: { gap: spacing.sm, marginTop: spacing.sm },
   bankTitle: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
@@ -711,6 +716,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 12,
     fontSize: 15,
+    color: colors.black,
+    backgroundColor: colors.white,
   },
   priceField: { gap: spacing.sm },
   priceLabel: { fontSize: 14, fontWeight: '600', color: colors.gray600 },

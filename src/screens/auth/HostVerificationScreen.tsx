@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
-import { GhostButton, PrimaryButton, Screen } from '../../components/ui'
+import { AppTextInput, GhostButton, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
 
@@ -86,8 +86,8 @@ export function HostVerificationScreen() {
         <AppIcon name="home" size={18} />
         <Text style={styles.sectionTitle}>Home address</Text>
       </View>
-      <TextInput
-        style={styles.input}
+      <AppTextInput
+        style={styles.addressInput}
         placeholder="22 Coconut St., Las Flores"
         value={address}
         onChangeText={setAddress}
@@ -118,7 +118,7 @@ export function HostVerificationScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34 },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34, color: colors.black },
   subtitle: { fontSize: 15, color: colors.gray500, lineHeight: 24, marginBottom: spacing.lg },
   pill: {
     flexDirection: 'row',
@@ -145,16 +145,9 @@ const styles = StyleSheet.create({
   },
   pillPendingText: { fontSize: 12, fontWeight: '600', color: '#b8860b' },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm, marginTop: spacing.sm },
-  sectionTitle: { fontSize: 16, fontWeight: '600' },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.black },
   sectionSub: { fontSize: 13, color: colors.gray500, marginBottom: spacing.md, lineHeight: 20 },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderRadius: radius.sm,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: spacing.sm,
-  },
+  addressInput: { marginBottom: spacing.sm },
   upload: {
     minHeight: 120,
     borderWidth: 2,
@@ -188,6 +181,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkTitle: { fontSize: 15, fontWeight: '600', lineHeight: 20 },
+  checkTitle: { fontSize: 15, fontWeight: '600', lineHeight: 20, color: colors.black },
   checkSub: { fontSize: 13, color: colors.gray500, marginTop: spacing.sm, lineHeight: 18 },
 })

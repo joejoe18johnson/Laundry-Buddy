@@ -16,10 +16,10 @@ export const colors = {
   mapBg: '#e9ecef',
 }
 
-/** Shared brand marks — washer line art (app icon, splash, loading). */
+/** Shared brand marks — laundry basket icon (app icon, splash, loading). */
 export const brand = {
   ink: '#242C34',
-  green: '#05944f',
+  green: '#1B833E',
   iconBg: '#000000',
 } as const
 
@@ -63,4 +63,28 @@ export const typography = {
   label: { fontSize: 12, fontWeight: '600' as const, color: colors.gray500, letterSpacing: 0.2 },
   /** Title Case for UI labels and supporting copy */
   titleCase: { textTransform: 'capitalize' as const },
+}
+
+/** Shared form field styles — explicit colors for Android dark-mode safety. */
+export const formStyles = {
+  input: {
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.sm,
+    padding: 16,
+    fontSize: 16,
+    color: colors.black,
+    backgroundColor: colors.white,
+  },
+  inputCompact: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  inputMultiline: {
+    minHeight: 100,
+    textAlignVertical: 'top' as const,
+    lineHeight: 22,
+  },
+  placeholderColor: colors.gray400,
 }

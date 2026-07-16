@@ -36,10 +36,10 @@ import { ToastProvider } from './src/context/ToastContext'
 import { getNotificationScreen } from './src/lib/notificationRoutes'
 import {
   addNotificationResponseListener,
-  markPermissionPrompted,
   requestPushPermissions,
-  shouldShowPermissionPrompt,
+  shouldPromptForPushAfterAuth,
 } from './src/lib/pushNotifications'
+import { getGreetingName } from './src/lib/displayName'
 import type { Screen } from './src/types'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
@@ -69,10 +69,9 @@ function AppShell() {
   const { unreadCount } = useUserNotifications(user!.id)
   const [menuOpen, setMenuOpen] = useState(false)
   const [locationSettingsOpen, setLocationSettingsOpen] = useState(false)
-  const [showNotifPrompt, setShowNotifPrompt] = useState(false)
 
   const isCustomer = user!.role === 'customer'
-  const firstName = user!.name.split(' ')[0]
+  const greetingName = getGreetingName(user!.name)
   const isHome = screen === 'customer-home'
 
   const loadNeedsAttention =
@@ -146,10 +145,6 @@ function AppShell() {
   const showBottomNav = !HIDE_BOTTOM_NAV.includes(screen)
 
   useEffect(() => {
-    shouldShowPermissionPrompt().then(setShowNotifPrompt)
-  }, [])
-
-  useEffect(() => {
     const subscription = addNotificationResponseListener((title) => {
       const target = getNotificationScreen(title, user!.role)
       navigate(target ?? 'notifications')
@@ -157,21 +152,11 @@ function AppShell() {
     return () => subscription.remove()
   }, [navigate, user])
 
-  const enableNotifications = async () => {
-    await requestPushPermissions()
-    setShowNotifPrompt(false)
-  }
-
-  const dismissNotifications = async () => {
-    await markPermissionPrompted()
-    setShowNotifPrompt(false)
-  }
-
   return (
     <SafeAreaView style={styles.app} edges={['top']}>
       <StatusBar style="dark" />
       <View style={[styles.header, isHome && styles.headerHome]}>
-        <Text style={styles.greetingLarge}>Hi {firstName}</Text>
+        <Text style={styles.greetingLarge}>Hi {greetingName}</Text>
         <View style={styles.headerRight}>
           <Pressable onPress={() => navigate('notifications')} style={styles.bellBtn} hitSlop={8}>
             <AppIcon name="bell" size={22} />
@@ -241,12 +226,40 @@ function AppShell() {
         </SafeAreaView>
       )}
 
-      <NotificationPermissionPrompt
-        visible={showNotifPrompt}
-        onEnable={enableNotifications}
-        onDismiss={dismissNotifications}
-      />
     </SafeAreaView>
+  )
+}
+
+function PushNotificationPromptGate() {
+  const { user, authSessionKey, showBiometricSetupPrompt } = useAuth()
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (!user || showBiometricSetupPrompt) {
+      setVisible(false)
+      return
+    }
+
+    let cancelled = false
+    void shouldPromptForPushAfterAuth().then((shouldPrompt) => {
+      if (!cancelled && shouldPrompt) setVisible(true)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [user, authSessionKey, showBiometricSetupPrompt])
+
+  if (!user) return null
+
+  return (
+    <NotificationPermissionPrompt
+      visible={visible}
+      onEnable={() => {
+        void requestPushPermissions().then(() => setVisible(false))
+      }}
+      onDismiss={() => setVisible(false)}
+    />
   )
 }
 
@@ -352,6 +365,7 @@ function AuthenticatedApp() {
           <HostVerificationScreen />
         </SafeAreaView>
         <BiometricOverlays />
+        <PushNotificationPromptGate />
       </>
     )
   }
@@ -366,6 +380,7 @@ function AuthenticatedApp() {
         </ToastProvider>
       </NotificationProvider>
       <BiometricOverlays />
+      <PushNotificationPromptGate />
     </>
   )
 }

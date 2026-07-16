@@ -129,6 +129,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: colors.black,
+    backgroundColor: colors.white,
   },
   addBtn: {
     backgroundColor: colors.black,
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   qtyBtnText: { fontSize: 18, fontWeight: '600', color: colors.black, lineHeight: 20 },
-  qtyValue: { minWidth: 20, textAlign: 'center', fontSize: 14, fontWeight: '700' },
+  qtyValue: { minWidth: 20, textAlign: 'center', fontSize: 14, fontWeight: '700', color: colors.black },
   removeBtn: { padding: 4 },
   empty: {
     alignItems: 'center',

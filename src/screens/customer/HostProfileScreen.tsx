@@ -218,14 +218,15 @@ export function HostProfileScreen() {
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
         <View style={styles.footer}>
           <View style={styles.footerInfo}>
-            <View style={styles.footerPriceRow}>
+            <Text style={styles.footerSummary} numberOfLines={2}>
               <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
                 {formatHostPrice(host.price)}
               </Text>
-              <Text style={styles.footerMeta} numberOfLines={1}>
+              <Text style={styles.footerMetaInline}>
+                {' · '}
                 {formatHostFooterMeta(host.slotsLeft, host.turnaroundHours)}
               </Text>
-            </View>
+            </Text>
           </View>
           <View style={styles.footerAction}>
             <PrimaryButton title="Book Slot" icon="calendar" onPress={() => selectHost(host)} />
@@ -350,22 +351,19 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
   },
-  footerInfo: { flex: 1, minWidth: 0 },
-  footerPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+  footerInfo: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  footerSummary: { lineHeight: 22 },
+  footerPrice: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+    color: colors.black,
   },
-  footerPrice: { fontSize: 24, fontWeight: '700', letterSpacing: -0.5, lineHeight: 28, flexShrink: 0 },
   footerPriceFree: { color: colors.green },
-  footerMeta: {
-    flex: 1,
-    minWidth: 120,
+  footerMetaInline: {
     fontSize: 13,
     fontWeight: '600',
     color: colors.gray500,
-    lineHeight: 18,
   },
   footerAction: { flexShrink: 0, alignSelf: 'center' },
 })

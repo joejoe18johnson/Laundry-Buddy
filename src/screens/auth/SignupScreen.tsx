@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
-import { BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
+import { AppTextInput, BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
 import type { AppRole, LoginMethod } from '../../types'
@@ -70,7 +70,7 @@ export function SignupScreen() {
 
       <View style={styles.field}>
         <Text style={styles.label}>Full name</Text>
-        <TextInput style={styles.input} placeholder="Your name" value={name} onChangeText={setName} />
+        <AppTextInput placeholder="Your name" value={name} onChangeText={setName} />
       </View>
 
       {method === 'phone' ? (
@@ -78,7 +78,7 @@ export function SignupScreen() {
           <Text style={styles.label}>Phone number</Text>
           <View style={styles.phoneRow}>
             <Text style={styles.prefix}>+501</Text>
-            <TextInput
+            <AppTextInput
               style={styles.phoneInput}
               placeholder="600 1234"
               keyboardType="phone-pad"
@@ -90,8 +90,7 @@ export function SignupScreen() {
       ) : (
         <View style={styles.field}>
           <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
+          <AppTextInput
             placeholder="you@example.com"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -103,8 +102,7 @@ export function SignupScreen() {
 
       <View style={styles.field}>
         <Text style={styles.label}>Password</Text>
-        <TextInput
-          style={styles.input}
+        <AppTextInput
           placeholder="At least 6 characters"
           secureTextEntry
           value={password}
@@ -130,7 +128,7 @@ export function SignupScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34 },
+  title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34, color: colors.black },
   subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
   roleRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   roleCard: {
@@ -157,19 +155,13 @@ const styles = StyleSheet.create({
   noticeText: { fontSize: 13, color: colors.gray600, lineHeight: 20 },
   field: { marginBottom: spacing.md },
   label: { fontSize: 13, fontWeight: '600', color: colors.gray600, marginBottom: spacing.sm },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderRadius: radius.sm,
-    padding: 16,
-    fontSize: 16,
-  },
   phoneRow: {
     flexDirection: 'row',
     borderWidth: 1,
     borderColor: colors.gray200,
     borderRadius: radius.sm,
     overflow: 'hidden',
+    backgroundColor: colors.white,
   },
   prefix: {
     padding: 16,
@@ -179,7 +171,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.gray600,
   },
-  phoneInput: { flex: 1, padding: 16, fontSize: 16 },
+  phoneInput: {
+    flex: 1,
+    borderWidth: 0,
+    padding: 16,
+    backgroundColor: colors.white,
+  },
   error: {
     color: colors.danger,
     backgroundColor: '#fef2f2',
