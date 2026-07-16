@@ -1,5 +1,6 @@
 import type { Host } from '../types'
 import { BELIZE_DISTRICTS, type BelizeDistrict } from '../lib/belizeDistricts'
+import { TURNAROUND_HOUR_OPTIONS } from '../lib/turnaroundTime'
 
 /** Minimum hosts clustered in Belmopan for demo / testing. */
 const BELMOPAN_HOST_COUNT = 22
@@ -129,7 +130,7 @@ function createHost(input: HostSeedInput): Host {
     foldingPrice,
     sheetsPrice: 1 + (globalIndex % 2),
     slotsLeft: 1 + (globalIndex % 4),
-    turnaroundHours: 2 + (globalIndex % 4),
+    turnaroundHours: TURNAROUND_HOUR_OPTIONS[globalIndex % TURNAROUND_HOUR_OPTIONS.length],
     dryerType: DRYER_TYPES[globalIndex % DRYER_TYPES.length],
     hasGenerator: globalIndex % 3 === 0,
     address: `${10 + (globalIndex % 80)} ${location} Rd., ${district}`,

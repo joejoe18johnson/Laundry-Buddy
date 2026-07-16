@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
 import { applyHostSettings } from '../../lib/hostListing'
 import { formatHostPrice } from '../../lib/hostFilters'
+import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
@@ -184,7 +185,7 @@ export function DashboardScreen() {
             ? ` · Folding ${formatHostPrice(hostProfile.foldingPrice!)}`
             : ''}
           {' · Sheets '}{formatHostPrice(hostProfile.sheetsPrice ?? 1)}
-          {' · '}{hostProfile.slotsLeft} slots · ~{hostProfile.turnaroundHours} hr
+          {' · '}{hostProfile.slotsLeft} slots · {formatTurnaroundHours(hostProfile.turnaroundHours)}
         </Text>
       )}
 

@@ -1,5 +1,6 @@
 import type { Host, HostListing, HostSettings } from '../types'
 import { applyHostPricing } from './hostPricing'
+import { clampTurnaroundHours, DEFAULT_TURNAROUND_HOURS } from './turnaroundTime'
 
 export const EMPTY_HOST_LISTING: HostListing = {
   bio: '',
@@ -8,7 +9,7 @@ export const EMPTY_HOST_LISTING: HostListing = {
   address: '',
   gateCode: '',
   whatsapp: '',
-  turnaroundHours: 3,
+  turnaroundHours: DEFAULT_TURNAROUND_HOURS,
   slotsLeft: 2,
   hasGenerator: false,
   setup: [],
@@ -42,6 +43,7 @@ export function normalizeListing(
   return {
     ...base,
     ...listing,
+    turnaroundHours: clampTurnaroundHours(listing.turnaroundHours ?? base.turnaroundHours),
     setup: listing.setup ?? base.setup,
     rules: listing.rules ?? base.rules,
   }
@@ -58,7 +60,7 @@ export function applyHostListing(host: Host, settings?: HostSettings): Host {
     address: listing.address.trim() || host.address,
     gateCode: listing.gateCode.trim() || host.gateCode,
     whatsapp: listing.whatsapp.trim() || host.whatsapp,
-    turnaroundHours: listing.turnaroundHours ?? host.turnaroundHours,
+    turnaroundHours: clampTurnaroundHours(listing.turnaroundHours ?? host.turnaroundHours),
     slotsLeft: listing.slotsLeft ?? host.slotsLeft,
     hasGenerator: listing.hasGenerator ?? host.hasGenerator,
     photos: listing.setup.length > 0 ? listing.setup : host.photos,

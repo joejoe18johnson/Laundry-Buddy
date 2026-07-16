@@ -7,6 +7,7 @@ import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { getHostProfileDetails } from '../../data/mockData'
 import { formatHostFooterMeta, formatHostPrice } from '../../lib/hostFilters'
+import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { formatServicePrice } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
@@ -158,7 +159,7 @@ export function HostProfileScreen() {
           </View>
           <View style={styles.detailChip}>
             <AppIcon name="clock" size={16} />
-            <Text style={styles.detailText}>~{host.turnaroundHours} Hr To Dry</Text>
+            <Text style={styles.detailText}>{formatTurnaroundHours(host.turnaroundHours)} to dry</Text>
           </View>
           <View style={styles.detailChip}>
             <AppIcon name="calendar" size={16} />

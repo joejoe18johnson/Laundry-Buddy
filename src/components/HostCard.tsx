@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../context/AppContext'
 import { formatHostPrice } from '../lib/hostFilters'
+import { formatTurnaroundHours } from '../lib/turnaroundTime'
 import type { Host } from '../types'
 import { colors, radius, spacing } from '../theme'
 import { AppIcon } from './AppIcon'
@@ -27,7 +28,7 @@ export function HostCard({ host }: { host: Host }) {
         </Text>
         <Text style={styles.subMeta}>
           {host.rating > 0 ? `★ ${host.rating.toFixed(1)}` : 'New Host'}
-          {' · '}{host.turnaroundHours} Hr Dry
+          {' · '}{formatTurnaroundHours(host.turnaroundHours)} dry
           {host.foldingPrice != null && host.foldingPrice > 0 ? ' · Folding' : ''}
         </Text>
       </View>

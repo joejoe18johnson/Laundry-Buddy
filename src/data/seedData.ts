@@ -54,7 +54,7 @@ export const SEED_HOSTS: Host[] = [
     foldingPrice: 3,
     sheetsPrice: 1,
     slotsLeft: 3,
-    turnaroundHours: 3,
+    turnaroundHours: 2,
     dryerType: 'Electric',
     hasGenerator: false,
     address: '22 Coconut St.',

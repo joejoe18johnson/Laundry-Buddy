@@ -6,6 +6,7 @@ import {
   DEFAULT_HOST_FILTERS,
   type HostFilters,
 } from '../lib/hostFilters'
+import { TURNAROUND_FILTER_OPTIONS } from '../lib/turnaroundTime'
 import { colors, radius, spacing } from '../theme'
 import { AppIcon } from './AppIcon'
 import { ChoiceChip } from './ui'
@@ -119,10 +120,14 @@ export function HostFilterSheet({ visible, filters, locations, onSave, onClose }
               </FilterSection>
 
               <FilterSection title="Dry time (standard load)" icon="clock">
-                <Chip label="Any" selected={draft.maxDryHours === null} onPress={() => set({ maxDryHours: null })} />
-                <Chip label="Under 3 hr" selected={draft.maxDryHours === 3} onPress={() => set({ maxDryHours: 3 })} />
-                <Chip label="Under 4 hr" selected={draft.maxDryHours === 4} onPress={() => set({ maxDryHours: 4 })} />
-                <Chip label="Under 5 hr" selected={draft.maxDryHours === 5} onPress={() => set({ maxDryHours: 5 })} />
+                {TURNAROUND_FILTER_OPTIONS.map((option) => (
+                  <Chip
+                    key={option.label}
+                    label={option.label}
+                    selected={draft.maxDryHours === option.value}
+                    onPress={() => set({ maxDryHours: option.value })}
+                  />
+                ))}
               </FilterSection>
             </ScrollView>
 

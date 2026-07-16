@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { getHostByUserId } from '../../data/mockData'
+import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { colors, radius, spacing } from '../../theme'
 
 function DetailRow({
@@ -89,7 +90,7 @@ export function AccountScreen() {
           <DetailRow
             icon="wind"
             label="Dryer setup"
-            value={`${hostProfile.turnaroundHours} hr turnaround · ${hostProfile.slotsLeft} slots`}
+            value={`${formatTurnaroundHours(hostProfile.turnaroundHours)} turnaround · ${hostProfile.slotsLeft} slots`}
           />
         ) : null}
       </View>

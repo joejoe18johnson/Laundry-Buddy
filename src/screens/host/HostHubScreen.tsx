@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { BackButton, BrandSwitch, PrimaryButton, Screen, StickySaveBar } from '../../components/ui'
+import { BackButton, BrandSwitch, PrimaryButton, Screen, StickySaveBar, ChoiceChip } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
@@ -17,6 +17,7 @@ import { getHostPaymentMethods, normalizeHostSettings, PAYMENT_METHOD_LABELS } f
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { parseListingInt } from '../../lib/hostListing'
 import { parsePriceInput } from '../../lib/hostPricing'
+import { formatTurnaroundHours, TURNAROUND_HOUR_OPTIONS } from '../../lib/turnaroundTime'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { colors, radius, spacing } from '../../theme'
 import type { DropOffHour, HostListing, HostSettings } from '../../types'
@@ -400,28 +401,26 @@ export function HostHubScreen() {
           placeholder="5016001234"
           keyboardType="phone-pad"
         />
-        <View style={styles.twoCol}>
-          <View style={styles.col}>
-            <Field
-              label="Dry time (hours)"
-              value={String(listing.turnaroundHours)}
-              onChangeText={(v) =>
-                patchListing({ turnaroundHours: parseListingInt(v, listing.turnaroundHours) })
-              }
-              keyboardType="number-pad"
+        <Text style={styles.fieldLabel}>Dry time (standard load)</Text>
+        <View style={styles.turnaroundRow}>
+          {TURNAROUND_HOUR_OPTIONS.map((hours) => (
+            <ChoiceChip
+              key={hours}
+              label={formatTurnaroundHours(hours)}
+              selected={listing.turnaroundHours === hours}
+              onPress={() => patchListing({ turnaroundHours: hours })}
+              size="compact"
             />
-          </View>
-          <View style={styles.col}>
-            <Field
-              label="Open slots"
-              value={String(listing.slotsLeft)}
-              onChangeText={(v) =>
-                patchListing({ slotsLeft: parseListingInt(v, listing.slotsLeft) })
-              }
-              keyboardType="number-pad"
-            />
-          </View>
+          ))}
         </View>
+        <Field
+          label="Open slots"
+          value={String(listing.slotsLeft)}
+          onChangeText={(v) =>
+            patchListing({ slotsLeft: parseListingInt(v, listing.slotsLeft) })
+          }
+          keyboardType="number-pad"
+        />
         <ToggleRow
           label="Generator backup"
           sub="Show guests you can run during power outages"
@@ -674,6 +673,7 @@ const styles = StyleSheet.create({
   rowValue: { fontSize: 15, color: colors.black, lineHeight: 21 },
   field: { gap: spacing.sm },
   fieldLabel: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
+  turnaroundRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: spacing.md },
   inputMultiline: { minHeight: 100, paddingTop: 12 },
   twoCol: { flexDirection: 'row', gap: spacing.sm },
   col: { flex: 1 },
