@@ -13,23 +13,60 @@ const iosIconDir = path.join(root, 'ios', 'LaundryBuddy', 'Images.xcassets', 'Ap
 const APP_ICON = path.join(appIconsDir, 'appstore.png')
 const ANDROID_DENSITIES = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']
 const ICON_BACKGROUND = '#0f1118'
+/** Scale factor for the logo inside the icon canvas (0.7 = 30% smaller). */
+const ICON_SCALE = 0.7
 
-async function copyFile(src, dest) {
-  await fs.mkdir(path.dirname(dest), { recursive: true })
-  await fs.copyFile(src, dest)
+const ANDROID_LAUNCHER_SIZES = {
+  mdpi: 48,
+  hdpi: 72,
+  xhdpi: 96,
+  xxhdpi: 144,
+  xxxhdpi: 192,
 }
 
-async function writeWebpFromPng(src, dest) {
+function parseHexColor(hex) {
+  const value = hex.replace('#', '')
+  return {
+    r: parseInt(value.slice(0, 2), 16),
+    g: parseInt(value.slice(2, 4), 16),
+    b: parseInt(value.slice(4, 6), 16),
+    alpha: 1,
+  }
+}
+
+async function buildPaddedIcon(
+  sourcePath,
+  size,
+  { scale = ICON_SCALE, background = ICON_BACKGROUND, transparent = false } = {},
+) {
+  const iconSize = Math.round(size * scale)
+  const offset = Math.round((size - iconSize) / 2)
+
+  const resized = await sharp(sourcePath).resize(iconSize, iconSize, { fit: 'contain' }).toBuffer()
+
+  return sharp({
+    create: {
+      width: size,
+      height: size,
+      channels: 4,
+      background: transparent ? { r: 0, g: 0, b: 0, alpha: 0 } : parseHexColor(background),
+    },
+  }).composite([{ input: resized, left: offset, top: offset }])
+}
+
+async function writePng(sourcePath, dest, size, options) {
   await fs.mkdir(path.dirname(dest), { recursive: true })
-  await sharp(src).webp({ quality: 95 }).toFile(dest)
+  await (await buildPaddedIcon(sourcePath, size, options)).png().toFile(dest)
+}
+
+async function writeWebpFromPaddedIcon(sourcePath, dest, size, options) {
+  await fs.mkdir(path.dirname(dest), { recursive: true })
+  await (await buildPaddedIcon(sourcePath, size, options)).webp({ quality: 95 }).toFile(dest)
 }
 
 async function notificationIconFromAppIcon(sourcePath, size) {
-  const { data, info } = await sharp(sourcePath)
-    .resize(Math.round(size), Math.round(size))
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
+  const padded = await buildPaddedIcon(sourcePath, size, { scale: ICON_SCALE })
+  const { data, info } = await padded.ensureAlpha().raw().toBuffer({ resolveWithObject: true })
 
   const out = Buffer.alloc(info.width * info.height * 4)
   for (let i = 0; i < info.width * info.height; i += 1) {
@@ -51,26 +88,31 @@ async function notificationIconFromAppIcon(sourcePath, size) {
 }
 
 async function syncExpoAssets() {
-  await copyFile(APP_ICON, path.join(assetsDir, 'icon.png'))
-  await copyFile(APP_ICON, path.join(assetsDir, 'adaptive-icon.png'))
-  await sharp(APP_ICON).resize(96, 96).png().toFile(path.join(assetsDir, 'favicon.png'))
+  await writePng(APP_ICON, path.join(assetsDir, 'icon.png'), 1024, {})
+  await writePng(APP_ICON, path.join(assetsDir, 'adaptive-icon.png'), 1024, { transparent: true })
+  await writePng(APP_ICON, path.join(assetsDir, 'favicon.png'), 96, {})
   await (await notificationIconFromAppIcon(APP_ICON, 96))
     .png()
     .toFile(path.join(assetsDir, 'notification-icon.png'))
 }
 
 async function syncIos() {
-  await copyFile(APP_ICON, path.join(iosIconDir, 'App-Icon-1024x1024@1x.png'))
+  await writePng(APP_ICON, path.join(iosIconDir, 'App-Icon-1024x1024@1x.png'), 1024, {})
 }
 
 async function syncAndroid() {
   for (const density of ANDROID_DENSITIES) {
-    const src = path.join(appIconsDir, 'android', `mipmap-${density}`, 'ic_launcher.png')
+    const size = ANDROID_LAUNCHER_SIZES[density]
     const mipmapDir = path.join(androidRes, `mipmap-${density}`)
 
-    await writeWebpFromPng(src, path.join(mipmapDir, 'ic_launcher.webp'))
-    await writeWebpFromPng(src, path.join(mipmapDir, 'ic_launcher_round.webp'))
-    await writeWebpFromPng(src, path.join(mipmapDir, 'ic_launcher_foreground.webp'))
+    await writeWebpFromPaddedIcon(APP_ICON, path.join(mipmapDir, 'ic_launcher.webp'), size, {})
+    await writeWebpFromPaddedIcon(APP_ICON, path.join(mipmapDir, 'ic_launcher_round.webp'), size, {})
+    await writeWebpFromPaddedIcon(
+      APP_ICON,
+      path.join(mipmapDir, 'ic_launcher_foreground.webp'),
+      size,
+      { transparent: true },
+    )
 
     const notificationSize = Math.round(24 * { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 }[density])
     await (await notificationIconFromAppIcon(APP_ICON, notificationSize))
@@ -87,12 +129,27 @@ async function syncAndroid() {
   await fs.writeFile(colorsPath, colors)
 }
 
+async function syncSourceCatalog() {
+  const catalogIcon = path.join(appIconsDir, 'Assets.xcassets', 'AppIcon.appiconset', '1024.png')
+  await writePng(APP_ICON, catalogIcon, 1024, {})
+  await writePng(APP_ICON, path.join(appIconsDir, 'playstore.png'), 512, {})
+
+  for (const density of ANDROID_DENSITIES) {
+    const size = ANDROID_LAUNCHER_SIZES[density]
+    const mipmapDir = path.join(appIconsDir, 'android', `mipmap-${density}`)
+    await writePng(APP_ICON, path.join(mipmapDir, 'ic_launcher.png'), size, {})
+  }
+}
+
 async function main() {
   await fs.access(APP_ICON)
+  await syncSourceCatalog()
   await syncExpoAssets()
   await syncIos()
   await syncAndroid()
-  console.log('Synced app icons from assets/AppIcons (Expo assets, iOS, Android, notification icon)')
+  console.log(
+    `Synced app icons at ${Math.round(ICON_SCALE * 100)}% scale (30% smaller) from assets/AppIcons/appstore.png`,
+  )
 }
 
 main().catch((error) => {
