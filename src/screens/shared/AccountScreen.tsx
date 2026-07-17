@@ -7,6 +7,12 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
 import { getHostByUserId } from '../../data/mockData'
+import {
+  formatIdDocumentType,
+  getIdentityVerification,
+  verificationStatusLabel,
+} from '../../lib/identityVerification'
+import { formatWhatsAppNumberDisplay } from '../../lib/whatsappVerification'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
@@ -17,7 +23,7 @@ function DetailRow({
   value,
   styles,
 }: {
-  icon: 'user' | 'phone' | 'mail' | 'map-pin' | 'shield' | 'wind'
+  icon: 'user' | 'phone' | 'mail' | 'map-pin' | 'shield' | 'wind' | 'credit-card'
   label: string
   value: string
   styles: ReturnType<typeof createAccountStyles>
@@ -137,17 +143,10 @@ export function AccountScreen() {
 
   const isCustomer = user.role === 'customer'
   const hostProfile = !isCustomer ? getHostByUserId(user.id) : undefined
-  const verification = user.hostVerification
+  const verification = getIdentityVerification(user)
   const backScreen = isCustomer ? 'customer-home' : 'host-dashboard'
-
-  const verificationLabel =
-    verification?.status === 'verified'
-      ? 'Verified Host'
-      : verification?.status === 'pending'
-        ? 'Verification Pending'
-        : verification?.status === 'rejected'
-          ? 'Verification Declined'
-          : 'Not Verified'
+  const verificationLabel = verificationStatusLabel(verification.status, user.role)
+  const verifiedPhone = verification.verifiedPhone ?? user.phone
 
   return (
     <Screen>
@@ -181,15 +180,21 @@ export function AccountScreen() {
 
       <View style={styles.card}>
         <DetailRow icon="user" label="Name" value={user.name} styles={styles} />
-        {user.phone ? <DetailRow icon="phone" label="Phone" value={user.phone} styles={styles} /> : null}
+        {verifiedPhone ? (
+          <DetailRow
+            icon="phone"
+            label="WhatsApp"
+            value={formatWhatsAppNumberDisplay(verifiedPhone)}
+            styles={styles}
+          />
+        ) : null}
         {user.email ? <DetailRow icon="mail" label="Email" value={user.email} styles={styles} /> : null}
-        {!isCustomer && verification ? (
-          <>
-            <DetailRow icon="shield" label="Host Status" value={verificationLabel} styles={styles} />
-            {verification.address ? (
-              <DetailRow icon="map-pin" label="Listed Address" value={verification.address} styles={styles} />
-            ) : null}
-          </>
+        <DetailRow icon="shield" label="Verification" value={verificationLabel} styles={styles} />
+        {verification.idType ? (
+          <DetailRow icon="credit-card" label="ID on file" value={formatIdDocumentType(verification.idType)} styles={styles} />
+        ) : null}
+        {!isCustomer && verification.address ? (
+          <DetailRow icon="map-pin" label="Listed Address" value={verification.address} styles={styles} />
         ) : null}
         {!isCustomer && hostProfile ? (
           <DetailRow

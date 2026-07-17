@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { User } from '../types'
 import { SEED_DATA_VERSION, SEED_USERS } from '../data/seedData'
+import { normalizeUserIdentity } from './identityVerification'
 import { normalizePhone } from './phone'
 
 const USERS_KEY = 'laundry-buddy-users'
@@ -23,8 +24,13 @@ async function seedUsersIfNeeded(): Promise<User[]> {
   return JSON.parse(raw) as User[]
 }
 
+function normalizeUsers(users: User[]): User[] {
+  return users.map(normalizeUserIdentity)
+}
+
 async function readUsers(): Promise<User[]> {
-  return seedUsersIfNeeded()
+  const users = await seedUsersIfNeeded()
+  return normalizeUsers(users)
 }
 
 async function writeUsers(users: User[]) {

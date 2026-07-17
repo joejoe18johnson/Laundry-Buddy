@@ -1,5 +1,6 @@
 import { Linking, Platform, Share } from 'react-native'
 import { formatMoney } from './bookingPayments'
+import { SUPPORT_PHONE_WHATSAPP } from './supportContact'
 
 export function normalizeWhatsAppPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -13,6 +14,19 @@ export function openWhatsAppChat(phone: string, message: string): void {
   if (!normalized) return
   const url = `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`
   Linking.openURL(url).catch(() => {})
+}
+
+export function buildVerificationCodeRequestMessage(name: string, phone: string): string {
+  const display = formatWhatsAppDisplay(phone)
+  return [
+    `Hi Laundry Buddy! This is ${name}.`,
+    `Please send my verification code to my WhatsApp: ${display}.`,
+    `I will reply here with the code once I receive it.`,
+  ].join('\n')
+}
+
+export function openSupportWhatsApp(message: string): void {
+  openWhatsAppChat(SUPPORT_PHONE_WHATSAPP, message)
 }
 
 export function buildTransferProofMessage({

@@ -7,6 +7,23 @@ export type AppRole = 'customer' | 'host'
 export type LoginMethod = 'phone' | 'email'
 export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected'
 
+export type IdDocumentType = 'passport' | 'social_security'
+
+export interface IdentityVerification {
+  status: VerificationStatus
+  phoneVerified: boolean
+  verifiedPhone?: string
+  idType?: IdDocumentType
+  idUploaded: boolean
+  idPhotoUri?: string
+  address?: string
+  addressUploaded?: boolean
+  submittedAt?: string
+}
+
+/** @deprecated Use IdentityVerification on user.identityVerification */
+export type HostVerification = IdentityVerification
+
 export type AuthScreen = 'welcome' | 'login' | 'signup'
 
 export type Screen =
@@ -81,14 +98,6 @@ export type NotificationLink =
   | { screen: 'customer-home' }
   | { screen: 'history'; bookingId?: string }
 
-export interface HostVerification {
-  status: VerificationStatus
-  idUploaded: boolean
-  addressUploaded: boolean
-  address: string
-  submittedAt?: string
-}
-
 export interface User {
   id: string
   name: string
@@ -96,6 +105,8 @@ export interface User {
   email?: string
   password: string
   role: AppRole
+  identityVerification?: IdentityVerification
+  /** @deprecated Use identityVerification */
   hostVerification?: HostVerification
 }
 
@@ -176,6 +187,7 @@ export interface Booking {
   dryPhotoUri?: string
   clothesList?: ClothesListItem[]
   acceptedAt?: string
+  createdAt?: string
 }
 
 export interface HostRequest {

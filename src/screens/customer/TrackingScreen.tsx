@@ -16,15 +16,21 @@ import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { getGuestProgressStep } from '../../lib/loadProgress'
+import {
+  canGuestCancelPendingRequest,
+  formatCancelCountdown,
+  getMsUntilGuestCanCancel,
+} from '../../lib/pendingRequestCancel'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { colors, radius, spacing } from '../../theme'
 
 export function TrackingScreen() {
   const { user } = useAuth()
-  const { booking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking } = useApp()
+  const { booking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking, cancelPendingRequest } = useApp()
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
+  const [cancelTick, setCancelTick] = useState(0)
   const pulse = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
@@ -37,6 +43,12 @@ export function TrackingScreen() {
     const timer = setTimeout(() => setBannerVisible(false), 6000)
     return () => clearTimeout(timer)
   }, [booking?.id, booking?.isNew, booking?.requestStatus])
+
+  useEffect(() => {
+    if (!booking || booking.requestStatus !== 'pending') return
+    const id = setInterval(() => setCancelTick((value) => value + 1), 30_000)
+    return () => clearInterval(id)
+  }, [booking?.id, booking?.requestStatus])
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -73,6 +85,9 @@ export function TrackingScreen() {
   const bank = hostSettings.bankDetails
 
   const isReadyForPickup = isAccepted && booking.stage === 'ready'
+  const canCancelPending = isPending && canGuestCancelPendingRequest(booking)
+  const msUntilCancel = isPending ? getMsUntilGuestCanCancel(booking) : 0
+  void cancelTick
 
   const handleConfirmPickup = () => {
     if (!booking) return
@@ -211,7 +226,7 @@ export function TrackingScreen() {
       )}
 
       {!isDeclined && (
-        <>
+        <View style={styles.progressSection}>
           <View style={styles.statusHeader}>
             <AppIcon name="package" size={20} color={colors.gray500} />
             <Text style={styles.eyebrow}>{toTitleCase('Load progress')}</Text>
@@ -219,7 +234,7 @@ export function TrackingScreen() {
           </View>
 
           <LoadProgressTracker booking={booking} pulse={pulse} />
-        </>
+        </View>
       )}
 
       {!isDeclined && isPending && (
@@ -231,6 +246,29 @@ export function TrackingScreen() {
               booking.hostName,
             )}
           </Text>
+        </View>
+      )}
+
+      {!isDeclined && isPending && (
+        <View style={styles.cancelCard}>
+          <View style={styles.cancelHeader}>
+            <AppIcon name="clock" size={18} color={colors.gray600} />
+            <Text style={styles.cancelTitle}>
+              {canCancelPending ? toTitleCase('No response yet') : toTitleCase('Waiting for host')}
+            </Text>
+          </View>
+          <Text style={styles.cancelSub}>
+            {canCancelPending
+              ? toTitleCase('You can cancel this request if you no longer need a dryer.')
+              : `${toTitleCase('You can cancel if the host has not responded within 30 minutes')} (${formatCancelCountdown(msUntilCancel)} ${toTitleCase('remaining')}).`}
+          </Text>
+          <OutlineButton
+            title="Cancel request"
+            icon="x-circle"
+            full
+            disabled={!canCancelPending}
+            onPress={() => cancelPendingRequest(booking.id)}
+          />
         </View>
       )}
 
@@ -399,7 +437,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   paidText: { fontSize: 14, fontWeight: '600', color: colors.green },
-  statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+    paddingBottom: spacing.sm,
+  },
+  progressSection: { gap: spacing.md, marginBottom: spacing.lg },
   eyebrow: { fontSize: 13, color: colors.gray500, letterSpacing: 0.4 },
   clothesSection: { marginBottom: spacing.lg },
   infoCard: {
@@ -409,14 +454,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray50,
     padding: spacing.md,
     borderRadius: radius.md,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
+  cancelCard: {
+    backgroundColor: colors.white,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    gap: spacing.md,
+  },
+  cancelHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  cancelTitle: { fontSize: 16, fontWeight: '700' },
+  cancelSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
   infoText: { fontSize: 14, color: colors.gray600, lineHeight: 22, flex: 1 },
   pickupCard: {
     backgroundColor: colors.gray50,
     padding: spacing.lg,
     borderRadius: radius.md,
     gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   pickupTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   pickupTitle: { fontSize: 16, fontWeight: '600' },

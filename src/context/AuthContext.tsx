@@ -30,7 +30,8 @@ import {
 } from '../lib/biometricAuth'
 import { isFullFlowTesting } from '../lib/testingFlow'
 import * as SplashScreen from 'expo-splash-screen'
-import type { AppRole, AuthScreen, HostVerification, LoginMethod, User } from '../types'
+import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
+import { emptyIdentityVerification, needsIdentityVerification } from '../lib/identityVerification'
 
 interface SignupInput {
   name: string
@@ -60,11 +61,13 @@ interface AuthState {
   disableBiometricLogin: () => Promise<void>
   acceptBiometricSetup: () => Promise<boolean>
   dismissBiometricSetup: () => void
-  submitHostVerification: (data: {
-    address: string
-    idUploaded: boolean
-    addressUploaded: boolean
-  }) => Promise<void>
+  submitIdentityVerification: (data: {
+    phone: string
+    idType: IdDocumentType
+    idPhotoUri?: string
+    address?: string
+    addressUploaded?: boolean
+  }) => Promise<boolean>
   clearAuthError: () => void
 }
 
@@ -223,10 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: input.email?.trim().toLowerCase(),
       password: input.password,
       role: input.role,
-      hostVerification:
-        input.role === 'host'
-          ? { status: 'none', idUploaded: false, addressUploaded: false, address: '' }
-          : undefined,
+      identityVerification: emptyIdentityVerification(),
     }
 
     await saveUser(newUser)
@@ -275,21 +275,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setShowBiometricSetupPrompt(false)
   }, [])
 
-  const submitHostVerification = useCallback(
-    async (data: { address: string; idUploaded: boolean; addressUploaded: boolean }) => {
-      if (!user || user.role !== 'host') return
+  const submitIdentityVerification = useCallback(
+    async (data: {
+      phone: string
+      idType: IdDocumentType
+      idPhotoUri?: string
+      address?: string
+      addressUploaded?: boolean
+    }) => {
+      if (!user) return false
 
-      const verification: HostVerification = {
+      const normalizedPhone = normalizePhone(data.phone)
+      const existing = await findUserByPhone(normalizedPhone)
+      if (existing && existing.id !== user.id) {
+        setAuthError('This phone number is already registered to another account.')
+        return false
+      }
+
+      const verification: IdentityVerification = {
         status: 'pending',
-        idUploaded: data.idUploaded,
-        addressUploaded: data.addressUploaded,
-        address: data.address.trim(),
+        phoneVerified: false,
+        verifiedPhone: normalizedPhone,
+        idType: data.idType,
+        idUploaded: true,
+        idPhotoUri: data.idPhotoUri,
+        address: data.address?.trim() ?? '',
+        addressUploaded: user.role === 'host' ? !!data.addressUploaded : undefined,
         submittedAt: new Date().toISOString(),
       }
 
-      const updated: User = { ...user, hostVerification: verification }
+      const updated: User = {
+        ...user,
+        phone: normalizedPhone,
+        identityVerification: verification,
+      }
+      delete updated.hostVerification
+
       await saveUser(updated)
       setUser(updated)
+      setAuthError(null)
+      return true
     },
     [user],
   )
@@ -314,7 +339,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       disableBiometricLogin: disableBiometricLoginForUser,
       acceptBiometricSetup,
       dismissBiometricSetup,
-      submitHostVerification,
+      submitIdentityVerification,
       clearAuthError,
     }),
     [
@@ -336,7 +361,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       disableBiometricLoginForUser,
       acceptBiometricSetup,
       dismissBiometricSetup,
-      submitHostVerification,
+      submitIdentityVerification,
       clearAuthError,
     ],
   )
@@ -355,5 +380,7 @@ export function useAuth() {
 }
 
 export function needsHostVerification(user: User): boolean {
-  return user.role === 'host' && user.hostVerification?.status !== 'verified'
+  return needsIdentityVerification(user)
 }
+
+export { needsIdentityVerification }

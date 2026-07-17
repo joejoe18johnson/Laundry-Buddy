@@ -1,9 +1,29 @@
 import { ALL_DROP_OFF_HOURS } from '../lib/dropOffAvailability'
-import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User } from '../types'
+import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, IdentityVerification, User } from '../types'
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '18'
+export const SEED_DATA_VERSION = '19'
+
+const VERIFIED_GUEST: IdentityVerification = {
+  status: 'verified',
+  phoneVerified: true,
+  verifiedPhone: '5016001111',
+  idType: 'passport',
+  idUploaded: true,
+  submittedAt: '2026-06-01T10:00:00.000Z',
+}
+
+const VERIFIED_HOST: IdentityVerification = {
+  status: 'verified',
+  phoneVerified: true,
+  verifiedPhone: '5016001234',
+  idType: 'passport',
+  idUploaded: true,
+  addressUploaded: true,
+  address: '22 Coconut St., Las Flores, Cayo',
+  submittedAt: '2026-06-15T10:00:00.000Z',
+}
 
 export const TRAINING_PASSWORD = 'demo1234'
 
@@ -23,6 +43,7 @@ export const SEED_USERS: User[] = [
     email: 'ana@ub.edu.bz',
     password: TRAINING_PASSWORD,
     role: 'customer',
+    identityVerification: VERIFIED_GUEST,
   },
   {
     id: 'user-maria',
@@ -31,13 +52,7 @@ export const SEED_USERS: User[] = [
     phone: '5016001234',
     password: TRAINING_PASSWORD,
     role: 'host',
-    hostVerification: {
-      status: 'verified',
-      idUploaded: true,
-      addressUploaded: true,
-      address: '22 Coconut St., Las Flores, Cayo',
-      submittedAt: '2026-06-15T10:00:00.000Z',
-    },
+    identityVerification: VERIFIED_HOST,
   },
 ]
 
@@ -202,7 +217,7 @@ export const TRAINING_ACCOUNTS = [
 
 export function getAvailableHosts(): Host[] {
   const verifiedUserIds = new Set(
-    SEED_USERS.filter((u) => u.hostVerification?.status === 'verified').map((u) => u.id),
+    SEED_USERS.filter((u) => u.identityVerification?.status === 'verified').map((u) => u.id),
   )
   const handPicked = SEED_HOSTS.filter(
     (h) => h.hostUserId && verifiedUserIds.has(h.hostUserId) && h.slotsLeft > 0,

@@ -68,6 +68,14 @@ export async function removeHostActiveLoad(hostUserId: string, loadId: string): 
   })
 }
 
+export async function removeHostPendingRequest(hostUserId: string, requestId: string): Promise<void> {
+  const orders = await getHostOrders(hostUserId)
+  await saveHostOrders(hostUserId, {
+    ...orders,
+    pendingRequests: orders.pendingRequests.filter((request) => request.id !== requestId),
+  })
+}
+
 export async function updateHostActiveLoads(
   hostUserId: string,
   activeLoads: Booking[],

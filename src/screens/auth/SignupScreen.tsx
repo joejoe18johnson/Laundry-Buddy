@@ -52,14 +52,16 @@ export function SignupScreen() {
         ))}
       </View>
 
-      {role === 'host' && (
-        <View style={styles.notice}>
-          <AppIcon name="shield" size={16} color={colors.gray600} />
-          <Text style={styles.noticeText}>
-            {toTitleCase('Hosts must verify ID and address before accepting loads.')}
-          </Text>
-        </View>
-      )}
+      <View style={styles.notice}>
+        <AppIcon name="shield" size={16} color={colors.gray600} />
+        <Text style={styles.noticeText}>
+          {toTitleCase(
+            role === 'host'
+              ? 'Next: add your WhatsApp number, passport or social security card, and host address.'
+              : 'Next: add your WhatsApp number and passport or social security card.',
+          )}
+        </Text>
+      </View>
 
       <MethodTabs
         value={method}
@@ -118,7 +120,7 @@ export function SignupScreen() {
       {authError && <Text style={styles.error}>{authError}</Text>}
 
       <PrimaryButton
-        title={role === 'host' ? 'Continue to verification' : 'Create account'}
+        title="Continue to verification"
         onPress={handleSignup}
         full
       />

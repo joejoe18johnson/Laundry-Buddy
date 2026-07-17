@@ -166,7 +166,6 @@ const styles = StyleSheet.create({
     borderColor: colors.gray200,
     borderRadius: radius.lg,
     padding: spacing.lg,
-    marginBottom: spacing.lg,
     gap: spacing.lg,
   },
   summaryRow: {
@@ -207,6 +206,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    paddingBottom: spacing.sm,
   },
   nodeWrap: { flex: 1, alignItems: 'center', gap: 6, minWidth: 0 },
   node: {
@@ -234,7 +234,12 @@ const styles = StyleSheet.create({
   },
   nodeLabelDone: { color: colors.gray600 },
   nodeLabelActive: { color: colors.black },
-  detailList: { gap: 0 },
+  detailList: {
+    gap: 0,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray100,
+  },
   detailRow: { flexDirection: 'row', minHeight: 64 },
   detailLeft: { width: 32, alignItems: 'center' },
   detailDot: {

@@ -52,6 +52,7 @@ import {
   mergeActiveLoads,
   mergeHostRequests,
   removeHostActiveLoad,
+  removeHostPendingRequest,
   saveHostOrders,
   upsertActiveLoad,
 } from '../lib/hostOrdersStorage'
@@ -76,6 +77,7 @@ import {
 import { FILTER_AREA_RADIUS_KM, getFilterAreaCenter } from '../lib/belizeDistricts'
 import * as Location from 'expo-location'
 import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
+import { canGuestCancelPendingRequest } from '../lib/pendingRequestCancel'
 import {
   type Booking,
   type BookingStage,
@@ -143,6 +145,7 @@ interface AppState {
   }) => void
   acceptRequest: (requestId: string) => void
   declineRequest: (requestId: string) => void
+  cancelPendingRequest: (bookingId: string) => void
   clearBooking: () => void
   markBagReceived: (loadId: string) => void
   advanceStage: (loadId: string, stage: BookingStage, extras?: { dryPhotoUri?: string }) => void
@@ -695,6 +698,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         gateCode: '',
         stageTimes: {},
         isNew: true,
+        createdAt: new Date().toISOString(),
       }
       setBooking(newBooking)
       setScreen('customer-tracking')
@@ -829,6 +833,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
       showToast('Request declined', { icon: 'x-circle' })
     },
     [hostRequests, activeLoads, user, notifyCustomer, showToast],
+  )
+
+  const cancelPendingRequest = useCallback(
+    (bookingId: string) => {
+      const current = bookingRef.current
+      if (!current || current.id !== bookingId || current.requestStatus !== 'pending') return
+      if (!canGuestCancelPendingRequest(current)) {
+        showToast('You can cancel 30 minutes after sending the request', { icon: 'clock' })
+        return
+      }
+      if (!user) return
+
+      const host = getHostById(current.hostId)
+      if (host?.hostUserId) {
+        void removeHostPendingRequest(host.hostUserId, bookingId)
+        notifyHost(
+          host.hostUserId,
+          'Request cancelled',
+          `${user.name} cancelled their load request.`,
+          hostDashboardLink(),
+          'update',
+        )
+      }
+
+      setBooking(null)
+      setScreen('customer-home')
+      showToast('Request cancelled', { icon: 'x-circle' })
+    },
+    [notifyHost, showToast, user],
   )
 
   const markBagReceived = useCallback(
@@ -1091,6 +1124,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       confirmBooking,
       acceptRequest,
       declineRequest,
+      cancelPendingRequest,
       clearBooking,
       markBagReceived,
       advanceStage,
@@ -1139,6 +1173,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       confirmBooking,
       acceptRequest,
       declineRequest,
+      cancelPendingRequest,
       clearBooking,
       markBagReceived,
       advanceStage,

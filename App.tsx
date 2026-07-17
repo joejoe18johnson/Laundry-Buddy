@@ -7,7 +7,7 @@ import { AppIcon } from './src/components/AppIcon'
 import { BiometricSetupPrompt } from './src/components/BiometricSetupPrompt'
 import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
-import { AuthProvider, needsHostVerification, useAuth } from './src/context/AuthContext'
+import { AuthProvider, needsIdentityVerification, useAuth } from './src/context/AuthContext'
 import { NotificationProvider, useUserNotifications } from './src/context/NotificationContext'
 import { HomeScreen } from './src/screens/customer/HomeScreen'
 import { BookingScreen } from './src/screens/customer/BookingScreen'
@@ -23,7 +23,7 @@ import { LoginScreen } from './src/screens/auth/LoginScreen'
 import { SignupScreen } from './src/screens/auth/SignupScreen'
 import { HeaderMenu } from './src/components/HeaderMenu'
 import { LocationSettingsSheet } from './src/components/LocationSettingsSheet'
-import { HostVerificationScreen } from './src/screens/auth/HostVerificationScreen'
+import { IdentityVerificationScreen } from './src/screens/auth/IdentityVerificationScreen'
 import { HistoryScreen } from './src/screens/shared/HistoryScreen'
 import { AccountScreen } from './src/screens/shared/AccountScreen'
 import { HelpScreen } from './src/screens/shared/HelpScreen'
@@ -422,12 +422,12 @@ function AuthenticatedApp() {
     )
   }
 
-  if (needsHostVerification(user)) {
+  if (needsIdentityVerification(user)) {
     return (
       <>
         <SafeAreaView style={authStyles.app} edges={['top', 'bottom']}>
           <StatusBar style="dark" />
-          <HostVerificationScreen />
+          <IdentityVerificationScreen />
         </SafeAreaView>
         <BiometricOverlays />
         <PushNotificationPromptGate />

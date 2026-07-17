@@ -20,6 +20,7 @@ import { parseListingInt } from '../../lib/hostListing'
 import { parsePriceInput } from '../../lib/hostPricing'
 import { formatTurnaroundHours, TURNAROUND_HOUR_OPTIONS } from '../../lib/turnaroundTime'
 import { formatDropOffAvailability, formatDropOffHoursWindow } from '../../lib/dropOffAvailability'
+import { getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
 import type { DropOffHour, HostListing, HostSettings } from '../../types'
@@ -190,7 +191,7 @@ export function HostHubScreen() {
   if (!user) return null
 
   const profile = host ? getHostProfileDetails(host.id) : null
-  const verification = user.hostVerification
+  const verification = getIdentityVerification(user)
   const pricing = draft.pricing
   const listing = draft.listing
 
