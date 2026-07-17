@@ -7,14 +7,14 @@ type Props = {
   showTagline?: boolean
 }
 
-export function SplashLoading({ message = 'Laundry Buddy', showTagline = true }: Props) {
+export function SplashLoading({ message, showTagline = true }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.logoWrap}>
         <SplashWasherAnimation />
       </View>
-      <Text style={styles.brand}>{message}</Text>
-      {showTagline && <Text style={styles.tagline}>Dry Laundry, Rain or Shine</Text>}
+      {message ? <Text style={styles.brand}>{message}</Text> : null}
+      {showTagline ? <Text style={styles.tagline}>Dry Laundry, Rain or Shine</Text> : null}
     </View>
   )
 }
@@ -29,7 +29,6 @@ const styles = StyleSheet.create({
   },
   logoWrap: {
     marginBottom: spacing.lg,
-    transform: [{ scale: 120 / 220 }],
   },
   brand: {
     fontSize: 30,

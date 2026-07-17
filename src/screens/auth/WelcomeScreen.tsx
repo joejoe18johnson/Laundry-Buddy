@@ -45,7 +45,7 @@ export function WelcomeScreen() {
   return (
     <Screen style={styles.container}>
       <View style={styles.hero}>
-        <AppLogoMark size={72} style={styles.logo} />
+        <AppLogoMark size={56} style={styles.logo} />
         <Text style={styles.title}>Dry Laundry, Rain or Shine</Text>
         <Text style={styles.tagline}>
           Book a neighbor's dryer anywhere in {ACTIVE_REGION_LABEL} — free for the community.

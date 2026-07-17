@@ -102,7 +102,6 @@ async function notificationIcon(logoPipeline, size) {
   const { data, info } = await logoPipeline
     .clone()
     .resize(Math.round(size), Math.round(size), { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .greyscale()
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true })
@@ -112,8 +111,7 @@ async function notificationIcon(logoPipeline, size) {
     const src = i * info.channels
     const dst = i * 4
     const alpha = info.channels === 4 ? data[src + 3] : 255
-    const lum = data[src]
-    if (alpha > 0 && lum > 30) {
+    if (alpha > 24) {
       out[dst] = 255
       out[dst + 1] = 255
       out[dst + 2] = 255
@@ -124,9 +122,67 @@ async function notificationIcon(logoPipeline, size) {
   return sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } })
 }
 
+/** Extract the basket icon mark from the horizontal wordmark (no text). */
+async function buildIconMarkFromWordmark(wordmarkPath) {
+  const { width, height } = await sharp(wordmarkPath).metadata()
+  if (!width || !height) {
+    throw new Error(`Could not read dimensions for ${wordmarkPath}`)
+  }
+
+  const { data, info } = await sharp(wordmarkPath)
+    .rotate()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const columnDensity = new Array(info.width).fill(0)
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      const i = (y * info.width + x) * 4
+      if (data[i + 3] > 10) columnDensity[x] += 1
+    }
+  }
+
+  let iconEnd = 0
+  let inCluster = false
+  for (let x = 0; x < info.width; x += 1) {
+    if (columnDensity[x] > 20) {
+      inCluster = true
+      iconEnd = x
+    } else if (inCluster && columnDensity[x] === 0) {
+      break
+    }
+  }
+
+  const cropWidth = Math.min(Math.max(iconEnd + 48, 400), width)
+  const cropped = await sharp(wordmarkPath)
+    .rotate()
+    .extract({ left: 0, top: 0, width: cropWidth, height })
+    .toBuffer()
+
+  const trimmed = await sharp(cropped).trim().toBuffer()
+
+  return sharp(trimmed)
+}
+
+async function buildLogoPipeline(sourcePath) {
+  const base = path.basename(sourcePath)
+  if (base === 'lb-logo.png') {
+    return buildIconMarkFromWordmark(sourcePath)
+  }
+  return buildTransparentLogo(sourcePath)
+}
+
 async function main() {
+  const lbLogo = path.join(assetsDir, 'lb-logo.png')
   const iconSource = path.join(assetsDir, 'icon-source.png')
-  const logoPipeline = await buildTransparentLogo(iconSource)
+  let sourcePath = lbLogo
+  try {
+    await fs.access(lbLogo)
+  } catch {
+    sourcePath = iconSource
+  }
+
+  const logoPipeline = await buildLogoPipeline(sourcePath)
 
   await writePng(logoPipeline.clone(), path.join(assetsDir, 'logo-mark.png'))
 
@@ -158,7 +214,7 @@ async function main() {
     await writePng(await notificationIcon(logoPipeline, notificationSize), path.join(drawableDir, 'notification_icon.png'))
   }
 
-  console.log('Generated assets from assets/icon-source.png (transparent logo-mark.png)')
+  console.log(`Generated assets from assets/${path.basename(sourcePath)} (notification-icon.png + Android drawables)`)
 }
 
 main().catch((error) => {

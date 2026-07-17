@@ -21,7 +21,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'laundrybuddy',
   userInterfaceStyle: 'light',
   splash: {
-    image: './assets/splash-icon.png',
+    image: './assets/lb-logo.png',
     resizeMode: 'contain',
     backgroundColor: '#ffffff',
   },
@@ -66,8 +66,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-splash-screen',
       {
         backgroundColor: '#ffffff',
-        image: './assets/splash-icon.png',
-        imageWidth: 200,
+        image: './assets/lb-logo.png',
+        imageWidth: 280,
         resizeMode: 'contain',
       },
     ],

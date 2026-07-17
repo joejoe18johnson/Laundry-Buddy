@@ -106,8 +106,7 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
         <View style={styles.brandRow}>
-          <AppLogoMark size={32} />
-          <Text style={styles.brand}>Laundry Buddy</Text>
+        <AppLogoMark size={28} />
         </View>
         {!isLast && (
           <Pressable onPress={onComplete} hitSlop={12}>
@@ -162,7 +161,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.gray100,
   },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  brand: { fontSize: 16, fontWeight: '700', letterSpacing: -0.3 },
   skip: { fontSize: 15, fontWeight: '600', color: colors.gray500 },
   list: { flex: 1 },
   slide: { flex: 1 },

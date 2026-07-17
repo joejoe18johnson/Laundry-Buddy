@@ -28,14 +28,12 @@ export function TransferProofCapture({ photoUri, onPhotoChange }: TransferProofC
       ? await ImagePicker.launchCameraAsync({
           mediaTypes: ['images'],
           quality: 0.8,
-          allowsEditing: true,
-          aspect: [4, 3],
+          allowsEditing: false,
         })
       : await ImagePicker.launchImageLibraryAsync({
           mediaTypes: ['images'],
           quality: 0.8,
-          allowsEditing: true,
-          aspect: [4, 3],
+          allowsEditing: false,
         })
 
     if (!result.canceled && result.assets[0]?.uri) {
