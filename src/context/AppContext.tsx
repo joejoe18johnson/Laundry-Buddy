@@ -19,7 +19,7 @@ import {
   getAvailableHosts,
   SEED_USERS,
 } from '../data/mockData'
-import { calculateBookingTotal, applyHostPricing, getHostPricing } from '../lib/hostPricing'
+import { calculateBookingTotal, applyHostPricing, getHostPricing, DRYER_SHEETS_PRICE } from '../lib/hostPricing'
 import { formatMoney } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
 import { resolveGuestFacingHostSettings } from '../lib/defaultHostSettings'
@@ -750,7 +750,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const hostProfile = hostRaw ? applyHostSettings(hostRaw, settings) : undefined
       const pricing = hostProfile
         ? getHostPricing(hostProfile, settings)
-        : { dryPrice: 0, foldingPrice: 0, sheetsPrice: 1 }
+        : { dryPrice: 0, foldingPrice: 0, sheetsPrice: DRYER_SHEETS_PRICE }
 
       const load: Booking = {
         id: request.id,

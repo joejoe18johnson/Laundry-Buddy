@@ -198,13 +198,13 @@ export interface HostRequest {
 
 export function sheetsOptionLabel(option: SheetsOption, _sheetsPrice?: number): string {
   if (option === 'buy') {
-    return `Buy 2 Sheets From Host ($1 Each · $2 Per Load)`
+    return 'Buy 2 Sheets From Host ($1 for 2 Sheets)'
   }
   return SHEETS_LABELS[option]
 }
 
 export const SHEETS_LABELS: Record<SheetsOption, string> = {
   own: 'Brings Own Sheets ✓',
-  buy: 'Wants 2 Sheets From Host ($1 Each)',
+  buy: 'Wants 2 Sheets From Host ($1 for 2 Sheets)',
   none: 'No Sheets Please',
 }

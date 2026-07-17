@@ -11,7 +11,7 @@ import { BackButton, AppTextInput, ChoiceChip, OptionRow, PrimaryButton, Screen,
 import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import {
   calculateBookingTotal,
-  DRYER_SHEET_UNIT_PRICE,
+  DRYER_SHEETS_PRICE,
   formatDryerSheetsPerLoadCharge,
   formatDryerSheetsRate,
   formatServicePrice,
@@ -19,7 +19,7 @@ import {
   bookingTotalLabel,
 } from '../../lib/hostPricing'
 import { formatMoney } from '../../lib/bookingPayments'
-import { sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
+import { formatDropOffHoursWindow, sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
@@ -67,7 +67,7 @@ export function BookingScreen() {
 
   const dryPrice = selectedHost.price
   const foldingPrice = selectedHost.foldingPrice ?? 0
-  const sheetsPrice = DRYER_SHEET_UNIT_PRICE
+  const sheetsPrice = DRYER_SHEETS_PRICE
   const showFolding = offersFoldingService({
     dryPrice,
     foldingPrice,
@@ -142,7 +142,7 @@ export function BookingScreen() {
         </View>
 
         <Text style={styles.section}>{toTitleCase('Drop Off Time')}</Text>
-        <Text style={styles.sectionHint}>{toTitleCase('Pick An Hour Between 8am And 8pm')}</Text>
+        <Text style={styles.sectionHint}>{toTitleCase('Pick an hour between')} {formatDropOffHoursWindow()}</Text>
         {availableTimes.length === 0 ? (
           <Text style={styles.paymentNote}>{toTitleCase('This Host Has Not Set Drop Off Hours Yet.')}</Text>
         ) : (

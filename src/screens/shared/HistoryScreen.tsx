@@ -12,6 +12,7 @@ import {
   sumBookingAmounts,
   bookingExtrasSummary,
 } from '../../lib/bookingPayments'
+import { DRYER_SHEETS_PRICE, formatDryerSheetsPerLoadCharge } from '../../lib/hostPricing'
 import {
   loadCustomerPaymentHistory,
   loadHostPaymentHistory,
@@ -69,7 +70,9 @@ function HistoryCard({ item, isCustomer }: { item: Booking; isCustomer: boolean 
       {item.pricePerLoad != null && item.loads > 1 && (
         <Text style={styles.breakdown}>
           {formatMoney(item.pricePerLoad)} dry × {item.loads}
-          {item.sheetsOption === 'buy' ? ` · sheets ${formatMoney(item.sheetsPrice ?? 1)} × ${item.loads}` : ''}
+          {item.sheetsOption === 'buy'
+            ? ` · sheets ${formatDryerSheetsPerLoadCharge(item.sheetsPrice ?? DRYER_SHEETS_PRICE)} × ${item.loads}`
+            : ''}
           {item.foldingService ? ` · folding ${formatMoney(item.foldingPrice ?? 0)} × ${item.loads}` : ''}
         </Text>
       )}

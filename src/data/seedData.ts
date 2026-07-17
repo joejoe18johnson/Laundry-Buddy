@@ -1,8 +1,9 @@
+import { ALL_DROP_OFF_HOURS } from '../lib/dropOffAvailability'
 import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User } from '../types'
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '17'
+export const SEED_DATA_VERSION = '18'
 
 export const TRAINING_PASSWORD = 'demo1234'
 
@@ -81,7 +82,7 @@ export const SEED_HOST_SETTINGS: Record<string, Partial<HostSettings>> = {
     notifyBookingUpdates: true,
     notifyGuestsWhenOnline: true,
     pricing: { dryPrice: 3, foldingPrice: 3, sheetsPrice: 1 },
-    dropOffAvailability: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    dropOffAvailability: [...ALL_DROP_OFF_HOURS],
   },
 }
 

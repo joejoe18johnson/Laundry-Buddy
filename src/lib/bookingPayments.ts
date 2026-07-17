@@ -1,5 +1,5 @@
 import type { Booking } from '../types'
-import { calculateBookingTotal, DRYER_SHEET_UNIT_PRICE, sheetsPurchaseTotalPerLoad, type BookingPriceInput } from './hostPricing'
+import { calculateBookingTotal, DRYER_SHEETS_PRICE, type BookingPriceInput } from './hostPricing'
 
 export function formatMoney(amount: number): string {
   return amount <= 0 ? 'Free' : `$${amount}`
@@ -10,7 +10,7 @@ export function getBookingPriceInput(booking: Booking): BookingPriceInput {
     loads: booking.loads,
     dryPrice: booking.dryPrice ?? booking.pricePerLoad ?? 0,
     foldingPrice: booking.foldingPrice ?? 0,
-    sheetsPrice: booking.sheetsPrice ?? DRYER_SHEET_UNIT_PRICE,
+    sheetsPrice: booking.sheetsPrice ?? DRYER_SHEETS_PRICE,
     sheetsOption: booking.sheetsOption,
     foldingService: booking.foldingService ?? false,
   }

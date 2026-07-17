@@ -2,7 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { sheetsOptionLabel } from '../../types'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
-import { formatDropOffAvailability, formatDropOffHour, type DropOffHour } from '../../lib/dropOffAvailability'
+import { formatDropOffAvailability, formatDropOffHour, formatDropOffHoursWindow, type DropOffHour } from '../../lib/dropOffAvailability'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
@@ -158,7 +158,7 @@ export function DashboardScreen() {
         <View style={styles.availabilityBar}>
           <View style={styles.availabilityHeader}>
             <AppIcon name="calendar" size={14} color={colors.gray600} />
-            <Text style={styles.availabilityTitle}>{toTitleCase('Your drop-off hours (8am – 8pm)')}</Text>
+            <Text style={styles.availabilityTitle}>{toTitleCase('Your drop-off hours')} ({formatDropOffHoursWindow()})</Text>
           </View>
           <Text style={styles.availabilityValue}>
             {formatDropOffAvailability(hostSettings.dropOffAvailability)}

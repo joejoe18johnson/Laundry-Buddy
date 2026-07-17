@@ -1,33 +1,20 @@
-export const DROP_OFF_HOUR_MIN = 8
-export const DROP_OFF_HOUR_MAX = 20
+export const DROP_OFF_HOUR_MIN = 5
+export const DROP_OFF_HOUR_MAX = 22
 
-export type DropOffHour =
-  | 8
-  | 9
-  | 10
-  | 11
-  | 12
-  | 13
-  | 14
-  | 15
-  | 16
-  | 17
-  | 18
-  | 19
-  | 20
+export const ALL_DROP_OFF_HOURS = [
+  5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+] as const
 
-export const ALL_DROP_OFF_HOURS: DropOffHour[] = [
-  8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-]
+export type DropOffHour = (typeof ALL_DROP_OFF_HOURS)[number]
 
 const LEGACY_SLOTS: Record<string, DropOffHour[]> = {
-  'before-10': [8, 9, 10],
+  'before-10': [5, 6, 7, 8, 9, 10],
   '2pm-4pm': [14, 15, 16],
-  'after-4': [17, 18, 19, 20],
+  'after-4': [17, 18, 19, 20, 21, 22],
 }
 
 export function isDropOffHour(value: unknown): value is DropOffHour {
-  return typeof value === 'number' && Number.isInteger(value) && value >= 8 && value <= 20
+  return typeof value === 'number' && Number.isInteger(value) && value >= DROP_OFF_HOUR_MIN && value <= DROP_OFF_HOUR_MAX
 }
 
 function migrateLegacySlot(slot: unknown): DropOffHour[] {
@@ -36,7 +23,7 @@ function migrateLegacySlot(slot: unknown): DropOffHour[] {
   return []
 }
 
-export function sortDropOffHours(hours: DropOffHour[]): DropOffHour[] {
+export function sortDropOffHours(hours: readonly DropOffHour[]): DropOffHour[] {
   return [...hours].filter(isDropOffHour).sort((a, b) => a - b)
 }
 
@@ -52,6 +39,12 @@ export function formatDropOffHour(hour: DropOffHour): string {
   if (hour === 12) return '12pm'
   if (hour < 12) return `${hour}am`
   return `${hour - 12}pm`
+}
+
+export function formatDropOffHoursWindow(): string {
+  const first = ALL_DROP_OFF_HOURS[0]
+  const last = ALL_DROP_OFF_HOURS[ALL_DROP_OFF_HOURS.length - 1]
+  return `${formatDropOffHour(first)} – ${formatDropOffHour(last)}`
 }
 
 export function formatDropOffAvailability(hours: DropOffHour[]): string {

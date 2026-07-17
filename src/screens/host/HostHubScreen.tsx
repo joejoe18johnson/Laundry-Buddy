@@ -12,13 +12,14 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { getHostByUserId, getHostProfileDetails } from '../../data/mockData'
-import { formatDryerSheetsPerLoadCharge, formatDryerSheetsRate, formatHostPrice } from '../../lib/hostFilters'
+import { formatHostPrice } from '../../lib/hostFilters'
+import { formatDryerSheetsPerLoadCharge, formatDryerSheetsRate } from '../../lib/hostPricing'
 import { getHostPaymentMethods, normalizeHostSettings, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { parseListingInt } from '../../lib/hostListing'
 import { parsePriceInput } from '../../lib/hostPricing'
 import { formatTurnaroundHours, TURNAROUND_HOUR_OPTIONS } from '../../lib/turnaroundTime'
-import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
+import { formatDropOffAvailability, formatDropOffHoursWindow } from '../../lib/dropOffAvailability'
 import { toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
 import type { DropOffHour, HostListing, HostSettings } from '../../types'
@@ -347,7 +348,7 @@ export function HostHubScreen() {
 
       <Section title="Drop-off availability">
         <Text style={styles.sectionHint}>
-          {toTitleCase('Tap the hours between 8am and 8pm when guests can drop off laundry.')}
+          {toTitleCase('Tap the hours between')} {formatDropOffHoursWindow()} {toTitleCase('when guests can drop off laundry.')}
         </Text>
         <DropOffHourGrid
           mode="toggle"
@@ -486,17 +487,14 @@ export function HostHubScreen() {
         </View>
         <View style={styles.priceField}>
           <Text style={styles.priceLabel}>{toTitleCase('Dryer sheets (if guest buys)')}</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={String(pricing.sheetsPrice)}
-            onChangeText={(v) => patchPricing({ sheetsPrice: parsePriceInput(v) })}
-          />
+          <Text style={styles.sectionHint}>
+            {formatDryerSheetsRate()} · {formatDryerSheetsPerLoadCharge()}
+          </Text>
         </View>
         <Text style={styles.paymentSummary}>
           {toTitleCase('Guests see')}: Dry {formatHostPrice(pricing.dryPrice)}
           {pricing.foldingPrice > 0 ? ` · Folding ${formatHostPrice(pricing.foldingPrice)}` : ''}
-          {' · Sheets '}{formatHostPrice(pricing.sheetsPrice)}
+          {' · Sheets '}{formatDryerSheetsRate()}
         </Text>
       </Section>
 

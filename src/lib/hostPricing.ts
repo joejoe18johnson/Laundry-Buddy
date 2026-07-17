@@ -1,40 +1,40 @@
 import type { Host, HostPricing, HostSettings, SheetsOption } from '../types'
 
-/** Standard dryer sheets included when a guest buys from the host. */
+/** Dryer sheets included when a guest buys from the host. */
 export const DRYER_SHEETS_PER_LOAD = 2
 
-/** Price per dryer sheet when the guest buys from the host. */
-export const DRYER_SHEET_UNIT_PRICE = 1
+/** Price for {@link DRYER_SHEETS_PER_LOAD} dryer sheets when the guest buys from the host. */
+export const DRYER_SHEETS_PRICE = 1
 
-export function sheetsPurchaseTotalPerLoad(unitPrice = DRYER_SHEET_UNIT_PRICE): number {
-  return DRYER_SHEETS_PER_LOAD * unitPrice
+export function sheetsPurchaseTotalPerLoad(price = DRYER_SHEETS_PRICE): number {
+  return Math.max(0, price)
 }
 
-export function formatDryerSheetsRate(unitPrice = DRYER_SHEET_UNIT_PRICE): string {
-  if (unitPrice <= 0) return 'Free'
-  return `$${unitPrice} each · ${DRYER_SHEETS_PER_LOAD} per load`
+export function formatDryerSheetsRate(price = DRYER_SHEETS_PRICE): string {
+  if (price <= 0) return 'Free'
+  return `$${price} for ${DRYER_SHEETS_PER_LOAD} sheets`
 }
 
-export function formatDryerSheetsPerLoadCharge(unitPrice = DRYER_SHEET_UNIT_PRICE): string {
-  const total = sheetsPurchaseTotalPerLoad(unitPrice)
-  return total <= 0 ? 'Free' : `$${total} per load`
+export function formatDryerSheetsPerLoadCharge(price = DRYER_SHEETS_PRICE): string {
+  if (price <= 0) return 'Free'
+  return `$${price} per load`
 }
 
 export const DEFAULT_HOST_PRICING: HostPricing = {
   dryPrice: 3,
   foldingPrice: 0,
-  sheetsPrice: DRYER_SHEET_UNIT_PRICE,
+  sheetsPrice: DRYER_SHEETS_PRICE,
 }
 
 export function getHostPricing(host: Host, settings?: HostSettings): HostPricing {
   const base = settings?.pricing ?? {
     dryPrice: host.price,
     foldingPrice: host.foldingPrice ?? 0,
-    sheetsPrice: DRYER_SHEET_UNIT_PRICE,
+    sheetsPrice: DRYER_SHEETS_PRICE,
   }
   return {
     ...base,
-    sheetsPrice: DRYER_SHEET_UNIT_PRICE,
+    sheetsPrice: DRYER_SHEETS_PRICE,
   }
 }
 
@@ -87,7 +87,7 @@ export function bookingTotalLabel(input: BookingPriceInput): string {
   parts.push(`${formatServicePrice(input.dryPrice)} dry × ${input.loads}`)
   if (input.sheetsOption === 'buy') {
     parts.push(
-      `${formatDryerSheetsPerLoadCharge(input.sheetsPrice)} (${DRYER_SHEETS_PER_LOAD} @ ${formatServicePrice(input.sheetsPrice)}) × ${input.loads}`,
+      `${formatDryerSheetsPerLoadCharge(input.sheetsPrice)} (${formatDryerSheetsRate(input.sheetsPrice)}) × ${input.loads}`,
     )
   }
   if (input.foldingService && input.foldingPrice > 0) {
