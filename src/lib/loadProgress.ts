@@ -60,18 +60,21 @@ export const GUEST_LOAD_STEPS: GuestProgressStep[] = [
   },
 ]
 
-const STAGE_ACTIVE_INDEX: Record<BookingStage, number> = {
-  'got-bag': 1,
-  waiting: 3,
-  drying: 4,
-  ready: 5,
-  'picked-up': 6,
-}
-
 export function getGuestProgressIndex(booking: Booking): number {
   if (booking.requestStatus === 'pending') return 0
   if (booking.requestStatus === 'declined') return -1
-  return STAGE_ACTIVE_INDEX[booking.stage] ?? 1
+  if (booking.stage === 'picked-up') return 6
+
+  const bagReceived = !!booking.stageTimes['got-bag']
+
+  if (booking.stage === 'ready') return 5
+  if (booking.stage === 'drying') return 4
+  if (booking.stage === 'waiting') return 3
+  if (booking.stage === 'got-bag') {
+    return bagReceived ? 2 : 1
+  }
+
+  return 1
 }
 
 export function getGuestProgressStep(booking: Booking): GuestProgressStep {
@@ -85,7 +88,7 @@ export function getStepTimestamp(booking: Booking, step: GuestProgressStep): str
   if (stepIndex < 0 || stepIndex > activeIndex) return undefined
 
   if (step.key === 'request') return undefined
-  if (step.key === 'accepted') return booking.stageTimes['got-bag']
+  if (step.key === 'accepted') return booking.acceptedAt
   if (step.stageKey) return booking.stageTimes[step.stageKey]
   return undefined
 }

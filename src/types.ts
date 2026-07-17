@@ -173,7 +173,9 @@ export interface Booking {
   paymentStatus?: 'paid' | 'pending'
   requestStatus?: 'pending' | 'accepted' | 'declined'
   loadPhotoUri?: string
+  dryPhotoUri?: string
   clothesList?: ClothesListItem[]
+  acceptedAt?: string
 }
 
 export interface HostRequest {

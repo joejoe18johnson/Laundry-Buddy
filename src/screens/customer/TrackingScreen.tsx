@@ -21,7 +21,7 @@ import { colors, radius, spacing } from '../../theme'
 
 export function TrackingScreen() {
   const { user } = useAuth()
-  const { booking, navigate, getSettingsForHost, confirmPickup, openLeaveReview } = useApp()
+  const { booking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking } = useApp()
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
   const pulse = useRef(new Animated.Value(1)).current
@@ -154,7 +154,7 @@ export function TrackingScreen() {
               {booking.hostName} couldn't take your load. Try another nearby host.
             </Text>
           </View>
-          <PrimaryButton title="Find another host" icon="search" onPress={() => navigate('customer-home')} full />
+          <PrimaryButton title="Find another host" icon="search" onPress={() => { clearBooking(); navigate('customer-home') }} full />
         </View>
       )}
 
@@ -228,15 +228,11 @@ export function TrackingScreen() {
         </View>
       )}
 
-      {!isDeclined && !isPending && (
+      {!isDeclined && !isPending && !isReadyForPickup && !transferPending && (
       <View style={styles.infoCard}>
         <AppIcon name="message-circle" size={18} color={colors.gray600} />
         <Text style={styles.infoText}>
-          {isReadyForPickup
-            ? 'Your load is ready! Pick it up, then confirm below so we can close out your booking.'
-            : transferPending
-              ? 'Message your host on WhatsApp with your transfer screenshot.'
-              : `Currently at step ${progressStep.number}: ${progressStep.description}`}
+          {`Step ${progressStep.number} of 6 — ${progressStep.description}`}
         </Text>
       </View>
       )}

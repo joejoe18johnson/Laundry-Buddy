@@ -43,6 +43,7 @@ export function LeaveReviewScreen() {
     navigate,
     submitHostReview,
     viewHostProfile,
+    getReviewsForHost,
   } = useApp()
 
   const [rating, setRating] = useState(0)
@@ -59,22 +60,31 @@ export function LeaveReviewScreen() {
     setComment('')
     setAlreadyReviewed(false)
 
-    if (!user || !reviewBookingId) {
+    if (!user || !reviewHostId) {
       setChecking(false)
       return
     }
 
-    void hasReviewedBooking(user.id, reviewBookingId).then((reviewed) => {
-      if (!cancelled) {
-        setAlreadyReviewed(reviewed)
-        setChecking(false)
-      }
-    })
+    if (reviewBookingId) {
+      void hasReviewedBooking(user.id, reviewBookingId).then((reviewed) => {
+        if (!cancelled) {
+          setAlreadyReviewed(reviewed)
+          setChecking(false)
+        }
+      })
+      return
+    }
+
+    const existing = getReviewsForHost(reviewHostId)
+    if (!cancelled) {
+      setAlreadyReviewed(existing.some((review) => review.author === user.name))
+      setChecking(false)
+    }
 
     return () => {
       cancelled = true
     }
-  }, [reviewHostId, reviewBookingId, user])
+  }, [reviewHostId, reviewBookingId, user, getReviewsForHost])
 
   if (!reviewHostId || !host) {
     return (

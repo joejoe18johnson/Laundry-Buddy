@@ -2,7 +2,7 @@ import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '16'
+export const SEED_DATA_VERSION = '17'
 
 export const TRAINING_PASSWORD = 'demo1234'
 

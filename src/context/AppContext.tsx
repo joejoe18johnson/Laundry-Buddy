@@ -49,6 +49,7 @@ import {
   getHostOrders,
   mergeActiveLoads,
   mergeHostRequests,
+  removeHostActiveLoad,
   saveHostOrders,
 } from '../lib/hostOrdersStorage'
 import {
@@ -139,8 +140,12 @@ interface AppState {
   }) => void
   acceptRequest: (requestId: string) => void
   declineRequest: (requestId: string) => void
-  advanceStage: (loadId: string, stage: BookingStage) => void
-  markDry: (loadId: string) => void
+  clearBooking: () => void
+  markBagReceived: (loadId: string) => void
+  advanceStage: (loadId: string, stage: BookingStage, extras?: { dryPhotoUri?: string }) => void
+  openMarkDry: (loadId: string) => void
+  markDryLoadId: string | null
+  markDry: (loadId: string, dryPhotoUri?: string) => void
   confirmPickup: (loadId: string) => void
   confirmTransferPayment: (loadId: string) => void
   openNotification: (notification: AppNotification) => Promise<void>
@@ -202,6 +207,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reviewHostId, setReviewHostId] = useState<string | null>(null)
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null)
   const [hostReviewsMap, setHostReviewsMap] = useState<Record<string, HostReview[]>>({})
+  const [markDryLoadId, setMarkDryLoadId] = useState<string | null>(null)
 
   const bookingRef = useRef(booking)
   const activeLoadsRef = useRef(activeLoads)
@@ -483,12 +489,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const notifyHost = useCallback(
-    async (hostUserId: string | undefined, title: string, body: string, link?: NotificationLink) => {
+    async (
+      hostUserId: string | undefined,
+      title: string,
+      body: string,
+      link?: NotificationLink,
+      kind: 'request' | 'update' = 'request',
+    ) => {
       if (!hostUserId) return
       const settings = hostSettingsMap[hostUserId]
-      if (settings?.notifyNewRequests !== false) {
-        await push(hostUserId, title, body, link)
+      if (kind === 'update') {
+        if (settings?.notifyBookingUpdates === false) return
+      } else if (settings?.notifyNewRequests === false) {
+        return
       }
+      await push(hostUserId, title, body, link)
     },
     [hostSettingsMap, push],
   )
@@ -503,31 +518,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const restoreBookingForGuest = useCallback(
     async (bookingId?: string): Promise<Booking | null> => {
-      const current = bookingRef.current
-      if (bookingId && current?.id === bookingId) return current
-      if (!bookingId && current) return current
-      if (current && current.customerId === user?.id && current.requestStatus !== 'declined') {
-        return current
-      }
-
       if (!user) return null
 
+      if (bookingId) {
+        const current = bookingRef.current
+        if (current?.id === bookingId && current.requestStatus !== 'declined') return current
+
+        const stored = await loadActiveBooking(user.id)
+        if (stored?.id === bookingId && stored.requestStatus !== 'declined') return stored
+
+        const history = await loadCustomerPaymentHistory(user.id)
+        const fromHistory = history.find((entry) => entry.id === bookingId)
+        if (fromHistory) return fromHistory
+
+        const seed = getCustomerSeedBooking(user.id)
+        if (seed?.id === bookingId) return seed
+
+        return null
+      }
+
+      const current = bookingRef.current
+      if (current && current.requestStatus !== 'declined') return current
+
       const stored = await loadActiveBooking(user.id)
-      if (stored && (!bookingId || stored.id === bookingId)) return stored
-
-      const history = await loadCustomerPaymentHistory(user.id)
-      const fromHistory = bookingId
-        ? history.find((entry) => entry.id === bookingId)
-        : history[0]
-      if (fromHistory) return fromHistory
-
-      const seed = getCustomerSeedBooking(user.id)
-      if (seed && (!bookingId || seed.id === bookingId)) return seed
+      if (stored && stored.requestStatus !== 'declined') return stored
 
       return null
     },
     [user],
   )
+
+  const clearBooking = useCallback(() => {
+    setBooking(null)
+  }, [])
 
   const openNotification = useCallback(
     async (notification: AppNotification) => {
@@ -604,6 +627,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadPhotoUri?: string
     }) => {
       if (!selectedHost || !user) return
+
+      if (bookingRef.current && bookingRef.current.requestStatus !== 'declined') {
+        showToast('You already have an active load', { icon: 'package' })
+        setScreen('customer-tracking')
+        return
+      }
+
       const settings = getSettingsForHost(selectedHost.hostUserId)
       const pricing = getHostPricing(selectedHost, settings)
       const totalAmount = calculateBookingTotal({
@@ -700,7 +730,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         : { dryPrice: 0, foldingPrice: 0, sheetsPrice: 1 }
 
       const load: Booking = {
-        id: request.id.startsWith('req-') ? `load-${Date.now()}` : request.id,
+        id: request.id,
         hostId: hostProfile?.id ?? 'unknown',
         hostName: hostProfile?.name ?? user.name,
         customerId: request.customerId,
@@ -725,7 +755,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         stage: 'got-bag',
         address: hostProfile?.address ?? '',
         gateCode: hostProfile?.gateCode ?? '',
-        stageTimes: { 'got-bag': nowTime() },
+        acceptedAt: nowTime(),
+        stageTimes: {},
       }
 
       const nextRequests = hostRequests.filter((r) => r.id !== requestId)
@@ -771,16 +802,59 @@ export function AppProvider({ children }: { children: ReactNode }) {
           bookingTrackingLink(requestId),
         )
       }
-      setBooking((prev) =>
-        prev?.id === requestId ? { ...prev, requestStatus: 'declined', isNew: false } : prev,
-      )
+      setBooking((prev) => (prev?.id === requestId ? null : prev))
       showToast('Request declined', { icon: 'x-circle' })
     },
     [hostRequests, activeLoads, user, notifyCustomer, showToast],
   )
 
+  const markBagReceived = useCallback(
+    (loadId: string) => {
+      const time = nowTime()
+      const patch = (load: Booking): Booking => ({
+        ...load,
+        stageTimes: { ...load.stageTimes, 'got-bag': time },
+      })
+
+      let target: Booking | undefined
+
+      setActiveLoads((prev) => {
+        const next = prev.map((load) => {
+          if (load.id !== loadId) return load
+          target = load
+          return patch(load)
+        })
+        if (role === 'host' && user) {
+          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+        }
+        return next
+      })
+
+      setBooking((prev) => {
+        if (prev?.id !== loadId) return prev
+        target = prev
+        return patch(prev)
+      })
+
+      if (target?.customerId) {
+        notifyCustomer(
+          target.customerId,
+          'Bag received',
+          `${target.hostName} has your laundry — we'll update you when it's in the dryer.`,
+          bookingTrackingLink(target.id),
+        )
+        showToast('Guest notified — bag received', { icon: 'check-circle' })
+      }
+    },
+    [hostRequests, notifyCustomer, role, showToast, user],
+  )
+
   const advanceStage = useCallback(
-    (loadId: string, stage: BookingStage) => {
+    (loadId: string, stage: BookingStage, extras?: { dryPhotoUri?: string }) => {
+      const targetLoad =
+        activeLoadsRef.current.find((load) => load.id === loadId) ??
+        (bookingRef.current?.id === loadId ? bookingRef.current : undefined)
+
       const time = nowTime()
       const completedDate = new Date().toLocaleDateString('en-US', {
         month: 'short',
@@ -788,14 +862,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         year: 'numeric',
       })
 
-      const patchLoad = (load: Booking): Booking => ({
-        ...load,
-        stage,
-        stageTimes: { ...load.stageTimes, [stage]: time },
-        ...(stage === 'picked-up'
-          ? { completedAt: completedDate, paymentStatus: 'paid' as const }
-          : {}),
-      })
+      const patchLoad = (load: Booking): Booking => {
+        const stageTimes = { ...load.stageTimes, [stage]: time }
+        if (stage === 'drying' && !load.stageTimes['got-bag']) {
+          stageTimes['got-bag'] = time
+        }
+
+        return {
+          ...load,
+          stage,
+          stageTimes,
+          ...(extras?.dryPhotoUri ? { dryPhotoUri: extras.dryPhotoUri } : {}),
+          ...(stage === 'picked-up'
+            ? {
+                completedAt: completedDate,
+                paymentStatus:
+                  load.paymentMethod === 'cash' || load.paymentStatus === 'paid'
+                    ? ('paid' as const)
+                    : (load.paymentStatus ?? 'pending'),
+              }
+            : {}),
+        }
+      }
 
       const persistIfPickedUp = (load: Booking) => {
         if (stage !== 'picked-up') return
@@ -818,10 +906,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           persistIfPickedUp(load)
           return patchLoad(load)
         })
+        const filtered = stage === 'picked-up' ? next.filter((load) => load.id !== loadId) : next
         if (role === 'host' && user) {
-          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: filtered })
         }
-        return stage === 'picked-up' ? next.filter((load) => load.id !== loadId) : next
+        return filtered
       })
 
       setBooking((prev) => {
@@ -832,13 +921,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return patchLoad(prev)
       })
 
+      if (stage === 'picked-up' && targetLoad) {
+        const host = getHostById(targetLoad.hostId)
+        if (host?.hostUserId) {
+          void removeHostActiveLoad(host.hostUserId, loadId)
+        }
+      }
+
       if (notifyTarget?.customerId && stage !== 'picked-up') {
-        notifyCustomer(
-          notifyTarget.customerId,
-          STAGE_LABELS[stage],
-          `${notifyTarget.hostName} updated your load — ${STAGE_LABELS[stage].toLowerCase()}.`,
-          bookingTrackingLink(notifyTarget.id),
-        )
+        const title = stage === 'ready' ? 'Ready for pickup' : STAGE_LABELS[stage]
+        const body =
+          stage === 'ready'
+            ? `${notifyTarget.hostName} marked your load dry — ready for pickup!`
+            : `${notifyTarget.hostName} updated your load — ${STAGE_LABELS[stage].toLowerCase()}.`
+        notifyCustomer(notifyTarget.customerId, title, body, bookingTrackingLink(notifyTarget.id))
       }
     },
     [notifyCustomer, role, user, hostRequests],
@@ -868,6 +964,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           'Ask For A Review',
           `${pickedUp.customerName} picked up their load. Ask them to leave a review on Laundry Buddy — it helps you get more bookings.`,
           hostDashboardLink(),
+          'update',
         )
       }
 
@@ -880,9 +977,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [advanceStage, notifyCustomer, notifyHost, role, showToast],
   )
 
+  const openMarkDry = useCallback((loadId: string) => {
+    setMarkDryLoadId(loadId)
+    setScreen('host-mark-dry')
+  }, [])
+
   const markDry = useCallback(
-    (loadId: string) => {
-      advanceStage(loadId, 'ready')
+    (loadId: string, dryPhotoUri?: string) => {
+      advanceStage(loadId, 'ready', dryPhotoUri ? { dryPhotoUri } : undefined)
+      setMarkDryLoadId(null)
       showToast('Load marked dry — guest notified', { icon: 'check-circle' })
       setScreen('host-dashboard')
     },
@@ -965,7 +1068,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       confirmBooking,
       acceptRequest,
       declineRequest,
+      clearBooking,
+      markBagReceived,
       advanceStage,
+      openMarkDry,
+      markDryLoadId,
       markDry,
       confirmPickup,
       confirmTransferPayment,
@@ -1009,7 +1116,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       confirmBooking,
       acceptRequest,
       declineRequest,
+      clearBooking,
+      markBagReceived,
       advanceStage,
+      openMarkDry,
+      markDryLoadId,
       markDry,
       confirmPickup,
       confirmTransferPayment,

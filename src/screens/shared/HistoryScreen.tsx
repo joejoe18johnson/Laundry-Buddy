@@ -20,8 +20,8 @@ import { colors, radius, spacing } from '../../theme'
 import { formatDropOffHour } from '../../lib/dropOffAvailability'
 import { type Booking } from '../../types'
 
-function PaymentStatusBadge({ status }: { status?: Booking['paymentStatus'] }) {
-  const paid = status === 'paid' || status == null
+function PaymentStatusBadge({ status, paymentMethod }: { status?: Booking['paymentStatus']; paymentMethod?: Booking['paymentMethod'] }) {
+  const paid = status === 'paid' || (status == null && paymentMethod === 'cash')
   return (
     <View style={[styles.statusBadge, paid ? styles.statusPaid : styles.statusPending]}>
       <Text style={[styles.statusText, paid ? styles.statusTextPaid : styles.statusTextPending]}>
@@ -62,7 +62,7 @@ function HistoryCard({ item, isCustomer }: { item: Booking; isCustomer: boolean 
           <AppIcon name="credit-card" size={14} color={colors.gray500} />
           <Text style={styles.metaText}>{formatPaymentMethod(item.paymentMethod)}</Text>
         </View>
-        <PaymentStatusBadge status={item.paymentStatus} />
+        <PaymentStatusBadge status={item.paymentStatus} paymentMethod={item.paymentMethod} />
       </View>
 
       {item.pricePerLoad != null && item.loads > 1 && (
@@ -167,18 +167,6 @@ export function HistoryScreen() {
             </Text>
           </View>
         </View>
-      )}
-
-      {isCustomer && history.length > 0 && (
-        <>
-          <Text style={styles.sectionTitle}>Payment history</Text>
-          <View style={styles.ledgerCard}>
-            {history.map((item) => (
-              <PaymentLedgerRow key={`ledger-${item.id}`} item={item} />
-            ))}
-          </View>
-          <Text style={styles.sectionTitle}>Load details</Text>
-        </>
       )}
 
       {history.length === 0 ? (

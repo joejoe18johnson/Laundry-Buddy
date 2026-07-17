@@ -8,10 +8,12 @@ import { AppIcon } from '../../components/AppIcon'
 import { colors, spacing } from '../../theme'
 
 export function MarkDryScreen() {
-  const { activeLoads, navigate, markDry } = useApp()
+  const { activeLoads, navigate, markDry, markDryLoadId } = useApp()
   const [photoUri, setPhotoUri] = useState<string | null>(null)
 
-  const dryingLoad = activeLoads.find((l) => l.stage === 'drying')
+  const dryingLoad =
+    activeLoads.find((load) => load.id === markDryLoadId && load.stage === 'drying') ??
+    activeLoads.find((load) => load.stage === 'drying')
 
   if (!dryingLoad) {
     return (
@@ -41,7 +43,7 @@ export function MarkDryScreen() {
         <AppIcon name="check-circle" size={20} />
         <Text style={styles.section}>Confirm it's dry</Text>
       </View>
-      <Text style={styles.sub}>Take a photo so the customer can trust it's ready.</Text>
+      <Text style={styles.sub}>Take a photo so the guest can trust it's ready.</Text>
 
       <LoadPhotoCapture photoUri={photoUri} onPhotoChange={setPhotoUri} />
 
@@ -50,7 +52,7 @@ export function MarkDryScreen() {
       <PrimaryButton
         title="Mark as dry"
         icon="wind"
-        onPress={() => markDry(dryingLoad.id)}
+        onPress={() => markDry(dryingLoad.id, photoUri ?? undefined)}
         disabled={!photoUri}
         full
       />

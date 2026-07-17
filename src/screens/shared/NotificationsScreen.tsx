@@ -15,23 +15,8 @@ import { colors, radius, spacing } from '../../theme'
 import type { AppNotification } from '../../types'
 
 function groupNotifications(items: AppNotification[]) {
-  const today: AppNotification[] = []
-  const earlier: AppNotification[] = []
-  for (const item of items) {
-    if (item.time.includes('AM') || item.time.includes('PM')) {
-      today.push(item)
-    } else {
-      earlier.push(item)
-    }
-  }
-  if (today.length === 0 && earlier.length === 0 && items.length > 0) {
-    return [{ title: 'Recent', data: items }]
-  }
-  const sections: { title: string; data: AppNotification[] }[] = []
-  if (today.length) sections.push({ title: 'Today', data: today })
-  if (earlier.length) sections.push({ title: 'Earlier', data: earlier })
-  if (!sections.length && items.length) sections.push({ title: 'Recent', data: items })
-  return sections
+  if (items.length === 0) return []
+  return [{ title: 'Recent', data: items }]
 }
 
 export function NotificationsScreen() {

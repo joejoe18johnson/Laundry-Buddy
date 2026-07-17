@@ -39,6 +39,22 @@ export function mergeHostRequests(seed: HostRequest[], stored: HostRequest[]): H
   return [...byId.values()]
 }
 
+export async function removeHostActiveLoad(hostUserId: string, loadId: string): Promise<void> {
+  const orders = await getHostOrders(hostUserId)
+  await saveHostOrders(hostUserId, {
+    ...orders,
+    activeLoads: orders.activeLoads.filter((load) => load.id !== loadId),
+  })
+}
+
+export async function updateHostActiveLoads(
+  hostUserId: string,
+  activeLoads: Booking[],
+): Promise<void> {
+  const orders = await getHostOrders(hostUserId)
+  await saveHostOrders(hostUserId, { ...orders, activeLoads })
+}
+
 export function mergeActiveLoads(seed: Booking[], stored: Booking[]): Booking[] {
   const byId = new Map<string, Booking>()
   for (const load of [...seed, ...stored]) {

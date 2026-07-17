@@ -1,13 +1,23 @@
-/** Curated town/area chips for search and filters — not every village. */
+/** Curated town/area chips for search and filters — villages and towns nationwide. */
 export const BELIZE_FILTER_AREAS = [
   'Belmopan',
   'San Ignacio',
   'Santa Elena',
+  'Las Flores',
+  'Spanish Lookout',
   'Corozal Town',
   'Orange Walk Town',
   'Belize City',
+  'Ladyville',
   'San Pedro',
   'Caye Caulker',
+  'Dangriga',
+  'Hopkins',
+  'Placencia',
+  'Punta Gorda',
+  'Independence',
+  'Sarteneja',
+  'Guinea Grass',
 ] as const
 
 export type BelizeFilterArea = (typeof BELIZE_FILTER_AREAS)[number]
@@ -23,11 +33,21 @@ export const FILTER_AREA_CENTERS: Record<
   Belmopan: { latitude: 17.251, longitude: -88.759 },
   'San Ignacio': { latitude: 17.156, longitude: -89.069 },
   'Santa Elena': { latitude: 17.151, longitude: -89.064 },
+  'Las Flores': { latitude: 17.158, longitude: -89.072 },
+  'Spanish Lookout': { latitude: 17.186, longitude: -89.035 },
   'Corozal Town': { latitude: 18.3938, longitude: -88.3885 },
   'Orange Walk Town': { latitude: 18.0812, longitude: -88.563 },
   'Belize City': { latitude: 17.5046, longitude: -88.1962 },
+  Ladyville: { latitude: 17.554, longitude: -88.194 },
   'San Pedro': { latitude: 17.9214, longitude: -87.9611 },
   'Caye Caulker': { latitude: 17.7612, longitude: -88.0277 },
+  Dangriga: { latitude: 16.969, longitude: -88.233 },
+  Hopkins: { latitude: 16.863, longitude: -88.367 },
+  Placencia: { latitude: 16.514, longitude: -88.366 },
+  'Punta Gorda': { latitude: 16.098, longitude: -88.81 },
+  Independence: { latitude: 16.534, longitude: -88.408 },
+  Sarteneja: { latitude: 18.352, longitude: -88.132 },
+  'Guinea Grass': { latitude: 17.979, longitude: -88.598 },
 }
 
 export function isBelizeFilterArea(label: string): label is BelizeFilterArea {
@@ -64,11 +84,21 @@ export const FILTER_AREA_DISTRICT: Record<BelizeFilterArea, BelizeDistrict> = {
   Belmopan: 'Cayo',
   'San Ignacio': 'Cayo',
   'Santa Elena': 'Cayo',
+  'Las Flores': 'Cayo',
+  'Spanish Lookout': 'Cayo',
   'Corozal Town': 'Corozal',
   'Orange Walk Town': 'Orange Walk',
   'Belize City': 'Belize',
+  Ladyville: 'Belize',
   'San Pedro': 'Belize',
   'Caye Caulker': 'Belize',
+  Dangriga: 'Stann Creek',
+  Hopkins: 'Stann Creek',
+  Placencia: 'Stann Creek',
+  'Punta Gorda': 'Toledo',
+  Independence: 'Stann Creek',
+  Sarteneja: 'Corozal',
+  'Guinea Grass': 'Orange Walk',
 }
 
 /** Resolve a town/area label to its Belize district for search subtitles. */
@@ -100,7 +130,7 @@ export function getPlaceSearchSubtitle(label: string, district?: string): string
 }
 
 const FILTER_ALIASES: Record<string, string[]> = {
-  belmopan: ['belmopan'],
+  belmopan: ['belmopan', 'teakettle', 'roaring creek', 'ontario', 'unitedville', 'armenia'],
   'san ignacio': [
     'san ignacio',
     'las flores',
@@ -116,10 +146,14 @@ const FILTER_ALIASES: Record<string, string[]> = {
     'camalote',
     'roaring creek',
     'salvapan',
+    'billy white',
+    'blackman eddy',
   ],
   'santa elena': ['santa elena', 'las flores', 'maya mopan'],
-  'corozal town': ['corozal'],
-  'orange walk town': ['orange walk'],
+  'las flores': ['las flores', 'santa elena', 'san ignacio'],
+  'spanish lookout': ['spanish lookout', 'branch mouth'],
+  'corozal town': ['corozal', 'concepcion', 'patchakan', 'progresso', 'xaibe', 'calcutta'],
+  'orange walk town': ['orange walk', 'trial farm', 'carmelita', 'san estevan', 'san pablo'],
   'belize city': [
     'belize city',
     'ladyville',
@@ -130,9 +164,20 @@ const FILTER_ALIASES: Record<string, string[]> = {
     'port loyola',
     'freetown',
     'gracie rock',
+    'burrell boom',
+    'sand hill',
+    'maskall',
   ],
+  ladyville: ['ladyville', 'hattieville', 'belize city'],
   'san pedro': ['san pedro'],
   'caye caulker': ['caye caulker'],
+  dangriga: ['dangriga', 'sittee river', 'pomona', 'alta vista', 'silk grass'],
+  hopkins: ['hopkins', 'red bank', 'georgetown', 'mullins river'],
+  placencia: ['placencia', 'seine bight', 'maya beach'],
+  'punta gorda': ['punta gorda', 'barranco', 'toledo settlement', 'crique sarco'],
+  independence: ['independence', 'mango creek', 'middlesex'],
+  sarteneja: ['sarteneja', 'copper bank', 'chunox'],
+  'guinea grass': ['guinea grass', 'shipyard', 'doubloon bank', 'san felipe'],
 }
 
 function hostHaystack(host: { location: string; district?: string; address: string }): string {

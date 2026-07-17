@@ -82,7 +82,7 @@ function InfoSection({ title, icon, children }: { title: string; icon: 'info' | 
 }
 
 export function HostProfileScreen() {
-  const { selectedHost, navigate, selectHost, getSettingsForHost, getReviewsForHost, refreshHostReviews } =
+  const { selectedHost, navigate, selectHost, getSettingsForHost, getReviewsForHost, refreshHostReviews, booking } =
     useApp()
   const insets = useSafeAreaInsets()
   const footerBottomPad = bottomSafePadding(insets.bottom)
@@ -106,6 +106,7 @@ export function HostProfileScreen() {
       : null,
   ].filter(Boolean)
   const gradient = coverColors[host.id] ?? ['#667eea', '#764ba2']
+  const canBook = settings.isOnline && !booking
 
   return (
     <View style={styles.wrapper}>
@@ -249,7 +250,12 @@ export function HostProfileScreen() {
             </Text>
           </View>
           <View style={styles.footerAction}>
-            <PrimaryButton title="Book Slot" icon="calendar" onPress={() => selectHost(host)} />
+            <PrimaryButton
+              title={canBook ? 'Book Slot' : booking ? 'Finish Current Load' : 'Host Offline'}
+              icon="calendar"
+              disabled={!canBook}
+              onPress={() => (canBook ? selectHost(host) : navigate('customer-tracking'))}
+            />
           </View>
         </View>
       </View>

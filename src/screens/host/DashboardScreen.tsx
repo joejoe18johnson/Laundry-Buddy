@@ -107,6 +107,8 @@ export function DashboardScreen() {
     advanceStage,
     confirmTransferPayment,
     confirmPickup,
+    markBagReceived,
+    openMarkDry,
   } = useApp()
 
   const rawHost = user ? getHostByUserId(user.id) : undefined
@@ -286,11 +288,22 @@ export function DashboardScreen() {
                 />
               </>
             )}
-            {(load.stage === 'got-bag' || load.stage === 'waiting') && (
+            {load.stage === 'got-bag' && !load.stageTimes['got-bag'] && (
+              <PrimaryButton
+                title="Bag received"
+                icon="shopping-bag"
+                full
+                onPress={() => markBagReceived(load.id)}
+              />
+            )}
+            {load.stage === 'got-bag' && load.stageTimes['got-bag'] && (
+              <PrimaryButton title="Start dryer" onPress={() => advanceStage(load.id, 'drying')} full />
+            )}
+            {load.stage === 'waiting' && (
               <PrimaryButton title="Start dryer" onPress={() => advanceStage(load.id, 'drying')} full />
             )}
             {load.stage === 'drying' && (
-              <PrimaryButton title="Mark as dry" onPress={() => navigate('host-mark-dry')} full />
+              <PrimaryButton title="Mark as dry" onPress={() => openMarkDry(load.id)} full />
             )}
             {load.stage === 'ready' && (
               <View style={styles.pickupBlock}>

@@ -140,9 +140,9 @@ function AppShell() {
   const isHome = screen === 'customer-home'
 
   const loadNeedsAttention =
-    booking &&
-    (booking.requestStatus === 'pending' ||
-      (booking.requestStatus !== 'declined' && booking.stage !== 'ready'))
+    !!booking && booking.requestStatus !== 'declined'
+
+  const hasActiveLoad = !!booking && booking.requestStatus !== 'declined'
 
   const customerTabs: NavTab[] = useMemo(
     () => [
@@ -243,7 +243,7 @@ function AppShell() {
         locationLabel={userLocationLabel}
         radiusKm={searchRadiusKm}
         onOpenLocationSettings={isCustomer ? () => setLocationSettingsOpen(true) : undefined}
-        hasActiveLoad={!!booking}
+        hasActiveLoad={hasActiveLoad}
         isHostOnline={hostSettings?.isOnline}
         notificationCount={unreadCount}
         onExplore={isCustomer ? () => navigate('customer-home') : undefined}
