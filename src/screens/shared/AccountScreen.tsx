@@ -154,25 +154,25 @@ export function AccountScreen() {
       <BackButton onPress={() => navigate(backScreen)} label="Back" />
       <View style={styles.titleRow}>
         <AppIcon name="user" size={22} color={colors.black} />
-        <Text style={styles.title}>Account</Text>
+        <Text style={styles.title}>{toTitleCase('Account')}</Text>
       </View>
-      <Text style={styles.subtitle}>Your Profile And Contact Details</Text>
+      <Text style={styles.subtitle}>{toTitleCase('Your Profile And Contact Details')}</Text>
 
       <View style={styles.avatar}>
         <AppIcon name="user" size={28} color={colors.black} />
       </View>
       <Text style={styles.name}>{user.name}</Text>
       <View style={styles.roleBadge}>
-        <Text style={styles.roleText}>{isCustomer ? 'Guest' : 'Host'}</Text>
+        <Text style={styles.roleText}>{toTitleCase(isCustomer ? 'Guest' : 'Host')}</Text>
       </View>
 
       <View style={styles.appearanceCard}>
         <View style={styles.appearanceHeader}>
           <AppIcon name={isDark ? 'moon' : 'sun'} size={18} color={colors.black} />
           <View style={styles.appearanceText}>
-            <Text style={styles.appearanceTitle}>Dark Mode</Text>
+            <Text style={styles.appearanceTitle}>{toTitleCase('Dark Mode')}</Text>
             <Text style={styles.appearanceSub}>
-              {isDark ? 'Dark Theme Is On' : 'Light Theme Is On'}
+              {toTitleCase(isDark ? 'Dark Theme Is On' : 'Light Theme Is On')}
             </Text>
           </View>
           <BrandSwitch value={isDark} onValueChange={(enabled) => setColorScheme(enabled ? 'dark' : 'light')} />

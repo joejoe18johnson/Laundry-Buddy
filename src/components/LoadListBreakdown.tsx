@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
+import { toTitleCase } from '../lib/titleCase'
 import { ClothesListDisplay } from './ClothesListDisplay'
 import { totalClothesCount } from '../lib/clothesList'
 import type { ClothesListItem } from '../types'
@@ -35,7 +36,7 @@ export function LoadListBreakdown({
       >
         <View style={styles.headerLeft}>
           <AppIcon name="list" size={16} color={colors.black} />
-          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.title}>{toTitleCase(title)}</Text>
         </View>
         <View style={styles.headerRight}>
           <Text style={styles.count}>
@@ -52,7 +53,7 @@ export function LoadListBreakdown({
       ) : (
         <View style={styles.previewBody}>
           <ClothesListDisplay items={items} compact />
-          <Text style={styles.previewHint}>Tap to see full breakdown with quantities</Text>
+          <Text style={styles.previewHint}>{toTitleCase('Tap to see full breakdown with quantities')}</Text>
         </View>
       )}
     </View>

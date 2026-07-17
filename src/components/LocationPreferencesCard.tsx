@@ -2,6 +2,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { AppIcon } from './AppIcon'
 import { BELIZE_FILTER_AREAS } from '../lib/belizeDistricts'
 import { RADIUS_OPTIONS_KM, type RadiusOptionKm } from '../lib/locationPreferences'
+import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
 type Props = {
@@ -31,11 +32,11 @@ export function LocationPreferencesCard({
       <View style={styles.cardHeader}>
         <AppIcon name="map-pin" size={18} color={colors.gray600} />
         <View style={styles.headerText}>
-          <Text style={styles.cardTitle}>Search area</Text>
+          <Text style={styles.cardTitle}>{toTitleCase('Search area')}</Text>
           <Text style={styles.cardSub}>
             {dirty
-              ? 'You have unsaved changes — tap Save search area when ready'
-              : 'Hosts shown within your radius on the map'}
+              ? toTitleCase('You have unsaved changes — tap Save search area when ready')
+              : toTitleCase('Hosts shown within your radius on the map')}
           </Text>
         </View>
       </View>
@@ -58,10 +59,10 @@ export function LocationPreferencesCard({
         ) : (
           <AppIcon name="crosshair" size={16} color={colors.black} />
         )}
-        <Text style={styles.gpsBtnText}>{locating ? 'Finding you…' : 'Use my location'}</Text>
+        <Text style={styles.gpsBtnText}>{locating ? toTitleCase('Finding you…') : toTitleCase('Use my location')}</Text>
       </Pressable>
 
-      <Text style={styles.sectionLabel}>Areas</Text>
+      <Text style={styles.sectionLabel}>{toTitleCase('Areas')}</Text>
       <View style={isScreen ? styles.areaGrid : styles.chipRowScroll}>
         {BELIZE_FILTER_AREAS.map((area) => {
           const selected = locationLabel === area
@@ -77,7 +78,7 @@ export function LocationPreferencesCard({
         })}
       </View>
 
-      <Text style={styles.sectionLabel}>Radius</Text>
+      <Text style={styles.sectionLabel}>{toTitleCase('Radius')}</Text>
       <View style={styles.radiusRow}>
         {RADIUS_OPTIONS_KM.map((km) => {
           const selected = radiusKm === km
@@ -147,7 +148,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray400,
-    textTransform: 'capitalize',
     letterSpacing: 0.5,
     marginTop: 4,
   },

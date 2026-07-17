@@ -13,6 +13,7 @@ import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { formatServicePrice } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
+import { toTitleCase } from '../../lib/titleCase'
 import { colors, coverColors, radius, spacing } from '../../theme'
 import type { HostReview } from '../../types'
 
@@ -46,7 +47,7 @@ function Stat({ icon, label, value }: { icon: 'package' | 'clock' | 'calendar'; 
     <View style={styles.stat}>
       <AppIcon name={icon} size={18} color={colors.gray500} />
       <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statLabel}>{toTitleCase(label)}</Text>
     </View>
   )
 }
@@ -74,7 +75,7 @@ function InfoSection({ title, icon, children }: { title: string; icon: 'info' | 
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <AppIcon name={icon} size={18} />
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionTitle}>{toTitleCase(title)}</Text>
       </View>
       {children}
     </View>
@@ -121,7 +122,7 @@ export function HostProfileScreen() {
           <View style={[styles.onlineBadge, !settings.isOnline && styles.offlineBadge]}>
             <View style={[styles.onlineDot, !settings.isOnline && styles.offlineDot]} />
             <Text style={[styles.onlineText, !settings.isOnline && styles.offlineText]}>
-              {settings.isOnline ? 'Online Now' : 'Offline'}
+              {settings.isOnline ? toTitleCase('Online Now') : toTitleCase('Offline')}
             </Text>
           </View>
           <View style={styles.heroLocation}>
@@ -163,18 +164,18 @@ export function HostProfileScreen() {
         <View style={styles.detailsGrid}>
           <View style={styles.detailChip}>
             <AppIcon name="wind" size={16} />
-            <Text style={styles.detailText}>Drying — {formatHostPrice(host.price)} Per Load</Text>
+            <Text style={styles.detailText}>{toTitleCase('Drying')} — {formatHostPrice(host.price)} {toTitleCase('Per Load')}</Text>
           </View>
           {(host.foldingPrice ?? 0) > 0 && (
             <View style={styles.detailChip}>
               <AppIcon name="layers" size={16} />
-              <Text style={styles.detailText}>Folding — {formatHostPrice(host.foldingPrice!)} Per Load</Text>
+              <Text style={styles.detailText}>{toTitleCase('Folding')} — {formatHostPrice(host.foldingPrice!)} {toTitleCase('Per Load')}</Text>
             </View>
           )}
           <View style={styles.detailChip}>
             <AppIcon name="tag" size={16} />
             <Text style={styles.detailText}>
-              Dryer Sheets — {formatServicePrice(host.sheetsPrice ?? 1)} If Guest Buys
+              {toTitleCase('Dryer Sheets')} — {formatServicePrice(host.sheetsPrice ?? 1)} {toTitleCase('If Guest Buys')}
             </Text>
           </View>
           <View style={styles.detailChip}>
@@ -190,13 +191,13 @@ export function HostProfileScreen() {
           {host.hasGenerator && (
             <View style={styles.detailChip}>
               <AppIcon name="zap" size={16} />
-              <Text style={styles.detailText}>Generator Backup</Text>
+              <Text style={styles.detailText}>{toTitleCase('Generator Backup')}</Text>
             </View>
           )}
           {paymentMethods.length > 0 && (
             <View style={styles.detailChip}>
               <AppIcon name="credit-card" size={16} />
-              <Text style={styles.detailText}>Accepts {paymentMethods.join(' · ')}</Text>
+              <Text style={styles.detailText}>{toTitleCase('Accepts')} {paymentMethods.join(' · ')}</Text>
             </View>
           )}
         </View>
@@ -223,11 +224,11 @@ export function HostProfileScreen() {
           <View style={styles.sectionHeader}>
             <AppIcon name="message-circle" size={18} />
             <Text style={styles.sectionTitle}>
-              Reviews{reviews.length ? ` (${reviews.length})` : ''}
+              {toTitleCase('Reviews')}{reviews.length ? ` (${reviews.length})` : ''}
             </Text>
           </View>
           {reviews.length === 0 ? (
-            <Text style={styles.emptyReviews}>No Reviews Yet — Be The First To Book.</Text>
+            <Text style={styles.emptyReviews}>{toTitleCase('No Reviews Yet — Be The First To Book.')}</Text>
           ) : (
             reviews.map((review) => <ReviewCard key={review.id} review={review} />)
           )}

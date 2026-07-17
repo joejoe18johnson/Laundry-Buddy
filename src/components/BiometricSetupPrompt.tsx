@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { OutlineButton, PrimaryButton } from './ui'
 import type { BiometricSupport } from '../lib/biometricAuth'
+import { titleCaseWithName, toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
 type Props = {
@@ -22,9 +23,14 @@ export function BiometricSetupPrompt({ visible, support, loading, onEnable, onSk
             <View style={styles.iconCircle}>
               <AppIcon name={support.icon} size={28} color={colors.black} />
             </View>
-            <Text style={styles.title}>Use {support.label} next time?</Text>
+            <Text style={styles.title}>
+              {titleCaseWithName(`Use ${support.label} next time?`, support.label)}
+            </Text>
             <Text style={styles.subtitle}>
-              Skip typing your password — use {support.label} when you log back in after signing out.
+              {titleCaseWithName(
+                `Skip typing your password — use ${support.label} when you log back in after signing out.`,
+                support.label,
+              )}
             </Text>
             <PrimaryButton
               title={loading ? 'Setting up…' : `Enable ${support.label}`}

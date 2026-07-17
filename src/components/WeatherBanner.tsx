@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
 import { WEATHER } from '../data/mockData'
+import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
 export function WeatherBanner() {
@@ -8,7 +9,7 @@ export function WeatherBanner() {
     <View style={styles.banner}>
       <AppIcon name="cloud-rain" size={16} color={colors.gray600} />
       <Text style={styles.text} numberOfLines={2}>
-        {WEATHER.headline}
+        {toTitleCase(WEATHER.headline)}
       </Text>
     </View>
   )

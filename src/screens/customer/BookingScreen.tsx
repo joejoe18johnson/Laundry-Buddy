@@ -18,7 +18,7 @@ import {
 import { formatMoney } from '../../lib/bookingPayments'
 import { sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
-import { titleCaseWithName } from '../../lib/titleCase'
+import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import type { ClothesListItem, PaymentMethod, SheetsOption } from '../../types'
 
@@ -118,7 +118,9 @@ export function BookingScreen() {
       <Screen>
         <BackButton onPress={() => navigate('customer-host-profile')} />
         <Text style={styles.eyebrow}>{selectedHost.location}</Text>
-        <Text style={styles.title}>Book With {selectedHost.name}</Text>
+        <Text style={styles.title}>
+          {titleCaseWithName(`Book with ${selectedHost.name}`, selectedHost.name)}
+        </Text>
 
         <StepIndicator
           steps={['Time', 'Loads', 'Pay', 'Clothes', 'Review']}
@@ -126,18 +128,18 @@ export function BookingScreen() {
         />
 
         <View style={styles.rateCard}>
-          <Text style={styles.rateTitle}>Host Rates (Per Load)</Text>
-          <Text style={styles.rateLine}>Drying — {formatServicePrice(dryPrice)}</Text>
+          <Text style={styles.rateTitle}>{toTitleCase('Host Rates (Per Load)')}</Text>
+          <Text style={styles.rateLine}>{toTitleCase('Drying')} — {formatServicePrice(dryPrice)}</Text>
           {showFolding && (
-            <Text style={styles.rateLine}>Folding — {formatServicePrice(foldingPrice)}</Text>
+            <Text style={styles.rateLine}>{toTitleCase('Folding')} — {formatServicePrice(foldingPrice)}</Text>
           )}
-          <Text style={styles.rateLine}>Dryer Sheets — {formatServicePrice(sheetsPrice)}</Text>
+          <Text style={styles.rateLine}>{toTitleCase('Dryer Sheets')} — {formatServicePrice(sheetsPrice)}</Text>
         </View>
 
-        <Text style={styles.section}>Drop Off Time</Text>
-        <Text style={styles.sectionHint}>Pick An Hour Between 8am And 8pm</Text>
+        <Text style={styles.section}>{toTitleCase('Drop Off Time')}</Text>
+        <Text style={styles.sectionHint}>{toTitleCase('Pick An Hour Between 8am And 8pm')}</Text>
         {availableTimes.length === 0 ? (
-          <Text style={styles.paymentNote}>This Host Has Not Set Drop Off Hours Yet.</Text>
+          <Text style={styles.paymentNote}>{toTitleCase('This Host Has Not Set Drop Off Hours Yet.')}</Text>
         ) : (
           <DropOffHourGrid
             mode="select"
@@ -147,23 +149,23 @@ export function BookingScreen() {
           />
         )}
 
-        <Text style={styles.section}>Loads</Text>
+        <Text style={styles.section}>{toTitleCase('Loads')}</Text>
         <View style={styles.stepper}>
           <Pressable onPress={() => setLoads(Math.max(1, loads - 1))} style={styles.stepBtn}>
             <Text style={styles.stepBtnText}>−</Text>
           </Pressable>
           <View style={styles.stepValue}>
             <Text style={styles.stepCount}>{loads}</Text>
-            <Text style={styles.stepLabel}>standard basket{loads > 1 ? 's' : ''}</Text>
+            <Text style={styles.stepLabel}>{toTitleCase(`standard basket${loads > 1 ? 's' : ''}`)}</Text>
           </View>
           <Pressable onPress={() => setLoads(loads + 1)} style={styles.stepBtn}>
             <Text style={styles.stepBtnText}>+</Text>
           </Pressable>
         </View>
 
-        <Text style={styles.section}>Payment</Text>
+        <Text style={styles.section}>{toTitleCase('Payment')}</Text>
         {paymentMethods.length === 0 ? (
-          <Text style={styles.paymentNote}>This Host Has Not Set Up Payment Options Yet.</Text>
+          <Text style={styles.paymentNote}>{toTitleCase('This Host Has Not Set Up Payment Options Yet.')}</Text>
         ) : (
           <>
             <View style={styles.chips}>
@@ -200,7 +202,7 @@ export function BookingScreen() {
           </>
         )}
 
-        <Text style={styles.section}>Dryer Sheets</Text>
+        <Text style={styles.section}>{toTitleCase('Dryer Sheets')}</Text>
         {sheets.map((s) => (
           <OptionRow
             key={s.value}
@@ -213,7 +215,7 @@ export function BookingScreen() {
 
         {showFolding && (
           <>
-            <Text style={styles.section}>Folding Service</Text>
+            <Text style={styles.section}>{toTitleCase('Folding Service')}</Text>
             <OptionRow
               label={`Add Folding — ${formatServicePrice(foldingPrice)} Per Load`}
               sub="Host Folds Clothes After Drying"
@@ -223,19 +225,19 @@ export function BookingScreen() {
           </>
         )}
 
-        <Text style={styles.section}>What's In Your Load?</Text>
-        <Text style={styles.sectionHint}>Optional — Helps Your Host Prepare</Text>
+        <Text style={styles.section}>{toTitleCase("What's In Your Load?")}</Text>
+        <Text style={styles.sectionHint}>{toTitleCase('Optional — Helps Your Host Prepare')}</Text>
         <ClothesListEditor items={clothesList} onChange={setClothesList} />
 
         {clothesList.length > 0 && (
           <LoadListBreakdown items={clothesList} title="Your Load List" />
         )}
 
-        <Text style={styles.section}>Photo Of Your Load</Text>
-        <Text style={styles.sectionHint}>Show The Host What You're Dropping Off</Text>
+        <Text style={styles.section}>{toTitleCase('Photo Of Your Load')}</Text>
+        <Text style={styles.sectionHint}>{toTitleCase("Show The Host What You're Dropping Off")}</Text>
         <LoadPhotoCapture photoUri={loadPhotoUri} onPhotoChange={setLoadPhotoUri} />
 
-        <Text style={styles.section}>Special Notes</Text>
+        <Text style={styles.section}>{toTitleCase('Special Notes')}</Text>
         <AppTextInput
           style={styles.notes}
           multiline
@@ -258,7 +260,7 @@ export function BookingScreen() {
                 <Text style={styles.footerMetaInline}> · {priceBreakdown}</Text>
               ) : null}
             </Text>
-            {validationHint ? <Text style={styles.validationHint}>{validationHint}</Text> : null}
+            {validationHint ? <Text style={styles.validationHint}>{toTitleCase(validationHint)}</Text> : null}
           </View>
           <View style={styles.footerAction}>
             <PrimaryButton
@@ -322,7 +324,7 @@ function createBookingStyles(colors: ReturnType<typeof useTheme>['colors']) {
     padding: spacing.md,
     gap: 4,
   },
-  bankTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, textTransform: 'capitalize', marginBottom: 4 },
+  bankTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, marginBottom: 4 },
   bankLine: { fontSize: 15, fontWeight: '600', color: colors.black },
   bankAccount: { fontSize: 18, fontWeight: '700', letterSpacing: 0.5, marginVertical: 4, color: colors.black },
   bankHint: { fontSize: 12, color: colors.gray500, lineHeight: 17, marginTop: 4 },

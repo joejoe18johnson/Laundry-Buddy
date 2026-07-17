@@ -26,6 +26,7 @@ import {
   type SearchSuggestion,
 } from '../lib/hostFilters'
 import type { Host } from '../types'
+import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
 type Props = {
@@ -177,7 +178,7 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
     <View style={styles.headerBlock}>
       {!trimmed && suggestions.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Suggestions</Text>
+          <Text style={styles.sectionLabel}>{toTitleCase('Suggestions')}</Text>
           {suggestions.map((item) => (
             <SuggestionRow
               key={item.type === 'host' ? item.host.id : item.label}
@@ -190,7 +191,7 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
 
       {trimmed && suggestions.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Matches</Text>
+          <Text style={styles.sectionLabel}>{toTitleCase('Matches')}</Text>
           {suggestions.map((item) => (
             <SuggestionRow
               key={item.type === 'host' ? item.host.id : item.label}
@@ -202,7 +203,7 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
       )}
 
       <View style={styles.districtSection}>
-        <Text style={styles.sectionLabelInline}>Areas</Text>
+        <Text style={styles.sectionLabelInline}>{toTitleCase('Areas')}</Text>
         <View style={styles.quickAreas}>
           {BELIZE_FILTER_AREAS.map((area) => (
             <ChoiceChip
@@ -240,7 +241,7 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
           <Pressable onPress={onClose} hitSlop={10} style={styles.backBtn}>
             <AppIcon name="arrow-left" size={22} color={colors.black} />
           </Pressable>
-          <Text style={styles.title}>Search hosts</Text>
+          <Text style={styles.title}>{toTitleCase('Search hosts')}</Text>
           <View style={styles.backBtn} />
         </View>
 
@@ -269,9 +270,9 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
           ListEmptyComponent={
             <View style={styles.empty}>
               <AppIcon name="search" size={28} color={colors.gray400} />
-              <Text style={styles.emptyTitle}>No hosts found</Text>
+              <Text style={styles.emptyTitle}>{toTitleCase('No hosts found')}</Text>
               <Text style={styles.emptySub}>
-                Try a host name like Maria, or pick a district like Cayo or Orange Walk.
+                {toTitleCase('Try a host name like Maria, or pick a district like Cayo or Orange Walk.')}
               </Text>
             </View>
           }
@@ -311,7 +312,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray400,
-    textTransform: 'capitalize',
     letterSpacing: 0.6,
     marginBottom: spacing.sm,
     paddingHorizontal: spacing.screen,
@@ -324,7 +324,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray400,
-    textTransform: 'capitalize',
     letterSpacing: 0.6,
     marginBottom: spacing.sm,
   },

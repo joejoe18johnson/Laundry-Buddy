@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { TRAINING_ACCOUNTS, TRAINING_PASSWORD, ACTIVE_REGION_LABEL } from '../../data/seedData'
 import { isFullFlowTesting } from '../../lib/testingFlow'
+import { toTitleCase, titleCaseWithName } from '../../lib/titleCase'
 import { AppLogoMark } from '../../components/AppLogoMark'
 import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
 import { OutlineButton, PrimaryButton, Screen } from '../../components/ui'
@@ -46,9 +47,9 @@ export function WelcomeScreen() {
     <Screen style={styles.container}>
       <View style={styles.hero}>
         <AppLogoMark size={56} style={styles.logo} />
-        <Text style={styles.title}>Dry Laundry, Rain or Shine</Text>
+        <Text style={styles.title}>{toTitleCase('Dry Laundry, Rain or Shine')}</Text>
         <Text style={styles.tagline}>
-          Book a neighbor's dryer anywhere in {ACTIVE_REGION_LABEL} — free for the community.
+          {toTitleCase(`Book a neighbor's dryer anywhere in ${ACTIVE_REGION_LABEL} — free for the community.`)}
         </Text>
       </View>
 
@@ -66,7 +67,10 @@ export function WelcomeScreen() {
         <View style={styles.biometricHint}>
           <AppIcon name={biometricSupport.icon} size={16} color={colors.gray600} />
           <Text style={styles.biometricHintText}>
-            Sign in once with your password — then enable {biometricSupport.label} for quick access.
+            {titleCaseWithName(
+              `Sign in once with your password — then enable ${biometricSupport.label} for quick access.`,
+              biometricSupport.label,
+            )}
           </Text>
         </View>
       ) : null}
@@ -78,7 +82,9 @@ export function WelcomeScreen() {
       <View style={styles.training}>
         <View style={styles.trainingTitleRow}>
           <AppIcon name="users" size={14} color={colors.gray600} />
-          <Text style={styles.trainingTitle}>Training accounts · password {TRAINING_PASSWORD}</Text>
+          <Text style={styles.trainingTitle}>
+            {toTitleCase(`Training accounts · password ${TRAINING_PASSWORD}`)}
+          </Text>
         </View>
         {TRAINING_ACCOUNTS.map((a) => (
           <Pressable
@@ -144,7 +150,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: colors.gray600,
-    textTransform: 'capitalize',
     letterSpacing: 0.4,
   },
   trainingRow: {

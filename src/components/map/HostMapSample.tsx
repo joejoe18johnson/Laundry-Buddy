@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native'
 import { SampleMapArt } from '../SampleMapArt'
+import { toTitleCase } from '../../lib/titleCase'
 import { HostPricePin, YouMarker } from './MapPins'
 import {
   buildSampleMapUrl,
@@ -72,7 +73,7 @@ export function HostMapSample({ hosts, onHostPress }: Props) {
         </View>
       </View>
       <View style={styles.legend}>
-        <Text style={styles.legendText}>Preview map · Belize</Text>
+        <Text style={styles.legendText}>{toTitleCase('Preview map · Belize')}</Text>
       </View>
     </View>
   )

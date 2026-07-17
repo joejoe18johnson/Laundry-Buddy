@@ -11,6 +11,7 @@ import {
   requestPushPermissions,
   type PushPermissionStatus,
 } from '../../lib/pushNotifications'
+import { toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
 import type { AppNotification } from '../../types'
 
@@ -46,10 +47,12 @@ export function NotificationsScreen() {
         <View style={styles.titleBlock}>
           <View style={styles.titleRow}>
             <AppIcon name="bell" size={22} />
-            <Text style={styles.title}>Notifications</Text>
+            <Text style={styles.title}>{toTitleCase('Notifications')}</Text>
           </View>
           <Text style={styles.subtitle}>
-            {unreadCount > 0 ? `${unreadCount} unread · tap to open` : 'You are all caught up'}
+            {unreadCount > 0
+              ? toTitleCase(`${unreadCount} unread · tap to open`)
+              : toTitleCase('You are all caught up')}
           </Text>
         </View>
         {unreadCount > 0 && (
@@ -58,7 +61,7 @@ export function NotificationsScreen() {
             hitSlop={8}
             style={({ pressed }) => [styles.markAllBtn, pressed && styles.markAllBtnPressed]}
           >
-            <Text style={styles.markAllText}>Mark all read</Text>
+            <Text style={styles.markAllText}>{toTitleCase('Mark all read')}</Text>
           </Pressable>
         )}
       </View>
@@ -67,9 +70,11 @@ export function NotificationsScreen() {
         <View style={styles.permissionCard}>
           <AppIcon name="bell" size={18} color={colors.black} />
           <View style={styles.permissionBody}>
-            <Text style={styles.permissionTitle}>Phone alerts are off</Text>
+            <Text style={styles.permissionTitle}>{toTitleCase('Phone alerts are off')}</Text>
             <Text style={styles.permissionSub}>
-              Enable notifications for host responses, ready-for-pickup alerts, and drop-off reminders.
+              {toTitleCase(
+                'Enable notifications for host responses, ready-for-pickup alerts, and drop-off reminders.',
+              )}
             </Text>
           </View>
           <OutlineButton
@@ -85,9 +90,9 @@ export function NotificationsScreen() {
       {notifications.length === 0 ? (
         <View style={styles.empty}>
           <AppIcon name="bell-off" size={32} color={colors.gray400} />
-          <Text style={styles.emptyTitle}>No notifications yet</Text>
+          <Text style={styles.emptyTitle}>{toTitleCase('No notifications yet')}</Text>
           <Text style={styles.emptySub}>
-            Booking updates and host alerts will show up here.
+            {toTitleCase('Booking updates and host alerts will show up here.')}
           </Text>
           {user.role === 'customer' ? (
             <PrimaryButton title="Explore dryers" icon="search" onPress={() => navigate('customer-home')} />
@@ -98,7 +103,7 @@ export function NotificationsScreen() {
       ) : (
         sections.map((section) => (
           <View key={section.title}>
-            <Text style={styles.sectionLabel}>{section.title}</Text>
+            <Text style={styles.sectionLabel}>{toTitleCase(section.title)}</Text>
             {section.data.map((item) => {
               const hasDestination = notificationHasDestination(item, user.role)
               return (
@@ -108,15 +113,15 @@ export function NotificationsScreen() {
                   onPress={() => openNotificationItem(item)}
                 >
                   <View style={styles.cardTop}>
-                    <Text style={styles.cardTitle}>{item.title}</Text>
+                    <Text style={styles.cardTitle}>{toTitleCase(item.title)}</Text>
                     <Text style={styles.cardTime}>{item.time}</Text>
                   </View>
-                  <Text style={styles.cardBody}>{item.body}</Text>
+                  <Text style={styles.cardBody}>{toTitleCase(item.body)}</Text>
                   <View style={styles.cardFooter}>
                     {!item.read && <View style={styles.unreadDot} />}
                     {hasDestination && (
                       <View style={styles.openHint}>
-                        <Text style={styles.openHintText}>Open</Text>
+                        <Text style={styles.openHintText}>{toTitleCase('Open')}</Text>
                         <AppIcon name="chevron-right" size={14} color={colors.gray500} />
                       </View>
                     )}
@@ -168,7 +173,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray500,
-    textTransform: 'capitalize',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
     marginTop: spacing.sm,

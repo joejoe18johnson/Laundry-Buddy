@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { AppTextInput, BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
+import { toTitleCase } from '../../lib/titleCase'
 import type { AppRole, LoginMethod } from '../../types'
 
 export function SignupScreen() {
@@ -30,8 +31,8 @@ export function SignupScreen() {
   return (
     <Screen>
       <BackButton onPress={() => navigateAuth('welcome')} />
-      <Text style={styles.title}>Create account</Text>
-      <Text style={styles.subtitle}>Join as a guest or host your dryer</Text>
+      <Text style={styles.title}>{toTitleCase('Create account')}</Text>
+      <Text style={styles.subtitle}>{toTitleCase('Join as a guest or host your dryer')}</Text>
 
       <View style={styles.roleRow}>
         {(['customer', 'host'] as const).map((r) => (
@@ -41,9 +42,11 @@ export function SignupScreen() {
             style={[styles.roleCard, role === r && styles.roleSelected]}
           >
             <AppIcon name={r === 'customer' ? 'search' : 'home'} size={20} />
-            <Text style={styles.roleTitle}>{r === 'customer' ? 'I need a dryer' : 'I have a dryer'}</Text>
+            <Text style={styles.roleTitle}>
+              {toTitleCase(r === 'customer' ? 'I need a dryer' : 'I have a dryer')}
+            </Text>
             <Text style={styles.roleSub}>
-              {r === 'customer' ? 'Book loads near you' : 'Host & help neighbors'}
+              {toTitleCase(r === 'customer' ? 'Book loads near you' : 'Host & help neighbors')}
             </Text>
           </Pressable>
         ))}
@@ -52,7 +55,9 @@ export function SignupScreen() {
       {role === 'host' && (
         <View style={styles.notice}>
           <AppIcon name="shield" size={16} color={colors.gray600} />
-          <Text style={styles.noticeText}>Hosts must verify ID and address before accepting loads.</Text>
+          <Text style={styles.noticeText}>
+            {toTitleCase('Hosts must verify ID and address before accepting loads.')}
+          </Text>
         </View>
       )}
 
@@ -69,13 +74,13 @@ export function SignupScreen() {
       />
 
       <View style={styles.field}>
-        <Text style={styles.label}>Full name</Text>
+        <Text style={styles.label}>{toTitleCase('Full name')}</Text>
         <AppTextInput placeholder="Your name" value={name} onChangeText={setName} />
       </View>
 
       {method === 'phone' ? (
         <View style={styles.field}>
-          <Text style={styles.label}>Phone number</Text>
+          <Text style={styles.label}>{toTitleCase('Phone number')}</Text>
           <View style={styles.phoneRow}>
             <Text style={styles.prefix}>+501</Text>
             <AppTextInput
@@ -89,7 +94,7 @@ export function SignupScreen() {
         </View>
       ) : (
         <View style={styles.field}>
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>{toTitleCase('Email')}</Text>
           <AppTextInput
             placeholder="you@example.com"
             keyboardType="email-address"
@@ -101,7 +106,7 @@ export function SignupScreen() {
       )}
 
       <View style={styles.field}>
-        <Text style={styles.label}>Password</Text>
+        <Text style={styles.label}>{toTitleCase('Password')}</Text>
         <AppTextInput
           placeholder="At least 6 characters"
           secureTextEntry
@@ -120,7 +125,7 @@ export function SignupScreen() {
 
       <Pressable onPress={() => navigateAuth('login')} style={styles.switch}>
         <Text style={styles.switchText}>
-          Already have an account? <Text style={styles.link}>Log in</Text>
+          {toTitleCase('Already have an account?')} <Text style={styles.link}>{toTitleCase('Log in')}</Text>
         </Text>
       </Pressable>
     </Screen>

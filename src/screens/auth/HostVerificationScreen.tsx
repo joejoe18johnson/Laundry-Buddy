@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { AppTextInput, GhostButton, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
+import { toTitleCase } from '../../lib/titleCase'
 
 export function HostVerificationScreen() {
   const { user, submitHostVerification, logout } = useAuth()
@@ -23,11 +24,11 @@ export function HostVerificationScreen() {
       <Screen>
         <View style={styles.pillPending}>
           <AppIcon name="clock" size={12} color="#b8860b" />
-          <Text style={styles.pillPendingText}>Under review</Text>
+          <Text style={styles.pillPendingText}>{toTitleCase('Under review')}</Text>
         </View>
-        <Text style={styles.title}>Verification submitted</Text>
+        <Text style={styles.title}>{toTitleCase('Verification submitted')}</Text>
         <Text style={styles.subtitle}>
-          We're reviewing your ID and address proof. This usually takes 24 hours.
+          {toTitleCase("We're reviewing your ID and address proof. This usually takes 24 hours.")}
         </Text>
         <View style={styles.checklist}>
           <View style={styles.checkItem}>
@@ -35,8 +36,8 @@ export function HostVerificationScreen() {
               <AppIcon name="check" size={14} color={colors.white} />
             </View>
             <View>
-              <Text style={styles.checkTitle}>Government ID</Text>
-              <Text style={styles.checkSub}>Uploaded</Text>
+              <Text style={styles.checkTitle}>{toTitleCase('Government ID')}</Text>
+              <Text style={styles.checkSub}>{toTitleCase('Uploaded')}</Text>
             </View>
           </View>
           <View style={styles.checkItem}>
@@ -44,7 +45,7 @@ export function HostVerificationScreen() {
               <AppIcon name="check" size={14} color={colors.white} />
             </View>
             <View>
-              <Text style={styles.checkTitle}>Address proof</Text>
+              <Text style={styles.checkTitle}>{toTitleCase('Address proof')}</Text>
               <Text style={styles.checkSub}>{user.hostVerification?.address}</Text>
             </View>
           </View>
@@ -58,33 +59,33 @@ export function HostVerificationScreen() {
     <Screen>
       <View style={styles.pill}>
         <AppIcon name="shield" size={12} color={colors.gray600} />
-        <Text style={styles.pillText}>Host verification</Text>
+        <Text style={styles.pillText}>{toTitleCase('Host verification')}</Text>
       </View>
-      <Text style={styles.title}>Verify your identity</Text>
+      <Text style={styles.title}>{toTitleCase('Verify your identity')}</Text>
       <Text style={styles.subtitle}>
         {isRejected
-          ? 'Your previous submission was rejected. Please resubmit clear documents.'
-          : 'Upload your ID and proof of address so guests can trust your listing.'}
+          ? toTitleCase('Your previous submission was rejected. Please resubmit clear documents.')
+          : toTitleCase('Upload your ID and proof of address so guests can trust your listing.')}
       </Text>
 
       <View style={styles.sectionHeader}>
         <AppIcon name="credit-card" size={18} />
-        <Text style={styles.sectionTitle}>Government ID</Text>
+        <Text style={styles.sectionTitle}>{toTitleCase('Government ID')}</Text>
       </View>
-      <Text style={styles.sectionSub}>Passport, social security card, or driver's license</Text>
+      <Text style={styles.sectionSub}>{toTitleCase("Passport, social security card, or driver's license")}</Text>
       <Pressable
         onPress={() => setIdUploaded(true)}
         style={[styles.upload, idUploaded && styles.uploadDone]}
       >
         <AppIcon name={idUploaded ? 'check-circle' : 'upload'} size={24} color={idUploaded ? colors.green : colors.gray500} />
         <Text style={[styles.uploadText, idUploaded && styles.uploadTextDone]}>
-          {idUploaded ? 'ID uploaded' : 'Upload ID photo'}
+          {idUploaded ? toTitleCase('ID uploaded') : toTitleCase('Upload ID photo')}
         </Text>
       </Pressable>
 
       <View style={[styles.sectionHeader, { marginTop: spacing.lg }]}>
         <AppIcon name="home" size={18} />
-        <Text style={styles.sectionTitle}>Home address</Text>
+        <Text style={styles.sectionTitle}>{toTitleCase('Home address')}</Text>
       </View>
       <AppTextInput
         style={styles.addressInput}
@@ -92,14 +93,14 @@ export function HostVerificationScreen() {
         value={address}
         onChangeText={setAddress}
       />
-      <Text style={styles.sectionSub}>Utility bill or lease in your name</Text>
+      <Text style={styles.sectionSub}>{toTitleCase('Utility bill or lease in your name')}</Text>
       <Pressable
         onPress={() => setAddressUploaded(true)}
         style={[styles.upload, addressUploaded && styles.uploadDone]}
       >
         <AppIcon name={addressUploaded ? 'check-circle' : 'upload'} size={24} color={addressUploaded ? colors.green : colors.gray500} />
         <Text style={[styles.uploadText, addressUploaded && styles.uploadTextDone]}>
-          {addressUploaded ? 'Address proof uploaded' : 'Upload address proof'}
+          {addressUploaded ? toTitleCase('Address proof uploaded') : toTitleCase('Upload address proof')}
         </Text>
       </Pressable>
 

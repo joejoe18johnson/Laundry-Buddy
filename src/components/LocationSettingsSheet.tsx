@@ -11,6 +11,7 @@ import {
   type LocationPreferences,
   type RadiusOptionKm,
 } from '../lib/locationPreferences'
+import { toTitleCase } from '../lib/titleCase'
 import { colors, spacing } from '../theme'
 
 type Props = {
@@ -78,7 +79,7 @@ export function LocationSettingsSheet({
           <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn}>
             <AppIcon name="x" size={22} color={colors.black} />
           </Pressable>
-          <Text style={styles.title}>Location Settings</Text>
+          <Text style={styles.title}>{toTitleCase('Location Settings')}</Text>
           <View style={styles.closeBtn} />
         </View>
 

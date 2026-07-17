@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../context/AppContext'
 import { formatHostPrice } from '../lib/hostFilters'
+import { toTitleCase } from '../lib/titleCase'
 import { formatTurnaroundHours } from '../lib/turnaroundTime'
 import type { Host } from '../types'
 import { colors, radius, spacing } from '../theme'
@@ -27,9 +28,9 @@ export function HostCard({ host }: { host: Host }) {
           {host.district ? ` · ${host.district}` : ''}
         </Text>
         <Text style={styles.subMeta}>
-          {host.rating > 0 ? `★ ${host.rating.toFixed(1)}` : 'New Host'}
+          {host.rating > 0 ? `★ ${host.rating.toFixed(1)}` : toTitleCase('New Host')}
           {' · '}{formatTurnaroundHours(host.turnaroundHours)} dry
-          {host.foldingPrice != null && host.foldingPrice > 0 ? ' · Folding' : ''}
+          {host.foldingPrice != null && host.foldingPrice > 0 ? ` · ${toTitleCase('Folding')}` : ''}
         </Text>
       </View>
 
@@ -38,7 +39,7 @@ export function HostCard({ host }: { host: Host }) {
           {formatHostPrice(host.price)}
         </Text>
         <Text style={styles.eta}>
-          {host.distanceKm != null ? `${host.distanceKm} km` : 'Nearby'}
+          {host.distanceKm != null ? `${host.distanceKm} km` : toTitleCase('Nearby')}
         </Text>
         <AppIcon name="chevron-right" size={18} color={colors.gray400} />
       </View>

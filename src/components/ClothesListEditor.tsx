@@ -9,6 +9,7 @@ import {
   totalClothesCount,
   updateItemQuantity,
 } from '../lib/clothesList'
+import { toTitleCase } from '../lib/titleCase'
 import type { ClothesListItem } from '../types'
 import { colors, radius, spacing } from '../theme'
 
@@ -31,7 +32,7 @@ export function ClothesListEditor({ items, onChange }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.hint}>Tap common items to add them. Adjust quantities below.</Text>
+      <Text style={styles.hint}>{toTitleCase('Tap common items to add them. Adjust quantities below.')}</Text>
 
       <View style={styles.chips}>
         {CLOTHES_PRESETS.map((label) => {
@@ -63,14 +64,14 @@ export function ClothesListEditor({ items, onChange }: Props) {
           onPress={addCustom}
           disabled={!customLabel.trim()}
         >
-          <Text style={styles.addBtnText}>Add</Text>
+          <Text style={styles.addBtnText}>{toTitleCase('Add')}</Text>
         </Pressable>
       </View>
 
       {items.length > 0 ? (
         <View style={styles.list}>
           <View style={styles.listHeader}>
-            <Text style={styles.listTitle}>Item breakdown</Text>
+            <Text style={styles.listTitle}>{toTitleCase('Item breakdown')}</Text>
             <Text style={styles.listCount}>{total} item{total === 1 ? '' : 's'}</Text>
           </View>
           {items.map((item) => (
@@ -108,7 +109,7 @@ export function ClothesListEditor({ items, onChange }: Props) {
       ) : (
         <View style={styles.empty}>
           <AppIcon name="list" size={20} color={colors.gray400} />
-          <Text style={styles.emptyText}>No items yet — tap a chip above to start</Text>
+          <Text style={styles.emptyText}>{toTitleCase('No items yet — tap a chip above to start')}</Text>
         </View>
       )}
     </View>
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
   },
-  listTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600, textTransform: 'capitalize', letterSpacing: 0.4 },
+  listTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600, letterSpacing: 0.4 },
   listCount: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
   row: {
     flexDirection: 'row',

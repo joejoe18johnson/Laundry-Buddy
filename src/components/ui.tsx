@@ -19,11 +19,14 @@ import { toTitleCase } from '../lib/titleCase'
 import { useTheme } from '../context/ThemeContext'
 import { radius, spacing } from '../theme'
 
-export function AppTextInput({ style, multiline, placeholderTextColor, ...props }: TextInputProps) {
+export function AppTextInput({ style, multiline, placeholderTextColor, placeholder, ...props }: TextInputProps) {
   const { uiStyles: styles, formStyles } = useTheme()
+  const resolvedPlaceholder =
+    typeof placeholder === 'string' ? toTitleCase(placeholder) : placeholder
   return (
     <TextInput
       {...props}
+      placeholder={resolvedPlaceholder}
       multiline={multiline}
       placeholderTextColor={placeholderTextColor ?? formStyles.placeholderColor}
       style={[styles.appInput, multiline && styles.appInputMultiline, style]}
@@ -155,11 +158,11 @@ export function SaveFooter({
   return (
     <View style={styles.saveFooter}>
       {dirty ? (
-        <Text style={styles.saveFooterHint}>{dirtyHint}</Text>
+        <Text style={styles.saveFooterHint}>{toTitleCase(dirtyHint)}</Text>
       ) : (
         <View style={styles.saveFooterSavedRow}>
           <AppIcon name="check" size={16} color={colors.green} />
-          <Text style={styles.saveFooterSavedText}>{savedLabel}</Text>
+          <Text style={styles.saveFooterSavedText}>{toTitleCase(savedLabel)}</Text>
         </View>
       )}
       <PrimaryButton
@@ -187,7 +190,7 @@ export function StickySaveBar({
   const { uiStyles: styles } = useTheme()
   return (
     <View style={styles.stickySaveBar}>
-      <Text style={styles.stickySaveText}>{dirtyLabel}</Text>
+      <Text style={styles.stickySaveText}>{toTitleCase(dirtyLabel)}</Text>
       <PrimaryButton title={saveLabel} onPress={onSave} disabled={saving} />
     </View>
   )

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, TextInput, View } from 'react-native'
 import { AppIcon } from './AppIcon'
 import { colors, radius, spacing } from '../theme'
+import { toTitleCase } from '../lib/titleCase'
 
 type Props = {
   value: string
@@ -27,7 +28,7 @@ export function HostSearchBar({
         value={value}
         onChangeText={onChange}
         onFocus={onFocus}
-        placeholder={placeholder}
+        placeholder={toTitleCase(placeholder)}
         placeholderTextColor={colors.gray400}
         autoCapitalize="none"
         autoCorrect={false}

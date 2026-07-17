@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
 import { bottomSafePadding } from '../lib/safeAreaInsets'
+import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 import type { User } from '../types'
 
@@ -42,7 +43,7 @@ function MenuItem({ icon, label, onPress, badge, hint }: MenuAction) {
     >
       <AppIcon name={icon} size={20} />
       <View style={styles.menuItemBody}>
-        <Text style={styles.menuLabel}>{label}</Text>
+        <Text style={styles.menuLabel}>{toTitleCase(label)}</Text>
         {hint ? <Text style={styles.menuHint}>{hint}</Text> : null}
       </View>
       {badge ? (
@@ -58,7 +59,7 @@ function MenuItem({ icon, label, onPress, badge, hint }: MenuAction) {
 function MenuSection({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <View style={styles.section}>
-      {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
+      {title ? <Text style={styles.sectionTitle}>{toTitleCase(title)}</Text> : null}
       {children}
     </View>
   )
@@ -178,7 +179,7 @@ export function HeaderMenu({
                 onPress={() => go(onLogout)}
               >
                 <AppIcon name="log-out" size={20} color={colors.white} />
-                <Text style={styles.logoutBtnText}>Log out</Text>
+                <Text style={styles.logoutBtnText}>{toTitleCase('Log out')}</Text>
               </Pressable>
             </View>
           </SafeAreaView>
@@ -236,7 +237,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray400,
-    textTransform: 'capitalize',
     letterSpacing: 0.6,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,

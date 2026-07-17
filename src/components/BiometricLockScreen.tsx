@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { PrimaryButton } from './ui'
 import { authenticateBiometric, type BiometricSupport } from '../lib/biometricAuth'
+import { titleCaseWithName, toTitleCase } from '../lib/titleCase'
 import { colors, spacing } from '../theme'
 
 type Props = {
@@ -37,8 +38,10 @@ export function BiometricLockScreen({ visible, support, onUnlock, onUsePassword 
           <View style={styles.iconCircle}>
             <AppIcon name={support.icon} size={32} color={colors.black} />
           </View>
-          <Text style={styles.title}>Laundry Buddy is locked</Text>
-          <Text style={styles.subtitle}>Use {support.label} to pick up where you left off</Text>
+          <Text style={styles.title}>{toTitleCase('Laundry Buddy is locked')}</Text>
+          <Text style={styles.subtitle}>
+            {titleCaseWithName(`Use ${support.label} to pick up where you left off`, support.label)}
+          </Text>
           <PrimaryButton
             title={checking ? 'Checking…' : `Unlock with ${support.label}`}
             icon={support.icon}
@@ -47,7 +50,7 @@ export function BiometricLockScreen({ visible, support, onUnlock, onUsePassword 
             full
           />
           <Pressable onPress={onUsePassword} hitSlop={8} style={styles.passwordLink}>
-            <Text style={styles.passwordText}>Use password instead</Text>
+            <Text style={styles.passwordText}>{toTitleCase('Use password instead')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>

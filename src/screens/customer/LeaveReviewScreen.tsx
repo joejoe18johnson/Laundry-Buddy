@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostById } from '../../data/mockData'
 import { hasReviewedBooking } from '../../lib/reviewStorage'
+import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
 
 function StarPicker({
@@ -89,8 +90,8 @@ export function LeaveReviewScreen() {
   if (!reviewHostId || !host) {
     return (
       <Screen style={styles.centered}>
-        <Text style={styles.emptyTitle}>Review unavailable</Text>
-        <Text style={styles.emptySub}>We could not find this host.</Text>
+        <Text style={styles.emptyTitle}>{toTitleCase('Review unavailable')}</Text>
+        <Text style={styles.emptySub}>{toTitleCase('We could not find this host.')}</Text>
         <PrimaryButton title="Go home" icon="home" onPress={() => navigate('customer-home')} full />
       </Screen>
     )
@@ -124,33 +125,39 @@ export function LeaveReviewScreen() {
         </View>
         <Text style={styles.title}>Rate {host.name}</Text>
         <Text style={styles.subtitle}>
-          How was your pickup with {host.name} in {host.location}?
+          {titleCaseWithName(
+            titleCaseWithName(
+              `How was your pickup with ${host.name} in ${host.location}?`,
+              host.name,
+            ),
+            host.location,
+          )}
         </Text>
       </View>
 
       {checking ? (
-        <Text style={styles.checking}>Checking your review status…</Text>
+        <Text style={styles.checking}>{toTitleCase('Checking your review status…')}</Text>
       ) : alreadyReviewed ? (
         <View style={styles.doneCard}>
           <AppIcon name="check-circle" size={22} color={colors.green} />
           <View style={styles.doneBody}>
-            <Text style={styles.doneTitle}>Review already submitted</Text>
-            <Text style={styles.doneSub}>Thanks for sharing feedback on this load.</Text>
+            <Text style={styles.doneTitle}>{toTitleCase('Review already submitted')}</Text>
+            <Text style={styles.doneSub}>{toTitleCase('Thanks for sharing feedback on this load.')}</Text>
           </View>
           <PrimaryButton title="View host profile" icon="user" full onPress={() => viewHostProfile(host)} />
         </View>
       ) : (
         <>
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Your rating</Text>
+            <Text style={styles.sectionLabel}>{toTitleCase('Your rating')}</Text>
             <StarPicker value={rating} onChange={setRating} />
             <Text style={styles.ratingHint}>
-              {rating === 0 ? 'Tap a star to rate' : `${rating} out of 5`}
+              {rating === 0 ? toTitleCase('Tap a star to rate') : `${rating} out of 5`}
             </Text>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Your review</Text>
+            <Text style={styles.sectionLabel}>{toTitleCase('Your review')}</Text>
             <AppTextInput
               multiline
               value={comment}
@@ -160,7 +167,7 @@ export function LeaveReviewScreen() {
             />
             <Text style={styles.charHint}>
               {comment.trim().length < 8
-                ? 'Write at least 8 characters'
+                ? toTitleCase('Write at least 8 characters')
                 : `${comment.trim().length} characters`}
             </Text>
           </View>
@@ -209,7 +216,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.gray500,
-    textTransform: 'capitalize',
     letterSpacing: 0.4,
   },
   starsRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },

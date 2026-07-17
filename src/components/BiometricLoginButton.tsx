@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
 import { colors, radius, spacing } from '../theme'
+import { toTitleCase, titleCaseWithName } from '../lib/titleCase'
 import type { BiometricSupport } from '../lib/biometricAuth'
 
 type Props = {
@@ -38,7 +39,9 @@ export function BiometricLoginButton({
           color={isPrimary ? colors.white : colors.black}
         />
         <Text style={[styles.label, isPrimary && styles.labelPrimary]}>
-          {loading ? 'Checking…' : `Continue with ${support.label}`}
+          {loading
+            ? toTitleCase('Checking…')
+            : titleCaseWithName(`Continue with ${support.label}`, support.label)}
         </Text>
       </View>
     </Pressable>
@@ -49,7 +52,7 @@ export function BiometricDivider() {
   return (
     <View style={styles.dividerRow}>
       <View style={styles.dividerLine} />
-      <Text style={styles.dividerText}>or</Text>
+      <Text style={styles.dividerText}>{toTitleCase('or')}</Text>
       <View style={styles.dividerLine} />
     </View>
   )
@@ -101,6 +104,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: colors.gray400,
-    textTransform: 'lowercase',
   },
 })

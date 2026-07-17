@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native'
+import { toTitleCase } from '../lib/titleCase'
 import { SplashWasherAnimation } from './SplashWasherAnimation'
 import { colors, spacing } from '../theme'
 
@@ -14,7 +15,7 @@ export function SplashLoading({ message, showTagline = true }: Props) {
         <SplashWasherAnimation />
       </View>
       {message ? <Text style={styles.brand}>{message}</Text> : null}
-      {showTagline ? <Text style={styles.tagline}>Dry Laundry, Rain or Shine</Text> : null}
+      {showTagline ? <Text style={styles.tagline}>{toTitleCase('Dry Laundry, Rain or Shine')}</Text> : null}
     </View>
   )
 }

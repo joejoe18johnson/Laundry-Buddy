@@ -19,6 +19,7 @@ import { parseListingInt } from '../../lib/hostListing'
 import { parsePriceInput } from '../../lib/hostPricing'
 import { formatTurnaroundHours, TURNAROUND_HOUR_OPTIONS } from '../../lib/turnaroundTime'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
+import { toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
 import type { DropOffHour, HostListing, HostSettings } from '../../types'
 
@@ -41,8 +42,8 @@ function EditableLineList({
 }) {
   return (
     <View style={styles.lineList}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      {hint ? <Text style={styles.sectionHint}>{hint}</Text> : null}
+      <Text style={styles.fieldLabel}>{toTitleCase(label)}</Text>
+      {hint ? <Text style={styles.sectionHint}>{toTitleCase(hint)}</Text> : null}
       {items.map((item, index) => (
         <View key={`${label}-${index}`} style={styles.lineRow}>
           <TextInput
@@ -59,7 +60,7 @@ function EditableLineList({
       ))}
       <Pressable onPress={onAdd} style={styles.addLineBtn}>
         <AppIcon name="plus" size={16} />
-        <Text style={styles.addLineText}>Add line</Text>
+        <Text style={styles.addLineText}>{toTitleCase('Add line')}</Text>
       </Pressable>
     </View>
   )
@@ -82,7 +83,7 @@ function Field({
 }) {
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldLabel}>{toTitleCase(label)}</Text>
       <TextInput
         style={[styles.input, multiline && styles.inputMultiline]}
         value={value}
@@ -101,7 +102,7 @@ function Field({
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionTitle}>{toTitleCase(title)}</Text>
       <View style={styles.sectionCard}>{children}</View>
     </View>
   )
@@ -120,7 +121,7 @@ function Row({
     <View style={styles.row}>
       <AppIcon name={icon} size={16} color={colors.gray500} />
       <View style={styles.rowText}>
-        <Text style={styles.rowLabel}>{label}</Text>
+        <Text style={styles.rowLabel}>{toTitleCase(label)}</Text>
         <Text style={styles.rowValue}>{value}</Text>
       </View>
     </View>
@@ -141,8 +142,8 @@ function ToggleRow({
   return (
     <View style={styles.toggleRow}>
       <View style={styles.toggleText}>
-        <Text style={styles.toggleLabel}>{label}</Text>
-        {sub ? <Text style={styles.toggleSub}>{sub}</Text> : null}
+        <Text style={styles.toggleLabel}>{toTitleCase(label)}</Text>
+        {sub ? <Text style={styles.toggleSub}>{toTitleCase(sub)}</Text> : null}
       </View>
       <BrandSwitch
         value={value}
@@ -292,19 +293,23 @@ export function HostHubScreen() {
       <BackButton onPress={() => navigate('host-dashboard')} label="Dashboard" />
       <View style={styles.titleRow}>
         <AppIcon name="user" size={22} />
-        <Text style={styles.title}>Host profile</Text>
+        <Text style={styles.title}>{toTitleCase('Host profile')}</Text>
       </View>
-      <Text style={styles.subtitle}>Edit your listing — guests see this when they browse and book</Text>
+      <Text style={styles.subtitle}>
+        {toTitleCase('Edit your listing — guests see this when they browse and book')}
+      </Text>
 
       <View style={[styles.onlineCard, draft.isOnline ? styles.onlineCardLive : styles.onlineCardOff]}>
         <View style={styles.onlineHeader}>
           <View style={[styles.onlineDot, draft.isOnline && styles.onlineDotLive]} />
           <View style={styles.onlineText}>
-            <Text style={styles.onlineTitle}>{draft.isOnline ? 'You are online' : 'You are offline'}</Text>
+            <Text style={styles.onlineTitle}>
+              {draft.isOnline ? toTitleCase('You are online') : toTitleCase('You are offline')}
+            </Text>
             <Text style={styles.onlineSub}>
               {draft.isOnline
-                ? 'Guests can find and book your dryer right now.'
-                : 'Go online when you are ready to accept loads.'}
+                ? toTitleCase('Guests can find and book your dryer right now.')
+                : toTitleCase('Go online when you are ready to accept loads.')}
             </Text>
           </View>
           <BrandSwitch
@@ -318,15 +323,15 @@ export function HostHubScreen() {
       <View style={styles.statsRow}>
         <View style={styles.statBox}>
           <Text style={styles.statNum}>{hostStats.loadsToday}</Text>
-          <Text style={styles.statLabel}>Loads today</Text>
+          <Text style={styles.statLabel}>{toTitleCase('Loads today')}</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statNum}>{hostRequests.length}</Text>
-          <Text style={styles.statLabel}>Requests</Text>
+          <Text style={styles.statLabel}>{toTitleCase('Requests')}</Text>
         </View>
         <View style={styles.statBox}>
           <Text style={styles.statNum}>{activeLoads.length}</Text>
-          <Text style={styles.statLabel}>Active</Text>
+          <Text style={styles.statLabel}>{toTitleCase('Active')}</Text>
         </View>
       </View>
 
@@ -342,7 +347,7 @@ export function HostHubScreen() {
 
       <Section title="Drop-off availability">
         <Text style={styles.sectionHint}>
-          Tap the hours between 8am and 8pm when guests can drop off laundry.
+          {toTitleCase('Tap the hours between 8am and 8pm when guests can drop off laundry.')}
         </Text>
         <DropOffHourGrid
           mode="toggle"
@@ -350,15 +355,15 @@ export function HostHubScreen() {
           onChange={toggleDropOff}
         />
         <Text style={styles.paymentSummary}>
-          Guests can book: {formatDropOffAvailability(draft.dropOffAvailability)}
+          {toTitleCase('Guests can book')}: {formatDropOffAvailability(draft.dropOffAvailability)}
         </Text>
         {draft.dropOffAvailability.length === 1 && (
-          <Text style={styles.availabilityNote}>At least one hour must stay on.</Text>
+          <Text style={styles.availabilityNote}>{toTitleCase('At least one hour must stay on.')}</Text>
         )}
       </Section>
 
       <Section title="About you">
-        <Text style={styles.sectionHint}>Tell guests about yourself and your laundry setup.</Text>
+        <Text style={styles.sectionHint}>{toTitleCase('Tell guests about yourself and your laundry setup.')}</Text>
         <Field
           label="Bio"
           value={listing.bio}
@@ -369,7 +374,9 @@ export function HostHubScreen() {
       </Section>
 
       <Section title="Listing details">
-        <Text style={styles.sectionHint}>Location and contact info guests need for drop-off.</Text>
+        <Text style={styles.sectionHint}>
+          {toTitleCase('Location and contact info guests need for drop-off.')}
+        </Text>
         <Field
           label="Area / neighborhood"
           value={listing.location}
@@ -401,7 +408,7 @@ export function HostHubScreen() {
           placeholder="5016001234"
           keyboardType="phone-pad"
         />
-        <Text style={styles.fieldLabel}>Dry time (standard load)</Text>
+        <Text style={styles.fieldLabel}>{toTitleCase('Dry time (standard load)')}</Text>
         <View style={styles.turnaroundRow}>
           {TURNAROUND_HOUR_OPTIONS.map((hours) => (
             <ChoiceChip
@@ -455,10 +462,12 @@ export function HostHubScreen() {
 
       <Section title="Your prices">
         <Text style={styles.sectionHint}>
-          You control what you charge. Guests see these rates when booking. Set folding to $0 to hide that service.
+          {toTitleCase(
+            'You control what you charge. Guests see these rates when booking. Set folding to $0 to hide that service.',
+          )}
         </Text>
         <View style={styles.priceField}>
-          <Text style={styles.priceLabel}>Drying (per load)</Text>
+          <Text style={styles.priceLabel}>{toTitleCase('Drying (per load)')}</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
@@ -467,7 +476,7 @@ export function HostHubScreen() {
           />
         </View>
         <View style={styles.priceField}>
-          <Text style={styles.priceLabel}>Folding service (per load)</Text>
+          <Text style={styles.priceLabel}>{toTitleCase('Folding service (per load)')}</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
@@ -476,7 +485,7 @@ export function HostHubScreen() {
           />
         </View>
         <View style={styles.priceField}>
-          <Text style={styles.priceLabel}>Dryer sheets (if guest buys)</Text>
+          <Text style={styles.priceLabel}>{toTitleCase('Dryer sheets (if guest buys)')}</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
@@ -485,14 +494,14 @@ export function HostHubScreen() {
           />
         </View>
         <Text style={styles.paymentSummary}>
-          Guests see: Dry {formatHostPrice(pricing.dryPrice)}
+          {toTitleCase('Guests see')}: Dry {formatHostPrice(pricing.dryPrice)}
           {pricing.foldingPrice > 0 ? ` · Folding ${formatHostPrice(pricing.foldingPrice)}` : ''}
           {' · Sheets '}{formatHostPrice(pricing.sheetsPrice)}
         </Text>
       </Section>
 
       <Section title="Payments">
-        <Text style={styles.sectionHint}>Choose how guests can pay you.</Text>
+        <Text style={styles.sectionHint}>{toTitleCase('Choose how guests can pay you.')}</Text>
         <ToggleRow
           label="Accept cash"
           sub="Guest pays in person at drop-off or pickup"
@@ -507,7 +516,7 @@ export function HostHubScreen() {
         />
         {draft.acceptBankTransfer && (
           <View style={styles.bankForm}>
-            <Text style={styles.bankTitle}>Bank details for guests</Text>
+            <Text style={styles.bankTitle}>{toTitleCase('Bank details for guests')}</Text>
             <TextInput
               style={styles.input}
               placeholder="Bank name"
@@ -533,9 +542,9 @@ export function HostHubScreen() {
           </View>
         )}
         {paymentSummary ? (
-          <Text style={styles.paymentSummary}>Guests will see: {paymentSummary}</Text>
+          <Text style={styles.paymentSummary}>{toTitleCase('Guests will see')}: {paymentSummary}</Text>
         ) : (
-          <Text style={styles.paymentWarning}>Enable at least one payment method.</Text>
+          <Text style={styles.paymentWarning}>{toTitleCase('Enable at least one payment method.')}</Text>
         )}
       </Section>
 
@@ -582,10 +591,11 @@ export function HostHubScreen() {
       <Pressable style={styles.reputationCard} onPress={() => navigate('help')}>
         <AppIcon name="award" size={18} />
         <View style={styles.reputationCardText}>
-          <Text style={styles.reputationCardTitle}>Log every sale — build your reputation</Text>
+          <Text style={styles.reputationCardTitle}>{toTitleCase('Log every sale — build your reputation')}</Text>
           <Text style={styles.reputationCardBody}>
-            More completed loads on the app means higher search visibility. Read the host FAQ on why
-            off-platform deals hurt your standing.
+            {toTitleCase(
+              'More completed loads on the app means higher search visibility. Read the host FAQ on why off-platform deals hurt your standing.',
+            )}
           </Text>
         </View>
         <AppIcon name="chevron-right" size={18} color={colors.gray400} />
@@ -595,11 +605,11 @@ export function HostHubScreen() {
         <PrimaryButton title={saved ? 'Saved' : 'Save changes'} onPress={handleSave} full />
         <Pressable style={styles.linkBtn} onPress={() => navigate('host-dashboard')}>
           <AppIcon name="home" size={16} />
-          <Text style={styles.linkText}>Back to dashboard</Text>
+          <Text style={styles.linkText}>{toTitleCase('Back to dashboard')}</Text>
         </Pressable>
         <Pressable style={styles.linkBtn} onPress={() => navigate('history')}>
           <AppIcon name="clock" size={16} />
-          <Text style={styles.linkText}>Load history</Text>
+          <Text style={styles.linkText}>{toTitleCase('Load history')}</Text>
         </Pressable>
       </View>
     </Screen>
@@ -655,7 +665,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: colors.gray500,
-    textTransform: 'capitalize',
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
   },

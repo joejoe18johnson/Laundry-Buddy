@@ -8,6 +8,7 @@ import {
 } from '../lib/hostFilters'
 import { TURNAROUND_FILTER_OPTIONS } from '../lib/turnaroundTime'
 import { colors, radius, spacing } from '../theme'
+import { toTitleCase } from '../lib/titleCase'
 import { AppIcon } from './AppIcon'
 import { ChoiceChip } from './ui'
 
@@ -24,7 +25,7 @@ function FilterSection({ title, icon, children }: { title: string; icon: 'map-pi
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <AppIcon name={icon} size={16} color={colors.gray600} />
-        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionTitle}>{toTitleCase(title)}</Text>
       </View>
       <View style={styles.chipRow}>{children}</View>
     </View>
@@ -78,14 +79,16 @@ export function HostFilterSheet({ visible, filters, locations, onSave, onClose }
           <SafeAreaView edges={['bottom']}>
             <View style={styles.handle} />
             <View style={styles.header}>
-              <Text style={styles.title}>Filter hosts</Text>
+              <Text style={styles.title}>{toTitleCase('Filter hosts')}</Text>
               <Pressable onPress={onClose} hitSlop={8}>
                 <AppIcon name="x" size={22} color={colors.gray500} />
               </Pressable>
             </View>
 
             <Text style={styles.hint}>
-              {dirty ? 'Tap Save filters when you are done' : 'Adjust filters, then save to apply'}
+              {dirty
+                ? toTitleCase('Tap Save filters when you are done')
+                : toTitleCase('Adjust filters, then save to apply')}
             </Text>
 
             <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -155,13 +158,13 @@ export function HostFilterSheet({ visible, filters, locations, onSave, onClose }
                 style={styles.resetBtn}
                 onPress={() => setDraft(DEFAULT_HOST_FILTERS)}
               >
-                <Text style={styles.resetText}>Reset</Text>
+                <Text style={styles.resetText}>{toTitleCase('Reset')}</Text>
               </Pressable>
               <Pressable
                 style={[styles.applyBtn, !dirty && styles.applyBtnSaved]}
                 onPress={handleSave}
               >
-                <Text style={styles.applyText}>{dirty ? 'Save filters' : 'Saved'}</Text>
+                <Text style={styles.applyText}>{dirty ? toTitleCase('Save filters') : toTitleCase('Saved')}</Text>
               </Pressable>
             </View>
           </SafeAreaView>
@@ -213,7 +216,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   section: { marginBottom: spacing.lg },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.gray600, textTransform: 'capitalize', letterSpacing: 0.4 },
+  sectionTitle: { fontSize: 14, fontWeight: '600', color: colors.gray600, letterSpacing: 0.4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   footer: {
     flexDirection: 'row',

@@ -7,6 +7,7 @@ import {
   getStepTimestamp,
   type GuestProgressStep,
 } from '../lib/loadProgress'
+import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 import type { Booking } from '../types'
 
@@ -47,7 +48,7 @@ function StepNode({
         style={[styles.nodeLabel, isDone && styles.nodeLabelDone, isActive && styles.nodeLabelActive]}
         numberOfLines={2}
       >
-        {step.label}
+        {toTitleCase(step.label)}
       </Text>
     </View>
   )
@@ -64,10 +65,18 @@ export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps
       <View style={styles.summaryRow}>
         <View style={styles.summaryCopy}>
           <Text style={styles.summaryEyebrow}>
-            {isComplete ? 'Load complete' : `Step ${currentStep.number} of ${GUEST_LOAD_STEPS.length}`}
+            {isComplete
+              ? toTitleCase('Load complete')
+              : toTitleCase(`Step ${currentStep.number} of ${GUEST_LOAD_STEPS.length}`)}
           </Text>
-          <Text style={styles.summaryTitle}>{isComplete ? 'Picked up' : currentStep.label}</Text>
-          <Text style={styles.summarySub}>{isComplete ? 'Thanks for using Laundry Buddy' : currentStep.description}</Text>
+          <Text style={styles.summaryTitle}>
+            {isComplete ? toTitleCase('Picked up') : toTitleCase(currentStep.label)}
+          </Text>
+          <Text style={styles.summarySub}>
+            {isComplete
+              ? toTitleCase('Thanks for using Laundry Buddy')
+              : toTitleCase(currentStep.description)}
+          </Text>
         </View>
         <View style={styles.percentBadge}>
           <Text style={styles.percentValue}>{isComplete ? '100' : progressPercent}%</Text>
@@ -131,15 +140,15 @@ export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps
                     color={state === 'upcoming' ? colors.gray400 : colors.black}
                   />
                   <Text style={[styles.detailLabel, state !== 'upcoming' && styles.detailLabelActive]}>
-                    {step.label}
+                    {toTitleCase(step.label)}
                   </Text>
                   {state === 'active' && !isComplete && (
                     <View style={styles.nowBadge}>
-                      <Text style={styles.nowBadgeText}>Now</Text>
+                      <Text style={styles.nowBadgeText}>{toTitleCase('Now')}</Text>
                     </View>
                   )}
                 </View>
-                <Text style={styles.detailDesc}>{step.description}</Text>
+                <Text style={styles.detailDesc}>{toTitleCase(step.description)}</Text>
                 {time ? <Text style={styles.detailTime}>{time}</Text> : null}
               </View>
             </View>
@@ -170,7 +179,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.gray500,
-    textTransform: 'capitalize',
     letterSpacing: 0.4,
   },
   summaryTitle: { fontSize: 24, fontWeight: '700', lineHeight: 30 },

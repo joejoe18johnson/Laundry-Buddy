@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
+import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
 type Props = {
@@ -24,7 +25,7 @@ export function CloseToMeButton({ onPress, loading = false, locationLabel }: Pro
           <AppIcon name="navigation" size={16} color={colors.black} />
         )}
       </View>
-      <Text style={styles.label}>Close to Me</Text>
+      <Text style={styles.label}>{toTitleCase('Close to Me')}</Text>
       {locationLabel ? (
         <Text style={styles.hint} numberOfLines={1}>
           · {locationLabel}

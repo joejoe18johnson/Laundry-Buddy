@@ -5,6 +5,7 @@ import { BiometricDivider, BiometricLoginButton } from '../../components/Biometr
 import { AppTextInput, BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
+import { toTitleCase } from '../../lib/titleCase'
 import type { LoginMethod } from '../../types'
 
 export function LoginScreen() {
@@ -40,8 +41,8 @@ export function LoginScreen() {
   return (
     <Screen>
       <BackButton onPress={() => navigateAuth('welcome')} />
-      <Text style={styles.title}>Welcome back</Text>
-      <Text style={styles.subtitle}>Log in with your phone or email</Text>
+      <Text style={styles.title}>{toTitleCase('Welcome back')}</Text>
+      <Text style={styles.subtitle}>{toTitleCase('Log in with your phone or email')}</Text>
 
       {showBiometric ? (
         <>
@@ -79,7 +80,7 @@ export function LoginScreen() {
         <View style={styles.field}>
           <View style={styles.labelRow}>
             <AppIcon name="smartphone" size={16} color={colors.gray600} />
-            <Text style={styles.label}>Phone number</Text>
+            <Text style={styles.label}>{toTitleCase('Phone number')}</Text>
           </View>
           <View style={styles.phoneRow}>
             <Text style={styles.prefix}>+501</Text>
@@ -96,7 +97,7 @@ export function LoginScreen() {
         <View style={styles.field}>
           <View style={styles.labelRow}>
             <AppIcon name="mail" size={16} color={colors.gray600} />
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>{toTitleCase('Email')}</Text>
           </View>
           <AppTextInput
             placeholder="you@example.com"
@@ -111,7 +112,7 @@ export function LoginScreen() {
       <View style={styles.field}>
         <View style={styles.labelRow}>
           <AppIcon name="lock" size={16} color={colors.gray600} />
-          <Text style={styles.label}>Password</Text>
+          <Text style={styles.label}>{toTitleCase('Password')}</Text>
         </View>
         <AppTextInput
           placeholder="Your password"
@@ -127,7 +128,7 @@ export function LoginScreen() {
 
       <Pressable onPress={() => navigateAuth('signup')} style={styles.switch}>
         <Text style={styles.switchText}>
-          New here? <Text style={styles.link}>Create account</Text>
+          {toTitleCase('New here?')} <Text style={styles.link}>{toTitleCase('Create account')}</Text>
         </Text>
       </Pressable>
     </Screen>

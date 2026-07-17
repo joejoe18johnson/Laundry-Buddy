@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
 import { hasDelicates, totalClothesCount } from '../lib/clothesList'
+import { toTitleCase } from '../lib/titleCase'
 import type { ClothesListItem } from '../types'
 import { colors, radius, spacing } from '../theme'
 
@@ -30,7 +31,7 @@ export function ClothesListDisplay({ items, compact, embedded }: Props) {
         ))}
         {delicates ? (
           <View style={[styles.chip, styles.delicateChip]}>
-            <Text style={styles.delicateChipText}>Delicates</Text>
+            <Text style={styles.delicateChipText}>{toTitleCase('Delicates')}</Text>
           </View>
         ) : null}
       </View>
@@ -41,7 +42,7 @@ export function ClothesListDisplay({ items, compact, embedded }: Props) {
     <View style={[styles.box, embedded && styles.boxEmbedded]}>
       <View style={styles.header}>
         <AppIcon name="list" size={14} color={colors.gray600} />
-        <Text style={styles.label}>Item breakdown</Text>
+        <Text style={styles.label}>{toTitleCase('Item breakdown')}</Text>
         <Text style={styles.count}>
           {total} item{total === 1 ? '' : 's'}
         </Text>
@@ -57,7 +58,7 @@ export function ClothesListDisplay({ items, compact, embedded }: Props) {
       {delicates ? (
         <View style={styles.delicateBanner}>
           <AppIcon name="alert-circle" size={14} color={colors.gray600} />
-          <Text style={styles.delicateText}>Includes delicates — handle with care</Text>
+          <Text style={styles.delicateText}>{toTitleCase('Includes delicates — handle with care')}</Text>
         </View>
       ) : null}
     </View>
@@ -86,7 +87,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
   },
-  label: { flex: 1, fontSize: 12, fontWeight: '700', color: colors.gray600, textTransform: 'capitalize', letterSpacing: 0.4 },
+  label: { flex: 1, fontSize: 12, fontWeight: '700', color: colors.gray600, letterSpacing: 0.4 },
   count: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
   items: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: 6 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

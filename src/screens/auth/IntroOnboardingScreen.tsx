@@ -18,6 +18,7 @@ import { IntroArtEarn } from '../../components/intro/IntroArtEarn'
 import { IntroArtEasy } from '../../components/intro/IntroArtEasy'
 import { IntroArtRain } from '../../components/intro/IntroArtRain'
 import { GhostButton, PrimaryButton } from '../../components/ui'
+import { toTitleCase } from '../../lib/titleCase'
 import { colors, spacing } from '../../theme'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
@@ -91,11 +92,11 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
         {item.highlight ? (
           <View style={styles.highlightRow}>
             <AppIcon name="check-circle" size={14} color={colors.green} />
-            <Text style={styles.highlightText}>{item.highlight}</Text>
+            <Text style={styles.highlightText}>{toTitleCase(item.highlight)}</Text>
           </View>
         ) : null}
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.body}>{item.body}</Text>
+        <Text style={styles.title}>{toTitleCase(item.title)}</Text>
+        <Text style={styles.body}>{toTitleCase(item.body)}</Text>
       </ScrollView>
     )
   }
@@ -110,7 +111,7 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
         </View>
         {!isLast && (
           <Pressable onPress={onComplete} hitSlop={12}>
-            <Text style={styles.skip}>Skip</Text>
+            <Text style={styles.skip}>{toTitleCase('Skip')}</Text>
           </Pressable>
         )}
       </View>
@@ -139,7 +140,7 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
         {isLast ? (
           <View style={styles.ctaBlock}>
             <PrimaryButton title="Get Started" icon="arrow-right" onPress={onComplete} full />
-            <Text style={styles.ctaSub}>Find a Host or List Your Dryer — Same App.</Text>
+            <Text style={styles.ctaSub}>{toTitleCase('Find a Host or List Your Dryer — Same App.')}</Text>
           </View>
         ) : (
           <GhostButton title="Next" icon="arrow-right" onPress={goNext} full />

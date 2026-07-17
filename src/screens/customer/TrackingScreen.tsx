@@ -16,6 +16,7 @@ import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { getGuestProgressStep } from '../../lib/loadProgress'
+import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { colors, radius, spacing } from '../../theme'
 
@@ -51,8 +52,8 @@ export function TrackingScreen() {
   if (!booking) {
     return (
       <Screen style={styles.empty}>
-        <Text style={styles.emptyTitle}>No active booking</Text>
-        <Text style={styles.emptySub}>Find a host to get started</Text>
+        <Text style={styles.emptyTitle}>{toTitleCase('No active booking')}</Text>
+        <Text style={styles.emptySub}>{toTitleCase('Find a host to get started')}</Text>
         <PrimaryButton title="Explore dryers" icon="search" onPress={() => navigate('customer-home')} full />
       </Screen>
     )
@@ -133,12 +134,15 @@ export function TrackingScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.successTitle}>
-              {isPending ? 'Request sent' : 'Booking confirmed'}
+              {isPending ? toTitleCase('Request sent') : toTitleCase('Booking confirmed')}
             </Text>
             <Text style={styles.successSub}>
               {isPending
-                ? `Waiting for ${booking.hostName} to accept your load`
-                : `Drop off at ${booking.address}`}
+                ? titleCaseWithName(
+                    `Waiting for ${booking.hostName} to accept your load`,
+                    booking.hostName,
+                  )
+                : titleCaseWithName(`Drop off at ${booking.address}`, booking.address)}
             </Text>
           </View>
           <AppIcon name="x" size={16} color={colors.gray500} />
@@ -149,9 +153,12 @@ export function TrackingScreen() {
         <View style={styles.declinedCard}>
           <AppIcon name="x-circle" size={18} color={colors.danger} />
           <View style={styles.pendingBody}>
-            <Text style={styles.declinedTitle}>Request declined</Text>
+            <Text style={styles.declinedTitle}>{toTitleCase('Request declined')}</Text>
             <Text style={styles.pendingSub}>
-              {booking.hostName} couldn't take your load. Try another nearby host.
+              {titleCaseWithName(
+                `${booking.hostName} couldn't take your load. Try another nearby host.`,
+                booking.hostName,
+              )}
             </Text>
           </View>
           <PrimaryButton title="Find another host" icon="search" onPress={() => { clearBooking(); navigate('customer-home') }} full />
@@ -162,7 +169,7 @@ export function TrackingScreen() {
         <View style={styles.paymentCard}>
           <View style={styles.paymentHeader}>
             <AppIcon name="credit-card" size={18} />
-            <Text style={styles.paymentTitle}>Bank transfer — {formatMoney(amount)}</Text>
+            <Text style={styles.paymentTitle}>{toTitleCase('Bank transfer')} — {formatMoney(amount)}</Text>
           </View>
           {bank?.accountNumber?.trim() ? (
             <View style={styles.bankBlock}>
@@ -172,8 +179,10 @@ export function TrackingScreen() {
             </View>
           ) : null}
           <Text style={styles.paymentSub}>
-            Transfer the amount above, add your receipt screenshot, then send proof to {booking.hostName} on WhatsApp
-            {whatsapp ? ` (${formatWhatsAppDisplay(whatsapp)}).` : '.'}
+            {titleCaseWithName(
+              `Transfer the amount above, add your receipt screenshot, then send proof to ${booking.hostName} on WhatsApp${whatsapp ? ` (${formatWhatsAppDisplay(whatsapp)}).` : '.'}`,
+              booking.hostName,
+            )}
           </Text>
           <TransferProofCapture photoUri={transferProofUri} onPhotoChange={setTransferProofUri} />
           {whatsapp ? (
@@ -184,11 +193,11 @@ export function TrackingScreen() {
               onPress={sendTransferProof}
             />
           ) : (
-            <Text style={styles.paymentWarn}>Host has not added a WhatsApp number yet.</Text>
+            <Text style={styles.paymentWarn}>{toTitleCase('Host has not added a WhatsApp number yet.')}</Text>
           )}
           {transferProofUri ? (
             <Text style={styles.paymentHint}>
-              Choose WhatsApp on the share sheet, then send the screenshot to your host.
+              {toTitleCase('Choose WhatsApp on the share sheet, then send the screenshot to your host.')}
             </Text>
           ) : null}
         </View>
@@ -197,7 +206,7 @@ export function TrackingScreen() {
       {isBankTransfer && booking.paymentStatus === 'paid' && isAccepted && (
         <View style={styles.paidCard}>
           <AppIcon name="check-circle" size={18} color={colors.green} />
-          <Text style={styles.paidText}>Transfer verified · {formatMoney(amount)}</Text>
+          <Text style={styles.paidText}>{toTitleCase('Transfer verified')} · {formatMoney(amount)}</Text>
         </View>
       )}
 
@@ -205,7 +214,7 @@ export function TrackingScreen() {
         <>
           <View style={styles.statusHeader}>
             <AppIcon name="package" size={20} color={colors.gray500} />
-            <Text style={styles.eyebrow}>Load progress</Text>
+            <Text style={styles.eyebrow}>{toTitleCase('Load progress')}</Text>
             <StatusBadge label={statusBadge.label} variant={statusBadge.variant} />
           </View>
 
@@ -217,7 +226,10 @@ export function TrackingScreen() {
         <View style={styles.infoCard}>
           <AppIcon name="message-circle" size={18} color={colors.gray600} />
           <Text style={styles.infoText}>
-            Step 1 is complete once {booking.hostName} accepts. You'll see drop-off details and live updates here.
+            {titleCaseWithName(
+              `Step 1 is complete once ${booking.hostName} accepts. You'll see drop-off details and live updates here.`,
+              booking.hostName,
+            )}
           </Text>
         </View>
       )}
@@ -232,7 +244,7 @@ export function TrackingScreen() {
       <View style={styles.infoCard}>
         <AppIcon name="message-circle" size={18} color={colors.gray600} />
         <Text style={styles.infoText}>
-          {`Step ${progressStep.number} of 6 — ${progressStep.description}`}
+          {toTitleCase(`Step ${progressStep.number} of 6 — ${progressStep.description}`)}
         </Text>
       </View>
       )}
@@ -241,19 +253,19 @@ export function TrackingScreen() {
       <View style={styles.pickupCard}>
         <View style={styles.pickupTitleRow}>
           <AppIcon name="map-pin" size={18} />
-          <Text style={styles.pickupTitle}>Pickup details</Text>
+          <Text style={styles.pickupTitle}>{toTitleCase('Pickup details')}</Text>
         </View>
         <View style={styles.pickupField}>
           <AppIcon name="home" size={14} color={colors.gray500} />
           <View style={styles.pickupFieldText}>
-            <Text style={styles.pickupLabel}>Address</Text>
+            <Text style={styles.pickupLabel}>{toTitleCase('Address')}</Text>
             <Text style={styles.pickupValue}>{booking.address}</Text>
           </View>
         </View>
         <View style={styles.pickupField}>
           <AppIcon name="key" size={14} color={colors.gray500} />
           <View style={styles.pickupFieldText}>
-            <Text style={styles.pickupLabel}>Gate code</Text>
+            <Text style={styles.pickupLabel}>{toTitleCase('Gate code')}</Text>
             <Text style={styles.pickupValue}>{booking.gateCode}</Text>
           </View>
         </View>
@@ -280,10 +292,13 @@ export function TrackingScreen() {
         <View style={styles.reviewCard}>
           <View style={styles.reviewHeader}>
             <AppIcon name="star" size={18} color={colors.black} />
-            <Text style={styles.reviewTitle}>Ready For Pickup</Text>
+            <Text style={styles.reviewTitle}>{toTitleCase('Ready For Pickup')}</Text>
           </View>
           <Text style={styles.reviewSub}>
-            After you collect your laundry, confirm pickup and leave a review for {booking.hostName}.
+            {titleCaseWithName(
+              `After you collect your laundry, confirm pickup and leave a review for ${booking.hostName}.`,
+              booking.hostName,
+            )}
           </Text>
           <PrimaryButton title="I Picked Up My Load" icon="check-circle" full onPress={handleConfirmPickup} />
         </View>
@@ -293,10 +308,13 @@ export function TrackingScreen() {
         <View style={styles.pickupCard}>
           <View style={styles.pickupTitleRow}>
             <AppIcon name="map-pin" size={18} color={colors.gray400} />
-            <Text style={[styles.pickupTitle, styles.pickupTitleMuted]}>Pickup details</Text>
+            <Text style={[styles.pickupTitle, styles.pickupTitleMuted]}>{toTitleCase('Pickup details')}</Text>
           </View>
           <Text style={styles.pendingDirectionsHint}>
-            Drop-off address and directions unlock after {booking.hostName} accepts your request.
+            {titleCaseWithName(
+              `Drop-off address and directions unlock after ${booking.hostName} accepts your request.`,
+              booking.hostName,
+            )}
           </Text>
           <OutlineButton title="Directions" icon="navigation" full disabled onPress={() => {}} />
         </View>
@@ -382,7 +400,7 @@ const styles = StyleSheet.create({
   },
   paidText: { fontSize: 14, fontWeight: '600', color: colors.green },
   statusHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
-  eyebrow: { fontSize: 13, color: colors.gray500, textTransform: 'capitalize', letterSpacing: 0.4 },
+  eyebrow: { fontSize: 13, color: colors.gray500, letterSpacing: 0.4 },
   clothesSection: { marginBottom: spacing.lg },
   infoCard: {
     flexDirection: 'row',
@@ -410,7 +428,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: colors.gray500,
-    textTransform: 'capitalize',
     letterSpacing: 0.5,
   },
   pickupValue: { fontSize: 16, fontWeight: '500', marginTop: spacing.sm, lineHeight: 22 },

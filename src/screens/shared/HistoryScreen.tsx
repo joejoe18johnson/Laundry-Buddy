@@ -18,6 +18,7 @@ import {
 } from '../../lib/paymentHistoryStorage'
 import { colors, radius, spacing } from '../../theme'
 import { formatDropOffHour } from '../../lib/dropOffAvailability'
+import { toTitleCase } from '../../lib/titleCase'
 import { type Booking } from '../../types'
 
 function PaymentStatusBadge({ status, paymentMethod }: { status?: Booking['paymentStatus']; paymentMethod?: Booking['paymentMethod'] }) {
@@ -25,7 +26,7 @@ function PaymentStatusBadge({ status, paymentMethod }: { status?: Booking['payme
   return (
     <View style={[styles.statusBadge, paid ? styles.statusPaid : styles.statusPending]}>
       <Text style={[styles.statusText, paid ? styles.statusTextPaid : styles.statusTextPending]}>
-        {paid ? 'Paid' : 'Pending'}
+        {paid ? toTitleCase('Paid') : toTitleCase('Pending')}
       </Text>
     </View>
   )
@@ -139,20 +140,20 @@ export function HistoryScreen() {
       <View style={styles.titleRow}>
         <AppIcon name={isCustomer ? 'credit-card' : 'clock'} size={22} />
         <Text style={styles.title}>
-          {isCustomer ? 'Past loads & payments' : 'Load history'}
+          {toTitleCase(isCustomer ? 'Past loads & payments' : 'Load history')}
         </Text>
       </View>
       <Text style={styles.subtitle}>
         {isCustomer
-          ? 'Every load you book and pay for on Laundry Buddy'
-          : 'Loads you have hosted for neighbors'}
+          ? toTitleCase('Every load you book and pay for on Laundry Buddy')
+          : toTitleCase('Loads you have hosted for neighbors')}
       </Text>
 
       {history.length > 0 && (
         <View style={styles.summaryCard}>
           <View style={styles.summaryMain}>
             <Text style={styles.summaryLabel}>
-              {isCustomer ? 'Total spent' : 'Total earned'}
+              {toTitleCase(isCustomer ? 'Total spent' : 'Total earned')}
             </Text>
             <Text style={[styles.summaryAmount, total <= 0 && styles.amountFree]}>
               {formatMoney(total)}
@@ -163,7 +164,7 @@ export function HistoryScreen() {
               {history.length} load{history.length !== 1 ? 's' : ''}
             </Text>
             <Text style={styles.summaryMetaText}>
-              {paidCount} paid
+              {paidCount} {toTitleCase('paid')}
             </Text>
           </View>
         </View>
@@ -172,11 +173,11 @@ export function HistoryScreen() {
       {history.length === 0 ? (
         <View style={styles.empty}>
           <AppIcon name="inbox" size={32} color={colors.gray400} />
-          <Text style={styles.emptyTitle}>No history yet</Text>
+          <Text style={styles.emptyTitle}>{toTitleCase('No history yet')}</Text>
           <Text style={styles.emptySub}>
             {isCustomer
-              ? 'Completed loads and payments will show up here.'
-              : 'Completed loads you host will appear here.'}
+              ? toTitleCase('Completed loads and payments will show up here.')
+              : toTitleCase('Completed loads you host will appear here.')}
           </Text>
         </View>
       ) : (
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   summaryMain: { gap: 4 },
-  summaryLabel: { fontSize: 13, fontWeight: '600', color: colors.gray500, textTransform: 'capitalize', letterSpacing: 0.4 },
+  summaryLabel: { fontSize: 13, fontWeight: '600', color: colors.gray500, letterSpacing: 0.4 },
   summaryAmount: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5 },
   summaryMeta: { flexDirection: 'row', gap: spacing.lg },
   summaryMetaText: { fontSize: 13, color: colors.gray600, fontWeight: '500' },

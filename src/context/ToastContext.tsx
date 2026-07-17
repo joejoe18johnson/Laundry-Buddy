@@ -11,6 +11,7 @@ import {
 import { Animated, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from '../components/AppIcon'
+import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
 interface ToastOptions {
@@ -77,7 +78,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         >
           <View style={styles.toast}>
             {toast.icon && <AppIcon name={toast.icon} size={16} color={colors.white} />}
-            <Text style={styles.text}>{toast.message}</Text>
+            <Text style={styles.text}>{toTitleCase(toast.message)}</Text>
           </View>
         </Animated.View>
       )}

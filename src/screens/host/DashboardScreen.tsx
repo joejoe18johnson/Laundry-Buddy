@@ -10,6 +10,7 @@ import { applyHostSettings } from '../../lib/hostListing'
 import { formatHostPrice } from '../../lib/hostFilters'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
+import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { colors, radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
@@ -57,7 +58,7 @@ function OrderDetails({
         <View style={styles.photoBlock}>
           <View style={styles.notesHeader}>
             <AppIcon name="camera" size={14} color={colors.gray600} />
-            <Text style={styles.notesLabel}>Guest load photo</Text>
+            <Text style={styles.notesLabel}>{toTitleCase('Guest load photo')}</Text>
           </View>
           <Image source={{ uri: loadPhotoUri }} style={styles.loadPhoto} resizeMode="cover" />
         </View>
@@ -67,25 +68,25 @@ function OrderDetails({
           <AppIcon name="clock" size={16} color={colors.black} />
         </View>
         <View style={styles.detailBody}>
-          <Text style={styles.detailLabel}>Guest drop-off time</Text>
+          <Text style={styles.detailLabel}>{toTitleCase('Guest drop-off time')}</Text>
           <Text style={styles.detailValue}>{formatDropOffHour(dropOffTime)}</Text>
-          <Text style={styles.detailHint}>Expect laundry during this window</Text>
+          <Text style={styles.detailHint}>{toTitleCase('Expect laundry during this window')}</Text>
         </View>
       </View>
       {trimmedNotes ? (
         <View style={styles.notesBox}>
           <View style={styles.notesHeader}>
             <AppIcon name="message-square" size={14} color={colors.gray600} />
-            <Text style={styles.notesLabel}>Guest notes</Text>
+            <Text style={styles.notesLabel}>{toTitleCase('Guest notes')}</Text>
           </View>
           <Text style={styles.notesText}>{trimmedNotes}</Text>
         </View>
       ) : (
-        <Text style={styles.noNotes}>No special instructions from guest</Text>
+        <Text style={styles.noNotes}>{toTitleCase('No special instructions from guest')}</Text>
       )}
       {paymentMethod && (
         <Text style={styles.paymentMeta}>
-          {paymentMethod === 'cash' ? 'Cash on pickup' : 'Bank transfer after acceptance'}
+          {paymentMethod === 'cash' ? toTitleCase('Cash on pickup') : toTitleCase('Bank transfer after acceptance')}
           {totalAmount != null && totalAmount > 0 ? ` · ${formatMoney(totalAmount)}` : ''}
         </Text>
       )}
@@ -131,7 +132,7 @@ export function DashboardScreen() {
         </View>
         <Pressable style={styles.hubLink} onPress={() => navigate('account')}>
           <AppIcon name="settings" size={16} />
-          <Text style={styles.hubLinkText}>Host settings</Text>
+          <Text style={styles.hubLinkText}>{toTitleCase('Host settings')}</Text>
         </Pressable>
       </View>
 
@@ -139,9 +140,13 @@ export function DashboardScreen() {
         <View style={styles.onlineLeft}>
           <View style={[styles.onlineDot, isOnline && styles.onlineDotLive]} />
           <View>
-            <Text style={styles.onlineTitle}>{isOnline ? 'Online — visible to guests' : 'Offline — hidden from search'}</Text>
+            <Text style={styles.onlineTitle}>
+              {isOnline ? toTitleCase('Online — visible to guests') : toTitleCase('Offline — hidden from search')}
+            </Text>
             <Text style={styles.onlineSub}>
-              {isOnline ? 'Tap to go offline when you are done for the day' : 'Go online to start receiving bookings'}
+              {isOnline
+                ? toTitleCase('Tap to go offline when you are done for the day')
+                : toTitleCase('Go online to start receiving bookings')}
             </Text>
           </View>
         </View>
@@ -152,13 +157,13 @@ export function DashboardScreen() {
         <View style={styles.availabilityBar}>
           <View style={styles.availabilityHeader}>
             <AppIcon name="calendar" size={14} color={colors.gray600} />
-            <Text style={styles.availabilityTitle}>Your drop-off hours (8am – 8pm)</Text>
+            <Text style={styles.availabilityTitle}>{toTitleCase('Your drop-off hours (8am – 8pm)')}</Text>
           </View>
           <Text style={styles.availabilityValue}>
             {formatDropOffAvailability(hostSettings.dropOffAvailability)}
           </Text>
           <Pressable style={styles.availabilityEdit} onPress={() => navigate('account')}>
-            <Text style={styles.availabilityEditText}>Edit availability</Text>
+            <Text style={styles.availabilityEditText}>{toTitleCase('Edit availability')}</Text>
             <AppIcon name="chevron-right" size={14} color={colors.gray500} />
           </Pressable>
         </View>
@@ -167,7 +172,7 @@ export function DashboardScreen() {
       <View style={styles.statsRow}>
         <View style={styles.statChip}>
           <Text style={styles.statNum}>{hostStats.loadsToday}</Text>
-          <Text style={styles.statLabel}>loads today</Text>
+          <Text style={styles.statLabel}>{toTitleCase('loads today')}</Text>
         </View>
         <View style={[styles.pill, hostStats.accepting ? styles.pillLive : null]}>
           <AppIcon
@@ -176,7 +181,7 @@ export function DashboardScreen() {
             color={hostStats.accepting ? colors.green : colors.gray600}
           />
           <Text style={[styles.pillText, hostStats.accepting ? styles.pillLiveText : null]}>
-            {hostStats.accepting ? 'Accepting loads' : 'Full today'}
+            {hostStats.accepting ? toTitleCase('Accepting loads') : toTitleCase('Full today')}
           </Text>
         </View>
       </View>
@@ -196,7 +201,7 @@ export function DashboardScreen() {
         <View style={styles.sectionHeader}>
           <AppIcon name="inbox" size={14} color={colors.black} />
           <Text style={styles.sectionHeaderText}>
-            New orders ({hostRequests.length})
+            {toTitleCase(`New orders (${hostRequests.length})`)}
           </Text>
         </View>
       )}
@@ -228,7 +233,7 @@ export function DashboardScreen() {
             />
             <View style={styles.tags}>
               <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption, hostProfile?.sheetsPrice ?? 1)}</Text>
-              {request.foldingService && <Text style={styles.tag}>Folding requested</Text>}
+              {request.foldingService && <Text style={styles.tag}>{toTitleCase('Folding requested')}</Text>}
             </View>
             <View style={styles.actions}>
               <View style={styles.actionBtn}>
@@ -246,7 +251,7 @@ export function DashboardScreen() {
         <View key={load.id} style={styles.section}>
           <View style={styles.sectionLabelRow}>
             <AppIcon name="package" size={12} color={colors.gray500} />
-            <Text style={styles.sectionLabel}>Active load</Text>
+            <Text style={styles.sectionLabel}>{toTitleCase('Active load')}</Text>
           </View>
           <View style={styles.card}>
             <View style={styles.row}>
@@ -278,7 +283,7 @@ export function DashboardScreen() {
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
               <>
                 <Text style={styles.transferHint}>
-                  Guest should send transfer proof on WhatsApp. Confirm once verified.
+                  {toTitleCase('Guest should send transfer proof on WhatsApp. Confirm once verified.')}
                 </Text>
                 <GhostButton
                   title={`Confirm ${formatMoney(getBookingAmount(load))} received`}
@@ -308,7 +313,7 @@ export function DashboardScreen() {
             {load.stage === 'ready' && (
               <View style={styles.pickupBlock}>
                 <Text style={styles.pickupHint}>
-                  Confirm once the guest has collected their laundry.
+                  {toTitleCase('Confirm once the guest has collected their laundry.')}
                 </Text>
                 <PrimaryButton
                   title="Guest Picked Up"
@@ -325,11 +330,11 @@ export function DashboardScreen() {
       {hostRequests.length === 0 && activeLoads.length === 0 && (
         <View style={styles.empty}>
           <AppIcon name="check-circle" size={32} color={colors.gray400} />
-          <Text style={styles.emptyTitle}>All caught up</Text>
+          <Text style={styles.emptyTitle}>{toTitleCase('All caught up')}</Text>
           <Text style={styles.emptySub}>
             {isOnline
-              ? 'No pending requests right now. Guests can book while you are online.'
-              : 'Go online in your profile to appear in guest search.'}
+              ? toTitleCase('No pending requests right now. Guests can book while you are online.')
+              : toTitleCase('Go online in your profile to appear in guest search.')}
           </Text>
           {!isOnline && (
             <PrimaryButton title="Go online" onPress={() => toggleOnline(true)} />
@@ -382,7 +387,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   availabilityHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  availabilityTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600, textTransform: 'capitalize' },
+  availabilityTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600 },
   availabilityValue: { fontSize: 15, fontWeight: '600', lineHeight: 22 },
   availabilityEdit: {
     flexDirection: 'row',
@@ -431,7 +436,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray500,
-    textTransform: 'capitalize',
     letterSpacing: 0.5,
   },
   card: {
@@ -477,7 +481,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray500,
-    textTransform: 'capitalize',
     letterSpacing: 0.4,
   },
   detailValue: { fontSize: 16, fontWeight: '700', marginTop: 2, lineHeight: 22 },
@@ -502,7 +505,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   notesHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  notesLabel: { fontSize: 11, fontWeight: '700', color: colors.gray600, textTransform: 'capitalize' },
+  notesLabel: { fontSize: 11, fontWeight: '700', color: colors.gray600 },
   notesText: { fontSize: 14, color: colors.black, lineHeight: 20 },
   noNotes: { fontSize: 13, color: colors.gray500, fontStyle: 'italic' },
   paymentMeta: { fontSize: 13, color: colors.gray600, fontWeight: '600' },

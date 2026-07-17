@@ -34,6 +34,7 @@ import {
   type HostSort,
 } from '../../lib/hostFilters'
 import { isBelizeFilterArea } from '../../lib/belizeDistricts'
+import { toTitleCase } from '../../lib/titleCase'
 import type { Host } from '../../types'
 import { colors, radius, spacing } from '../../theme'
 
@@ -295,7 +296,7 @@ export function HomeScreen() {
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Sort</Text>
+        <Text style={styles.sectionLabel}>{toTitleCase('Sort')}</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -314,7 +315,7 @@ export function HomeScreen() {
           ))}
           <Pressable style={styles.filterChip} onPress={() => setFiltersOpen(true)}>
             <AppIcon name="sliders" size={14} />
-            <Text style={styles.filterChipText}>Filters</Text>
+            <Text style={styles.filterChipText}>{toTitleCase('Filters')}</Text>
             {activeFilterCount > 0 && (
               <View style={styles.filterBadge}>
                 <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
@@ -327,17 +328,19 @@ export function HomeScreen() {
       <View style={styles.weatherRow}>
         <AppIcon name="cloud-rain" size={14} color={colors.gray500} />
         <Text style={styles.weatherText} numberOfLines={1}>
-          {WEATHER.headline}
+          {toTitleCase(WEATHER.headline)}
         </Text>
       </View>
 
       <View style={styles.resultsDivider}>
         <Text style={styles.resultsTitle}>
-          {hosts.length === 0 ? 'No hosts' : `${hosts.length} host${hosts.length === 1 ? '' : 's'}`}
+          {hosts.length === 0
+            ? toTitleCase('No hosts')
+            : toTitleCase(`${hosts.length} host${hosts.length === 1 ? '' : 's'}`)}
         </Text>
         {(trimmedSearch || activeFilterCount > 0) && (
           <Pressable onPress={clearAll} hitSlop={8}>
-            <Text style={styles.clearLink}>Clear All</Text>
+            <Text style={styles.clearLink}>{toTitleCase('Clear All')}</Text>
           </Pressable>
         )}
       </View>
@@ -353,15 +356,17 @@ export function HomeScreen() {
   const listEmpty = (
     <View style={styles.empty}>
       <AppIcon name="search" size={28} color={colors.gray400} />
-      <Text style={styles.emptyTitle}>No hosts found</Text>
+      <Text style={styles.emptyTitle}>{toTitleCase('No hosts found')}</Text>
       <Text style={styles.emptySub}>
         {trimmedSearch
-          ? 'Try another area or host name.'
+          ? toTitleCase('Try another area or host name.')
           : onlineHosts.length === 0 && allOnlineHosts.length > 0
-            ? `No hosts within ${searchRadiusKm} km — check the map for hosts outside your radius.`
+            ? toTitleCase(
+                `No hosts within ${searchRadiusKm} km — check the map for hosts outside your radius.`,
+              )
             : onlineHosts.length === 0
-              ? 'No hosts are online right now.'
-              : 'Try different filters or sort.'}
+              ? toTitleCase('No hosts are online right now.')
+              : toTitleCase('Try different filters or sort.')}
       </Text>
       {!onlineHosts.length && allOnlineHosts.length > 0 && (
         <Text style={styles.emptyHint}>
@@ -411,7 +416,7 @@ export function HomeScreen() {
             <View style={styles.handle} />
           </Pressable>
           <View style={styles.sheetTitleRow}>
-            <Text style={styles.sheetTitle}>Select A Host</Text>
+            <Text style={styles.sheetTitle}>{toTitleCase('Select A Host')}</Text>
           <Pressable onPress={cycleSnap} hitSlop={8} style={styles.snapBtn}>
             <Animated.View style={{ transform: [{ translateY: snap === 'map' ? chevronBounce : 0 }] }}>
               <AppIcon
@@ -564,7 +569,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: colors.gray400,
-    textTransform: 'capitalize',
     letterSpacing: 0.6,
     marginBottom: 6,
   },

@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { ACTIVE_REGION_LABEL } from '../../data/mockData'
 import { SUPPORT_EMAIL, SUPPORT_PHONE_DISPLAY, SUPPORT_PHONE_WHATSAPP } from '../../lib/supportContact'
+import { toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
 
 const SUPPORT_PHONE = SUPPORT_PHONE_WHATSAPP
@@ -12,8 +13,8 @@ const SUPPORT_PHONE = SUPPORT_PHONE_WHATSAPP
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   return (
     <View style={styles.faq}>
-      <Text style={styles.faqQ}>{question}</Text>
-      <Text style={styles.faqA}>{answer}</Text>
+      <Text style={styles.faqQ}>{toTitleCase(question)}</Text>
+      <Text style={styles.faqA}>{toTitleCase(answer)}</Text>
     </View>
   )
 }
@@ -25,8 +26,8 @@ function Step({ n, title, body }: { n: number; title: string; body: string }) {
         <Text style={styles.stepNumText}>{n}</Text>
       </View>
       <View style={styles.stepBody}>
-        <Text style={styles.stepTitle}>{title}</Text>
-        <Text style={styles.stepDesc}>{body}</Text>
+        <Text style={styles.stepTitle}>{toTitleCase(title)}</Text>
+        <Text style={styles.stepDesc}>{toTitleCase(body)}</Text>
       </View>
     </View>
   )
@@ -56,28 +57,29 @@ export function HelpScreen() {
       <BackButton onPress={() => navigate(backScreen)} label="Back" />
       <View style={styles.titleRow}>
         <AppIcon name="help-circle" size={22} />
-        <Text style={styles.title}>Help & support</Text>
+        <Text style={styles.title}>{toTitleCase('Help & support')}</Text>
       </View>
       <Text style={styles.subtitle}>
         {isCustomer
-          ? 'How to book a neighbor’s dryer anywhere in Belize'
-          : 'Build your reputation — every load logged on the app counts'}
+          ? toTitleCase('How to book a neighbor’s dryer anywhere in Belize')
+          : toTitleCase('Build your reputation — every load logged on the app counts')}
       </Text>
 
       {!isCustomer && (
         <View style={styles.reputationBanner}>
           <AppIcon name="award" size={20} color={colors.black} />
           <View style={styles.reputationText}>
-            <Text style={styles.reputationTitle}>Laundry Buddy is about reputation</Text>
+            <Text style={styles.reputationTitle}>{toTitleCase('Laundry Buddy is about reputation')}</Text>
             <Text style={styles.reputationBody}>
-              Record every sale on the app. The more loads you complete here, the higher you appear in guest
-              searches. Off-platform deals hurt your visibility and your trust score.
+              {toTitleCase(
+                'Record every sale on the app. The more loads you complete here, the higher you appear in guest searches. Off-platform deals hurt your visibility and your trust score.',
+              )}
             </Text>
           </View>
         </View>
       )}
 
-      <Text style={styles.section}>How it works</Text>
+      <Text style={styles.section}>{toTitleCase('How it works')}</Text>
       {isCustomer ? (
         <>
           <Step n={1} title="Find a host" body={`Search by district, town, price, or reviews anywhere in ${ACTIVE_REGION_LABEL}.`} />
@@ -94,7 +96,9 @@ export function HelpScreen() {
         </>
       )}
 
-      <Text style={styles.section}>{isCustomer ? 'Common questions' : 'Host FAQ — reputation & sales'}</Text>
+      <Text style={styles.section}>
+        {toTitleCase(isCustomer ? 'Common questions' : 'Host FAQ — reputation & sales')}
+      </Text>
       <View style={styles.faqCard}>
         {isCustomer ? (
           <>
@@ -141,11 +145,11 @@ export function HelpScreen() {
         )}
       </View>
 
-      <Text style={styles.section}>Contact us</Text>
+      <Text style={styles.section}>{toTitleCase('Contact us')}</Text>
       <Pressable style={styles.contactBtn} onPress={openWhatsApp}>
         <AppIcon name="message-circle" size={18} />
         <View style={styles.contactCopy}>
-          <Text style={styles.contactLabel}>WhatsApp Support</Text>
+          <Text style={styles.contactLabel}>{toTitleCase('WhatsApp Support')}</Text>
           <Text style={styles.contactSub}>{SUPPORT_PHONE_DISPLAY}</Text>
         </View>
         <AppIcon name="chevron-right" size={18} color={colors.gray400} />

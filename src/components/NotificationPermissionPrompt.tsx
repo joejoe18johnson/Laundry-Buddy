@@ -2,6 +2,7 @@ import { Modal, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { PrimaryButton, OutlineButton } from './ui'
+import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
 type Props = {
@@ -19,14 +20,16 @@ export function NotificationPermissionPrompt({ visible, onEnable, onDismiss }: P
             <View style={styles.iconWrap}>
               <AppIcon name="bell" size={28} color={colors.white} />
             </View>
-            <Text style={styles.title}>Stay on time with alerts</Text>
+            <Text style={styles.title}>{toTitleCase('Stay on time with alerts')}</Text>
             <Text style={styles.body}>
-              Turn on notifications to get prompt updates when a host accepts your load, when laundry is ready, and before your drop-off window.
+              {toTitleCase(
+                'Turn on notifications to get prompt updates when a host accepts your load, when laundry is ready, and before your drop-off window.',
+              )}
             </Text>
             <View style={styles.list}>
-              <Text style={styles.listItem}>• Host accepts or declines your request</Text>
-              <Text style={styles.listItem}>• Load is drying or ready for pickup</Text>
-              <Text style={styles.listItem}>• Reminders before drop-off time</Text>
+              <Text style={styles.listItem}>• {toTitleCase('Host accepts or declines your request')}</Text>
+              <Text style={styles.listItem}>• {toTitleCase('Load is drying or ready for pickup')}</Text>
+              <Text style={styles.listItem}>• {toTitleCase('Reminders before drop-off time')}</Text>
             </View>
             <PrimaryButton title="Enable notifications" icon="bell" full onPress={onEnable} />
             <OutlineButton title="Not now" full onPress={onDismiss} />
