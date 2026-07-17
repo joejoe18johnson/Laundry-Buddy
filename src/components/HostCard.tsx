@@ -1,16 +1,20 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../context/AppContext'
 import { formatHostPrice } from '../lib/hostFilters'
+import { isTopRatedHost } from '../lib/hostReputation'
 import { toTitleCase } from '../lib/titleCase'
 import { formatTurnaroundHours } from '../lib/turnaroundTime'
 import type { Host } from '../types'
 import { colors, radius, spacing } from '../theme'
 import { AppIcon } from './AppIcon'
 import { HostAvatar } from './HostAvatar'
+import { TopRatedHostBadge } from './TopRatedHostBadge'
 
 export function HostCard({ host }: { host: Host }) {
-  const { viewHostProfile } = useApp()
+  const { viewHostProfile, getReviewsForHost } = useApp()
   const isFree = host.price <= 0
+  const reviews = getReviewsForHost(host.id)
+  const topRated = isTopRatedHost(host, reviews)
 
   return (
     <Pressable
@@ -20,9 +24,12 @@ export function HostCard({ host }: { host: Host }) {
       <HostAvatar host={host} size={48} />
 
       <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={1}>
-          {host.name}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {host.name}
+          </Text>
+          {topRated ? <TopRatedHostBadge compact /> : null}
+        </View>
         <Text style={styles.meta} numberOfLines={1}>
           {host.location}
           {host.district ? ` · ${host.district}` : ''}
@@ -64,11 +71,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gray50,
   },
   body: { flex: 1, gap: 4, minWidth: 0 },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
   name: {
     fontSize: 16,
     fontWeight: '700',
     color: colors.black,
     letterSpacing: -0.2,
+    flexShrink: 1,
   },
   meta: { fontSize: 13, color: colors.gray600, fontWeight: '500' },
   subMeta: { fontSize: 12, color: colors.gray500, marginTop: 2 },
