@@ -196,17 +196,15 @@ export interface HostRequest {
   clothesList?: ClothesListItem[]
 }
 
-export function sheetsOptionLabel(option: SheetsOption, sheetsPrice: number): string {
+export function sheetsOptionLabel(option: SheetsOption, _sheetsPrice?: number): string {
   if (option === 'buy') {
-    return sheetsPrice <= 0
-      ? 'Buy Sheets From Host (Free)'
-      : `Buy Sheets From Host ($${sheetsPrice}/load)`
+    return `Buy 2 Sheets From Host ($1 Each · $2 Per Load)`
   }
   return SHEETS_LABELS[option]
 }
 
 export const SHEETS_LABELS: Record<SheetsOption, string> = {
   own: 'Brings Own Sheets ✓',
-  buy: 'Wants to Buy Sheets From Host',
+  buy: 'Wants 2 Sheets From Host ($1 Each)',
   none: 'No Sheets Please',
 }

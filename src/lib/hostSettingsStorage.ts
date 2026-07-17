@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getHostProfileDetails, SEED_HOST_SETTINGS, SEED_DATA_VERSION, SEED_HOSTS } from '../data/seedData'
-import { DEFAULT_HOST_PRICING } from './hostPricing'
+import { DEFAULT_HOST_PRICING, DRYER_SHEET_UNIT_PRICE } from './hostPricing'
 import { normalizeListing } from './hostListing'
 import { normalizeDropOffAvailability } from './dropOffAvailability'
 import type { Host, HostSettings, PaymentMethod } from '../types'
@@ -42,7 +42,10 @@ export function normalizeHostSettings(
       ...DEFAULT_HOST_SETTINGS.bankDetails,
       ...settings?.bankDetails,
     },
-    pricing,
+    pricing: {
+      ...pricing,
+      sheetsPrice: DRYER_SHEET_UNIT_PRICE,
+    },
     listing,
     dropOffAvailability: normalizeDropOffAvailability(settings?.dropOffAvailability),
   }

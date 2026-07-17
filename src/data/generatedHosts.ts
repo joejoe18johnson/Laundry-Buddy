@@ -72,7 +72,7 @@ function createHost(input: HostSeedInput): Host {
     reviewCount: rating > 0 ? 3 + (globalIndex % 40) : 0,
     price,
     foldingPrice,
-    sheetsPrice: 1 + (globalIndex % 2),
+    sheetsPrice: 1,
     slotsLeft: 1 + (globalIndex % 4),
     turnaroundHours: TURNAROUND_HOUR_OPTIONS[globalIndex % TURNAROUND_HOUR_OPTIONS.length],
     dryerType: DRYER_TYPES[globalIndex % DRYER_TYPES.length],

@@ -47,11 +47,13 @@ import {
 } from '../lib/notificationLinks'
 import {
   appendHostRequest,
+  dedupeActiveLoads,
   getHostOrders,
   mergeActiveLoads,
   mergeHostRequests,
   removeHostActiveLoad,
   saveHostOrders,
+  upsertActiveLoad,
 } from '../lib/hostOrdersStorage'
 import {
   DEFAULT_HOST_SETTINGS,
@@ -244,8 +246,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (role === 'host') {
       const seed = getHostDashboardSeed(user!.id)
       getHostOrders(user!.id).then((stored) => {
-        setHostRequests(mergeHostRequests(seed.pendingRequests, stored.pendingRequests))
-        setActiveLoads(mergeActiveLoads(seed.activeLoads, stored.activeLoads))
+        const mergedLoads = dedupeActiveLoads(
+          mergeActiveLoads(seed.activeLoads, stored.activeLoads),
+        )
+        const activeLoadIds = mergedLoads.map((load) => load.id)
+        setHostRequests(
+          mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds),
+        )
+        setActiveLoads(mergedLoads)
         setHostStats({
           loadsToday: seed.loadsToday,
           maxLoads: seed.maxLoads,
@@ -775,7 +783,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       const nextRequests = hostRequests.filter((r) => r.id !== requestId)
-      const nextLoads = [...activeLoads, load]
+      const nextLoads = upsertActiveLoad(activeLoads, load)
       setActiveLoads(nextLoads)
       setHostRequests(nextRequests)
       setHostStats((prev) => ({ ...prev, loadsToday: prev.loadsToday + 1 }))

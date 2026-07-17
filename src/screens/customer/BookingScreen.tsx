@@ -11,6 +11,9 @@ import { BackButton, AppTextInput, ChoiceChip, OptionRow, PrimaryButton, Screen,
 import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import {
   calculateBookingTotal,
+  DRYER_SHEET_UNIT_PRICE,
+  formatDryerSheetsPerLoadCharge,
+  formatDryerSheetsRate,
   formatServicePrice,
   offersFoldingService,
   bookingTotalLabel,
@@ -64,7 +67,7 @@ export function BookingScreen() {
 
   const dryPrice = selectedHost.price
   const foldingPrice = selectedHost.foldingPrice ?? 0
-  const sheetsPrice = selectedHost.sheetsPrice ?? 1
+  const sheetsPrice = DRYER_SHEET_UNIT_PRICE
   const showFolding = offersFoldingService({
     dryPrice,
     foldingPrice,
@@ -76,7 +79,7 @@ export function BookingScreen() {
     {
       value: 'buy',
       label: 'Buy From Host',
-      sub: `${formatServicePrice(sheetsPrice)} Per Load`,
+      sub: `${formatDryerSheetsRate()} (${formatDryerSheetsPerLoadCharge()})`,
     },
     { value: 'none', label: 'No Sheets' },
   ]
@@ -133,7 +136,9 @@ export function BookingScreen() {
           {showFolding && (
             <Text style={styles.rateLine}>{toTitleCase('Folding')} — {formatServicePrice(foldingPrice)}</Text>
           )}
-          <Text style={styles.rateLine}>{toTitleCase('Dryer Sheets')} — {formatServicePrice(sheetsPrice)}</Text>
+          <Text style={styles.rateLine}>
+            {toTitleCase('Dryer Sheets')} — {formatDryerSheetsRate()} ({formatDryerSheetsPerLoadCharge()})
+          </Text>
         </View>
 
         <Text style={styles.section}>{toTitleCase('Drop Off Time')}</Text>

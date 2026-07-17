@@ -31,10 +31,31 @@ export async function appendHostRequest(hostUserId: string, request: HostRequest
   await saveHostOrders(hostUserId, orders)
 }
 
-export function mergeHostRequests(seed: HostRequest[], stored: HostRequest[]): HostRequest[] {
+export function mergeHostRequests(
+  seed: HostRequest[],
+  stored: HostRequest[],
+  activeLoadIds: Iterable<string> = [],
+): HostRequest[] {
+  const accepted = new Set(activeLoadIds)
   const byId = new Map<string, HostRequest>()
   for (const r of [...seed, ...stored]) {
-    if (r.status === 'pending') byId.set(r.id, r)
+    if (r.status === 'pending' && !accepted.has(r.id)) byId.set(r.id, r)
+  }
+  return [...byId.values()]
+}
+
+export function upsertActiveLoad(loads: Booking[], load: Booking): Booking[] {
+  const index = loads.findIndex((entry) => entry.id === load.id)
+  if (index === -1) return [...loads, load]
+  const next = [...loads]
+  next[index] = load
+  return next
+}
+
+export function dedupeActiveLoads(loads: Booking[]): Booking[] {
+  const byId = new Map<string, Booking>()
+  for (const load of loads) {
+    byId.set(load.id, load)
   }
   return [...byId.values()]
 }

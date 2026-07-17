@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
 import { applyHostSettings } from '../../lib/hostListing'
 import { formatHostPrice } from '../../lib/hostFilters'
+import { formatDryerSheetsRate } from '../../lib/hostPricing'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
 import { toTitleCase } from '../../lib/titleCase'
@@ -192,7 +193,7 @@ export function DashboardScreen() {
           {(hostProfile.foldingPrice ?? 0) > 0
             ? ` · Folding ${formatHostPrice(hostProfile.foldingPrice!)}`
             : ''}
-          {' · Sheets '}{formatHostPrice(hostProfile.sheetsPrice ?? 1)}
+          {' · Sheets '}{formatDryerSheetsRate()}
           {' · '}{hostProfile.slotsLeft} slots · {formatTurnaroundHours(hostProfile.turnaroundHours)}
         </Text>
       )}
@@ -232,7 +233,7 @@ export function DashboardScreen() {
               loadPhotoUri={request.loadPhotoUri}
             />
             <View style={styles.tags}>
-              <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption, hostProfile?.sheetsPrice ?? 1)}</Text>
+              <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption)}</Text>
               {request.foldingService && <Text style={styles.tag}>{toTitleCase('Folding requested')}</Text>}
             </View>
             <View style={styles.actions}>

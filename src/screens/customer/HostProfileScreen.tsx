@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { AppIcon } from '../../components/AppIcon'
 import { TopRatedHostBadge } from '../../components/TopRatedHostBadge'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
@@ -12,7 +13,7 @@ import { formatHostFooterMeta, formatHostPrice } from '../../lib/hostFilters'
 import { isTopRatedHost } from '../../lib/hostReputation'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
-import { formatServicePrice } from '../../lib/hostPricing'
+import { formatDryerSheetsRate, formatServicePrice } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { toTitleCase } from '../../lib/titleCase'
 import { colors, coverColors, radius, spacing } from '../../theme'
@@ -182,7 +183,7 @@ export function HostProfileScreen() {
           <View style={styles.detailChip}>
             <AppIcon name="tag" size={16} />
             <Text style={styles.detailText}>
-              {toTitleCase('Dryer Sheets')} — {formatServicePrice(host.sheetsPrice ?? 1)} {toTitleCase('If Guest Buys')}
+              {toTitleCase('Dryer Sheets')} — {formatDryerSheetsRate()} {toTitleCase('If Guest Buys')}
             </Text>
           </View>
           <View style={styles.detailChip}>

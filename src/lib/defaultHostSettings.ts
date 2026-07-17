@@ -1,6 +1,6 @@
 import type { Host, HostBankDetails, HostSettings } from '../types'
 import { getHostProfileDetails } from '../data/seedData'
-import { DEFAULT_HOST_SETTINGS, normalizeHostSettings } from './hostSettingsStorage'
+import { DRYER_SHEET_UNIT_PRICE } from './hostPricing'
 import { defaultListingFromHost } from './hostListing'
 
 const DEMO_BANKS = ['Belize Bank', 'Heritage Bank', 'Atlantic Bank', 'ScotiaBank']
@@ -34,7 +34,7 @@ export function defaultGuestFacingHostSettings(host: Host): HostSettings {
       pricing: {
         dryPrice: host.price,
         foldingPrice: host.foldingPrice ?? 0,
-        sheetsPrice: host.sheetsPrice ?? 1,
+        sheetsPrice: DRYER_SHEET_UNIT_PRICE,
       },
       listing: defaultListingFromHost(host, bio),
     },
