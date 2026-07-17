@@ -4,11 +4,14 @@ import { formatTurnaroundHoursLabel } from './turnaroundTime'
 
 export type HostSort = 'nearest' | 'cheapest' | 'rating' | 'fastest'
 
+export type TopRatedFilter = 'my-area' | 'each-area'
+
 export interface HostFilters {
   location: string | null
   maxPrice: number | null
   minRating: number | null
   maxDryHours: number | null
+  topRated: TopRatedFilter | null
 }
 
 export type SearchSuggestion =
@@ -20,6 +23,7 @@ export const DEFAULT_HOST_FILTERS: HostFilters = {
   maxPrice: null,
   minRating: null,
   maxDryHours: null,
+  topRated: null,
 }
 
 export function formatHostPrice(price: number): string {
@@ -41,6 +45,7 @@ export function countActiveFilters(filters: HostFilters): number {
     filters.maxPrice,
     filters.minRating,
     filters.maxDryHours,
+    filters.topRated,
   ].filter((v) => v != null).length
 }
 
@@ -92,6 +97,27 @@ export function matchesHostSearch(host: Host, query: string): boolean {
   return tokens.every((token) => haystack.includes(token))
 }
 
+function compareByRating(a: Host, b: Host): number {
+  const byRating = b.rating - a.rating
+  if (byRating !== 0) return byRating
+  const byReviews = (b.reviewCount ?? 0) - (a.reviewCount ?? 0)
+  if (byReviews !== 0) return byReviews
+  return (a.distanceKm ?? 999) - (b.distanceKm ?? 999)
+}
+
+/** Best-rated host per curated filter area (Belmopan, Dangriga, etc.). */
+export function pickTopRatedHostPerArea(hosts: Host[]): Host[] {
+  const picks: Host[] = []
+  for (const area of BELIZE_FILTER_AREAS) {
+    const candidates = hosts.filter(
+      (host) => host.rating > 0 && hostMatchesFilterArea(host, area),
+    )
+    if (!candidates.length) continue
+    picks.push([...candidates].sort(compareByRating)[0])
+  }
+  return picks.sort(compareByRating)
+}
+
 function compareHosts(a: Host, b: Host, sort: HostSort): number {
   let cmp = 0
   switch (sort) {
@@ -132,6 +158,14 @@ export function filterAndSortHosts(
     if (filters.maxDryHours != null && host.turnaroundHours > filters.maxDryHours) return false
     return true
   })
+
+  if (filters.topRated === 'my-area') {
+    return result.filter((host) => host.rating > 0).sort(compareByRating)
+  }
+
+  if (filters.topRated === 'each-area') {
+    return pickTopRatedHostPerArea(result)
+  }
 
   result = [...result].sort((a, b) => {
     const bySort = compareHosts(a, b, sort)

@@ -40,6 +40,7 @@ import {
 import {
   bookingTrackingLink,
   hostDashboardLink,
+  hostProfileLink,
   hostReviewLink,
   linkFromPushData,
   resolveNotificationLink,
@@ -442,40 +443,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [refreshHostReviews],
   )
 
-  const submitHostReview = useCallback(
-    async ({
-      hostId,
-      bookingId,
-      rating,
-      comment,
-    }: {
-      hostId: string
-      bookingId?: string | null
-      rating: number
-      comment: string
-    }) => {
-      if (!user) return
-      const review: HostReview = {
-        id: `rev-${Date.now()}`,
-        author: user.name,
-        rating,
-        comment,
-        date: new Date().toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }),
-      }
-      await saveReviewForHost(hostId, review)
-      if (bookingId) await markBookingReviewed(user.id, bookingId)
-      await refreshHostReviews(hostId)
-      setReviewHostId(null)
-      setReviewBookingId(null)
-      showToast('Review submitted', { icon: 'star' })
-    },
-    [refreshHostReviews, showToast, user],
-  )
-
   const selectHost = useCallback(
     (host: Host) => {
       const resolved = applyHostSettings(
@@ -514,6 +481,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await push(customerId, title, body, link)
     },
     [push],
+  )
+
+  const submitHostReview = useCallback(
+    async ({
+      hostId,
+      bookingId,
+      rating,
+      comment,
+    }: {
+      hostId: string
+      bookingId?: string | null
+      rating: number
+      comment: string
+    }) => {
+      if (!user) return
+      const review: HostReview = {
+        id: `rev-${Date.now()}`,
+        author: user.name,
+        rating,
+        comment,
+        date: new Date().toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        }),
+      }
+      await saveReviewForHost(hostId, review)
+      if (bookingId) await markBookingReviewed(user.id, bookingId)
+      await refreshHostReviews(hostId)
+
+      const host = getHostById(hostId)
+      if (host?.hostUserId) {
+        const preview =
+          comment.length > 80 ? `${comment.slice(0, 77).trim()}…` : comment.trim()
+        void notifyHost(
+          host.hostUserId,
+          'New Review',
+          `${user.name} left a ${rating}/5 review: "${preview}"`,
+          hostProfileLink(hostId),
+          'update',
+        )
+      }
+
+      setReviewHostId(null)
+      setReviewBookingId(null)
+      showToast('Review submitted', { icon: 'star' })
+    },
+    [notifyHost, refreshHostReviews, showToast, user],
   )
 
   const restoreBookingForGuest = useCallback(

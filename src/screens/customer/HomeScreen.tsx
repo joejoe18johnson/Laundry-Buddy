@@ -104,7 +104,12 @@ export function HomeScreen() {
 
   const trimmedSearch = searchQuery.trim()
   const areaSearchActive = trimmedSearch.length > 0 && isBelizeFilterArea(trimmedSearch)
-  const hostSource = areaSearchActive ? onlineHosts : trimmedSearch ? allOnlineHosts : onlineHosts
+  const hostSource = useMemo(() => {
+    if (filters.topRated === 'each-area') return allOnlineHosts
+    if (areaSearchActive) return onlineHosts
+    if (trimmedSearch) return allOnlineHosts
+    return onlineHosts
+  }, [allOnlineHosts, areaSearchActive, filters.topRated, onlineHosts, trimmedSearch])
 
   const nearbyHostIds = useMemo(() => new Set(onlineHosts.map((h) => h.id)), [onlineHosts])
 
@@ -123,9 +128,18 @@ export function HomeScreen() {
     return popularAreas
   }, [allOnlineHosts, searchQuery, trimmedSearch, popularAreas])
 
-  const resultLabel = trimmedSearch
-    ? `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}”`
-    : `${hosts.length} within ${searchRadiusKm} km · ${userLocationLabel}`
+  const resultLabel = useMemo(() => {
+    if (filters.topRated === 'my-area') {
+      return `${hosts.length} top-rated within ${searchRadiusKm} km · ${userLocationLabel}`
+    }
+    if (filters.topRated === 'each-area') {
+      return `${hosts.length} top-rated host${hosts.length === 1 ? '' : 's'} across Belize`
+    }
+    if (trimmedSearch) {
+      return `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}”`
+    }
+    return `${hosts.length} within ${searchRadiusKm} km · ${userLocationLabel}`
+  }, [filters.topRated, hosts.length, searchRadiusKm, trimmedSearch, userLocationLabel])
 
   const animateToSnap = useCallback(
     (point: SnapPoint) => {
@@ -235,6 +249,9 @@ export function HomeScreen() {
 
   const handleFiltersChange = (next: HostFilters) => {
     setFilters(next)
+    if (next.topRated === 'my-area' || next.topRated === 'each-area') {
+      setSort('rating')
+    }
     if (next.location) {
       focusSearchOnArea(next.location)
       setSearchQuery(next.location)

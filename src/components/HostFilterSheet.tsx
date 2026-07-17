@@ -50,7 +50,8 @@ function filtersEqual(a: HostFilters, b: HostFilters): boolean {
     a.location === b.location &&
     a.maxPrice === b.maxPrice &&
     a.minRating === b.minRating &&
-    a.maxDryHours === b.maxDryHours
+    a.maxDryHours === b.maxDryHours &&
+    a.topRated === b.topRated
   )
 }
 
@@ -88,6 +89,24 @@ export function HostFilterSheet({ visible, filters, locations, onSave, onClose }
             </Text>
 
             <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+              <FilterSection title="Top rated" icon="star">
+                <Chip
+                  label="Any"
+                  selected={draft.topRated === null}
+                  onPress={() => set({ topRated: null })}
+                />
+                <Chip
+                  label="In my area"
+                  selected={draft.topRated === 'my-area'}
+                  onPress={() => set({ topRated: 'my-area' })}
+                />
+                <Chip
+                  label="In each area"
+                  selected={draft.topRated === 'each-area'}
+                  onPress={() => set({ topRated: 'each-area' })}
+                />
+              </FilterSection>
+
               <FilterSection title="Location" icon="map-pin">
                 <Chip
                   label="All areas"

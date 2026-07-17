@@ -12,6 +12,10 @@ export function hostDashboardLink(bookingId?: string): NotificationLink {
   return { screen: 'host-dashboard', bookingId }
 }
 
+export function hostProfileLink(hostId: string): NotificationLink {
+  return { screen: 'customer-host-profile', hostId }
+}
+
 export function linkFromPushData(data: Record<string, unknown>): NotificationLink | undefined {
   const screen = data.screen as NotificationLink['screen'] | undefined
   if (!screen) return undefined
