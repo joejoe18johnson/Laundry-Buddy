@@ -3,12 +3,13 @@ import type { ReactNode } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { AppIcon } from '../../components/AppIcon'
+import { TopRatedHostBadge } from '../../components/TopRatedHostBadge'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { getHostProfileDetails } from '../../data/mockData'
 import { summarizeRatings } from '../../lib/reviewStorage'
 import { formatHostFooterMeta, formatHostPrice } from '../../lib/hostFilters'
+import { isTopRatedHost } from '../../lib/hostReputation'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { formatServicePrice } from '../../lib/hostPricing'
@@ -100,6 +101,7 @@ export function HostProfileScreen() {
   const settings = getSettingsForHost(host.hostUserId)
   const reviews = getReviewsForHost(host.id)
   const ratingSummary = summarizeRatings(reviews)
+  const topRated = isTopRatedHost(host, reviews)
   const paymentMethods = [
     settings.acceptCash ? 'Cash' : null,
     settings.acceptBankTransfer && settings.bankDetails.accountNumber.trim()
@@ -119,6 +121,11 @@ export function HostProfileScreen() {
             <Text style={styles.avatarText}>{host.name[0]}</Text>
           </View>
           <Text style={styles.heroName}>{host.name}</Text>
+          {topRated ? (
+            <View style={styles.topRatedWrap}>
+              <TopRatedHostBadge light />
+            </View>
+          ) : null}
           <View style={[styles.onlineBadge, !settings.isOnline && styles.offlineBadge]}>
             <View style={[styles.onlineDot, !settings.isOnline && styles.offlineDot]} />
             <Text style={[styles.onlineText, !settings.isOnline && styles.offlineText]}>
@@ -284,6 +291,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 28, fontWeight: '700', color: colors.black },
   heroName: { fontSize: 26, fontWeight: '700', color: colors.white, letterSpacing: -0.5 },
+  topRatedWrap: { marginTop: spacing.sm },
   onlineBadge: {
     flexDirection: 'row',
     alignItems: 'center',

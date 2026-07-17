@@ -14,7 +14,8 @@ import { AppIcon } from './AppIcon'
 import { HostAvatar } from './HostAvatar'
 import { CloseToMeButton } from './CloseToMeButton'
 import { HostSearchBar } from './HostSearchBar'
-import { ChoiceChip } from './ui'
+import { TopRatedHostBadge } from './TopRatedHostBadge'
+import { isTopRatedHost } from '../lib/hostReputation'
 import { useApp } from '../context/AppContext'
 import { BELIZE_FILTER_AREAS, getPlaceSearchSubtitle, isBelizeFilterArea } from '../lib/belizeDistricts'
 import {
@@ -25,7 +26,7 @@ import {
   type HostSort,
   type SearchSuggestion,
 } from '../lib/hostFilters'
-import type { Host } from '../types'
+import type { Host, HostReview } from '../types'
 import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
@@ -41,20 +42,26 @@ function HostSearchRow({
   host,
   outsideRadius,
   onPress,
+  reviews,
 }: {
   host: Host
   outsideRadius: boolean
   onPress: () => void
+  reviews: HostReview[]
 }) {
   const isFree = host.price <= 0
+  const topRated = isTopRatedHost(host, reviews)
 
   return (
     <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowPressed]} onPress={onPress}>
       <HostAvatar host={host} size={44} />
       <View style={styles.rowBody}>
-        <Text style={styles.rowName} numberOfLines={1}>
-          {host.name}
-        </Text>
+        <View style={styles.rowNameLine}>
+          <Text style={styles.rowName} numberOfLines={1}>
+            {host.name}
+          </Text>
+          {topRated ? <TopRatedHostBadge compact /> : null}
+        </View>
         <Text style={styles.rowMeta} numberOfLines={1}>
           {host.location}
           {host.district ? ` · ${host.district}` : ''}
@@ -112,7 +119,7 @@ function SuggestionRow({
 }
 
 export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, onQueryChange }: Props) {
-  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, userLocationLabel, focusSearchOnArea, searchRadiusKm } =
+  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, userLocationLabel, focusSearchOnArea, searchRadiusKm, getReviewsForHost } =
     useApp()
   const [query, setQuery] = useState(initialQuery)
 
@@ -171,6 +178,7 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
       host={item}
       outsideRadius={!nearbyIds.has(item.id)}
       onPress={() => openHost(item)}
+      reviews={getReviewsForHost(item.id)}
     />
   )
 
@@ -353,7 +361,13 @@ const styles = StyleSheet.create({
   },
   rowPressed: { backgroundColor: colors.gray50 },
   rowBody: { flex: 1, minWidth: 0, gap: 2 },
-  rowName: { fontSize: 16, fontWeight: '700', color: colors.black },
+  rowNameLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  rowName: { fontSize: 16, fontWeight: '700', color: colors.black, flexShrink: 1 },
   rowMeta: { fontSize: 13, color: colors.gray600, fontWeight: '500' },
   rowSub: { fontSize: 12, color: colors.gray500 },
   rowRight: { alignItems: 'flex-end', gap: 4 },
