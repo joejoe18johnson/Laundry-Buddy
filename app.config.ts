@@ -17,7 +17,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   slug: 'laundry-buddy',
   version: '1.0.0',
   orientation: 'portrait',
-  icon: './assets/icon.png',
+  icon: './assets/AppIcons/appstore.png',
   scheme: 'laundrybuddy',
   userInterfaceStyle: 'light',
   splash: {
@@ -40,9 +40,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#000000',
-      monochromeImage: './assets/adaptive-icon.png',
+      foregroundImage: './assets/AppIcons/appstore.png',
+      backgroundColor: '#0f1118',
+      monochromeImage: './assets/AppIcons/appstore.png',
     },
     package: 'com.laundrybuddy.app',
     versionCode: 2,

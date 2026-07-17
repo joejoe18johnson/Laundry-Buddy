@@ -107,7 +107,7 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
         <View style={styles.brandRow}>
-        <AppLogoMark size={28} />
+        <AppLogoMark size={56} />
         </View>
         {!isLast && (
           <Pressable onPress={onComplete} hitSlop={12}>
