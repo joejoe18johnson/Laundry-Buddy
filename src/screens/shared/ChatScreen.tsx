@@ -14,6 +14,7 @@ import * as ImagePicker from 'expo-image-picker'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { ImageLightbox } from '../../components/ImageLightbox'
+import { PaymentProofChip } from '../../components/PaymentProofChip'
 import { AppTextInput, BackButton, PrimaryButton, SuccessButton } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -48,18 +49,42 @@ function ChatMessageImage({
   )
 }
 
+function renderPaymentProofContent(
+  message: ChatMessage,
+  isOwn: boolean,
+  styles: ReturnType<typeof createStyles>,
+  onImagePress: (uri: string) => void,
+  confirmed?: boolean,
+) {
+  if (message.imageUri) {
+    return (
+      <PaymentProofChip
+        compact
+        confirmed={confirmed}
+        onPress={() => onImagePress(message.imageUri!)}
+      />
+    )
+  }
+
+  return message.text ? (
+    <Text style={[styles.body, isOwn && styles.bodyOwn]}>{message.text}</Text>
+  ) : null
+}
+
 function MessageBubble({
   message,
   isOwn,
   colors,
   styles,
   onImagePress,
+  paymentConfirmed,
 }: {
   message: ChatMessage
   isOwn: boolean
   colors: ReturnType<typeof useTheme>['colors']
   styles: ReturnType<typeof createStyles>
   onImagePress: (uri: string) => void
+  paymentConfirmed?: boolean
 }) {
   const isSystem = message.kind === 'system' || message.senderRole === 'support'
 
@@ -70,10 +95,14 @@ function MessageBubble({
           {message.kind === 'payment_proof' ? (
             <Text style={styles.systemLabel}>{toTitleCase('Payment proof')}</Text>
           ) : null}
-          {message.text ? <Text style={styles.systemText}>{message.text}</Text> : null}
-          {message.imageUri ? (
-            <ChatMessageImage uri={message.imageUri} style={styles.image} onPress={onImagePress} />
+          {message.text && message.kind !== 'payment_proof' ? (
+            <Text style={styles.systemText}>{message.text}</Text>
           ) : null}
+          {message.kind === 'payment_proof'
+            ? renderPaymentProofContent(message, isOwn, styles, onImagePress, paymentConfirmed)
+            : message.imageUri ? (
+                <ChatMessageImage uri={message.imageUri} style={styles.image} onPress={onImagePress} />
+              ) : null}
           <Text style={styles.systemTime}>{formatChatTime(message.createdAt)}</Text>
         </View>
       </View>
@@ -91,10 +120,16 @@ function MessageBubble({
         {message.kind === 'payment_proof' ? (
           <Text style={styles.proofLabel}>{toTitleCase('Payment proof')}</Text>
         ) : null}
-        {message.text ? <Text style={[styles.body, isOwn && styles.bodyOwn]}>{message.text}</Text> : null}
-        {message.imageUri ? (
-          <ChatMessageImage uri={message.imageUri} style={styles.image} onPress={onImagePress} />
-        ) : null}
+        {message.kind === 'payment_proof' ? (
+          renderPaymentProofContent(message, isOwn, styles, onImagePress, paymentConfirmed)
+        ) : (
+          <>
+            {message.text ? <Text style={[styles.body, isOwn && styles.bodyOwn]}>{message.text}</Text> : null}
+            {message.imageUri ? (
+              <ChatMessageImage uri={message.imageUri} style={styles.image} onPress={onImagePress} />
+            ) : null}
+          </>
+        )}
         <Text style={[styles.time, isOwn && styles.timeOwn]}>{formatChatTime(message.createdAt)}</Text>
       </View>
     </View>
@@ -114,7 +149,7 @@ export function ChatThreadPanel({
   onBack?: () => void
   showBackButton?: boolean
   onConfirmPayment?: () => void
-  onPaymentProofSent?: () => void
+  onPaymentProofSent?: (proofUri: string) => void
 }) {
   const { user } = useAuth()
   const { colors } = useTheme()
@@ -223,7 +258,7 @@ export function ChatThreadPanel({
         paymentProof: !!pendingImageUri && booking?.paymentMethod === 'bank_transfer',
       })
       if (pendingImageUri && booking?.paymentMethod === 'bank_transfer') {
-        onPaymentProofSent?.()
+        onPaymentProofSent?.(pendingImageUri)
       }
       setDraft('')
       setPendingImageUri(null)
@@ -287,6 +322,7 @@ export function ChatThreadPanel({
             colors={colors}
             styles={styles}
             onImagePress={setLightboxUri}
+            paymentConfirmed={paymentConfirmed}
           />
         )}
         ListEmptyComponent={
@@ -366,7 +402,7 @@ export function ChatScreen() {
         liveBooking ? () => confirmTransferPayment(liveBooking.id) : undefined
       }
       onPaymentProofSent={
-        liveBooking ? () => markPaymentProofSent(liveBooking.id) : undefined
+        liveBooking ? (proofUri) => markPaymentProofSent(liveBooking.id, proofUri) : undefined
       }
     />
   )

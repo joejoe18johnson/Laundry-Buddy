@@ -1,6 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
+import { ImageLightbox } from '../../components/ImageLightbox'
+import { PaymentProofChip } from '../../components/PaymentProofChip'
 import { sheetsOptionLabel } from '../../types'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { formatDropOffAvailability, formatDropOffHour, formatDropOffHoursWindow, type DropOffHour } from '../../lib/dropOffAvailability'
@@ -125,6 +127,7 @@ export function DashboardScreen() {
     openMarkDry,
     openChat,
   } = useApp()
+  const [proofLightboxUri, setProofLightboxUri] = useState<string | null>(null)
 
   const rawHost = user ? getHostByUserId(user.id) : undefined
   const hostProfile = rawHost && hostSettings
@@ -308,10 +311,18 @@ export function DashboardScreen() {
               loadPhotoUri={load.loadPhotoUri}
               styles={styles}
             />
+            {load.paymentProofUri ? (
+              <PaymentProofChip
+                confirmed={load.paymentStatus === 'paid'}
+                onPress={() => setProofLightboxUri(load.paymentProofUri!)}
+              />
+            ) : null}
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
               <>
                 <Text style={styles.transferHint}>
-                  {toTitleCase('Guest should send transfer proof in the app chat. Confirm once verified.')}
+                  {load.paymentProofUri
+                    ? toTitleCase('Review the transfer proof below, then confirm once verified.')
+                    : toTitleCase('Guest submits proof from their load screen. You will see it here and in chat.')}
                 </Text>
                 <GhostButton
                   title={`Confirm ${formatMoney(getBookingAmount(load))} received`}
@@ -374,6 +385,11 @@ export function DashboardScreen() {
           )}
         </View>
       )}
+      <ImageLightbox
+        visible={!!proofLightboxUri}
+        imageUri={proofLightboxUri}
+        onClose={() => setProofLightboxUri(null)}
+      />
     </Screen>
   )
 }

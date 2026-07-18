@@ -168,7 +168,7 @@ interface AppState {
   markDry: (loadId: string, dryPhotoUri?: string) => void
   confirmPickup: (loadId: string) => void
   confirmTransferPayment: (loadId: string) => void
-  markPaymentProofSent: (loadId: string) => void
+  markPaymentProofSent: (loadId: string, proofUri?: string) => void
   chatThreadId: string | null
   chatBooking: Booking | null
   openChat: (threadId: string, bookingId?: string) => void
@@ -1206,11 +1206,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const markPaymentProofSent = useCallback(
-    (loadId: string) => {
+    (loadId: string, proofUri?: string) => {
       const timestamp = new Date().toISOString()
       const patch = (load: Booking): Booking => ({
         ...load,
         paymentProofSentAt: load.paymentProofSentAt ?? timestamp,
+        paymentProofUri: proofUri ?? load.paymentProofUri,
       })
 
       setActiveLoads((prev) => {

@@ -72,7 +72,22 @@ function createMessagesStyles(colors: ReturnType<typeof useTheme>['colors']) {
     empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
     emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.black },
     emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20, paddingHorizontal: spacing.lg },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.gray500,
+      letterSpacing: 0.5,
+      marginBottom: spacing.sm,
+      marginTop: spacing.md,
+    },
   })
+}
+
+function isActiveThread(threadId: string, booking: Booking | null | undefined): boolean {
+  if (isSupportThread(threadId)) return true
+  if (!booking) return false
+  if (booking.requestStatus === 'declined') return false
+  return booking.stage !== 'picked-up'
 }
 
 function buildBookingThreadIds(
@@ -183,6 +198,50 @@ export function MessagesScreen() {
     openSupportChat()
   }
 
+  const { activeThreads, pastThreads } = useMemo(() => {
+    const active: ThreadRow[] = []
+    const past: ThreadRow[] = []
+    for (const row of threads) {
+      const booking = row.bookingId ? findBookingForChat(row.bookingId) : null
+      if (isActiveThread(row.threadId, booking)) active.push(row)
+      else past.push(row)
+    }
+    return { activeThreads: active, pastThreads: past }
+  }, [findBookingForChat, threads])
+
+  const renderThread = (row: ThreadRow) => (
+    <Pressable
+      key={row.threadId}
+      style={[styles.row, row.unread > 0 && styles.rowUnread]}
+      onPress={() => openThread(row)}
+    >
+      <View style={styles.avatar}>
+        <AppIcon
+          name={isSupportThread(row.threadId) ? 'life-buoy' : isCustomer ? 'user' : 'package'}
+          size={20}
+          color={colors.black}
+        />
+      </View>
+      <View style={styles.rowBody}>
+        <View style={styles.rowTop}>
+          <Text style={styles.rowTitle} numberOfLines={1}>
+            {row.title}
+          </Text>
+          {row.time ? <Text style={styles.rowTime}>{row.time}</Text> : null}
+        </View>
+        {row.subtitle ? <Text style={styles.rowSub}>{row.subtitle}</Text> : null}
+        <Text style={styles.rowPreview} numberOfLines={2}>
+          {row.preview}
+        </Text>
+      </View>
+      {row.unread > 0 ? (
+        <View style={styles.unreadBadge}>
+          <Text style={styles.unreadBadgeText}>{row.unread > 9 ? '9+' : row.unread}</Text>
+        </View>
+      ) : null}
+    </Pressable>
+  )
+
   return (
     <Screen>
       <View style={styles.titleRow}>
@@ -190,7 +249,7 @@ export function MessagesScreen() {
         <Text style={styles.title}>{toTitleCase('Messages')}</Text>
       </View>
       <Text style={styles.subtitle}>
-        {toTitleCase('Load chats with your host or guest, plus support when you need help.')}
+        {toTitleCase('Active load chats stay on top. Older loads move to past conversations.')}
       </Text>
 
       {threads.length === 0 ? (
@@ -207,38 +266,22 @@ export function MessagesScreen() {
           <PrimaryButton title="Message support" icon="message-circle" onPress={openSupportChat} />
         </View>
       ) : (
-        threads.map((row) => (
-          <Pressable
-            key={row.threadId}
-            style={[styles.row, row.unread > 0 && styles.rowUnread]}
-            onPress={() => openThread(row)}
-          >
-            <View style={styles.avatar}>
-              <AppIcon
-                name={isSupportThread(row.threadId) ? 'life-buoy' : isCustomer ? 'user' : 'package'}
-                size={20}
-                color={colors.black}
-              />
-            </View>
-            <View style={styles.rowBody}>
-              <View style={styles.rowTop}>
-                <Text style={styles.rowTitle} numberOfLines={1}>
-                  {row.title}
-                </Text>
-                {row.time ? <Text style={styles.rowTime}>{row.time}</Text> : null}
-              </View>
-              {row.subtitle ? <Text style={styles.rowSub}>{row.subtitle}</Text> : null}
-              <Text style={styles.rowPreview} numberOfLines={2}>
-                {row.preview}
+        <>
+          {activeThreads.length > 0 ? (
+            <>
+              <Text style={styles.sectionLabel}>{toTitleCase('Active')}</Text>
+              {activeThreads.map(renderThread)}
+            </>
+          ) : null}
+          {pastThreads.length > 0 ? (
+            <>
+              <Text style={styles.sectionLabel}>
+                {toTitleCase(`Past loads (${pastThreads.length})`)}
               </Text>
-            </View>
-            {row.unread > 0 ? (
-              <View style={styles.unreadBadge}>
-                <Text style={styles.unreadBadgeText}>{row.unread > 9 ? '9+' : row.unread}</Text>
-              </View>
-            ) : null}
-          </Pressable>
-        ))
+              {pastThreads.map(renderThread)}
+            </>
+          ) : null}
+        </>
       )}
     </Screen>
   )

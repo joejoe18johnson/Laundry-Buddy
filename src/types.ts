@@ -200,6 +200,7 @@ export interface Booking {
   totalAmount?: number
   paymentStatus?: 'paid' | 'pending'
   paymentProofSentAt?: string
+  paymentProofUri?: string
   requestStatus?: 'pending' | 'accepted' | 'declined'
   loadPhotoUri?: string
   dryPhotoUri?: string

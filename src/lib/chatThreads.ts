@@ -22,6 +22,10 @@ export function buildVerificationCodeRequestMessage(name: string, phone: string)
   ].join('\n')
 }
 
+export function buildPaymentProofChatNotice(amount: number): string {
+  return `Transfer proof submitted · ${formatMoney(amount)}. Tap to view receipt.`
+}
+
 export function buildTransferProofMessage({
   guestName,
   hostName,

@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useMessages } from '../../context/MessageContext'
 import { getHostById } from '../../data/mockData'
 import { getBookingAmount, formatMoney } from '../../lib/bookingPayments'
-import { buildTransferProofMessage } from '../../lib/chatThreads'
+import { buildPaymentProofChatNotice } from '../../lib/chatThreads'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
@@ -136,30 +136,17 @@ export function TrackingScreen() {
   }
 
   const sendTransferProof = async () => {
-    if (!user) return
-    const message = buildTransferProofMessage({
-      guestName: user.name,
-      hostName: booking.hostName,
-      amount,
-      loads: booking.loads,
-      bookingId: booking.id,
-      bankName: hostSettings.bankDetails.bankName,
-      accountNumber: hostSettings.bankDetails.accountNumber,
-      hasScreenshot: !!transferProofUri,
+    if (!user || !transferProofUri) return
+
+    await sendMessage({
+      threadId: booking.id,
+      text: buildPaymentProofChatNotice(amount),
+      imageUri: transferProofUri,
+      booking,
+      paymentProof: true,
     })
-    if (transferProofUri || message) {
-      await sendMessage({
-        threadId: booking.id,
-        text: message,
-        imageUri: transferProofUri ?? undefined,
-        booking,
-        paymentProof: !!transferProofUri,
-      })
-      if (transferProofUri) {
-        markPaymentProofSent(booking.id)
-      }
-    }
-    openLoadChat()
+    markPaymentProofSent(booking.id, transferProofUri)
+    setTransferProofUri(null)
   }
 
   return (
@@ -253,22 +240,24 @@ export function TrackingScreen() {
           ) : null}
           <Text style={styles.paymentSub}>
             {titleCaseWithName(
-              `Transfer the amount above, add your receipt screenshot, then send proof to ${booking.hostName} in the app chat.`,
+              `Transfer the amount above, then attach your receipt here. Proof is saved on this load — not mixed into regular chat photos.`,
               booking.hostName,
             )}
           </Text>
           <TransferProofCapture photoUri={transferProofUri} onPhotoChange={setTransferProofUri} />
-          <PrimaryButton
-            title={transferProofUri ? 'Send proof in chat' : 'Open chat to send proof'}
-            icon="message-circle"
-            full
-            onPress={() => void sendTransferProof()}
-          />
-          {transferProofUri ? (
+          {booking.paymentProofUri && !transferProofUri ? (
             <Text style={styles.paymentHint}>
-              {toTitleCase('Your screenshot will be sent in the load chat with your host.')}
+              {toTitleCase('Proof already submitted. Your host can view it from this load or in chat.')}
             </Text>
           ) : null}
+          <PrimaryButton
+            title={transferProofUri ? 'Submit transfer proof' : 'Add screenshot first'}
+            icon="check-circle"
+            full
+            disabled={!transferProofUri}
+            onPress={() => void sendTransferProof()}
+          />
+          <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
         </View>
       )}
 
