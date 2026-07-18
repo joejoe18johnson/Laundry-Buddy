@@ -1,20 +1,77 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { AppTextInput, BackButton, PrimaryButton, Screen, useScreenScroll } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { getHostById } from '../../data/mockData'
 import { hasReviewedBooking } from '../../lib/reviewStorage'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
-import { colors, radius, spacing } from '../../theme'
+import { radius, spacing } from '../../theme'
+
+function createLeaveReviewStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    centered: { flexGrow: 1, justifyContent: 'center', gap: spacing.md },
+    emptyTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center', color: colors.black },
+    emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', marginBottom: spacing.md },
+    header: { alignItems: 'center', marginBottom: spacing.xl, gap: spacing.sm },
+    hostAvatar: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
+      backgroundColor: colors.gray100,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.sm,
+    },
+    hostInitial: { fontSize: 28, fontWeight: '700', color: colors.black },
+    title: { fontSize: 24, fontWeight: '700', lineHeight: 30, color: colors.black },
+    subtitle: { fontSize: 15, color: colors.gray600, textAlign: 'center', lineHeight: 22 },
+    checking: { fontSize: 14, color: colors.gray500, textAlign: 'center' },
+    section: {
+      backgroundColor: colors.gray50,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.gray100,
+      padding: spacing.lg,
+      marginBottom: spacing.lg,
+      gap: spacing.md,
+    },
+    sectionLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.gray500,
+      letterSpacing: 0.4,
+    },
+    starsRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
+    ratingHint: { fontSize: 14, color: colors.gray600, textAlign: 'center' },
+    commentInput: { minHeight: 120, textAlignVertical: 'top' },
+    charHint: { fontSize: 12, color: colors.gray500 },
+    doneCard: {
+      gap: spacing.md,
+      backgroundColor: colors.greenBg,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.green,
+      padding: spacing.lg,
+    },
+    doneBody: { gap: 4 },
+    doneTitle: { fontSize: 16, fontWeight: '700', color: colors.black },
+    doneSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+  })
+}
 
 function StarPicker({
   value,
   onChange,
+  colors,
+  styles,
 }: {
   value: number
   onChange: (rating: number) => void
+  colors: ReturnType<typeof useTheme>['colors']
+  styles: ReturnType<typeof createLeaveReviewStyles>
 }) {
   return (
     <View style={styles.starsRow}>
@@ -46,6 +103,8 @@ export function LeaveReviewScreen() {
     viewHostProfile,
     getReviewsForHost,
   } = useApp()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createLeaveReviewStyles(colors), [colors])
 
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
@@ -151,7 +210,7 @@ export function LeaveReviewScreen() {
         <>
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>{toTitleCase('Your rating')}</Text>
-            <StarPicker value={rating} onChange={setRating} />
+            <StarPicker value={rating} onChange={setRating} colors={colors} styles={styles} />
             <Text style={styles.ratingHint}>
               {rating === 0 ? toTitleCase('Tap a star to rate') : `${rating} out of 5`}
             </Text>
@@ -188,53 +247,3 @@ export function LeaveReviewScreen() {
     </Screen>
   )
 }
-
-const styles = StyleSheet.create({
-  centered: { flexGrow: 1, justifyContent: 'center', gap: spacing.md },
-  emptyTitle: { fontSize: 18, fontWeight: '700', textAlign: 'center' },
-  emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', marginBottom: spacing.md },
-  header: { alignItems: 'center', marginBottom: spacing.xl, gap: spacing.sm },
-  hostAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
-  },
-  hostInitial: { fontSize: 28, fontWeight: '700' },
-  title: { fontSize: 24, fontWeight: '700', lineHeight: 30 },
-  subtitle: { fontSize: 15, color: colors.gray600, textAlign: 'center', lineHeight: 22 },
-  checking: { fontSize: 14, color: colors.gray500, textAlign: 'center' },
-  section: {
-    backgroundColor: colors.gray50,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.gray100,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.gray500,
-    letterSpacing: 0.4,
-  },
-  starsRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
-  ratingHint: { fontSize: 14, color: colors.gray600, textAlign: 'center' },
-  commentInput: { minHeight: 120, textAlignVertical: 'top' },
-  charHint: { fontSize: 12, color: colors.gray500 },
-  doneCard: {
-    gap: spacing.md,
-    backgroundColor: colors.greenBg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0,138,5,0.15)',
-    padding: spacing.lg,
-  },
-  doneBody: { gap: 4 },
-  doneTitle: { fontSize: 16, fontWeight: '700' },
-  doneSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
-})

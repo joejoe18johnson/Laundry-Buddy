@@ -1,12 +1,57 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
 import { AppTextInput, BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
-import { colors, radius, spacing } from '../../theme'
+import { radius, spacing } from '../../theme'
 import { toTitleCase } from '../../lib/titleCase'
 import type { LoginMethod } from '../../types'
+
+function createLoginStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34, color: colors.black },
+    subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
+    field: { marginBottom: spacing.md },
+    labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+    label: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+    phoneRow: {
+      flexDirection: 'row',
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      borderRadius: radius.sm,
+      overflow: 'hidden',
+      backgroundColor: colors.white,
+    },
+    prefix: {
+      padding: 16,
+      backgroundColor: colors.gray50,
+      borderRightWidth: 1,
+      borderRightColor: colors.gray200,
+      fontSize: 16,
+      color: colors.gray600,
+    },
+    phoneInput: {
+      flex: 1,
+      borderWidth: 0,
+      padding: 16,
+      backgroundColor: colors.white,
+    },
+    error: {
+      color: colors.danger,
+      backgroundColor: colors.gray50,
+      padding: spacing.md,
+      borderRadius: radius.sm,
+      marginBottom: spacing.md,
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    switch: { marginTop: spacing.xl, alignItems: 'center', paddingVertical: spacing.sm },
+    switchText: { fontSize: 14, color: colors.gray500 },
+    link: { fontWeight: '600', color: colors.black, textDecorationLine: 'underline' },
+  })
+}
 
 export function LoginScreen() {
   const {
@@ -18,6 +63,8 @@ export function LoginScreen() {
     biometricSupport,
     biometricEnabled,
   } = useAuth()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createLoginStyles(colors), [colors])
   const [method, setMethod] = useState<LoginMethod>('phone')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
@@ -126,45 +173,3 @@ export function LoginScreen() {
     </Screen>
   )
 }
-
-const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34, color: colors.black },
-  subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
-  field: { marginBottom: spacing.md },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  label: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-  phoneRow: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderRadius: radius.sm,
-    overflow: 'hidden',
-    backgroundColor: colors.white,
-  },
-  prefix: {
-    padding: 16,
-    backgroundColor: colors.gray50,
-    borderRightWidth: 1,
-    borderRightColor: colors.gray200,
-    fontSize: 16,
-    color: colors.gray600,
-  },
-  phoneInput: {
-    flex: 1,
-    borderWidth: 0,
-    padding: 16,
-    backgroundColor: colors.white,
-  },
-  error: {
-    color: colors.danger,
-    backgroundColor: '#fef2f2',
-    padding: spacing.md,
-    borderRadius: radius.sm,
-    marginBottom: spacing.md,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  switch: { marginTop: spacing.xl, alignItems: 'center', paddingVertical: spacing.sm },
-  switchText: { fontSize: 14, color: colors.gray500 },
-  link: { fontWeight: '600', color: colors.black, textDecorationLine: 'underline' },
-})

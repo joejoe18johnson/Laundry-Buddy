@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { TransferProofCapture } from '../../components/TransferProofCapture'
@@ -20,7 +20,8 @@ import {
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { TrainingDemoHint, isDemoAnaMariaBooking } from '../../components/TrainingDemoHint'
-import { colors, radius, spacing } from '../../theme'
+import { useTheme } from '../../context/ThemeContext'
+import { radius, spacing } from '../../theme'
 import type { Booking } from '../../types'
 
 function getLoadStatusLabel(load: Booking): string {
@@ -33,12 +34,14 @@ function getLoadStatusLabel(load: Booking): string {
 
 export function TrackingScreen() {
   const { user } = useAuth()
-  const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking, cancelPendingRequest, openChat } = useApp()
+  const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking, cancelPendingRequest, openChat, markPaymentProofSent } = useApp()
   const { sendMessage } = useMessages()
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
   const [cancelTick, setCancelTick] = useState(0)
   const pulse = useRef(new Animated.Value(1)).current
+  const { colors } = useTheme()
+  const styles = useMemo(() => createTrackingStyles(colors), [colors])
 
   useEffect(() => {
     setBannerVisible(true)
@@ -152,6 +155,9 @@ export function TrackingScreen() {
         booking,
         paymentProof: !!transferProofUri,
       })
+      if (transferProofUri) {
+        markPaymentProofSent(booking.id)
+      }
     }
     openLoadChat()
   }
@@ -290,7 +296,7 @@ export function TrackingScreen() {
           <AppIcon name="message-circle" size={18} color={colors.gray600} />
           <Text style={styles.infoText}>
             {titleCaseWithName(
-              `Step 1 is complete once ${booking.hostName} accepts. You'll see drop-off details and live updates here.`,
+              `Step 1: waiting for ${booking.hostName} to accept your request.`,
               booking.hostName,
             )}
           </Text>
@@ -397,7 +403,8 @@ export function TrackingScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+function createTrackingStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   empty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
   emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: spacing.sm },
   emptySub: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 20 },
@@ -459,12 +466,12 @@ const styles = StyleSheet.create({
   pendingSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
   declinedCard: {
     gap: spacing.md,
-    backgroundColor: '#fff5f5',
+    backgroundColor: colors.gray50,
     padding: spacing.md,
     borderRadius: radius.lg,
     marginBottom: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(220,38,38,0.2)',
+    borderColor: colors.danger,
   },
   declinedTitle: { fontSize: 16, fontWeight: '700', color: colors.danger, marginBottom: 4 },
   bankBlock: { gap: 2, marginVertical: spacing.sm },
@@ -558,4 +565,5 @@ const styles = StyleSheet.create({
   reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   reviewTitle: { fontSize: 16, fontWeight: '700' },
   reviewSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
-})
+  })
+}

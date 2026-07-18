@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
-import { Platform } from 'react-native'
+import { Linking, Platform } from 'react-native'
 import { formatDropOffHour, type DropOffHour } from './dropOffAvailability'
 import { bookingTrackingLink, linkToPushData } from './notificationLinks'
 
@@ -81,6 +81,36 @@ export async function shouldPromptForPushAfterAuth(): Promise<boolean> {
   if (Platform.OS === 'web' || !Device.isDevice) return false
   const status = await getPushPermissionStatus()
   return status !== 'granted'
+}
+
+/** Request OS permission when possible; fall back to settings when permanently denied. */
+export async function ensurePushNotificationsEnabled(): Promise<PushPermissionStatus> {
+  if (Platform.OS === 'web' || !Device.isDevice) return 'unsupported'
+
+  await initPushNotifications()
+  let status = await getPushPermissionStatus()
+  if (status === 'granted') return 'granted'
+
+  if (status === 'undetermined') {
+    await requestPushPermissions()
+    status = await getPushPermissionStatus()
+    if (status === 'granted') return 'granted'
+  }
+
+  return status
+}
+
+export async function openNotificationSettings(): Promise<void> {
+  if (Platform.OS === 'web') return
+  try {
+    if (Platform.OS === 'ios') {
+      await Linking.openURL('app-settings:')
+    } else {
+      await Linking.openSettings()
+    }
+  } catch {
+    // ignore — device may not support deep link
+  }
 }
 
 export async function markPermissionPrompted(): Promise<void> {

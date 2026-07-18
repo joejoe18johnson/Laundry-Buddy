@@ -168,10 +168,12 @@ interface AppState {
   markDry: (loadId: string, dryPhotoUri?: string) => void
   confirmPickup: (loadId: string) => void
   confirmTransferPayment: (loadId: string) => void
+  markPaymentProofSent: (loadId: string) => void
   chatThreadId: string | null
   chatBooking: Booking | null
   openChat: (threadId: string, bookingId?: string) => void
   openSupportChat: () => void
+  findBookingForChat: (bookingId: string) => Booking | null
   closeChat: () => void
   openNotification: (notification: AppNotification) => Promise<void>
   openNotificationFromPush: (title: string, data: Record<string, unknown>) => Promise<void>
@@ -180,9 +182,9 @@ interface AppState {
 const AppContext = createContext<AppState | null>(null)
 
 const STAGE_LABELS: Record<BookingStage, string> = {
-  'got-bag': 'Bag received',
-  waiting: 'Waiting for dryer',
-  drying: 'Drying',
+  'got-bag': 'Payment confirmed',
+  waiting: 'Payment confirmed',
+  drying: 'Drying started',
   ready: 'Ready for pickup',
   'picked-up': 'Picked up',
 }
@@ -1203,6 +1205,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [advanceStage, showToast],
   )
 
+  const markPaymentProofSent = useCallback(
+    (loadId: string) => {
+      const timestamp = new Date().toISOString()
+      const patch = (load: Booking): Booking => ({
+        ...load,
+        paymentProofSentAt: load.paymentProofSentAt ?? timestamp,
+      })
+
+      setActiveLoads((prev) => {
+        const next = prev.map((load) => (load.id === loadId ? patch(load) : load))
+        if (role === 'host' && user) {
+          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+        }
+        return next
+      })
+
+      setGuestBookings((prev) => patchGuestBooking(prev, loadId, patch))
+    },
+    [hostRequests, role, user],
+  )
+
   const confirmTransferPayment = useCallback(
     (loadId: string) => {
       const markPaid = (load: Booking): Booking => ({ ...load, paymentStatus: 'paid' })
@@ -1291,10 +1314,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDry,
       confirmPickup,
       confirmTransferPayment,
+      markPaymentProofSent,
       chatThreadId,
       chatBooking,
       openChat,
       openSupportChat,
+      findBookingForChat,
       closeChat,
       openNotification,
       openNotificationFromPush,
@@ -1348,10 +1373,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDry,
       confirmPickup,
       confirmTransferPayment,
+      markPaymentProofSent,
       chatThreadId,
       chatBooking,
       openChat,
       openSupportChat,
+      findBookingForChat,
       closeChat,
       openNotification,
       openNotificationFromPush,

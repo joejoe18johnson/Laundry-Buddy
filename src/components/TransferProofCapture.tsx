@@ -1,15 +1,47 @@
+import { useMemo } from 'react'
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { AppIcon } from './AppIcon'
+import { useTheme } from '../context/ThemeContext'
 import { toTitleCase } from '../lib/titleCase'
-import { colors, radius, spacing } from '../theme'
+import { radius, spacing } from '../theme'
 
 interface TransferProofCaptureProps {
   photoUri: string | null
   onPhotoChange: (uri: string | null) => void
 }
 
+function createTransferProofStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    upload: {
+      minHeight: 140,
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      borderColor: colors.gray200,
+      borderRadius: radius.lg,
+      backgroundColor: colors.white,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: spacing.sm,
+      overflow: 'hidden',
+    },
+    uploadDone: {
+      borderStyle: 'solid',
+      borderColor: colors.black,
+      padding: 0,
+    },
+    preview: { width: '100%', height: 180, borderRadius: radius.lg - 2 },
+    uploadText: { fontSize: 15, fontWeight: '600', color: colors.black },
+    uploadHint: { fontSize: 13, color: colors.gray500, textAlign: 'center', paddingHorizontal: spacing.md },
+    changeBtn: { alignSelf: 'center', marginTop: spacing.sm, paddingVertical: spacing.sm },
+    changeBtnText: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
+  })
+}
+
 export function TransferProofCapture({ photoUri, onPhotoChange }: TransferProofCaptureProps) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createTransferProofStyles(colors), [colors])
+
   const pickPhoto = async (useCamera: boolean) => {
     const permission = useCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -74,28 +106,3 @@ export function TransferProofCapture({ photoUri, onPhotoChange }: TransferProofC
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  upload: {
-    minHeight: 140,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.gray200,
-    borderRadius: radius.lg,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.sm,
-    overflow: 'hidden',
-  },
-  uploadDone: {
-    borderStyle: 'solid',
-    borderColor: colors.black,
-    padding: 0,
-  },
-  preview: { width: '100%', height: 180, borderRadius: radius.lg - 2 },
-  uploadText: { fontSize: 15, fontWeight: '600', color: colors.black },
-  uploadHint: { fontSize: 13, color: colors.gray500, textAlign: 'center', paddingHorizontal: spacing.md },
-  changeBtn: { alignSelf: 'center', marginTop: spacing.sm, paddingVertical: spacing.sm },
-  changeBtnText: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
-})

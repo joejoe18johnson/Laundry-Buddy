@@ -36,7 +36,8 @@ import {
 import { isBelizeFilterArea } from '../../lib/belizeDistricts'
 import { toTitleCase } from '../../lib/titleCase'
 import type { Host } from '../../types'
-import { colors, radius, spacing } from '../../theme'
+import { useTheme } from '../../context/ThemeContext'
+import { radius, spacing } from '../../theme'
 
 const SORT_OPTIONS: { value: HostSort; label: string; icon: 'map-pin' | 'dollar-sign' | 'star' | 'clock' }[] = [
   { value: 'nearest', label: 'Nearest', icon: 'map-pin' },
@@ -84,6 +85,8 @@ function nearestSnap(height: number, containerHeight: number, velocityY: number)
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createHomeStyles(colors), [colors])
   const { showToast } = useToast()
   const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm, focusSearchOnArea } = useApp()
   const totalHosts = getAvailableHosts().length
@@ -484,7 +487,8 @@ export function HomeScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+function createHomeStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.mapBg },
   map: {
     ...StyleSheet.absoluteFillObject,
@@ -620,4 +624,5 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.black },
   emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20 },
   emptyHint: { fontSize: 12, color: colors.gray400, textAlign: 'center' },
-})
+  })
+}

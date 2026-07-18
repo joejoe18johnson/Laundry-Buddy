@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { sheetsOptionLabel } from '../../types'
@@ -12,9 +13,10 @@ import { formatDryerSheetsRate } from '../../lib/hostPricing'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
 import { toTitleCase } from '../../lib/titleCase'
-import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
+import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge, SuccessButton } from '../../components/ui'
 import { TrainingDemoHint, isDemoAnaMariaBooking } from '../../components/TrainingDemoHint'
-import { colors, radius, spacing } from '../../theme'
+import { useTheme } from '../../context/ThemeContext'
+import { radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
 
 function stageBadge(stage: BookingStage) {
@@ -30,7 +32,14 @@ function stageBadge(stage: BookingStage) {
   }
 }
 
-function DropOffBadge({ dropOffTime }: { dropOffTime: DropOffHour }) {
+function DropOffBadge({
+  dropOffTime,
+  styles,
+}: {
+  dropOffTime: DropOffHour
+  styles: ReturnType<typeof createDashboardStyles>
+}) {
+  const { colors } = useTheme()
   return (
     <View style={styles.dropOffBadge}>
       <AppIcon name="clock" size={12} color={colors.white} />
@@ -45,13 +54,16 @@ function OrderDetails({
   paymentMethod,
   totalAmount,
   loadPhotoUri,
+  styles,
 }: {
   dropOffTime: DropOffHour
   notes?: string
   paymentMethod?: 'cash' | 'bank_transfer'
   totalAmount?: number
   loadPhotoUri?: string
+  styles: ReturnType<typeof createDashboardStyles>
 }) {
+  const { colors } = useTheme()
   const trimmedNotes = notes?.trim()
 
   return (
@@ -110,7 +122,6 @@ export function DashboardScreen() {
     advanceStage,
     confirmTransferPayment,
     confirmPickup,
-    markBagReceived,
     openMarkDry,
     openChat,
   } = useApp()
@@ -120,6 +131,8 @@ export function DashboardScreen() {
     ? applyHostSettings(rawHost, hostSettings)
     : rawHost
   const isOnline = hostSettings?.isOnline ?? false
+  const { colors } = useTheme()
+  const styles = useMemo(() => createDashboardStyles(colors), [colors])
 
   const toggleOnline = async (online: boolean) => {
     if (!hostSettings) return
@@ -226,7 +239,7 @@ export function DashboardScreen() {
                   {request.location} · {request.loads} load{request.loads > 1 ? 's' : ''}
                 </Text>
               </View>
-              <DropOffBadge dropOffTime={request.dropOffTime} />
+              <DropOffBadge dropOffTime={request.dropOffTime} styles={styles} />
             </View>
             {request.clothesList && request.clothesList.length > 0 ? (
               <LoadListBreakdown items={request.clothesList} title="Guest's load list" />
@@ -237,6 +250,7 @@ export function DashboardScreen() {
               paymentMethod={request.paymentMethod}
               totalAmount={request.totalAmount}
               loadPhotoUri={request.loadPhotoUri}
+              styles={styles}
             />
             <View style={styles.tags}>
               <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption)}</Text>
@@ -281,7 +295,7 @@ export function DashboardScreen() {
                 </Text>
               </View>
               <StatusBadge {...stageBadge(load.stage)} />
-              <DropOffBadge dropOffTime={load.dropOffTime} />
+              <DropOffBadge dropOffTime={load.dropOffTime} styles={styles} />
             </View>
             {load.clothesList && load.clothesList.length > 0 ? (
               <LoadListBreakdown items={load.clothesList} title="Guest's load list" />
@@ -292,6 +306,7 @@ export function DashboardScreen() {
               paymentMethod={load.paymentMethod}
               totalAmount={load.totalAmount}
               loadPhotoUri={load.loadPhotoUri}
+              styles={styles}
             />
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
               <>
@@ -306,20 +321,19 @@ export function DashboardScreen() {
                 />
               </>
             )}
-            {load.stage === 'got-bag' && !load.stageTimes['got-bag'] && (
-              <PrimaryButton
-                title="Bag received"
-                icon="shopping-bag"
-                full
-                onPress={() => markBagReceived(load.id)}
-              />
+            {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'paid' && (
+              <SuccessButton title="Payment confirmed" icon="check-circle" full disabled />
             )}
-            {load.stage === 'got-bag' && load.stageTimes['got-bag'] && (
-              <PrimaryButton title="Start dryer" onPress={() => advanceStage(load.id, 'drying')} full />
-            )}
-            {load.stage === 'waiting' && (
-              <PrimaryButton title="Start dryer" onPress={() => advanceStage(load.id, 'drying')} full />
-            )}
+            {(load.paymentStatus === 'paid' || load.paymentMethod === 'cash') &&
+              load.stage !== 'drying' &&
+              load.stage !== 'ready' && (
+                <PrimaryButton
+                  title="Start drying"
+                  icon="wind"
+                  full
+                  onPress={() => advanceStage(load.id, 'drying')}
+                />
+              )}
             {load.stage === 'drying' && (
               <PrimaryButton title="Mark as dry" onPress={() => openMarkDry(load.id)} full />
             )}
@@ -364,7 +378,8 @@ export function DashboardScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+function createDashboardStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   title: { fontSize: 22, fontWeight: '700', flex: 1, lineHeight: 28 },
@@ -438,7 +453,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.gray100,
   },
-  pillLive: { backgroundColor: colors.greenBg, borderColor: 'rgba(0,138,5,0.2)' },
+  pillLive: { backgroundColor: colors.greenBg, borderColor: colors.green },
   pillText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
   pillLiveText: { color: colors.green },
   listingMeta: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 20 },
@@ -555,4 +570,5 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
   emptyTitle: { fontSize: 18, fontWeight: '600' },
   emptySub: { fontSize: 14, color: colors.gray500, marginTop: spacing.sm, lineHeight: 20, textAlign: 'center' },
-})
+  })
+}

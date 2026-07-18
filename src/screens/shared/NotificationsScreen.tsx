@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { useUserNotifications } from '../../context/NotificationContext'
 import { notificationHasDestination } from '../../lib/notificationLinks'
 import {
   getPushPermissionStatus,
+  openNotificationSettings,
   requestPushPermissions,
   type PushPermissionStatus,
 } from '../../lib/pushNotifications'
 import { toTitleCase } from '../../lib/titleCase'
-import { colors, radius, spacing } from '../../theme'
+import { radius, spacing } from '../../theme'
 import type { AppNotification } from '../../types'
 
 function groupNotifications(items: AppNotification[]) {
@@ -20,9 +22,81 @@ function groupNotifications(items: AppNotification[]) {
   return [{ title: 'Recent', data: items }]
 }
 
+function createNotificationsStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    header: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    titleBlock: { flex: 1, gap: 4 },
+    titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    title: { fontSize: 26, fontWeight: '700', lineHeight: 32 },
+    subtitle: { fontSize: 14, color: colors.gray500, lineHeight: 20 },
+    markAllBtn: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
+      marginTop: 2,
+    },
+    markAllBtnPressed: { opacity: 0.7 },
+    markAllText: { fontSize: 14, fontWeight: '600', color: colors.black },
+    permissionCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+      backgroundColor: colors.gray50,
+    },
+    permissionBody: { flex: 1, gap: 4 },
+    permissionTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
+    permissionSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.gray500,
+      letterSpacing: 0.5,
+      marginBottom: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    card: {
+      borderWidth: 1,
+      borderColor: colors.gray100,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      gap: spacing.sm,
+    },
+    cardUnread: { borderColor: colors.black, backgroundColor: colors.gray50 },
+    cardTop: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
+    cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', lineHeight: 20 },
+    cardTime: { fontSize: 12, color: colors.gray400 },
+    cardBody: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+    cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    unreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.accent,
+    },
+    openHint: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
+    openHintText: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
+    empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
+    emptyTitle: { fontSize: 18, fontWeight: '600' },
+    emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20, marginBottom: spacing.md },
+  })
+}
+
 export function NotificationsScreen() {
   const { user } = useAuth()
   const { navigate, openNotification } = useApp()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createNotificationsStyles(colors), [colors])
   const { notifications, unreadCount, markRead, markAllRead } = useUserNotifications(user?.id)
   const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
 
@@ -78,8 +152,12 @@ export function NotificationsScreen() {
             </Text>
           </View>
           <OutlineButton
-            title="Enable"
+            title={permission === 'denied' ? 'Open settings' : 'Enable'}
             onPress={async () => {
+              if (permission === 'denied') {
+                await openNotificationSettings()
+                return
+              }
               const granted = await requestPushPermissions()
               setPermission(granted ? 'granted' : 'denied')
             }}
@@ -135,71 +213,3 @@ export function NotificationsScreen() {
     </Screen>
   )
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  titleBlock: { flex: 1, gap: 4 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  title: { fontSize: 26, fontWeight: '700', lineHeight: 32 },
-  subtitle: { fontSize: 14, color: colors.gray500, lineHeight: 20 },
-  markAllBtn: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    marginTop: 2,
-  },
-  markAllBtnPressed: { opacity: 0.7 },
-  markAllText: { fontSize: 14, fontWeight: '600', color: colors.black },
-  permissionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-    backgroundColor: colors.gray50,
-  },
-  permissionBody: { flex: 1, gap: 4 },
-  permissionTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
-  permissionSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.gray500,
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.gray100,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  cardUnread: { borderColor: colors.black, backgroundColor: colors.gray50 },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
-  cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', lineHeight: 20 },
-  cardTime: { fontSize: 12, color: colors.gray400 },
-  cardBody: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  unreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.accent,
-  },
-  openHint: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 'auto' },
-  openHintText: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
-  empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
-  emptyTitle: { fontSize: 18, fontWeight: '600' },
-  emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20, marginBottom: spacing.md },
-})

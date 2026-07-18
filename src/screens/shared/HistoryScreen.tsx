@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { BackButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import {
   formatMoney,
   formatPaymentMethod,
@@ -17,12 +18,89 @@ import {
   loadCustomerPaymentHistory,
   loadHostPaymentHistory,
 } from '../../lib/paymentHistoryStorage'
-import { colors, radius, spacing } from '../../theme'
+import { radius, spacing } from '../../theme'
 import { formatDropOffHour } from '../../lib/dropOffAvailability'
 import { toTitleCase } from '../../lib/titleCase'
 import { type Booking } from '../../types'
 
-function PaymentStatusBadge({ status, paymentMethod }: { status?: Booking['paymentStatus']; paymentMethod?: Booking['paymentMethod'] }) {
+function createHistoryStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+    title: { fontSize: 26, fontWeight: '700', lineHeight: 32, color: colors.black },
+    subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
+    summaryCard: {
+      borderWidth: 1,
+      borderColor: colors.black,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      marginBottom: spacing.lg,
+      gap: spacing.md,
+    },
+    summaryMain: { gap: 4 },
+    summaryLabel: { fontSize: 13, fontWeight: '600', color: colors.gray500, letterSpacing: 0.4 },
+    summaryAmount: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, color: colors.black },
+    summaryMeta: { flexDirection: 'row', gap: spacing.lg },
+    summaryMetaText: { fontSize: 13, color: colors.gray600, fontWeight: '500' },
+    sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: spacing.md, color: colors.black },
+    ledgerCard: {
+      borderWidth: 1,
+      borderColor: colors.gray100,
+      borderRadius: radius.lg,
+      marginBottom: spacing.lg,
+      overflow: 'hidden',
+    },
+    ledgerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.gray100,
+      gap: spacing.md,
+    },
+    ledgerLeft: { flex: 1, gap: 2 },
+    ledgerTitle: { fontSize: 15, fontWeight: '600', color: colors.black },
+    ledgerSub: { fontSize: 12, color: colors.gray500 },
+    ledgerAmount: { fontSize: 16, fontWeight: '700', color: colors.black },
+    card: {
+      borderWidth: 1,
+      borderColor: colors.black,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      marginBottom: spacing.md,
+      gap: spacing.sm,
+    },
+    cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+    cardTitle: { fontSize: 16, fontWeight: '600', flex: 1, color: colors.black },
+    amount: { fontSize: 18, fontWeight: '700', color: colors.black },
+    amountFree: { color: colors.green },
+    cardSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    metaText: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
+    paymentRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    statusBadge: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
+    statusPaid: { backgroundColor: colors.greenBg, borderColor: colors.green },
+    statusPending: { backgroundColor: colors.gray50, borderColor: colors.gray200 },
+    statusText: { fontSize: 11, fontWeight: '700' },
+    statusTextPaid: { color: colors.green },
+    statusTextPending: { color: colors.gray600 },
+    breakdown: { fontSize: 12, color: colors.gray400 },
+    empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
+    emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.black },
+    emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20, paddingHorizontal: spacing.lg },
+  })
+}
+
+function PaymentStatusBadge({
+  status,
+  paymentMethod,
+  styles,
+}: {
+  status?: Booking['paymentStatus']
+  paymentMethod?: Booking['paymentMethod']
+  styles: ReturnType<typeof createHistoryStyles>
+}) {
   const paid = status === 'paid' || (status == null && paymentMethod === 'cash')
   return (
     <View style={[styles.statusBadge, paid ? styles.statusPaid : styles.statusPending]}>
@@ -33,7 +111,17 @@ function PaymentStatusBadge({ status, paymentMethod }: { status?: Booking['payme
   )
 }
 
-function HistoryCard({ item, isCustomer }: { item: Booking; isCustomer: boolean }) {
+function HistoryCard({
+  item,
+  isCustomer,
+  styles,
+  colors,
+}: {
+  item: Booking
+  isCustomer: boolean
+  styles: ReturnType<typeof createHistoryStyles>
+  colors: ReturnType<typeof useTheme>['colors']
+}) {
   const amount = getBookingAmount(item)
 
   return (
@@ -64,7 +152,7 @@ function HistoryCard({ item, isCustomer }: { item: Booking; isCustomer: boolean 
           <AppIcon name="credit-card" size={14} color={colors.gray500} />
           <Text style={styles.metaText}>{formatPaymentMethod(item.paymentMethod)}</Text>
         </View>
-        <PaymentStatusBadge status={item.paymentStatus} paymentMethod={item.paymentMethod} />
+        <PaymentStatusBadge status={item.paymentStatus} paymentMethod={item.paymentMethod} styles={styles} />
       </View>
 
       {item.pricePerLoad != null && item.loads > 1 && (
@@ -98,7 +186,13 @@ function HistoryCard({ item, isCustomer }: { item: Booking; isCustomer: boolean 
   )
 }
 
-function PaymentLedgerRow({ item }: { item: Booking }) {
+function PaymentLedgerRow({
+  item,
+  styles,
+}: {
+  item: Booking
+  styles: ReturnType<typeof createHistoryStyles>
+}) {
   const amount = getBookingAmount(item)
   return (
     <View style={styles.ledgerRow}>
@@ -118,6 +212,8 @@ function PaymentLedgerRow({ item }: { item: Booking }) {
 export function HistoryScreen() {
   const { user } = useAuth()
   const { navigate, screen } = useApp()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createHistoryStyles(colors), [colors])
   const [history, setHistory] = useState<Booking[]>([])
 
   const isCustomer = user!.role === 'customer'
@@ -185,76 +281,9 @@ export function HistoryScreen() {
         </View>
       ) : (
         history.map((item) => (
-          <HistoryCard key={item.id} item={item} isCustomer={isCustomer} />
+          <HistoryCard key={item.id} item={item} isCustomer={isCustomer} styles={styles} colors={colors} />
         ))
       )}
     </Screen>
   )
 }
-
-const styles = StyleSheet.create({
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  title: { fontSize: 26, fontWeight: '700', lineHeight: 32 },
-  subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
-  summaryCard: {
-    borderWidth: 1,
-    borderColor: colors.black,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
-  },
-  summaryMain: { gap: 4 },
-  summaryLabel: { fontSize: 13, fontWeight: '600', color: colors.gray500, letterSpacing: 0.4 },
-  summaryAmount: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5 },
-  summaryMeta: { flexDirection: 'row', gap: spacing.lg },
-  summaryMetaText: { fontSize: 13, color: colors.gray600, fontWeight: '500' },
-  sectionTitle: { fontSize: 16, fontWeight: '600', marginBottom: spacing.md },
-  ledgerCard: {
-    borderWidth: 1,
-    borderColor: colors.gray100,
-    borderRadius: radius.lg,
-    marginBottom: spacing.lg,
-    overflow: 'hidden',
-  },
-  ledgerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.gray100,
-    gap: spacing.md,
-  },
-  ledgerLeft: { flex: 1, gap: 2 },
-  ledgerTitle: { fontSize: 15, fontWeight: '600' },
-  ledgerSub: { fontSize: 12, color: colors.gray500 },
-  ledgerAmount: { fontSize: 16, fontWeight: '700' },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.black,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '600', flex: 1 },
-  amount: { fontSize: 18, fontWeight: '700' },
-  amountFree: { color: colors.green },
-  cardSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  metaText: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
-  paymentRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  statusBadge: { borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
-  statusPaid: { backgroundColor: colors.greenBg, borderColor: colors.green },
-  statusPending: { backgroundColor: colors.gray50, borderColor: colors.gray200 },
-  statusText: { fontSize: 11, fontWeight: '700' },
-  statusTextPaid: { color: colors.green },
-  statusTextPending: { color: colors.gray600 },
-  breakdown: { fontSize: 12, color: colors.gray400 },
-  empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
-  emptyTitle: { fontSize: 18, fontWeight: '600' },
-  emptySub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20, paddingHorizontal: spacing.lg },
-})

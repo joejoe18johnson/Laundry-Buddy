@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
-import { useMemo, useState, useEffect } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useMemo, useState, useEffect } from 'react'
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
 import { BiometricSetupPrompt } from './src/components/BiometricSetupPrompt'
@@ -9,7 +9,7 @@ import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, needsIdentityVerification, useAuth } from './src/context/AuthContext'
 import { NotificationProvider, useUserNotifications } from './src/context/NotificationContext'
-import { MessageProvider } from './src/context/MessageContext'
+import { MessageProvider, useMessages } from './src/context/MessageContext'
 import { HomeScreen } from './src/screens/customer/HomeScreen'
 import { BookingScreen } from './src/screens/customer/BookingScreen'
 import { HostProfileScreen } from './src/screens/customer/HostProfileScreen'
@@ -29,8 +29,8 @@ import { HistoryScreen } from './src/screens/shared/HistoryScreen'
 import { AccountScreen } from './src/screens/shared/AccountScreen'
 import { HelpScreen } from './src/screens/shared/HelpScreen'
 import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
+import { MessagesScreen } from './src/screens/shared/MessagesScreen'
 import { ChatScreen } from './src/screens/shared/ChatScreen'
-import { BrandSwitch } from './src/components/ui'
 import { colors, spacing } from './src/theme'
 import { ThemeProvider, useTheme } from './src/context/ThemeContext'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
@@ -40,8 +40,11 @@ import { NotificationPermissionPrompt } from './src/components/NotificationPermi
 import { ToastProvider } from './src/context/ToastContext'
 import {
   addNotificationResponseListener,
+  ensurePushNotificationsEnabled,
+  getPushPermissionStatus,
+  openNotificationSettings,
   requestPushPermissions,
-  shouldPromptForPushAfterAuth,
+  type PushPermissionStatus,
 } from './src/lib/pushNotifications'
 import { getGreetingName } from './src/lib/displayName'
 import type { Screen } from './src/types'
@@ -60,7 +63,7 @@ const HIDE_BOTTOM_NAV: Screen[] = [
 
 function AppShell() {
   const { user, logout } = useAuth()
-  const { colors, isDark, setColorScheme } = useTheme()
+  const { colors } = useTheme()
   const shellStyles = useMemo(
     () =>
       StyleSheet.create({
@@ -86,11 +89,6 @@ function AppShell() {
           letterSpacing: -0.4,
         },
         headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-        themeToggle: {
-          flexDirection: 'row',
-          alignItems: 'center',
-          paddingRight: 2,
-        },
         bellBtn: {
           width: 36,
           height: 36,
@@ -141,6 +139,7 @@ function AppShell() {
     openNotificationFromPush,
   } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
+  const { totalUnreadCount } = useMessages()
   const [menuOpen, setMenuOpen] = useState(false)
   const [locationSettingsOpen, setLocationSettingsOpen] = useState(false)
 
@@ -170,11 +169,13 @@ function AppShell() {
         badge: !!loadNeedsAttention,
       },
       {
-        id: 'history',
-        label: 'History',
-        icon: 'clock',
-        screen: 'history',
-        matchScreens: ['history'],
+        id: 'messages',
+        label: 'Messages',
+        icon: 'message-circle',
+        screen: 'messages',
+        matchScreens: ['messages'],
+        badge: totalUnreadCount > 0,
+        badgeCount: totalUnreadCount,
       },
       {
         id: 'profile',
@@ -184,7 +185,7 @@ function AppShell() {
         matchScreens: ['account'],
       },
     ],
-    [loadNeedsAttention],
+    [loadNeedsAttention, totalUnreadCount],
   )
 
   const hostTabs: NavTab[] = useMemo(
@@ -197,11 +198,13 @@ function AppShell() {
         matchScreens: ['host-dashboard'],
       },
       {
-        id: 'history',
-        label: 'History',
-        icon: 'clock',
-        screen: 'history',
-        matchScreens: ['history'],
+        id: 'messages',
+        label: 'Messages',
+        icon: 'message-circle',
+        screen: 'messages',
+        matchScreens: ['messages'],
+        badge: totalUnreadCount > 0,
+        badgeCount: totalUnreadCount,
       },
       {
         id: 'profile',
@@ -211,11 +214,12 @@ function AppShell() {
         matchScreens: ['account'],
       },
     ],
-    [],
+    [totalUnreadCount],
   )
 
   const tabs = isCustomer ? customerTabs : hostTabs
   const showBottomNav = !HIDE_BOTTOM_NAV.includes(screen)
+  const showAppHeader = !HIDE_BOTTOM_NAV.includes(screen)
 
   useEffect(() => {
     const subscription = addNotificationResponseListener((title, data) => {
@@ -226,17 +230,11 @@ function AppShell() {
 
   return (
     <SafeAreaView style={shellStyles.app} edges={['top']}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style="dark" />
+      {showAppHeader ? (
       <View style={[shellStyles.header, isHome && shellStyles.headerHome]}>
         <Text style={shellStyles.greetingLarge}>Hi {greetingName}</Text>
         <View style={shellStyles.headerRight}>
-          <View style={shellStyles.themeToggle}>
-            <BrandSwitch
-              value={isDark}
-              onValueChange={(enabled) => setColorScheme(enabled ? 'dark' : 'light')}
-              accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            />
-          </View>
           <Pressable onPress={() => navigate('notifications')} style={shellStyles.bellBtn} hitSlop={8}>
             <AppIcon name="bell" size={22} color={colors.black} />
             {unreadCount > 0 && (
@@ -250,6 +248,7 @@ function AppShell() {
           </Pressable>
         </View>
       </View>
+      ) : null}
 
       <HeaderMenu
         visible={menuOpen}
@@ -295,6 +294,7 @@ function AppShell() {
         {screen === 'host-dashboard' && <DashboardScreen />}
         {screen === 'host-mark-dry' && <MarkDryScreen />}
         {screen === 'history' && <HistoryScreen />}
+        {screen === 'messages' && <MessagesScreen />}
         {screen === 'account' && (isCustomer ? <AccountScreen /> : <HostHubScreen />)}
         {screen === 'help' && <HelpScreen />}
         {screen === 'notifications' && <NotificationsScreen />}
@@ -314,30 +314,51 @@ function AppShell() {
 function PushNotificationPromptGate() {
   const { user, authSessionKey, showBiometricSetupPrompt } = useAuth()
   const [visible, setVisible] = useState(false)
+  const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
 
-  useEffect(() => {
+  const syncPermissionPrompt = useCallback(async () => {
     if (!user || showBiometricSetupPrompt) {
       setVisible(false)
       return
     }
 
-    let cancelled = false
-    void shouldPromptForPushAfterAuth().then((shouldPrompt) => {
-      if (!cancelled && shouldPrompt) setVisible(true)
+    const status = await ensurePushNotificationsEnabled()
+    setPermission(status)
+    setVisible(status !== 'granted' && status !== 'unsupported')
+  }, [showBiometricSetupPrompt, user])
+
+  useEffect(() => {
+    void syncPermissionPrompt()
+  }, [user, authSessionKey, showBiometricSetupPrompt, syncPermissionPrompt])
+
+  useEffect(() => {
+    if (!user) return
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return
+      void syncPermissionPrompt()
     })
 
-    return () => {
-      cancelled = true
-    }
-  }, [user, authSessionKey, showBiometricSetupPrompt])
+    return () => subscription.remove()
+  }, [syncPermissionPrompt, user])
 
   if (!user) return null
 
   return (
     <NotificationPermissionPrompt
       visible={visible}
+      permission={permission}
       onEnable={() => {
-        void requestPushPermissions().then(() => setVisible(false))
+        void (async () => {
+          if (permission === 'denied') {
+            await openNotificationSettings()
+            return
+          }
+          await requestPushPermissions()
+          const status = await getPushPermissionStatus()
+          setPermission(status)
+          setVisible(status !== 'granted' && status !== 'unsupported')
+        })()
       }}
       onDismiss={() => setVisible(false)}
     />

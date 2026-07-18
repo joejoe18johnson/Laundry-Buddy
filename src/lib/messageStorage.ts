@@ -24,6 +24,11 @@ async function writeReadMap(map: Record<string, Record<string, string>>) {
   await AsyncStorage.setItem(READ_KEY, JSON.stringify(map))
 }
 
+export async function loadAllThreadIds(): Promise<string[]> {
+  const map = await readMessageMap()
+  return Object.keys(map).filter((threadId) => (map[threadId]?.length ?? 0) > 0)
+}
+
 export async function loadThreadMessages(threadId: string): Promise<ChatMessage[]> {
   const map = await readMessageMap()
   return map[threadId] ?? []

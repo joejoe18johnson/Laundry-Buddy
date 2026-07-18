@@ -7,11 +7,13 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { AppState } from 'react-native'
 import { useAuth } from './AuthContext'
 import { useNotifications } from './NotificationContext'
 import {
   appendThreadMessage,
   countUnreadInThread,
+  loadAllThreadIds,
   loadThreadMessages,
   markThreadRead,
 } from '../lib/messageStorage'
@@ -37,9 +39,11 @@ interface SendMessageInput {
 interface MessageState {
   getMessages: (threadId: string) => ChatMessage[]
   refreshThread: (threadId: string) => Promise<ChatMessage[]>
+  refreshThreads: (threadIds: string[]) => Promise<void>
   sendMessage: (input: SendMessageInput) => Promise<ChatMessage | null>
   markRead: (threadId: string) => Promise<void>
   unreadCount: (threadId: string) => number
+  totalUnreadCount: number
   openSupportChat: () => string
 }
 
@@ -88,11 +92,31 @@ export function MessageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) return
-    void refreshThread(supportThreadId(user.id))
-    if (user.id === 'user-ana' || user.id === 'user-maria') {
-      void refreshThread(DEMO_ANA_MARIA_BOOKING_ID)
+
+    const refreshKnownThreads = async () => {
+      const supportId = supportThreadId(user.id)
+      const storedIds = await loadAllThreadIds()
+      const threadIds = Array.from(
+        new Set([supportId, ...storedIds, ...(user.id === 'user-ana' || user.id === 'user-maria' ? [DEMO_ANA_MARIA_BOOKING_ID] : [])]),
+      )
+      await refreshThreads(threadIds)
     }
-  }, [user, refreshThread])
+
+    void refreshKnownThreads()
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refreshKnownThreads()
+    })
+
+    return () => subscription.remove()
+  }, [refreshThreads, user])
+
+  const refreshThreads = useCallback(
+    async (threadIds: string[]) => {
+      await Promise.all(threadIds.map((threadId) => refreshThread(threadId)))
+    },
+    [refreshThread],
+  )
 
   const getMessages = useCallback(
     (threadId: string) => messagesByThread[threadId] ?? [],
@@ -185,6 +209,11 @@ export function MessageProvider({ children }: { children: ReactNode }) {
 
   const unreadCount = useCallback((threadId: string) => unreadByThread[threadId] ?? 0, [unreadByThread])
 
+  const totalUnreadCount = useMemo(
+    () => Object.values(unreadByThread).reduce((sum, count) => sum + count, 0),
+    [unreadByThread],
+  )
+
   const openSupportChat = useCallback(() => {
     if (!user) return ''
     return supportThreadId(user.id)
@@ -194,12 +223,14 @@ export function MessageProvider({ children }: { children: ReactNode }) {
     () => ({
       getMessages,
       refreshThread,
+      refreshThreads,
       sendMessage,
       markRead,
       unreadCount,
+      totalUnreadCount,
       openSupportChat,
     }),
-    [getMessages, markRead, openSupportChat, refreshThread, sendMessage, unreadCount],
+    [getMessages, markRead, openSupportChat, refreshThread, refreshThreads, sendMessage, totalUnreadCount, unreadCount],
   )
 
   return <MessageContext.Provider value={value}>{children}</MessageContext.Provider>

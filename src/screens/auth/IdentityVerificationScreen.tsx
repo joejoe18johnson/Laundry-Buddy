@@ -12,6 +12,7 @@ import {
   StepIndicator,
 } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import { useMessages } from '../../context/MessageContext'
 import {
   formatIdDocumentType,
@@ -28,7 +29,7 @@ import {
   isValidWhatsAppNumber,
 } from '../../lib/whatsappVerification'
 import { ChatThreadPanel } from '../shared/ChatScreen'
-import { colors, radius, spacing } from '../../theme'
+import { radius, spacing } from '../../theme'
 import { toTitleCase } from '../../lib/titleCase'
 import type { IdDocumentType } from '../../types'
 
@@ -50,6 +51,8 @@ export function IdentityVerificationScreen() {
   const isHost = user?.role === 'host'
   const steps = useMemo(() => identityVerificationSteps(user?.role ?? 'customer'), [user?.role])
   const stepIndex = step === 'phone' ? 0 : step === 'id' ? 1 : 2
+  const { colors } = useTheme()
+  const styles = useMemo(() => createIdentityVerificationStyles(colors), [colors])
 
   useEffect(() => {
     if (!user?.phone) return
@@ -62,7 +65,7 @@ export function IdentityVerificationScreen() {
     return (
       <Screen>
         <View style={styles.pillPending}>
-          <AppIcon name="clock" size={12} color="#b8860b" />
+          <AppIcon name="clock" size={12} color={colors.gray600} />
           <Text style={styles.pillPendingText}>{toTitleCase('Under review')}</Text>
         </View>
         <Text style={styles.title}>{toTitleCase('Verification submitted')}</Text>
@@ -81,13 +84,15 @@ export function IdentityVerificationScreen() {
           <ChecklistItem
             title="WhatsApp number"
             sub={formatWhatsAppNumberDisplay(verification.verifiedPhone ?? user.phone ?? '')}
+            styles={styles}
           />
           <ChecklistItem
             title={formatIdDocumentType(verification.idType)}
             sub={verification.idUploaded ? toTitleCase('Uploaded') : toTitleCase('Missing')}
+            styles={styles}
           />
           {isHost && verification.address ? (
-            <ChecklistItem title="Host address" sub={verification.address} />
+            <ChecklistItem title="Host address" sub={verification.address} styles={styles} />
           ) : null}
         </View>
         <PrimaryButton
@@ -334,6 +339,7 @@ function SupportChatModal({
   userId: string
   onClose: () => void
 }) {
+  const { colors } = useTheme()
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
@@ -343,7 +349,16 @@ function SupportChatModal({
   )
 }
 
-function ChecklistItem({ title, sub }: { title: string; sub: string }) {
+function ChecklistItem({
+  title,
+  sub,
+  styles,
+}: {
+  title: string
+  sub: string
+  styles: ReturnType<typeof createIdentityVerificationStyles>
+}) {
+  const { colors } = useTheme()
   return (
     <View style={styles.checkItem}>
       <View style={styles.checkIcon}>
@@ -357,7 +372,8 @@ function ChecklistItem({ title, sub }: { title: string; sub: string }) {
   )
 }
 
-const styles = StyleSheet.create({
+function createIdentityVerificationStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
   title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34, color: colors.black },
   subtitle: { fontSize: 15, color: colors.gray500, lineHeight: 24, marginBottom: spacing.lg },
   pill: {
@@ -377,13 +393,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    backgroundColor: '#fff8e6',
+    backgroundColor: colors.gray50,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: radius.pill,
     marginBottom: spacing.md,
   },
-  pillPendingText: { fontSize: 12, fontWeight: '600', color: '#b8860b' },
+  pillPendingText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
   stepBlock: { gap: spacing.md, marginTop: spacing.lg, marginBottom: spacing.lg },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.black },
@@ -455,11 +471,12 @@ const styles = StyleSheet.create({
   checkSub: { fontSize: 13, color: colors.gray500, marginTop: spacing.sm, lineHeight: 18 },
   error: {
     color: colors.danger,
-    backgroundColor: '#fef2f2',
+    backgroundColor: colors.gray50,
     padding: spacing.md,
     borderRadius: radius.sm,
     marginBottom: spacing.md,
     fontSize: 14,
     lineHeight: 20,
   },
-})
+  })
+}

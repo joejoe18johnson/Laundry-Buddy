@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
+import { useTheme } from '../context/ThemeContext'
 import { bottomSafePadding } from '../lib/safeAreaInsets'
 import { toTitleCase } from '../lib/titleCase'
-import { colors, radius, spacing } from '../theme'
+import { radius, spacing } from '../theme'
 import type { User } from '../types'
 
 type MenuAction = {
@@ -35,7 +36,113 @@ type Props = {
   isHostOnline?: boolean
 }
 
-function MenuItem({ icon, label, onPress, badge, hint }: MenuAction) {
+function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      alignItems: 'flex-end',
+    },
+    panel: {
+      width: '88%',
+      maxWidth: 360,
+      height: '100%',
+      backgroundColor: colors.white,
+      borderLeftWidth: 1,
+      borderLeftColor: colors.gray100,
+      shadowColor: '#000',
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 8,
+    },
+    panelInner: { flex: 1 },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.gray100,
+    },
+    profileIcon: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.gray100,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerText: { flex: 1 },
+    name: { fontSize: 18, fontWeight: '700', color: colors.black },
+    role: { fontSize: 13, color: colors.gray500, marginTop: 2 },
+    onlineStatus: { fontSize: 12, color: colors.gray400, marginTop: 4, fontWeight: '600' },
+    onlineLive: { color: colors.green },
+    contact: { fontSize: 12, color: colors.gray400, marginTop: spacing.sm },
+    closeBtn: { padding: spacing.sm },
+    menu: { flex: 1, paddingVertical: spacing.sm },
+    section: { paddingBottom: spacing.sm },
+    sectionTitle: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.gray400,
+      letterSpacing: 0.6,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    menuItemPressed: { backgroundColor: colors.gray50 },
+    menuItemBody: { flex: 1, gap: 2 },
+    menuLabel: { fontSize: 16, fontWeight: '600', color: colors.black },
+    menuHint: { fontSize: 13, color: colors.gray500, fontWeight: '500' },
+    badge: {
+      backgroundColor: colors.greenBg,
+      borderRadius: radius.pill,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderWidth: 1,
+      borderColor: colors.green,
+    },
+    badgeText: { fontSize: 10, fontWeight: '700', color: colors.green },
+    footer: {
+      borderTopWidth: 1,
+      borderTopColor: colors.gray100,
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.md,
+    },
+    logoutBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      backgroundColor: colors.danger,
+      borderRadius: radius.lg,
+      paddingVertical: 16,
+      shadowColor: colors.danger,
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 4,
+    },
+    logoutBtnPressed: { opacity: 0.92 },
+    logoutBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
+  })
+}
+
+function MenuItem({
+  icon,
+  label,
+  onPress,
+  badge,
+  hint,
+  styles,
+}: MenuAction & { styles: ReturnType<typeof createHeaderMenuStyles> }) {
+  const { colors } = useTheme()
   return (
     <Pressable
       style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
@@ -56,7 +163,15 @@ function MenuItem({ icon, label, onPress, badge, hint }: MenuAction) {
   )
 }
 
-function MenuSection({ title, children }: { title?: string; children: ReactNode }) {
+function MenuSection({
+  title,
+  children,
+  styles,
+}: {
+  title?: string
+  children: ReactNode
+  styles: ReturnType<typeof createHeaderMenuStyles>
+}) {
   return (
     <View style={styles.section}>
       {title ? <Text style={styles.sectionTitle}>{toTitleCase(title)}</Text> : null}
@@ -84,6 +199,8 @@ export function HeaderMenu({
   notificationCount,
   isHostOnline,
 }: Props) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createHeaderMenuStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const isCustomer = user.role === 'customer'
   const contact = user.email ?? user.phone
@@ -121,22 +238,23 @@ export function HeaderMenu({
 
             <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
               {isCustomer && onOpenLocationSettings ? (
-                <MenuSection title="Location Settings">
+                <MenuSection title="Location Settings" styles={styles}>
                   <MenuItem
                     icon="map-pin"
                     label="Search area"
                     hint={locationHint}
                     onPress={() => go(onOpenLocationSettings)}
+                    styles={styles}
                   />
                 </MenuSection>
               ) : null}
 
-              <MenuSection title={isCustomer ? 'Browse' : 'Hosting'}>
+              <MenuSection title={isCustomer ? 'Browse' : 'Hosting'} styles={styles}>
                 {isCustomer && onExplore ? (
-                  <MenuItem icon="search" label="Explore dryers" onPress={() => go(onExplore)} />
+                  <MenuItem icon="search" label="Explore dryers" onPress={() => go(onExplore)} styles={styles} />
                 ) : null}
                 {!isCustomer && onDashboard ? (
-                  <MenuItem icon="home" label="Dashboard" onPress={() => go(onDashboard)} />
+                  <MenuItem icon="home" label="Dashboard" onPress={() => go(onDashboard)} styles={styles} />
                 ) : null}
                 {isCustomer && onMyLoad ? (
                   <MenuItem
@@ -144,6 +262,7 @@ export function HeaderMenu({
                     label="My load"
                     onPress={() => go(onMyLoad)}
                     badge={hasActiveLoad ? 'Active' : undefined}
+                    styles={styles}
                   />
                 ) : null}
                 {onPastLoads ? (
@@ -151,13 +270,14 @@ export function HeaderMenu({
                     icon="clock"
                     label={isCustomer ? 'Past loads & payments' : 'Load history'}
                     onPress={() => go(onPastLoads)}
+                    styles={styles}
                   />
                 ) : null}
               </MenuSection>
 
-              <MenuSection title="Account">
+              <MenuSection title="Account" styles={styles}>
                 {onAccount ? (
-                  <MenuItem icon="user" label="Profile" onPress={() => go(onAccount)} />
+                  <MenuItem icon="user" label="Profile" onPress={() => go(onAccount)} styles={styles} />
                 ) : null}
                 {onNotifications ? (
                   <MenuItem
@@ -165,10 +285,11 @@ export function HeaderMenu({
                     label="Notifications"
                     onPress={() => go(onNotifications)}
                     badge={notificationCount ? String(notificationCount) : undefined}
+                    styles={styles}
                   />
                 ) : null}
                 {onHelp ? (
-                  <MenuItem icon="help-circle" label="Help & support" onPress={() => go(onHelp)} />
+                  <MenuItem icon="help-circle" label="Help & support" onPress={() => go(onHelp)} styles={styles} />
                 ) : null}
               </MenuSection>
             </ScrollView>
@@ -188,99 +309,3 @@ export function HeaderMenu({
     </Modal>
   )
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'flex-end',
-  },
-  panel: {
-    width: '88%',
-    maxWidth: 360,
-    height: '100%',
-    backgroundColor: colors.white,
-    borderLeftWidth: 1,
-    borderLeftColor: colors.gray100,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  panelInner: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
-  },
-  profileIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerText: { flex: 1 },
-  name: { fontSize: 18, fontWeight: '700', color: colors.black },
-  role: { fontSize: 13, color: colors.gray500, marginTop: 2 },
-  onlineStatus: { fontSize: 12, color: colors.gray400, marginTop: 4, fontWeight: '600' },
-  onlineLive: { color: colors.green },
-  contact: { fontSize: 12, color: colors.gray400, marginTop: spacing.sm },
-  closeBtn: { padding: spacing.sm },
-  menu: { flex: 1, paddingVertical: spacing.sm },
-  section: { paddingBottom: spacing.sm },
-  sectionTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.gray400,
-    letterSpacing: 0.6,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-  },
-  menuItemPressed: { backgroundColor: colors.gray50 },
-  menuItemBody: { flex: 1, gap: 2 },
-  menuLabel: { fontSize: 16, fontWeight: '600', color: colors.black },
-  menuHint: { fontSize: 13, color: colors.gray500, fontWeight: '500' },
-  badge: {
-    backgroundColor: colors.greenBg,
-    borderRadius: radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.green,
-  },
-  badgeText: { fontSize: 10, fontWeight: '700', color: colors.green },
-  footer: {
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.danger,
-    borderRadius: radius.lg,
-    paddingVertical: 16,
-    shadowColor: colors.danger,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  logoutBtnPressed: { opacity: 0.92 },
-  logoutBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
-})

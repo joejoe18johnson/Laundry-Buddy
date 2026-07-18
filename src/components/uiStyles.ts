@@ -28,6 +28,14 @@ export function createUiStyles(colors: ThemeColors, formStyles: FormStyles) {
       alignItems: 'center',
     },
     btnPrimaryText: { color: colors.white, fontSize: 16, fontWeight: '600' },
+    btnSuccess: {
+      backgroundColor: colors.green,
+      paddingVertical: 16,
+      paddingHorizontal: 28,
+      borderRadius: radius.pill,
+      alignItems: 'center',
+    },
+    btnSuccessText: { color: colors.white, fontSize: 16, fontWeight: '600' },
     btnOutline: {
       borderWidth: 1,
       borderColor: colors.black,

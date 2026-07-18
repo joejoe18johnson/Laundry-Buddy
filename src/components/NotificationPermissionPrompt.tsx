@@ -3,15 +3,19 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { PrimaryButton, OutlineButton } from './ui'
 import { toTitleCase } from '../lib/titleCase'
+import type { PushPermissionStatus } from '../lib/pushNotifications'
 import { colors, radius, spacing } from '../theme'
 
 type Props = {
   visible: boolean
+  permission: PushPermissionStatus
   onEnable: () => void
   onDismiss: () => void
 }
 
-export function NotificationPermissionPrompt({ visible, onEnable, onDismiss }: Props) {
+export function NotificationPermissionPrompt({ visible, permission, onEnable, onDismiss }: Props) {
+  const denied = permission === 'denied'
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
       <View style={styles.overlay}>
@@ -23,7 +27,9 @@ export function NotificationPermissionPrompt({ visible, onEnable, onDismiss }: P
             <Text style={styles.title}>{toTitleCase('Stay on time with alerts')}</Text>
             <Text style={styles.body}>
               {toTitleCase(
-                'Turn on notifications to get prompt updates when a host accepts your load, when laundry is ready, and before your drop-off window.',
+                denied
+                  ? 'Notifications are off on this phone. Turn them on so you never miss when a load is accepted, drying, or ready for pickup.'
+                  : 'Laundry Buddy works best with alerts on. Allow notifications for host responses, ready-for-pickup updates, and drop-off reminders.',
               )}
             </Text>
             <View style={styles.list}>
@@ -31,7 +37,12 @@ export function NotificationPermissionPrompt({ visible, onEnable, onDismiss }: P
               <Text style={styles.listItem}>• {toTitleCase('Load is drying or ready for pickup')}</Text>
               <Text style={styles.listItem}>• {toTitleCase('Reminders before drop-off time')}</Text>
             </View>
-            <PrimaryButton title="Enable notifications" icon="bell" full onPress={onEnable} />
+            <PrimaryButton
+              title={denied ? 'Open phone settings' : 'Turn on notifications'}
+              icon="bell"
+              full
+              onPress={onEnable}
+            />
             <OutlineButton title="Not now" full onPress={onDismiss} />
           </View>
         </SafeAreaView>

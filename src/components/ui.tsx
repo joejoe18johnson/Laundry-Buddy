@@ -1,7 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useRef, useState, type ComponentProps } from 'react'
 import {
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -72,32 +71,25 @@ export function Screen({ children, style }: { children: ReactNode; style?: ViewS
     })
   }
 
-  const keyboardPadding = Platform.OS === 'android' ? keyboardHeight : 0
+  const keyboardPadding = keyboardHeight
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <ScreenScrollContext.Provider value={{ scrollToEnd }}>
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={[
+            styles.scroll,
+            {
+              paddingBottom: bottomSafePadding(insets.bottom, spacing.lg) + keyboardPadding,
+            },
+            style,
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            ref={scrollRef}
-            contentContainerStyle={[
-              styles.scroll,
-              {
-                paddingBottom: bottomSafePadding(insets.bottom, spacing.lg) + keyboardPadding,
-              },
-              style,
-            ]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-          >
-            {children}
-          </ScrollView>
-        </KeyboardAvoidingView>
+          {children}
+        </ScrollView>
       </ScreenScrollContext.Provider>
     </SafeAreaView>
   )
@@ -141,6 +133,39 @@ export function PrimaryButton({
       <View style={styles.btnContent}>
         {icon && <AppIcon name={icon} size={18} color={colors.white} />}
         <Text style={styles.btnPrimaryText}>{toTitleCase(title)}</Text>
+      </View>
+    </Pressable>
+  )
+}
+
+export function SuccessButton({
+  title,
+  onPress,
+  disabled,
+  full,
+  icon,
+}: {
+  title: string
+  onPress?: () => void
+  disabled?: boolean
+  full?: boolean
+  icon?: IconName
+}) {
+  const { uiStyles: styles } = useTheme()
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled ?? !onPress}
+      style={({ pressed }) => [
+        styles.btnSuccess,
+        full && styles.btnFull,
+        (disabled ?? !onPress) && styles.btnDisabled,
+        pressed && !(disabled ?? !onPress) && styles.btnPressed,
+      ]}
+    >
+      <View style={styles.btnContent}>
+        {icon && <AppIcon name={icon} size={18} color="#fff" />}
+        <Text style={styles.btnSuccessText}>{toTitleCase(title)}</Text>
       </View>
     </Pressable>
   )

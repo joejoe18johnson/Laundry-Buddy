@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { Animated, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
+import { useTheme } from '../context/ThemeContext'
 import {
   GUEST_LOAD_STEPS,
   getGuestProgressIndex,
@@ -8,7 +10,7 @@ import {
   type GuestProgressStep,
 } from '../lib/loadProgress'
 import { toTitleCase } from '../lib/titleCase'
-import { colors, radius, spacing } from '../theme'
+import { radius, spacing } from '../theme'
 import type { Booking } from '../types'
 
 type LoadProgressTrackerProps = {
@@ -16,15 +18,141 @@ type LoadProgressTrackerProps = {
   pulse: Animated.Value
 }
 
+function createLoadProgressStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: colors.white,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      gap: spacing.lg,
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.md,
+    },
+    summaryCopy: { flex: 1, gap: 4 },
+    summaryEyebrow: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.gray500,
+      letterSpacing: 0.4,
+    },
+    summaryTitle: { fontSize: 24, fontWeight: '700', lineHeight: 30 },
+    summarySub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+    percentBadge: {
+      minWidth: 52,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: radius.pill,
+      backgroundColor: colors.black,
+      alignItems: 'center',
+    },
+    percentValue: { fontSize: 14, fontWeight: '700', color: colors.white },
+    progressTrack: {
+      height: 6,
+      borderRadius: radius.pill,
+      backgroundColor: colors.gray100,
+      overflow: 'hidden',
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: radius.pill,
+      backgroundColor: colors.black,
+    },
+    stepperRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+      paddingBottom: spacing.sm,
+    },
+    nodeWrap: { flex: 1, alignItems: 'center', gap: 6, minWidth: 0 },
+    node: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.gray100,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    nodeDone: { backgroundColor: colors.black },
+    nodeActive: {
+      backgroundColor: colors.white,
+      borderWidth: 2,
+      borderColor: colors.black,
+    },
+    nodeNumber: { fontSize: 12, fontWeight: '700', color: colors.gray500 },
+    nodeNumberActive: { color: colors.black },
+    nodeLabel: {
+      fontSize: 9,
+      fontWeight: '600',
+      color: colors.gray400,
+      textAlign: 'center',
+      lineHeight: 12,
+    },
+    nodeLabelDone: { color: colors.gray600 },
+    nodeLabelActive: { color: colors.black },
+    detailList: {
+      gap: 0,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.gray100,
+    },
+    detailRow: { flexDirection: 'row', minHeight: 64 },
+    detailLeft: { width: 32, alignItems: 'center' },
+    detailDot: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.gray100,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    detailDotDone: { backgroundColor: colors.black },
+    detailDotActive: {
+      backgroundColor: colors.white,
+      borderWidth: 2,
+      borderColor: colors.black,
+    },
+    detailDotText: { fontSize: 11, fontWeight: '700', color: colors.gray500 },
+    detailDotTextActive: { color: colors.black },
+    detailLine: {
+      flex: 1,
+      width: 2,
+      backgroundColor: colors.gray100,
+      marginVertical: 4,
+    },
+    detailLineDone: { backgroundColor: colors.black },
+    detailBody: { flex: 1, paddingLeft: spacing.sm, paddingBottom: spacing.md },
+    detailHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+    detailLabel: { fontSize: 15, fontWeight: '500', color: colors.gray400 },
+    detailLabelActive: { color: colors.black, fontWeight: '700' },
+    detailDesc: { fontSize: 13, color: colors.gray500, lineHeight: 18, marginTop: 2 },
+    detailTime: { fontSize: 12, color: colors.gray500, marginTop: 4, fontWeight: '600' },
+    nowBadge: {
+      backgroundColor: colors.black,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+    },
+    nowBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white },
+  })
+}
+
 function StepNode({
   step,
   state,
   pulse,
+  styles,
 }: {
   step: GuestProgressStep
   state: 'done' | 'active' | 'upcoming'
   pulse: Animated.Value
+  styles: ReturnType<typeof createLoadProgressStyles>
 }) {
+  const { colors } = useTheme()
   const isDone = state === 'done'
   const isActive = state === 'active'
 
@@ -55,6 +183,8 @@ function StepNode({
 }
 
 export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createLoadProgressStyles(colors), [colors])
   const activeIndex = getGuestProgressIndex(booking)
   const currentStep = GUEST_LOAD_STEPS[Math.max(0, Math.min(activeIndex, GUEST_LOAD_STEPS.length - 1))]
   const progressPercent = getProgressPercent(activeIndex, GUEST_LOAD_STEPS.length)
@@ -95,7 +225,7 @@ export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps
               : index === activeIndex
                 ? 'active'
                 : 'upcoming'
-          return <StepNode key={step.key} step={step} state={state} pulse={pulse} />
+          return <StepNode key={step.key} step={step} state={state} pulse={pulse} styles={styles} />
         })}
       </View>
 
@@ -158,124 +288,3 @@ export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    gap: spacing.lg,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.md,
-  },
-  summaryCopy: { flex: 1, gap: 4 },
-  summaryEyebrow: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.gray500,
-    letterSpacing: 0.4,
-  },
-  summaryTitle: { fontSize: 24, fontWeight: '700', lineHeight: 30 },
-  summarySub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
-  percentBadge: {
-    minWidth: 52,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.black,
-    alignItems: 'center',
-  },
-  percentValue: { fontSize: 14, fontWeight: '700', color: colors.white },
-  progressTrack: {
-    height: 6,
-    borderRadius: radius.pill,
-    backgroundColor: colors.gray100,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: radius.pill,
-    backgroundColor: colors.black,
-  },
-  stepperRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    paddingBottom: spacing.sm,
-  },
-  nodeWrap: { flex: 1, alignItems: 'center', gap: 6, minWidth: 0 },
-  node: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nodeDone: { backgroundColor: colors.black },
-  nodeActive: {
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.black,
-  },
-  nodeNumber: { fontSize: 12, fontWeight: '700', color: colors.gray500 },
-  nodeNumberActive: { color: colors.black },
-  nodeLabel: {
-    fontSize: 9,
-    fontWeight: '600',
-    color: colors.gray400,
-    textAlign: 'center',
-    lineHeight: 12,
-  },
-  nodeLabelDone: { color: colors.gray600 },
-  nodeLabelActive: { color: colors.black },
-  detailList: {
-    gap: 0,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
-  },
-  detailRow: { flexDirection: 'row', minHeight: 64 },
-  detailLeft: { width: 32, alignItems: 'center' },
-  detailDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailDotDone: { backgroundColor: colors.black },
-  detailDotActive: {
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.black,
-  },
-  detailDotText: { fontSize: 11, fontWeight: '700', color: colors.gray500 },
-  detailDotTextActive: { color: colors.black },
-  detailLine: {
-    flex: 1,
-    width: 2,
-    backgroundColor: colors.gray100,
-    marginVertical: 4,
-  },
-  detailLineDone: { backgroundColor: colors.black },
-  detailBody: { flex: 1, paddingLeft: spacing.sm, paddingBottom: spacing.md },
-  detailHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
-  detailLabel: { fontSize: 15, fontWeight: '500', color: colors.gray400 },
-  detailLabelActive: { color: colors.black, fontWeight: '700' },
-  detailDesc: { fontSize: 13, color: colors.gray500, lineHeight: 18, marginTop: 2 },
-  detailTime: { fontSize: 12, color: colors.gray500, marginTop: 4, fontWeight: '600' },
-  nowBadge: {
-    backgroundColor: colors.black,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.pill,
-  },
-  nowBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white },
-})

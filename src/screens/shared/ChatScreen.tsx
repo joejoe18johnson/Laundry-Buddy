@@ -4,7 +4,6 @@ import {
   FlatList,
   Image,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -14,7 +13,8 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
-import { AppTextInput, BackButton, PrimaryButton } from '../../components/ui'
+import { ImageLightbox } from '../../components/ImageLightbox'
+import { AppTextInput, BackButton, PrimaryButton, SuccessButton } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatChatTime, senderRoleLabel, useMessages } from '../../context/MessageContext'
@@ -28,16 +28,38 @@ import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import type { Booking, ChatMessage } from '../../types'
 
+function ChatMessageImage({
+  uri,
+  style,
+  onPress,
+}: {
+  uri: string
+  style: ReturnType<typeof createStyles>['image']
+  onPress: (uri: string) => void
+}) {
+  return (
+    <Pressable
+      onPress={() => onPress(uri)}
+      accessibilityRole="imagebutton"
+      accessibilityLabel="View full image"
+    >
+      <Image source={{ uri }} style={style} resizeMode="cover" />
+    </Pressable>
+  )
+}
+
 function MessageBubble({
   message,
   isOwn,
   colors,
   styles,
+  onImagePress,
 }: {
   message: ChatMessage
   isOwn: boolean
   colors: ReturnType<typeof useTheme>['colors']
   styles: ReturnType<typeof createStyles>
+  onImagePress: (uri: string) => void
 }) {
   const isSystem = message.kind === 'system' || message.senderRole === 'support'
 
@@ -50,7 +72,7 @@ function MessageBubble({
           ) : null}
           {message.text ? <Text style={styles.systemText}>{message.text}</Text> : null}
           {message.imageUri ? (
-            <Image source={{ uri: message.imageUri }} style={styles.image} resizeMode="cover" />
+            <ChatMessageImage uri={message.imageUri} style={styles.image} onPress={onImagePress} />
           ) : null}
           <Text style={styles.systemTime}>{formatChatTime(message.createdAt)}</Text>
         </View>
@@ -71,7 +93,7 @@ function MessageBubble({
         ) : null}
         {message.text ? <Text style={[styles.body, isOwn && styles.bodyOwn]}>{message.text}</Text> : null}
         {message.imageUri ? (
-          <Image source={{ uri: message.imageUri }} style={styles.image} resizeMode="cover" />
+          <ChatMessageImage uri={message.imageUri} style={styles.image} onPress={onImagePress} />
         ) : null}
         <Text style={[styles.time, isOwn && styles.timeOwn]}>{formatChatTime(message.createdAt)}</Text>
       </View>
@@ -85,12 +107,14 @@ export function ChatThreadPanel({
   onBack,
   showBackButton = true,
   onConfirmPayment,
+  onPaymentProofSent,
 }: {
   threadId: string
   booking?: Booking | null
   onBack?: () => void
   showBackButton?: boolean
   onConfirmPayment?: () => void
+  onPaymentProofSent?: () => void
 }) {
   const { user } = useAuth()
   const { colors } = useTheme()
@@ -99,19 +123,23 @@ export function ChatThreadPanel({
   const { getMessages, refreshThread, sendMessage, markRead } = useMessages()
   const [draft, setDraft] = useState('')
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null)
+  const [lightboxUri, setLightboxUri] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
   const listRef = useRef<FlatList<ChatMessage>>(null)
 
   const messages = getMessages(threadId)
   const title = getChatThreadTitle(threadId, user!, booking)
   const subtitle = getChatThreadSubtitle(threadId, booking)
   const isSupport = isSupportThread(threadId)
+  const isBankTransfer = booking?.paymentMethod === 'bank_transfer'
+  const paymentPending = isBankTransfer && booking?.paymentStatus === 'pending'
+  const paymentConfirmed = isBankTransfer && booking?.paymentStatus === 'paid'
   const canConfirmPayment =
     !!onConfirmPayment &&
     !isSupport &&
     user?.role === 'host' &&
-    booking?.paymentMethod === 'bank_transfer' &&
-    booking.paymentStatus === 'pending'
+    paymentPending
 
   useEffect(() => {
     if (!threadId) return
@@ -119,11 +147,31 @@ export function ChatThreadPanel({
   }, [threadId, refreshThread, markRead])
 
   useEffect(() => {
-    if (messages.length === 0) return
-    requestAnimationFrame(() => {
-      listRef.current?.scrollToEnd({ animated: true })
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
+    const show = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height)
+      setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true })
+      }, Platform.OS === 'ios' ? event.duration ?? 100 : 100)
     })
-  }, [messages.length])
+    const hide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0)
+    })
+    return () => {
+      show.remove()
+      hide.remove()
+    }
+  }, [])
+
+  const scrollToLatest = useCallback(() => {
+    listRef.current?.scrollToEnd({ animated: true })
+  }, [])
+
+  useEffect(() => {
+    if (messages.length === 0) return
+    scrollToLatest()
+  }, [messages.length, scrollToLatest])
 
   const pickImage = async (useCamera: boolean) => {
     const permission = useCamera
@@ -174,6 +222,9 @@ export function ChatThreadPanel({
         booking,
         paymentProof: !!pendingImageUri && booking?.paymentMethod === 'bank_transfer',
       })
+      if (pendingImageUri && booking?.paymentMethod === 'bank_transfer') {
+        onPaymentProofSent?.()
+      }
       setDraft('')
       setPendingImageUri(null)
       Keyboard.dismiss()
@@ -181,7 +232,7 @@ export function ChatThreadPanel({
     } finally {
       setSending(false)
     }
-  }, [booking, draft, pendingImageUri, refreshThread, sendMessage, sending, threadId])
+  }, [booking, draft, onPaymentProofSent, pendingImageUri, refreshThread, sendMessage, sending, threadId])
 
   if (!user || !threadId) {
     return (
@@ -192,12 +243,8 @@ export function ChatThreadPanel({
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.wrap}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
-    >
-      <View style={styles.header}>
+    <View style={[styles.wrap, { paddingBottom: keyboardHeight }]}>
+        <View style={styles.header}>
         {showBackButton && onBack ? <BackButton onPress={onBack} label="Back" /> : null}
         <View style={styles.headerCopy}>
           <Text style={styles.title}>{title}</Text>
@@ -217,19 +264,29 @@ export function ChatThreadPanel({
             onPress={onConfirmPayment}
           />
         </View>
+      ) : paymentConfirmed && !isSupport && user?.role === 'host' ? (
+        <View style={[styles.paymentBanner, styles.paymentBannerConfirmed]}>
+          <SuccessButton title="Payment confirmed" icon="check-circle" full disabled />
+        </View>
       ) : null}
 
       <FlatList
         ref={listRef}
+        style={styles.flex}
         data={messages}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        onContentSizeChange={scrollToLatest}
+        onLayout={scrollToLatest}
         renderItem={({ item }) => (
           <MessageBubble
             message={item}
             isOwn={item.senderId === user.id}
             colors={colors}
             styles={styles}
+            onImagePress={setLightboxUri}
           />
         )}
         ListEmptyComponent={
@@ -263,6 +320,7 @@ export function ChatThreadPanel({
           placeholder="Write a message"
           value={draft}
           onChangeText={setDraft}
+          onFocus={scrollToLatest}
           multiline
           maxLength={1000}
         />
@@ -274,12 +332,18 @@ export function ChatThreadPanel({
           <AppIcon name="send" size={18} color={colors.white} />
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+      <ImageLightbox
+        visible={!!lightboxUri}
+        imageUri={lightboxUri}
+        onClose={() => setLightboxUri(null)}
+      />
+    </View>
   )
 }
 
 export function ChatScreen() {
-  const { chatThreadId, chatBooking, closeChat, confirmTransferPayment } = useApp()
+  const { chatThreadId, chatBooking, closeChat, confirmTransferPayment, markPaymentProofSent, findBookingForChat } =
+    useApp()
   if (!chatThreadId) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -287,13 +351,22 @@ export function ChatScreen() {
       </View>
     )
   }
+
+  const liveBooking =
+    chatThreadId && !isSupportThread(chatThreadId)
+      ? findBookingForChat(chatThreadId) ?? chatBooking
+      : chatBooking
+
   return (
     <ChatThreadPanel
       threadId={chatThreadId}
-      booking={chatBooking}
+      booking={liveBooking}
       onBack={closeChat}
       onConfirmPayment={
-        chatBooking ? () => confirmTransferPayment(chatBooking.id) : undefined
+        liveBooking ? () => confirmTransferPayment(liveBooking.id) : undefined
+      }
+      onPaymentProofSent={
+        liveBooking ? () => markPaymentProofSent(liveBooking.id) : undefined
       }
     />
   )
@@ -302,6 +375,7 @@ export function ChatScreen() {
 function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
     wrap: { flex: 1, backgroundColor: colors.white },
+    flex: { flex: 1 },
     header: {
       paddingHorizontal: spacing.screen,
       paddingTop: spacing.sm,
@@ -324,6 +398,10 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       gap: spacing.sm,
     },
     paymentBannerText: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
+    paymentBannerConfirmed: {
+      borderColor: colors.green,
+      backgroundColor: colors.greenBg,
+    },
     listContent: {
       paddingHorizontal: spacing.screen,
       paddingVertical: spacing.md,

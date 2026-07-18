@@ -101,3 +101,13 @@ export function defaultMessageKind(imageUri?: string | null, paymentProof?: bool
   if (imageUri) return 'image'
   return 'text'
 }
+
+export function messagePreview(message: { kind?: string; text?: string; imageUri?: string }): string {
+  if (message.kind === 'payment_proof') return 'Payment proof'
+  if (message.imageUri) return 'Photo'
+  if (message.text) {
+    const trimmed = message.text.trim()
+    return trimmed.length > 80 ? `${trimmed.slice(0, 77).trim()}…` : trimmed
+  }
+  return 'Message'
+}

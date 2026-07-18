@@ -11,6 +11,7 @@ export type NavTab = {
   screen: Screen
   matchScreens: Screen[]
   badge?: boolean
+  badgeCount?: number
 }
 
 type Props = {
@@ -43,6 +44,21 @@ export function BottomNav({ tabs, currentScreen, onNavigate }: Props) {
       borderWidth: 1.5,
       borderColor: colors.white,
     },
+    countBadge: {
+      position: 'absolute',
+      top: -6,
+      right: -10,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      paddingHorizontal: 4,
+      backgroundColor: colors.black,
+      borderWidth: 1.5,
+      borderColor: colors.white,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    countBadgeText: { fontSize: 10, fontWeight: '700', color: colors.white },
     label: { fontSize: 11, fontWeight: '600', color: colors.gray400 },
     labelActive: { color: colors.black, fontWeight: '700' },
   })
@@ -51,6 +67,9 @@ export function BottomNav({ tabs, currentScreen, onNavigate }: Props) {
     <View style={styles.bar}>
       {tabs.map((tab) => {
         const active = tab.matchScreens.includes(currentScreen)
+        const showCount = !active && (tab.badgeCount ?? 0) > 0
+        const showDot = !active && !showCount && tab.badge
+
         return (
           <Pressable
             key={tab.id}
@@ -58,10 +77,21 @@ export function BottomNav({ tabs, currentScreen, onNavigate }: Props) {
             onPress={() => onNavigate(tab.screen)}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
+            accessibilityLabel={
+              showCount ? `${tab.label}, ${tab.badgeCount} new messages` : tab.label
+            }
           >
             <View style={styles.iconWrap}>
               <AppIcon name={tab.icon} size={22} color={active ? colors.black : colors.gray400} />
-              {tab.badge && !active ? <View style={styles.dot} /> : null}
+              {showCount ? (
+                <View style={styles.countBadge}>
+                  <Text style={styles.countBadgeText}>
+                    {(tab.badgeCount ?? 0) > 9 ? '9+' : tab.badgeCount}
+                  </Text>
+                </View>
+              ) : showDot ? (
+                <View style={styles.dot} />
+              ) : null}
             </View>
             <Text style={[styles.label, active && styles.labelActive]}>{toTitleCase(tab.label)}</Text>
           </Pressable>

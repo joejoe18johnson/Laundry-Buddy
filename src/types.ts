@@ -35,6 +35,7 @@ export type Screen =
   | 'host-dashboard'
   | 'host-mark-dry'
   | 'history'
+  | 'messages'
   | 'account'
   | 'help'
   | 'notifications'
@@ -198,6 +199,7 @@ export interface Booking {
   foldingService?: boolean
   totalAmount?: number
   paymentStatus?: 'paid' | 'pending'
+  paymentProofSentAt?: string
   requestStatus?: 'pending' | 'accepted' | 'declined'
   loadPhotoUri?: string
   dryPhotoUri?: string
