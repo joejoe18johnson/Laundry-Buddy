@@ -90,6 +90,13 @@ export function MessageProvider({ children }: { children: ReactNode }) {
     [refreshUnread],
   )
 
+  const refreshThreads = useCallback(
+    async (threadIds: string[]) => {
+      await Promise.all(threadIds.map((threadId) => refreshThread(threadId)))
+    },
+    [refreshThread],
+  )
+
   useEffect(() => {
     if (!user) return
 
@@ -97,7 +104,11 @@ export function MessageProvider({ children }: { children: ReactNode }) {
       const supportId = supportThreadId(user.id)
       const storedIds = await loadAllThreadIds()
       const threadIds = Array.from(
-        new Set([supportId, ...storedIds, ...(user.id === 'user-ana' || user.id === 'user-maria' ? [DEMO_ANA_MARIA_BOOKING_ID] : [])]),
+        new Set([
+          supportId,
+          ...storedIds,
+          ...(user.id === 'user-ana' || user.id === 'user-maria' ? [DEMO_ANA_MARIA_BOOKING_ID] : []),
+        ]),
       )
       await refreshThreads(threadIds)
     }
@@ -110,13 +121,6 @@ export function MessageProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.remove()
   }, [refreshThreads, user])
-
-  const refreshThreads = useCallback(
-    async (threadIds: string[]) => {
-      await Promise.all(threadIds.map((threadId) => refreshThread(threadId)))
-    },
-    [refreshThread],
-  )
 
   const getMessages = useCallback(
     (threadId: string) => messagesByThread[threadId] ?? [],
