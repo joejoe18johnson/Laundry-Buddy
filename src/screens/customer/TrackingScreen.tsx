@@ -1,17 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { TransferProofCapture } from '../../components/TransferProofCapture'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { useMessages } from '../../context/MessageContext'
 import { getHostById } from '../../data/mockData'
-import { applyHostListing } from '../../lib/hostListing'
 import { getBookingAmount, formatMoney } from '../../lib/bookingPayments'
-import {
-  buildTransferProofMessage,
-  formatWhatsAppDisplay,
-  sendTransferProofViaWhatsApp,
-} from '../../lib/whatsapp'
+import { buildTransferProofMessage } from '../../lib/chatThreads'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
@@ -23,11 +19,22 @@ import {
 } from '../../lib/pendingRequestCancel'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
+import { TrainingDemoHint, isDemoAnaMariaBooking } from '../../components/TrainingDemoHint'
 import { colors, radius, spacing } from '../../theme'
+import type { Booking } from '../../types'
+
+function getLoadStatusLabel(load: Booking): string {
+  if (load.requestStatus === 'pending') return 'Awaiting'
+  if (load.requestStatus === 'declined') return 'Declined'
+  if (load.stage === 'ready') return 'Ready'
+  if (load.stage === 'drying') return 'Drying'
+  return 'In progress'
+}
 
 export function TrackingScreen() {
   const { user } = useAuth()
-  const { booking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking, cancelPendingRequest } = useApp()
+  const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking, cancelPendingRequest, openChat } = useApp()
+  const { sendMessage } = useMessages()
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
   const [cancelTick, setCancelTick] = useState(0)
@@ -64,8 +71,8 @@ export function TrackingScreen() {
   if (!booking) {
     return (
       <Screen style={styles.empty}>
-        <Text style={styles.emptyTitle}>{toTitleCase('No active booking')}</Text>
-        <Text style={styles.emptySub}>{toTitleCase('Find a host to get started')}</Text>
+        <Text style={styles.emptyTitle}>{toTitleCase('No active loads')}</Text>
+        <Text style={styles.emptySub}>{toTitleCase('Find a host to book your first load, or book another anytime')}</Text>
         <PrimaryButton title="Explore dryers" icon="search" onPress={() => navigate('customer-home')} full />
       </Screen>
     )
@@ -74,8 +81,6 @@ export function TrackingScreen() {
   const progressStep = getGuestProgressStep(booking)
   const host = getHostById(booking.hostId)
   const hostSettings = getSettingsForHost(host?.hostUserId)
-  const resolvedHost = host ? applyHostListing(host, hostSettings) : null
-  const whatsapp = resolvedHost?.whatsapp ?? host?.whatsapp ?? ''
   const amount = getBookingAmount(booking)
   const isBankTransfer = booking.paymentMethod === 'bank_transfer'
   const isAccepted = booking.requestStatus !== 'pending' && booking.requestStatus !== 'declined'
@@ -123,8 +128,12 @@ export function TrackingScreen() {
     void openDirections({ address: booking.address, label: booking.hostName })
   }
 
-  const sendTransferProof = () => {
-    if (!whatsapp || !user) return
+  const openLoadChat = () => {
+    openChat(booking.id, booking.id)
+  }
+
+  const sendTransferProof = async () => {
+    if (!user) return
     const message = buildTransferProofMessage({
       guestName: user.name,
       hostName: booking.hostName,
@@ -135,12 +144,55 @@ export function TrackingScreen() {
       accountNumber: hostSettings.bankDetails.accountNumber,
       hasScreenshot: !!transferProofUri,
     })
-    void sendTransferProofViaWhatsApp(whatsapp, message, transferProofUri)
+    if (transferProofUri || message) {
+      await sendMessage({
+        threadId: booking.id,
+        text: message,
+        imageUri: transferProofUri ?? undefined,
+        booking,
+        paymentProof: !!transferProofUri,
+      })
+    }
+    openLoadChat()
   }
 
   return (
     <Screen>
       <BackButton onPress={() => navigate('customer-home')} label="Home" />
+
+      {isDemoAnaMariaBooking(booking.id) ? <TrainingDemoHint role="customer" /> : null}
+
+      {activeGuestBookings.length > 1 && (
+        <View style={styles.loadSwitcher}>
+          <Text style={styles.loadSwitcherLabel}>{toTitleCase('Your loads')}</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.loadSwitcherRow}
+          >
+            {activeGuestBookings.map((load) => {
+              const selected = load.id === booking.id
+              return (
+                <Pressable
+                  key={load.id}
+                  onPress={() => selectGuestBooking(load.id)}
+                  style={[styles.loadChip, selected && styles.loadChipActive]}
+                >
+                  <Text
+                    style={[styles.loadChipTitle, selected && styles.loadChipTitleActive]}
+                    numberOfLines={1}
+                  >
+                    {load.hostName}
+                  </Text>
+                  <Text style={[styles.loadChipMeta, selected && styles.loadChipMetaActive]}>
+                    {load.loads} load{load.loads === 1 ? '' : 's'} · {getLoadStatusLabel(load)}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {booking.isNew && !isDeclined && bannerVisible && (
         <Pressable onPress={() => setBannerVisible(false)} style={styles.success}>
@@ -195,24 +247,20 @@ export function TrackingScreen() {
           ) : null}
           <Text style={styles.paymentSub}>
             {titleCaseWithName(
-              `Transfer the amount above, add your receipt screenshot, then send proof to ${booking.hostName} on WhatsApp${whatsapp ? ` (${formatWhatsAppDisplay(whatsapp)}).` : '.'}`,
+              `Transfer the amount above, add your receipt screenshot, then send proof to ${booking.hostName} in the app chat.`,
               booking.hostName,
             )}
           </Text>
           <TransferProofCapture photoUri={transferProofUri} onPhotoChange={setTransferProofUri} />
-          {whatsapp ? (
-            <PrimaryButton
-              title={transferProofUri ? 'Send proof on WhatsApp' : 'Open WhatsApp to send proof'}
-              icon="message-circle"
-              full
-              onPress={sendTransferProof}
-            />
-          ) : (
-            <Text style={styles.paymentWarn}>{toTitleCase('Host has not added a WhatsApp number yet.')}</Text>
-          )}
+          <PrimaryButton
+            title={transferProofUri ? 'Send proof in chat' : 'Open chat to send proof'}
+            icon="message-circle"
+            full
+            onPress={() => void sendTransferProof()}
+          />
           {transferProofUri ? (
             <Text style={styles.paymentHint}>
-              {toTitleCase('Choose WhatsApp on the share sheet, then send the screenshot to your host.')}
+              {toTitleCase('Your screenshot will be sent in the load chat with your host.')}
             </Text>
           ) : null}
         </View>
@@ -269,6 +317,7 @@ export function TrackingScreen() {
             disabled={!canCancelPending}
             onPress={() => cancelPendingRequest(booking.id)}
           />
+          <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
         </View>
       )}
 
@@ -309,20 +358,7 @@ export function TrackingScreen() {
         </View>
         <View style={{ height: spacing.md }} />
         <OutlineButton title="Directions" icon="navigation" full onPress={handleDirections} />
-        {whatsapp ? (
-          <OutlineButton
-            title="Message host"
-            icon="message-circle"
-            full
-            onPress={() =>
-              Linking.openURL(
-                `https://wa.me/${whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(
-                  `Hi ${booking.hostName}! Checking on my load.`,
-                )}`,
-              )
-            }
-          />
-        ) : null}
+        <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
       </View>
       )}
 
@@ -365,6 +401,27 @@ const styles = StyleSheet.create({
   empty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.lg },
   emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: spacing.sm },
   emptySub: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 20 },
+  loadSwitcher: { marginBottom: spacing.lg, gap: spacing.sm },
+  loadSwitcherLabel: { fontSize: 13, color: colors.gray500, letterSpacing: 0.4 },
+  loadSwitcherRow: { gap: spacing.sm, paddingRight: spacing.md },
+  loadChip: {
+    minWidth: 140,
+    maxWidth: 200,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    backgroundColor: colors.white,
+  },
+  loadChipActive: {
+    borderColor: colors.black,
+    backgroundColor: colors.black,
+  },
+  loadChipTitle: { fontSize: 14, fontWeight: '700', color: colors.black },
+  loadChipTitleActive: { color: colors.white },
+  loadChipMeta: { fontSize: 12, color: colors.gray600, marginTop: 2 },
+  loadChipMetaActive: { color: 'rgba(255,255,255,0.85)' },
   success: {
     flexDirection: 'row',
     gap: spacing.md,

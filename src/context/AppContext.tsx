@@ -30,7 +30,16 @@ import {
   saveCompletedHostPayment,
   loadCustomerPaymentHistory,
 } from '../lib/paymentHistoryStorage'
-import { loadActiveBooking, saveActiveBooking } from '../lib/bookingStorage'
+import { loadActiveBookings, saveActiveBookings } from '../lib/bookingStorage'
+import {
+  filterActiveGuestBookings,
+  findGuestBooking,
+  isActiveGuestBooking,
+  mergeGuestBookings,
+  patchGuestBooking,
+  removeGuestBooking,
+  upsertGuestBooking,
+} from '../lib/guestBookings'
 import {
   loadStoredReviewsForHost,
   markBookingReviewed,
@@ -78,6 +87,8 @@ import { FILTER_AREA_RADIUS_KM, getFilterAreaCenter } from '../lib/belizeDistric
 import * as Location from 'expo-location'
 import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
 import { canGuestCancelPendingRequest } from '../lib/pendingRequestCancel'
+import { supportThreadId } from '../lib/chatThreads'
+import { syncTrainingDemoIfNeeded } from '../lib/trainingSeedStorage'
 import {
   type Booking,
   type BookingStage,
@@ -97,6 +108,9 @@ interface AppState {
   screen: Screen
   selectedHost: Host | null
   booking: Booking | null
+  guestBookings: Booking[]
+  activeGuestBookings: Booking[]
+  selectGuestBooking: (bookingId: string) => void
   hostRequests: HostRequest[]
   activeLoads: Booking[]
   hostStats: { loadsToday: number; maxLoads: number; accepting: boolean }
@@ -154,6 +168,11 @@ interface AppState {
   markDry: (loadId: string, dryPhotoUri?: string) => void
   confirmPickup: (loadId: string) => void
   confirmTransferPayment: (loadId: string) => void
+  chatThreadId: string | null
+  chatBooking: Booking | null
+  openChat: (threadId: string, bookingId?: string) => void
+  openSupportChat: () => void
+  closeChat: () => void
   openNotification: (notification: AppNotification) => Promise<void>
   openNotificationFromPush: (title: string, data: Record<string, unknown>) => Promise<void>
 }
@@ -187,11 +206,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const role = user!.role
 
   const hostSeed = role === 'host' ? getHostDashboardSeed(user!.id) : null
-  const customerSeed = role === 'customer' ? getCustomerSeedBooking(user!.id) : null
+  const customerSeedBookings =
+    role === 'customer'
+      ? filterActiveGuestBookings(
+          [getCustomerSeedBooking(user!.id)].filter((entry): entry is Booking => !!entry),
+        )
+      : []
 
   const [screen, setScreen] = useState<Screen>(() => defaultScreen(role))
   const [selectedHost, setSelectedHost] = useState<Host | null>(null)
-  const [booking, setBooking] = useState<Booking | null>(() => customerSeed)
+  const [guestBookings, setGuestBookings] = useState<Booking[]>(() => customerSeedBookings)
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
+    () => customerSeedBookings[0]?.id ?? null,
+  )
   const [hostRequests, setHostRequests] = useState<HostRequest[]>(
     () => hostSeed?.pendingRequests ?? [],
   )
@@ -214,11 +241,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null)
   const [hostReviewsMap, setHostReviewsMap] = useState<Record<string, HostReview[]>>({})
   const [markDryLoadId, setMarkDryLoadId] = useState<string | null>(null)
+  const [chatThreadId, setChatThreadId] = useState<string | null>(null)
+  const [chatBooking, setChatBooking] = useState<Booking | null>(null)
+  const chatReturnScreenRef = useRef<Screen>(defaultScreen(role))
 
-  const bookingRef = useRef(booking)
+  const guestBookingsRef = useRef(guestBookings)
+  const selectedBookingIdRef = useRef(selectedBookingId)
   const activeLoadsRef = useRef(activeLoads)
-  bookingRef.current = booking
+  guestBookingsRef.current = guestBookings
+  selectedBookingIdRef.current = selectedBookingId
   activeLoadsRef.current = activeLoads
+
+  const activeGuestBookings = useMemo(
+    () => filterActiveGuestBookings(guestBookings),
+    [guestBookings],
+  )
+
+  const booking = useMemo(() => {
+    if (selectedBookingId) {
+      const selected = findGuestBooking(guestBookings, selectedBookingId)
+      if (selected) {
+        if (isActiveGuestBooking(selected) || selected.requestStatus === 'declined') {
+          return selected
+        }
+      }
+    }
+    return activeGuestBookings[0] ?? null
+  }, [guestBookings, selectedBookingId, activeGuestBookings])
+
+  const selectGuestBooking = useCallback((bookingId: string) => {
+    setSelectedBookingId(bookingId)
+  }, [])
+
+  useEffect(() => {
+    if (!selectedBookingId) return
+    const stillActive = findGuestBooking(guestBookings, selectedBookingId)
+    if (stillActive && isActiveGuestBooking(stillActive)) return
+    setSelectedBookingId(activeGuestBookings[0]?.id ?? null)
+  }, [guestBookings, selectedBookingId, activeGuestBookings])
 
   useEffect(() => {
     loadLocationPreferences().then((prefs) => {
@@ -246,35 +306,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setScreen(defaultScreen(role))
-    if (role === 'host') {
-      const seed = getHostDashboardSeed(user!.id)
-      getHostOrders(user!.id).then((stored) => {
-        const mergedLoads = dedupeActiveLoads(
-          mergeActiveLoads(seed.activeLoads, stored.activeLoads),
-        )
-        const activeLoadIds = mergedLoads.map((load) => load.id)
-        setHostRequests(
-          mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds),
-        )
-        setActiveLoads(mergedLoads)
-        setHostStats({
-          loadsToday: seed.loadsToday,
-          maxLoads: seed.maxLoads,
-          accepting: seed.accepting,
+    void syncTrainingDemoIfNeeded().then(() => {
+      if (role === 'host') {
+        const seed = getHostDashboardSeed(user!.id)
+        getHostOrders(user!.id).then((stored) => {
+          const mergedLoads = dedupeActiveLoads(
+            mergeActiveLoads(seed.activeLoads, stored.activeLoads),
+          )
+          const activeLoadIds = mergedLoads.map((load) => load.id)
+          setHostRequests(
+            mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds),
+          )
+          setActiveLoads(mergedLoads)
+          setHostStats({
+            loadsToday: seed.loadsToday,
+            maxLoads: seed.maxLoads,
+            accepting: seed.accepting,
+          })
         })
-      })
-    } else {
-      void loadActiveBooking(user!.id).then((stored) => {
-        setBooking(stored ?? getCustomerSeedBooking(user!.id))
-      })
-    }
+      } else {
+        void loadActiveBookings(user!.id).then((stored) => {
+          const seed = filterActiveGuestBookings(
+            [getCustomerSeedBooking(user!.id)].filter((entry): entry is Booking => !!entry),
+          )
+          const merged = mergeGuestBookings(seed, stored)
+          setGuestBookings(merged)
+          setSelectedBookingId((current) =>
+            current && findGuestBooking(merged, current) ? current : merged[0]?.id ?? null,
+          )
+        })
+      }
+    })
   }, [role, user!.id])
 
   useEffect(() => {
     if (role === 'customer' && user) {
-      void saveActiveBooking(user.id, booking)
+      void saveActiveBookings(user.id, guestBookings)
     }
-  }, [booking, role, user])
+  }, [guestBookings, role, user])
 
   useEffect(() => {
     if (role === 'host') {
@@ -422,6 +491,77 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const navigate = useCallback((next: Screen) => setScreen(next), [])
 
+  const findBookingForChat = useCallback(
+    (bookingId: string): Booking | null => {
+      const fromGuest = findGuestBooking(guestBookingsRef.current, bookingId)
+      if (fromGuest) return fromGuest
+
+      const fromActive = activeLoadsRef.current.find((load) => load.id === bookingId)
+      if (fromActive) return fromActive
+
+      const request = hostRequests.find((entry) => entry.id === bookingId)
+      if (request && user && role === 'host') {
+        const hostProfile = getHostByUserId(user.id)
+        if (!hostProfile) return null
+        return {
+          id: request.id,
+          hostId: hostProfile.id,
+          hostName: hostProfile.name,
+          customerId: request.customerId,
+          customerName: request.customerName,
+          location: request.location,
+          loads: request.loads,
+          dropOffTime: request.dropOffTime,
+          sheetsOption: request.sheetsOption,
+          notes: request.notes ?? '',
+          stage: 'got-bag',
+          address: hostProfile.address,
+          gateCode: hostProfile.gateCode,
+          stageTimes: {},
+          paymentMethod: request.paymentMethod,
+          foldingService: request.foldingService,
+          totalAmount: request.totalAmount,
+          paymentStatus: 'pending',
+          requestStatus: request.status === 'pending' ? 'pending' : 'accepted',
+          loadPhotoUri: request.loadPhotoUri,
+          clothesList: request.clothesList,
+        }
+      }
+
+      return null
+    },
+    [hostRequests, role, user],
+  )
+
+  const openChat = useCallback(
+    (threadId: string, bookingId?: string) => {
+      chatReturnScreenRef.current = screen
+      setChatThreadId(threadId)
+      if (bookingId) {
+        const found = findBookingForChat(bookingId)
+        setChatBooking(found)
+        if (role === 'customer' && found) {
+          setSelectedBookingId(bookingId)
+        }
+      } else {
+        setChatBooking(null)
+      }
+      setScreen('chat')
+    },
+    [findBookingForChat, role, screen],
+  )
+
+  const openSupportChat = useCallback(() => {
+    if (!user) return
+    openChat(supportThreadId(user.id))
+  }, [openChat, user])
+
+  const closeChat = useCallback(() => {
+    setChatThreadId(null)
+    setChatBooking(null)
+    setScreen(chatReturnScreenRef.current)
+  }, [])
+
   const viewHostProfile = useCallback(
     (host: Host) => {
       const resolved = applyHostSettings(
@@ -547,11 +687,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!user) return null
 
       if (bookingId) {
-        const current = bookingRef.current
-        if (current?.id === bookingId && current.requestStatus !== 'declined') return current
+        const fromCurrent = findGuestBooking(guestBookingsRef.current, bookingId)
+        if (fromCurrent && isActiveGuestBooking(fromCurrent)) return fromCurrent
 
-        const stored = await loadActiveBooking(user.id)
-        if (stored?.id === bookingId && stored.requestStatus !== 'declined') return stored
+        const stored = await loadActiveBookings(user.id)
+        const fromStored = findGuestBooking(stored, bookingId)
+        if (fromStored) return fromStored
 
         const history = await loadCustomerPaymentHistory(user.id)
         const fromHistory = history.find((entry) => entry.id === bookingId)
@@ -563,19 +704,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return null
       }
 
-      const current = bookingRef.current
-      if (current && current.requestStatus !== 'declined') return current
+      const current = guestBookingsRef.current.find(isActiveGuestBooking)
+      if (current) return current
 
-      const stored = await loadActiveBooking(user.id)
-      if (stored && stored.requestStatus !== 'declined') return stored
-
-      return null
+      const stored = await loadActiveBookings(user.id)
+      return stored[0] ?? null
     },
     [user],
   )
 
   const clearBooking = useCallback(() => {
-    setBooking(null)
+    const bookingId = selectedBookingIdRef.current
+    if (!bookingId) return
+    setGuestBookings((prev) => removeGuestBooking(prev, bookingId))
   }, [])
 
   const openNotification = useCallback(
@@ -586,9 +727,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      if (link.screen === 'chat') {
+        openChat(link.threadId, link.bookingId)
+        return
+      }
+
       if (link.screen === 'customer-tracking') {
         const restored = await restoreBookingForGuest(link.bookingId || undefined)
-        if (restored) setBooking(restored)
+        if (restored) {
+          setGuestBookings((prev) => upsertGuestBooking(prev, restored))
+          setSelectedBookingId(restored.id)
+        }
         setScreen('customer-tracking')
         return
       }
@@ -626,7 +775,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setScreen('customer-home')
     },
-    [openLeaveReview, restoreBookingForGuest, role, showToast, viewHostProfile],
+    [openChat, openLeaveReview, restoreBookingForGuest, role, showToast, viewHostProfile],
   )
 
   const openNotificationFromPush = useCallback(
@@ -653,12 +802,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadPhotoUri?: string
     }) => {
       if (!selectedHost || !user) return
-
-      if (bookingRef.current && bookingRef.current.requestStatus !== 'declined') {
-        showToast('You already have an active load', { icon: 'package' })
-        setScreen('customer-tracking')
-        return
-      }
 
       const settings = getSettingsForHost(selectedHost.hostUserId)
       const pricing = getHostPricing(selectedHost, settings)
@@ -700,7 +843,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         isNew: true,
         createdAt: new Date().toISOString(),
       }
-      setBooking(newBooking)
+      setGuestBookings((prev) => upsertGuestBooking(prev, newBooking))
+      setSelectedBookingId(bookingId)
       setScreen('customer-tracking')
 
       if (selectedHost.hostUserId) {
@@ -793,8 +937,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setHostStats((prev) => ({ ...prev, loadsToday: prev.loadsToday + 1 }))
       void saveHostOrders(user.id, { pendingRequests: nextRequests, activeLoads: nextLoads })
 
-      setBooking((prev) =>
-        prev?.id === request.id ? { ...prev, ...load, requestStatus: 'accepted', isNew: false } : prev,
+      setGuestBookings((prev) =>
+        patchGuestBooking(prev, request.id, (current) => ({
+          ...current,
+          ...load,
+          requestStatus: 'accepted',
+          isNew: false,
+        })),
       )
 
       if (request.customerId) {
@@ -829,7 +978,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           bookingTrackingLink(requestId),
         )
       }
-      setBooking((prev) => (prev?.id === requestId ? null : prev))
+      setGuestBookings((prev) =>
+        patchGuestBooking(prev, requestId, (current) => ({ ...current, requestStatus: 'declined' })),
+      )
       showToast('Request declined', { icon: 'x-circle' })
     },
     [hostRequests, activeLoads, user, notifyCustomer, showToast],
@@ -837,8 +988,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const cancelPendingRequest = useCallback(
     (bookingId: string) => {
-      const current = bookingRef.current
-      if (!current || current.id !== bookingId || current.requestStatus !== 'pending') return
+      const current = findGuestBooking(guestBookingsRef.current, bookingId)
+      if (!current || current.requestStatus !== 'pending') return
       if (!canGuestCancelPendingRequest(current)) {
         showToast('You can cancel 30 minutes after sending the request', { icon: 'clock' })
         return
@@ -857,7 +1008,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         )
       }
 
-      setBooking(null)
+      setGuestBookings((prev) => removeGuestBooking(prev, bookingId))
       setScreen('customer-home')
       showToast('Request cancelled', { icon: 'x-circle' })
     },
@@ -886,10 +1037,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return next
       })
 
-      setBooking((prev) => {
-        if (prev?.id !== loadId) return prev
-        target = prev
-        return patch(prev)
+      setGuestBookings((prev) => {
+        const existing = findGuestBooking(prev, loadId)
+        if (existing) target = existing
+        return patchGuestBooking(prev, loadId, patch)
       })
 
       if (target?.customerId) {
@@ -909,7 +1060,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (loadId: string, stage: BookingStage, extras?: { dryPhotoUri?: string }) => {
       const targetLoad =
         activeLoadsRef.current.find((load) => load.id === loadId) ??
-        (bookingRef.current?.id === loadId ? bookingRef.current : undefined)
+        findGuestBooking(guestBookingsRef.current, loadId)
 
       const time = nowTime()
       const completedDate = new Date().toLocaleDateString('en-US', {
@@ -969,12 +1120,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return filtered
       })
 
-      setBooking((prev) => {
-        if (prev?.id !== loadId) return prev
-        notifyTarget = prev
-        persistIfPickedUp(prev)
-        if (stage === 'picked-up') return null
-        return patchLoad(prev)
+      setGuestBookings((prev) => {
+        const existing = findGuestBooking(prev, loadId)
+        if (existing) {
+          notifyTarget = existing
+          persistIfPickedUp(existing)
+        }
+        if (stage === 'picked-up') {
+          return removeGuestBooking(prev, loadId)
+        }
+        return patchGuestBooking(prev, loadId, patchLoad)
       })
 
       if (stage === 'picked-up' && targetLoad) {
@@ -1000,7 +1155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (loadId: string) => {
       const pickedUp =
         activeLoadsRef.current.find((load) => load.id === loadId) ??
-        (bookingRef.current?.id === loadId ? bookingRef.current : undefined)
+        findGuestBooking(guestBookingsRef.current, loadId)
 
       advanceStage(loadId, 'picked-up')
 
@@ -1066,10 +1221,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return next
       })
 
-      setBooking((prev) => {
-        if (prev?.id !== loadId) return prev
-        target = prev
-        return markPaid(prev)
+      setGuestBookings((prev) => {
+        const existing = findGuestBooking(prev, loadId)
+        if (existing) target = existing
+        return patchGuestBooking(prev, loadId, markPaid)
       })
 
       if (target?.customerId) {
@@ -1090,6 +1245,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       screen,
       selectedHost,
       booking,
+      guestBookings,
+      activeGuestBookings,
+      selectGuestBooking,
       hostRequests,
       activeLoads,
       hostStats,
@@ -1133,6 +1291,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDry,
       confirmPickup,
       confirmTransferPayment,
+      chatThreadId,
+      chatBooking,
+      openChat,
+      openSupportChat,
+      closeChat,
       openNotification,
       openNotificationFromPush,
     }),
@@ -1140,6 +1303,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       screen,
       selectedHost,
       booking,
+      guestBookings,
+      activeGuestBookings,
+      selectGuestBooking,
       hostRequests,
       activeLoads,
       hostStats,
@@ -1182,6 +1348,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDry,
       confirmPickup,
       confirmTransferPayment,
+      chatThreadId,
+      chatBooking,
+      openChat,
+      openSupportChat,
+      closeChat,
       openNotification,
       openNotificationFromPush,
     ],

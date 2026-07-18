@@ -1,6 +1,12 @@
-import { Linking, Platform, Share } from 'react-native'
+import { Linking } from 'react-native'
 import { formatMoney } from './bookingPayments'
+import {
+  buildTransferProofMessage,
+  buildVerificationCodeRequestMessage,
+} from './chatThreads'
 import { SUPPORT_PHONE_WHATSAPP } from './supportContact'
+
+export { buildTransferProofMessage, buildVerificationCodeRequestMessage }
 
 export function normalizeWhatsAppPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '')
@@ -9,6 +15,7 @@ export function normalizeWhatsAppPhone(phone: string): string {
   return digits
 }
 
+/** @deprecated Use in-app support chat instead. */
 export function openWhatsAppChat(phone: string, message: string): void {
   const normalized = normalizeWhatsAppPhone(phone)
   if (!normalized) return
@@ -16,77 +23,18 @@ export function openWhatsAppChat(phone: string, message: string): void {
   Linking.openURL(url).catch(() => {})
 }
 
-export function buildVerificationCodeRequestMessage(name: string, phone: string): string {
-  const display = formatWhatsAppDisplay(phone)
-  return [
-    `Hi Laundry Buddy! This is ${name}.`,
-    `Please send my verification code to my WhatsApp: ${display}.`,
-    `I will reply here with the code once I receive it.`,
-  ].join('\n')
-}
-
+/** @deprecated Use in-app support chat instead. */
 export function openSupportWhatsApp(message: string): void {
   openWhatsAppChat(SUPPORT_PHONE_WHATSAPP, message)
 }
 
-export function buildTransferProofMessage({
-  guestName,
-  hostName,
-  amount,
-  loads,
-  bookingId,
-  bankName,
-  accountNumber,
-  hasScreenshot,
-}: {
-  guestName: string
-  hostName: string
-  amount: number
-  loads: number
-  bookingId?: string
-  bankName?: string
-  accountNumber?: string
-  hasScreenshot?: boolean
-}): string {
-  const lines = [
-    `Hi ${hostName}! This is ${guestName}.`,
-    `I sent a bank transfer for my Laundry Buddy booking.`,
-    ``,
-    `Amount: ${formatMoney(amount)}`,
-    `Loads: ${loads}`,
-  ]
-  if (bookingId) lines.push(`Booking ref: ${bookingId}`)
-  if (bankName && accountNumber) {
-    lines.push(`Transferred to: ${bankName} · ${accountNumber}`)
-  }
-  lines.push(
-    ``,
-    hasScreenshot
-      ? `I am sending my transfer screenshot in this chat — please confirm when received.`
-      : `Please confirm when received. I will send my transfer screenshot next.`,
-  )
-  return lines.join('\n')
-}
-
+/** @deprecated Use in-app chat with payment proof attachment instead. */
 export async function sendTransferProofViaWhatsApp(
-  hostWhatsApp: string,
-  message: string,
-  screenshotUri?: string | null,
+  _hostWhatsApp: string,
+  _message: string,
+  _screenshotUri?: string | null,
 ): Promise<void> {
-  if (screenshotUri) {
-    try {
-      const result = await Share.share(
-        Platform.OS === 'ios'
-          ? { url: screenshotUri, message }
-          : { message, url: screenshotUri },
-      )
-      if (result.action === Share.sharedAction) return
-    } catch {
-      // fall back to opening WhatsApp chat below
-    }
-  }
-
-  openWhatsAppChat(hostWhatsApp, message)
+  // Legacy no-op — transfer proof is sent in the load chat.
 }
 
 export function formatWhatsAppDisplay(phone: string): string {

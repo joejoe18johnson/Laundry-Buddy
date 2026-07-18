@@ -1,20 +1,21 @@
 import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
-import { AppTextInput, BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
+import { AppTextInput, BackButton, BrandSwitch, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { colors, radius, spacing } from '../../theme'
-import { toTitleCase } from '../../lib/titleCase'
+import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import type { AppRole, LoginMethod } from '../../types'
 
 export function SignupScreen() {
-  const { signup, navigateAuth, authError, clearAuthError } = useAuth()
+  const { signup, navigateAuth, authError, clearAuthError, biometricSupport } = useAuth()
   const [method, setMethod] = useState<LoginMethod>('phone')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<AppRole>('customer')
+  const [enableQuickAccess, setEnableQuickAccess] = useState(false)
 
   const handleSignup = async () => {
     clearAuthError()
@@ -25,6 +26,7 @@ export function SignupScreen() {
       email: method === 'email' ? email : undefined,
       password,
       role,
+      enableQuickAccess,
     })
   }
 
@@ -117,6 +119,26 @@ export function SignupScreen() {
         />
       </View>
 
+      {biometricSupport.available ? (
+        <View style={styles.quickAccessCard}>
+          <View style={styles.quickAccessHeader}>
+            <AppIcon name={biometricSupport.icon} size={18} color={colors.black} />
+            <View style={styles.quickAccessText}>
+              <Text style={styles.quickAccessTitle}>
+                {titleCaseWithName(`Quick access with ${biometricSupport.label}`, biometricSupport.label)}
+              </Text>
+              <Text style={styles.quickAccessSub}>
+                {titleCaseWithName(
+                  `Skip your password next time — sign in with ${biometricSupport.label} after you log out.`,
+                  biometricSupport.label,
+                )}
+              </Text>
+            </View>
+            <BrandSwitch value={enableQuickAccess} onValueChange={setEnableQuickAccess} />
+          </View>
+        </View>
+      ) : null}
+
       {authError && <Text style={styles.error}>{authError}</Text>}
 
       <PrimaryButton
@@ -160,6 +182,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   noticeText: { fontSize: 13, color: colors.gray600, lineHeight: 20 },
+  quickAccessCard: {
+    borderWidth: 1,
+    borderColor: colors.gray100,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.gray50,
+  },
+  quickAccessHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  quickAccessText: { flex: 1, gap: 4 },
+  quickAccessTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
+  quickAccessSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
   field: { marginBottom: spacing.md },
   label: { fontSize: 13, fontWeight: '600', color: colors.gray600, marginBottom: spacing.sm },
   phoneRow: {

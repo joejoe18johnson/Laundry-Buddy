@@ -40,6 +40,7 @@ interface SignupInput {
   email?: string
   password: string
   role: AppRole
+  enableQuickAccess?: boolean
 }
 
 interface AuthState {
@@ -234,9 +235,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(newUser)
     setAuthError(null)
     bumpAuthSession()
-    void maybeOfferBiometricSetup()
+
+    if (input.enableQuickAccess) {
+      const support = await getBiometricSupport()
+      if (support.available) {
+        await enableBiometricLogin(newUser.id)
+        await refreshBiometricState()
+      }
+    }
+
     return true
-  }, [bumpAuthSession, maybeOfferBiometricSetup])
+  }, [bumpAuthSession, refreshBiometricState])
 
   const enableBiometricLoginForUser = useCallback(async () => {
     if (!user) return false

@@ -13,6 +13,7 @@ import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
 import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
+import { TrainingDemoHint, isDemoAnaMariaBooking } from '../../components/TrainingDemoHint'
 import { colors, radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
 
@@ -111,6 +112,7 @@ export function DashboardScreen() {
     confirmPickup,
     markBagReceived,
     openMarkDry,
+    openChat,
   } = useApp()
 
   const rawHost = user ? getHostByUserId(user.id) : undefined
@@ -198,6 +200,10 @@ export function DashboardScreen() {
         </Text>
       )}
 
+      {activeLoads.some((load) => isDemoAnaMariaBooking(load.id)) ? (
+        <TrainingDemoHint role="host" />
+      ) : null}
+
       {hostRequests.length > 0 && (
         <View style={styles.sectionHeader}>
           <AppIcon name="inbox" size={14} color={colors.black} />
@@ -244,6 +250,12 @@ export function DashboardScreen() {
                 <GhostButton title="Decline" onPress={() => declineRequest(request.id)} full />
               </View>
             </View>
+            <GhostButton
+              title="Message guest"
+              icon="message-circle"
+              full
+              onPress={() => openChat(request.id, request.id)}
+            />
           </View>
         </View>
       ))}
@@ -284,7 +296,7 @@ export function DashboardScreen() {
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
               <>
                 <Text style={styles.transferHint}>
-                  {toTitleCase('Guest should send transfer proof on WhatsApp. Confirm once verified.')}
+                  {toTitleCase('Guest should send transfer proof in the app chat. Confirm once verified.')}
                 </Text>
                 <GhostButton
                   title={`Confirm ${formatMoney(getBookingAmount(load))} received`}
@@ -324,6 +336,12 @@ export function DashboardScreen() {
                 />
               </View>
             )}
+            <GhostButton
+              title="Message guest"
+              icon="message-circle"
+              full
+              onPress={() => openChat(load.id, load.id)}
+            />
           </View>
         </View>
       ))}

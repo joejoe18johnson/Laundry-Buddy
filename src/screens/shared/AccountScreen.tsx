@@ -69,22 +69,6 @@ function createAccountStyles(colors: ReturnType<typeof useTheme>['colors']) {
       borderColor: colors.gray100,
     },
     roleText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-    appearanceCard: {
-      borderWidth: 1,
-      borderColor: colors.gray100,
-      borderRadius: radius.lg,
-      padding: spacing.md,
-      marginBottom: spacing.lg,
-      backgroundColor: colors.gray50,
-    },
-    appearanceHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-    },
-    appearanceText: { flex: 1, gap: 4 },
-    appearanceTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
-    appearanceSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
     securityCard: {
       borderWidth: 1,
       borderColor: colors.gray100,
@@ -136,7 +120,7 @@ export function AccountScreen() {
   } = useAuth()
   const { showToast } = useToast()
   const { navigate } = useApp()
-  const { colors, isDark, setColorScheme } = useTheme()
+  const { colors } = useTheme()
   const styles = useMemo(() => createAccountStyles(colors), [colors])
 
   if (!user) return null
@@ -163,19 +147,6 @@ export function AccountScreen() {
       <Text style={styles.name}>{user.name}</Text>
       <View style={styles.roleBadge}>
         <Text style={styles.roleText}>{toTitleCase(isCustomer ? 'Guest' : 'Host')}</Text>
-      </View>
-
-      <View style={styles.appearanceCard}>
-        <View style={styles.appearanceHeader}>
-          <AppIcon name={isDark ? 'moon' : 'sun'} size={18} color={colors.black} />
-          <View style={styles.appearanceText}>
-            <Text style={styles.appearanceTitle}>{toTitleCase('Dark Mode')}</Text>
-            <Text style={styles.appearanceSub}>
-              {toTitleCase(isDark ? 'Dark Theme Is On' : 'Light Theme Is On')}
-            </Text>
-          </View>
-          <BrandSwitch value={isDark} onValueChange={(enabled) => setColorScheme(enabled ? 'dark' : 'light')} />
-        </View>
       </View>
 
       <View style={styles.card}>

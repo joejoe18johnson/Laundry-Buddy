@@ -9,6 +9,7 @@ import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, needsIdentityVerification, useAuth } from './src/context/AuthContext'
 import { NotificationProvider, useUserNotifications } from './src/context/NotificationContext'
+import { MessageProvider } from './src/context/MessageContext'
 import { HomeScreen } from './src/screens/customer/HomeScreen'
 import { BookingScreen } from './src/screens/customer/BookingScreen'
 import { HostProfileScreen } from './src/screens/customer/HostProfileScreen'
@@ -28,6 +29,8 @@ import { HistoryScreen } from './src/screens/shared/HistoryScreen'
 import { AccountScreen } from './src/screens/shared/AccountScreen'
 import { HelpScreen } from './src/screens/shared/HelpScreen'
 import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
+import { ChatScreen } from './src/screens/shared/ChatScreen'
+import { BrandSwitch } from './src/components/ui'
 import { colors, spacing } from './src/theme'
 import { ThemeProvider, useTheme } from './src/context/ThemeContext'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
@@ -52,11 +55,12 @@ const HIDE_BOTTOM_NAV: Screen[] = [
   'host-mark-dry',
   'notifications',
   'help',
+  'chat',
 ]
 
 function AppShell() {
   const { user, logout } = useAuth()
-  const { colors, isDark } = useTheme()
+  const { colors, isDark, setColorScheme } = useTheme()
   const shellStyles = useMemo(
     () =>
       StyleSheet.create({
@@ -81,7 +85,12 @@ function AppShell() {
           color: colors.black,
           letterSpacing: -0.4,
         },
-        headerRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+        headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+        themeToggle: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingRight: 2,
+        },
         bellBtn: {
           width: 36,
           height: 36,
@@ -120,7 +129,7 @@ function AppShell() {
   )
   const {
     screen,
-    booking,
+    activeGuestBookings,
     navigate,
     hostSettings,
     userLocationLabel,
@@ -139,10 +148,9 @@ function AppShell() {
   const greetingName = getGreetingName(user!.name)
   const isHome = screen === 'customer-home'
 
-  const loadNeedsAttention =
-    !!booking && booking.requestStatus !== 'declined'
+  const loadNeedsAttention = activeGuestBookings.length > 0
 
-  const hasActiveLoad = !!booking && booking.requestStatus !== 'declined'
+  const hasActiveLoad = activeGuestBookings.length > 0
 
   const customerTabs: NavTab[] = useMemo(
     () => [
@@ -155,7 +163,7 @@ function AppShell() {
       },
       {
         id: 'load',
-        label: 'My load',
+        label: 'My loads',
         icon: 'package',
         screen: 'customer-tracking',
         matchScreens: ['customer-tracking'],
@@ -222,6 +230,13 @@ function AppShell() {
       <View style={[shellStyles.header, isHome && shellStyles.headerHome]}>
         <Text style={shellStyles.greetingLarge}>Hi {greetingName}</Text>
         <View style={shellStyles.headerRight}>
+          <View style={shellStyles.themeToggle}>
+            <BrandSwitch
+              value={isDark}
+              onValueChange={(enabled) => setColorScheme(enabled ? 'dark' : 'light')}
+              accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            />
+          </View>
           <Pressable onPress={() => navigate('notifications')} style={shellStyles.bellBtn} hitSlop={8}>
             <AppIcon name="bell" size={22} color={colors.black} />
             {unreadCount > 0 && (
@@ -283,6 +298,7 @@ function AppShell() {
         {screen === 'account' && (isCustomer ? <AccountScreen /> : <HostHubScreen />)}
         {screen === 'help' && <HelpScreen />}
         {screen === 'notifications' && <NotificationsScreen />}
+        {screen === 'chat' && <ChatScreen />}
       </View>
 
       {showBottomNav && (
@@ -425,10 +441,14 @@ function AuthenticatedApp() {
   if (needsIdentityVerification(user)) {
     return (
       <>
-        <SafeAreaView style={authStyles.app} edges={['top', 'bottom']}>
-          <StatusBar style="dark" />
-          <IdentityVerificationScreen />
-        </SafeAreaView>
+        <NotificationProvider activeUserId={user!.id}>
+          <MessageProvider>
+            <SafeAreaView style={authStyles.app} edges={['top', 'bottom']}>
+              <StatusBar style="dark" />
+              <IdentityVerificationScreen />
+            </SafeAreaView>
+          </MessageProvider>
+        </NotificationProvider>
         <BiometricOverlays />
         <PushNotificationPromptGate />
       </>
@@ -438,11 +458,13 @@ function AuthenticatedApp() {
   return (
     <>
       <NotificationProvider activeUserId={user!.id}>
-        <ToastProvider>
-          <AppProvider>
-            <AppShell />
-          </AppProvider>
-        </ToastProvider>
+        <MessageProvider>
+          <ToastProvider>
+            <AppProvider>
+              <AppShell />
+            </AppProvider>
+          </ToastProvider>
+        </MessageProvider>
       </NotificationProvider>
       <BiometricOverlays />
       <PushNotificationPromptGate />

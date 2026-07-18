@@ -1,5 +1,6 @@
-import { ReactNode, type ComponentProps } from 'react'
+import { createContext, ReactNode, useContext, useEffect, useRef, useState, type ComponentProps } from 'react'
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,6 +20,16 @@ import { toTitleCase } from '../lib/titleCase'
 import { useTheme } from '../context/ThemeContext'
 import { radius, spacing } from '../theme'
 
+type ScreenScrollContextValue = {
+  scrollToEnd: () => void
+}
+
+const ScreenScrollContext = createContext<ScreenScrollContextValue | null>(null)
+
+export function useScreenScroll() {
+  return useContext(ScreenScrollContext)
+}
+
 export function AppTextInput({ style, multiline, placeholderTextColor, placeholder, ...props }: TextInputProps) {
   const { uiStyles: styles, formStyles } = useTheme()
   const resolvedPlaceholder =
@@ -37,24 +48,57 @@ export function AppTextInput({ style, multiline, placeholderTextColor, placehold
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const insets = useSafeAreaInsets()
   const { uiStyles: styles } = useTheme()
+  const scrollRef = useRef<ScrollView>(null)
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
+    const show = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height)
+    })
+    const hide = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0)
+    })
+    return () => {
+      show.remove()
+      hide.remove()
+    }
+  }, [])
+
+  const scrollToEnd = () => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({ animated: true })
+    })
+  }
+
+  const keyboardPadding = Platform.OS === 'android' ? keyboardHeight : 0
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingBottom: bottomSafePadding(insets.bottom, spacing.lg) },
-            style,
-          ]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      <ScreenScrollContext.Provider value={{ scrollToEnd }}>
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
-          {children}
-        </ScrollView>
-      </KeyboardAvoidingView>
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={[
+              styles.scroll,
+              {
+                paddingBottom: bottomSafePadding(insets.bottom, spacing.lg) + keyboardPadding,
+              },
+              style,
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          >
+            {children}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </ScreenScrollContext.Provider>
     </SafeAreaView>
   )
 }

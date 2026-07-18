@@ -16,6 +16,10 @@ export function hostProfileLink(hostId: string): NotificationLink {
   return { screen: 'customer-host-profile', hostId }
 }
 
+export function chatLink(threadId: string, bookingId?: string): NotificationLink {
+  return { screen: 'chat', threadId, bookingId }
+}
+
 export function linkFromPushData(data: Record<string, unknown>): NotificationLink | undefined {
   const screen = data.screen as NotificationLink['screen'] | undefined
   if (!screen) return undefined
@@ -39,6 +43,13 @@ export function linkFromPushData(data: Record<string, unknown>): NotificationLin
       bookingId: typeof data.bookingId === 'string' ? data.bookingId : undefined,
     }
   }
+  if (screen === 'chat' && typeof data.threadId === 'string') {
+    return {
+      screen,
+      threadId: data.threadId,
+      bookingId: typeof data.bookingId === 'string' ? data.bookingId : undefined,
+    }
+  }
   if (screen === 'customer-home' || screen === 'history') {
     return { screen }
   }
@@ -49,12 +60,21 @@ export function linkToPushData(link: NotificationLink): Record<string, string> {
   const data: Record<string, string> = { screen: link.screen }
   if ('bookingId' in link && link.bookingId) data.bookingId = link.bookingId
   if ('hostId' in link && link.hostId) data.hostId = link.hostId
+  if ('threadId' in link && link.threadId) data.threadId = link.threadId
   return data
 }
 
 /** Fallback for notifications saved before link metadata existed. */
 export function inferNotificationLink(title: string, role: AppRole): NotificationLink | null {
   const lower = title.toLowerCase()
+
+  if (
+    lower.includes('message from') ||
+    lower.includes('support replied') ||
+    lower.includes('transfer proof')
+  ) {
+    return { screen: 'chat', threadId: '' }
+  }
 
   if (role === 'host') {
     return { screen: 'host-dashboard' }

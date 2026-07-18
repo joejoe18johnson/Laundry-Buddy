@@ -3,7 +3,42 @@ import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, Iden
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '19'
+export const SEED_DATA_VERSION = '20'
+
+/** Shared Ana (guest) ↔ Maria (host) demo load — same id on both accounts. */
+export const DEMO_ANA_MARIA_BOOKING_ID = 'demo-ana-maria-1'
+
+export const DEMO_ANA_MARIA_BOOKING: Booking = {
+  id: DEMO_ANA_MARIA_BOOKING_ID,
+  hostId: 'maria',
+  hostName: 'Maria',
+  customerId: 'user-ana',
+  customerName: 'Ana',
+  location: 'Las Flores',
+  loads: 1,
+  dropOffTime: 9,
+  sheetsOption: 'own',
+  notes: 'Mostly towels — please use low heat.',
+  paymentMethod: 'bank_transfer',
+  foldingService: false,
+  pricePerLoad: 3,
+  dryPrice: 3,
+  foldingPrice: 3,
+  sheetsPrice: 1,
+  totalAmount: 3,
+  paymentStatus: 'pending',
+  requestStatus: 'accepted',
+  stage: 'got-bag',
+  address: '22 Coconut St.',
+  gateCode: '4421',
+  stageTimes: {},
+  acceptedAt: '8:05 AM',
+  createdAt: '2026-07-14T12:30:00.000Z',
+  clothesList: [
+    { id: 'demo-ana-towels', label: 'Towels', quantity: 4 },
+    { id: 'demo-ana-delicates', label: 'Delicates', quantity: 2 },
+  ],
+}
 
 const VERIFIED_GUEST: IdentityVerification = {
   status: 'verified',
@@ -132,31 +167,15 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
     loadsToday: 1,
     maxLoads: 4,
     accepting: true,
-    pendingRequests: [
-      {
-        id: 'req-ana',
-        customerId: 'user-ana',
-        customerName: 'Ana',
-        location: 'UB',
-        loads: 1,
-        dropOffTime: 9,
-        sheetsOption: 'own',
-        notes: 'Mostly towels — please use low heat.',
-        paymentMethod: 'cash',
-        totalAmount: 3,
-        status: 'pending',
-        clothesList: [
-          { id: 'seed-ana-towels', label: 'Towels', quantity: 4 },
-          { id: 'seed-ana-delicates', label: 'Delicates', quantity: 2 },
-        ],
-      },
-    ],
-    activeLoads: [],
+    pendingRequests: [],
+    activeLoads: [{ ...DEMO_ANA_MARIA_BOOKING }],
   },
 }
 
 /** Pre-loaded booking when a customer logs in (training shortcut). */
-export const SEED_CUSTOMER_BOOKINGS: Record<string, Booking> = {}
+export const SEED_CUSTOMER_BOOKINGS: Record<string, Booking> = {
+  'user-ana': { ...DEMO_ANA_MARIA_BOOKING },
+}
 
 export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
   'user-ana': [
@@ -213,6 +232,12 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
 export const TRAINING_ACCOUNTS = [
   { label: 'Ana (guest)', login: '6001111', type: 'phone' as const },
   { label: 'Maria (host)', login: 'maria@example.com', type: 'email' as const },
+] as const
+
+export const TRAINING_DEMO_STEPS = [
+  'Sign in as Ana → My loads → chat & send transfer proof',
+  'Log out → sign in as Maria → Dashboard → reply & confirm payment',
+  'Keep switching accounts to walk through bag → dry → pickup',
 ]
 
 export function getAvailableHosts(): Host[] {

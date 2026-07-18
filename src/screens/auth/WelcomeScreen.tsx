@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
-import { TRAINING_ACCOUNTS, TRAINING_PASSWORD, ACTIVE_REGION_LABEL } from '../../data/seedData'
+import { TRAINING_ACCOUNTS, TRAINING_DEMO_STEPS, TRAINING_PASSWORD, ACTIVE_REGION_LABEL } from '../../data/seedData'
 import { isFullFlowTesting } from '../../lib/testingFlow'
-import { toTitleCase, titleCaseWithName } from '../../lib/titleCase'
+import { toTitleCase } from '../../lib/titleCase'
 import { AppLogoMark } from '../../components/AppLogoMark'
 import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
 import { OutlineButton, PrimaryButton, Screen } from '../../components/ui'
@@ -63,16 +63,6 @@ export function WelcomeScreen() {
           />
           <BiometricDivider />
         </>
-      ) : biometricSupport.available ? (
-        <View style={styles.biometricHint}>
-          <AppIcon name={biometricSupport.icon} size={16} color={colors.gray600} />
-          <Text style={styles.biometricHintText}>
-            {titleCaseWithName(
-              `Sign in once with your password — then enable ${biometricSupport.label} for quick access.`,
-              biometricSupport.label,
-            )}
-          </Text>
-        </View>
       ) : null}
 
       <PrimaryButton title="Log in" icon="log-in" onPress={() => navigateAuth('login')} full />
@@ -103,6 +93,13 @@ export function WelcomeScreen() {
               {signingIn === a.login ? 'Signing in…' : a.login}
             </Text></Pressable>
         ))}
+        <View style={styles.demoSteps}>
+          {TRAINING_DEMO_STEPS.map((step) => (
+            <Text key={step} style={styles.demoStep}>
+              · {toTitleCase(step)}
+            </Text>
+          ))}
+        </View>
       </View>
     </Screen>
   )
@@ -115,23 +112,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, marginBottom: spacing.md, lineHeight: 40, textAlign: 'center' },
   tagline: { fontSize: 16, color: colors.gray500, lineHeight: 26, textAlign: 'center' },
   gap: { height: spacing.md },
-  biometricHint: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.gray50,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.gray100,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  biometricHintText: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.gray600,
-    lineHeight: 19,
-  },
   training: {
     marginTop: spacing.xl,
     padding: spacing.md,
@@ -177,4 +157,6 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
   trainingLoginBusy: { color: colors.gray500, textDecorationLine: 'none' },
+  demoSteps: { marginTop: spacing.md, gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.gray100 },
+  demoStep: { fontSize: 12, color: colors.gray600, lineHeight: 18 },
 })

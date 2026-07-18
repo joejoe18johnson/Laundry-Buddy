@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { AppTextInput, BackButton, PrimaryButton, Screen } from '../../components/ui'
+import { AppTextInput, BackButton, PrimaryButton, Screen, useScreenScroll } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostById } from '../../data/mockData'
@@ -52,6 +52,7 @@ export function LeaveReviewScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [alreadyReviewed, setAlreadyReviewed] = useState(false)
   const [checking, setChecking] = useState(true)
+  const screenScroll = useScreenScroll()
 
   const host = reviewHostId ? getHostById(reviewHostId) : undefined
 
@@ -164,6 +165,9 @@ export function LeaveReviewScreen() {
               onChangeText={setComment}
               placeholder="Share how drop-off, drying, and pickup went…"
               style={styles.commentInput}
+              onFocus={() => {
+                setTimeout(() => screenScroll?.scrollToEnd(), 100)
+              }}
             />
             <Text style={styles.charHint}>
               {comment.trim().length < 8
@@ -220,7 +224,7 @@ const styles = StyleSheet.create({
   },
   starsRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
   ratingHint: { fontSize: 14, color: colors.gray600, textAlign: 'center' },
-  commentInput: { minHeight: 120 },
+  commentInput: { minHeight: 120, textAlignVertical: 'top' },
   charHint: { fontSize: 12, color: colors.gray500 },
   doneCard: {
     gap: spacing.md,

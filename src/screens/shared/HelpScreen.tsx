@@ -1,14 +1,12 @@
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { BackButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { ACTIVE_REGION_LABEL } from '../../data/mockData'
-import { SUPPORT_EMAIL, SUPPORT_PHONE_DISPLAY, SUPPORT_PHONE_WHATSAPP } from '../../lib/supportContact'
+import { SUPPORT_EMAIL } from '../../lib/supportContact'
 import { toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
-
-const SUPPORT_PHONE = SUPPORT_PHONE_WHATSAPP
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   return (
@@ -35,22 +33,12 @@ function Step({ n, title, body }: { n: number; title: string; body: string }) {
 
 export function HelpScreen() {
   const { user } = useAuth()
-  const { navigate } = useApp()
+  const { navigate, openSupportChat } = useApp()
 
   if (!user) return null
 
   const isCustomer = user.role === 'customer'
   const backScreen = isCustomer ? 'customer-home' : 'host-dashboard'
-
-  const openWhatsApp = () => {
-    Linking.openURL(`https://wa.me/${SUPPORT_PHONE}?text=Hi%20Laundry%20Buddy%20—%20I%20need%20help`).catch(
-      () => {},
-    )
-  }
-
-  const openEmail = () => {
-    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=Laundry%20Buddy%20support`).catch(() => {})
-  }
 
   return (
     <Screen>
@@ -85,7 +73,7 @@ export function HelpScreen() {
           <Step n={1} title="Find a host" body={`Search by district, town, price, or reviews anywhere in ${ACTIVE_REGION_LABEL}.`} />
           <Step n={2} title="Book a slot" body="Pick drop-off time, load count, and any notes for the host." />
           <Step n={3} title="Track your load" body="Follow each stage from bag received to ready for pickup." />
-          <Step n={4} title="Pick up dry laundry" body="Message your host on WhatsApp if you need directions or timing." />
+          <Step n={4} title="Pick up dry laundry" body="Message your host in the app if you need directions or timing." />
         </>
       ) : (
         <>
@@ -104,7 +92,7 @@ export function HelpScreen() {
           <>
             <FaqItem
               question="Is payment handled in the app?"
-              answer="Hosts set their price per load. Pay your host directly unless they say otherwise."
+              answer="Hosts set their price per load. Send bank transfer proof in the load chat, or pay cash at pickup."
             />
             <FaqItem
               question="What if it rains?"
@@ -146,19 +134,21 @@ export function HelpScreen() {
       </View>
 
       <Text style={styles.section}>{toTitleCase('Contact us')}</Text>
-      <Pressable style={styles.contactBtn} onPress={openWhatsApp}>
+      <Pressable style={styles.contactBtn} onPress={openSupportChat}>
         <AppIcon name="message-circle" size={18} />
         <View style={styles.contactCopy}>
-          <Text style={styles.contactLabel}>{toTitleCase('WhatsApp Support')}</Text>
-          <Text style={styles.contactSub}>{SUPPORT_PHONE_DISPLAY}</Text>
+          <Text style={styles.contactLabel}>{toTitleCase('In-app support chat')}</Text>
+          <Text style={styles.contactSub}>{toTitleCase('Message our team without leaving the app')}</Text>
         </View>
         <AppIcon name="chevron-right" size={18} color={colors.gray400} />
       </Pressable>
-      <Pressable style={styles.contactBtn} onPress={openEmail}>
+      <View style={styles.contactBtn}>
         <AppIcon name="mail" size={18} />
-        <Text style={styles.contactLabel}>{SUPPORT_EMAIL}</Text>
-        <AppIcon name="chevron-right" size={18} color={colors.gray400} />
-      </Pressable>
+        <View style={styles.contactCopy}>
+          <Text style={styles.contactLabel}>{SUPPORT_EMAIL}</Text>
+          <Text style={styles.contactSub}>{toTitleCase('Use in-app chat for the fastest reply')}</Text>
+        </View>
+      </View>
     </Screen>
   )
 }

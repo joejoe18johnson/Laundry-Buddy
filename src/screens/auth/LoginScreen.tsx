@@ -54,14 +54,6 @@ export function LoginScreen() {
           />
           <BiometricDivider />
         </>
-      ) : biometricSupport.available ? (
-        <View style={styles.biometricHint}>
-          <AppIcon name={biometricSupport.icon} size={16} color={colors.gray600} />
-          <Text style={styles.biometricHintText}>
-            After you sign in, you can turn on {biometricSupport.label} so you won't need your
-            password every time.
-          </Text>
-        </View>
       ) : null}
 
       <MethodTabs
@@ -138,23 +130,6 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34, color: colors.black },
   subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
-  biometricHint: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.gray50,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.gray100,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  biometricHintText: {
-    flex: 1,
-    fontSize: 13,
-    color: colors.gray600,
-    lineHeight: 19,
-  },
   field: { marginBottom: spacing.md },
   labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   label: { fontSize: 13, fontWeight: '600', color: colors.gray600 },

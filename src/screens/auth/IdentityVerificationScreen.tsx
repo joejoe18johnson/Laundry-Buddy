@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { IdDocumentCapture } from '../../components/IdDocumentCapture'
 import { AppIcon } from '../../components/AppIcon'
 import {
@@ -11,6 +12,7 @@ import {
   StepIndicator,
 } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
+import { useMessages } from '../../context/MessageContext'
 import {
   formatIdDocumentType,
   getIdentityVerification,
@@ -19,12 +21,13 @@ import {
 import { normalizePhone } from '../../lib/phone'
 import {
   buildVerificationCodeRequestMessage,
-  openSupportWhatsApp,
-} from '../../lib/whatsapp'
+  supportThreadId,
+} from '../../lib/chatThreads'
 import {
   formatWhatsAppNumberDisplay,
   isValidWhatsAppNumber,
 } from '../../lib/whatsappVerification'
+import { ChatThreadPanel } from '../shared/ChatScreen'
 import { colors, radius, spacing } from '../../theme'
 import { toTitleCase } from '../../lib/titleCase'
 import type { IdDocumentType } from '../../types'
@@ -40,6 +43,8 @@ export function IdentityVerificationScreen() {
   const [address, setAddress] = useState('')
   const [addressUploaded, setAddressUploaded] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [supportChatOpen, setSupportChatOpen] = useState(false)
+  const { sendMessage } = useMessages()
 
   const verification = user ? getIdentityVerification(user) : null
   const isHost = user?.role === 'host'
@@ -63,13 +68,13 @@ export function IdentityVerificationScreen() {
         <Text style={styles.title}>{toTitleCase('Verification submitted')}</Text>
         <Text style={styles.subtitle}>
           {toTitleCase(
-            'We sent a verification code to your WhatsApp. Reply to us on WhatsApp with that code so we can approve your account.',
+            'We sent a verification code to your WhatsApp. Reply in the app support chat with that code so we can approve your account.',
           )}
         </Text>
         <View style={styles.whatsAppHint}>
           <AppIcon name="message-circle" size={18} color={colors.gray600} />
           <Text style={styles.whatsAppHintText}>
-            {toTitleCase('Waiting for your code reply on WhatsApp before we unlock the app.')}
+            {toTitleCase('Waiting for your code reply in support chat before we unlock the app.')}
           </Text>
         </View>
         <View style={styles.checklist}>
@@ -86,16 +91,17 @@ export function IdentityVerificationScreen() {
           ) : null}
         </View>
         <PrimaryButton
-          title="Reply on WhatsApp"
+          title="Open support chat"
           icon="message-circle"
           full
-          onPress={() =>
-            openSupportWhatsApp(
-              `Hi Laundry Buddy! This is ${user.name}. Here is my verification code: `,
-            )
-          }
+          onPress={() => setSupportChatOpen(true)}
         />
         <GhostButton title="Log out" icon="log-out" onPress={logout} full />
+        <SupportChatModal
+          visible={supportChatOpen}
+          userId={user.id}
+          onClose={() => setSupportChatOpen(false)}
+        />
       </Screen>
     )
   }
@@ -104,10 +110,14 @@ export function IdentityVerificationScreen() {
   const idReady = !!idType && !!idPhotoUri
   const addressReady = !isHost || (address.trim().length > 0 && addressUploaded)
 
-  const handleOpenWhatsApp = () => {
+  const handleRequestCodeInApp = async () => {
     clearAuthError()
     if (!phoneReady || !user) return
-    openSupportWhatsApp(buildVerificationCodeRequestMessage(user.name, normalizePhone(phone)))
+    await sendMessage({
+      threadId: supportThreadId(user.id),
+      text: buildVerificationCodeRequestMessage(user.name, normalizePhone(phone)),
+    })
+    setSupportChatOpen(true)
   }
 
   const handleContinueFromPhone = () => {
@@ -159,7 +169,7 @@ export function IdentityVerificationScreen() {
         {isRejected
           ? toTitleCase('Your previous submission was declined. Please resubmit clear documents.')
           : toTitleCase(
-              'Add your WhatsApp number and government ID. We send a code on WhatsApp — reply to us with it to finish verification.',
+              'Add your WhatsApp number and government ID. We send a code on WhatsApp — reply in the app support chat with it to finish verification.',
             )}
       </Text>
 
@@ -173,7 +183,7 @@ export function IdentityVerificationScreen() {
           </View>
           <Text style={styles.sectionSub}>
             {toTitleCase(
-              'Use the WhatsApp number where we can reach you. We send your verification code there — reply to us on WhatsApp with that code.',
+              'Use the WhatsApp number where we can reach you. We send your verification code there — reply in support chat with that code.',
             )}
           </Text>
           <View style={styles.phoneRow}>
@@ -192,15 +202,15 @@ export function IdentityVerificationScreen() {
             </Text>
           ) : null}
           <PrimaryButton
-            title="Request code on WhatsApp"
+            title="Request code in support chat"
             icon="message-circle"
             full
             disabled={!phoneReady}
-            onPress={handleOpenWhatsApp}
+            onPress={() => void handleRequestCodeInApp()}
           />
           <Text style={styles.sectionSub}>
             {toTitleCase(
-              'This opens WhatsApp to Laundry Buddy support. After we send your code, reply in that chat with the code.',
+              'This opens the in-app support chat. After we send your code, reply there with the code.',
             )}
           </Text>
           <PrimaryButton
@@ -305,7 +315,31 @@ export function IdentityVerificationScreen() {
       {authError ? <Text style={styles.error}>{authError}</Text> : null}
 
       <GhostButton title="Log out" icon="log-out" onPress={logout} full />
+
+      <SupportChatModal
+        visible={supportChatOpen}
+        userId={user.id}
+        onClose={() => setSupportChatOpen(false)}
+      />
     </Screen>
+  )
+}
+
+function SupportChatModal({
+  visible,
+  userId,
+  onClose,
+}: {
+  visible: boolean
+  userId: string
+  onClose: () => void
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+        <ChatThreadPanel threadId={supportThreadId(userId)} onBack={onClose} />
+      </SafeAreaView>
+    </Modal>
   )
 }
 

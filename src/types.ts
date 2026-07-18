@@ -38,6 +38,7 @@ export type Screen =
   | 'account'
   | 'help'
   | 'notifications'
+  | 'chat'
 
 export type PaymentMethod = 'cash' | 'bank_transfer'
 
@@ -97,6 +98,21 @@ export type NotificationLink =
   | { screen: 'host-dashboard'; bookingId?: string }
   | { screen: 'customer-home' }
   | { screen: 'history'; bookingId?: string }
+  | { screen: 'chat'; threadId: string; bookingId?: string }
+
+export type ChatMessageKind = 'text' | 'image' | 'payment_proof' | 'system'
+
+export interface ChatMessage {
+  id: string
+  threadId: string
+  senderId: string
+  senderName: string
+  senderRole: AppRole | 'support'
+  text?: string
+  imageUri?: string
+  kind: ChatMessageKind
+  createdAt: string
+}
 
 export interface User {
   id: string
