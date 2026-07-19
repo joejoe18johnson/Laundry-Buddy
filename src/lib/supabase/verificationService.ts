@@ -1,4 +1,5 @@
-import type { IdentityVerification } from '../../types'
+import type { IdentityVerification, User } from '../../types'
+import { prepareSupabaseAdminSession } from './adminAccess'
 import { getSupabaseClient } from './client'
 import { identityVerificationToJson, profileRowToUser } from './mappers'
 
@@ -9,9 +10,27 @@ export type AdminPatchResult =
 export async function adminPatchIdentityVerification(
   userId: string,
   patch: Partial<IdentityVerification>,
+  actingUser?: User | null,
 ): Promise<AdminPatchResult> {
   const supabase = getSupabaseClient()
   if (!supabase) return { ok: false, error: 'Supabase is not configured.' }
+
+  if (actingUser) {
+    const prepared = await prepareSupabaseAdminSession(actingUser)
+    if (!prepared.ok) {
+      return { ok: false, error: prepared.error ?? 'Admin session not ready.' }
+    }
+  } else {
+    const { getSupabaseAdminStatus } = await import('./adminAccess')
+    const status = await getSupabaseAdminStatus()
+    if (!status.hasSession || !status.isAdmin) {
+      return {
+        ok: false,
+        error:
+          'Your account is not recognized as admin in Supabase. Log in with support@laundrybuddy.app (not training mode) and run the admin migration SQL.',
+      }
+    }
+  }
 
   const { data, error } = await supabase.rpc('admin_patch_identity_verification', {
     target_user_id: userId,
@@ -20,8 +39,10 @@ export async function adminPatchIdentityVerification(
 
   if (error) {
     const message = error.message.includes('not authorized')
-      ? 'Your account is not recognized as admin in Supabase. Run the latest migration and ensure your profile role is admin.'
-      : error.message
+      ? 'Your account is not recognized as admin in Supabase. Log in with support@laundrybuddy.app and ensure your profile role is admin (run the migration SQL).'
+      : error.message.includes('Could not find the function')
+        ? 'Admin database functions are missing. Run supabase/migrations/20260719000000_admin_profile_updates.sql in Supabase SQL Editor.'
+        : error.message
     return { ok: false, error: message }
   }
 

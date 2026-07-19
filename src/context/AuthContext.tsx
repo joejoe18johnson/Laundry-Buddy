@@ -41,9 +41,10 @@ import {
   supabaseSignUp,
   supabaseSubmitIdentityVerification,
 } from '../lib/supabase'
+import { ensureSupabaseAdminProfile, isLikelyAdminUser } from '../lib/supabase/adminAccess'
 import * as SplashScreen from 'expo-splash-screen'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
-import { emptyIdentityVerification, getIdentityVerification, needsIdentityVerification } from '../lib/identityVerification'
+import { emptyIdentityVerification, getIdentityVerification, normalizeUserIdentity, needsIdentityVerification } from '../lib/identityVerification'
 import { isValidEmail } from '../lib/email'
 import {
   approveUserVerification,
@@ -274,7 +275,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false
       }
       const merged = await resolveUserById(signedIn.id)
-      const sessionUser = merged ?? signedIn
+      let sessionUser = merged ?? signedIn
+      if (isLikelyAdminUser(sessionUser)) {
+        sessionUser = normalizeUserIdentity({ ...sessionUser, role: 'admin' })
+        try {
+          sessionUser = await ensureSupabaseAdminProfile(sessionUser)
+        } catch {
+          // Verification actions will surface admin setup errors.
+        }
+      }
       await saveUser(sessionUser)
       setUser(sessionUser)
       setAuthError(null)
@@ -308,6 +317,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!found || found.password !== password) {
         setAuthError('Training account not found. Reload the app to refresh demo data.')
         return false
+      }
+
+      if (found.role === 'admin' && isSupabaseConfigured() && found.email) {
+        const { user: signedIn, error } = await supabaseSignIn('email', found.email, password)
+        if (signedIn) {
+          let sessionUser = normalizeUserIdentity({ ...signedIn, role: 'admin' })
+          try {
+            sessionUser = await ensureSupabaseAdminProfile(sessionUser)
+          } catch {
+            // Still allow dashboard — verification actions will show a clearer error.
+          }
+          const merged = await resolveUserById(sessionUser.id)
+          const nextUser = merged ? normalizeUserIdentity({ ...merged, role: 'admin' }) : sessionUser
+          await saveUser(nextUser)
+          setUser(nextUser)
+          setAuthError(null)
+          bumpAuthSession()
+          return true
+        }
+        if (error) {
+          setAuthError(
+            'Support admin is not set up in Supabase yet. Create support@laundrybuddy.app via Sign up, then run the admin migration SQL.',
+          )
+          return false
+        }
       }
 
       if (isSupabaseConfigured()) {
@@ -562,9 +596,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   )
 
-  const adminSendVerificationCode = useCallback(async (userId: string) => {
-    return adminSendVerificationCodeToUser(userId)
-  }, [])
+  const adminSendVerificationCode = useCallback(
+    async (userId: string) => {
+      return adminSendVerificationCodeToUser(userId, user)
+    },
+    [user],
+  )
 
   const submitVerificationCode = useCallback(
     async (code: string) => {
@@ -605,7 +642,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const adminApproveUser = useCallback(
     async (userId: string) => {
-      const result = await approveUserVerification(userId)
+      const result = await approveUserVerification(userId, user)
       if (result.user && user?.id === userId) setUser(result.user)
       return result
     },
@@ -614,7 +651,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const adminRejectUser = useCallback(
     async (userId: string) => {
-      const result = await rejectUserVerification(userId)
+      const result = await rejectUserVerification(userId, user)
       if (result.user && user?.id === userId) setUser(result.user)
       return result
     },

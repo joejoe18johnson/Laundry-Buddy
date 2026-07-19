@@ -20,7 +20,8 @@ as $$
         role::text = 'admin'
         or lower(coalesce(email, '')) = 'support@laundrybuddy.app'
       )
-  );
+  )
+  or lower(coalesce(auth.jwt()->>'email', '')) = 'support@laundrybuddy.app';
 $$;
 
 drop policy if exists "profiles_update_admin" on public.profiles;
@@ -68,6 +69,11 @@ $$;
 
 grant execute on function public.is_admin() to authenticated;
 grant execute on function public.admin_patch_identity_verification(uuid, jsonb) to authenticated;
+
+-- One-time: promote support login to admin (safe to re-run).
+update public.profiles
+set role = 'admin'
+where lower(coalesce(email, '')) = 'support@laundrybuddy.app';
 
 -- Pre-booking inquiry threads: inquiry:{guest_user_id}:{host_user_id}
 drop policy if exists "chat_messages_select_inquiry" on public.chat_messages;

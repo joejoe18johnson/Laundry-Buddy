@@ -47,6 +47,7 @@ import { isFullFlowTesting, TESTING_SPLASH_MS } from './src/lib/testingFlow'
 import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
 import { HostRequestAlertSync } from './src/components/HostRequestAlertSync'
+import { SupportChatFab } from './src/components/SupportChatFab'
 import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
 import {
@@ -57,6 +58,7 @@ import {
   requestPushPermissions,
   type PushPermissionStatus,
 } from './src/lib/pushNotifications'
+import { ensureSupabaseAdminProfile } from './src/lib/supabase/adminAccess'
 import { getGreetingName } from './src/lib/displayName'
 import type { Screen } from './src/types'
 
@@ -84,6 +86,11 @@ function AdminAppShell() {
   const [reviewUserId, setReviewUserId] = useState<string | null>(null)
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const { queueCount } = useAdminDashboardData(dashboardRefreshKey)
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return
+    void ensureSupabaseAdminProfile(user).catch(() => {})
+  }, [user?.id, user?.role])
 
   const openUserReview = (userId: string) => {
     setReviewUserId(userId)
@@ -297,6 +304,7 @@ function AppShell() {
     fetchGpsLocation,
     applyLocationPreferences,
     openNotificationFromPush,
+    openSupportChat,
   } = useApp()
   const { unreadCount } = useUserNotifications(user!.id)
   const { totalUnreadCount } = useMessages()
@@ -391,6 +399,7 @@ function AppShell() {
   const tabs = isCustomer ? customerTabs : hostTabs
   const showBottomNav = !HIDE_BOTTOM_NAV.includes(screen)
   const showAppHeader = !HIDE_BOTTOM_NAV.includes(screen)
+  const showSupportFab = screen !== 'chat' && screen !== 'messages'
 
   useEffect(() => {
     const subscription = addNotificationResponseListener((title, data) => {
@@ -474,6 +483,12 @@ function AppShell() {
           />
         )}
       </View>
+
+      <SupportChatFab
+        visible={showSupportFab}
+        aboveBottomNav={showBottomNav}
+        onPress={openSupportChat}
+      />
 
       {showBottomNav && (
         <SafeAreaView edges={['bottom']} style={shellStyles.bottomNavWrap}>

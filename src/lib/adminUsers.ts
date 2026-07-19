@@ -174,6 +174,7 @@ export async function markPhoneVerifiedForUser(userId: string, phone?: string): 
 export async function updateUserVerificationStatus(
   userId: string,
   status: VerificationStatus,
+  actingUser?: User | null,
 ): Promise<AdminUserActionResult> {
   const user = await resolveUserById(userId)
   if (!user) return { user: null, error: 'User not found.' }
@@ -190,7 +191,7 @@ export async function updateUserVerificationStatus(
   })
 
   if (isSupabaseConfigured()) {
-    const patchResult = await adminPatchIdentityVerification(userId, verification)
+    const patchResult = await adminPatchIdentityVerification(userId, verification, actingUser)
     if (!patchResult.ok) {
       return { user: null, error: patchResult.error }
     }
@@ -209,10 +210,16 @@ export async function updateUserVerificationStatus(
   return { user: updated }
 }
 
-export async function approveUserVerification(userId: string): Promise<AdminUserActionResult> {
-  return updateUserVerificationStatus(userId, 'verified')
+export async function approveUserVerification(
+  userId: string,
+  actingUser?: User | null,
+): Promise<AdminUserActionResult> {
+  return updateUserVerificationStatus(userId, 'verified', actingUser)
 }
 
-export async function rejectUserVerification(userId: string): Promise<AdminUserActionResult> {
-  return updateUserVerificationStatus(userId, 'rejected')
+export async function rejectUserVerification(
+  userId: string,
+  actingUser?: User | null,
+): Promise<AdminUserActionResult> {
+  return updateUserVerificationStatus(userId, 'rejected', actingUser)
 }

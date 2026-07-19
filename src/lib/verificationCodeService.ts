@@ -1,3 +1,4 @@
+import type { User } from '../types'
 import { listAllUsers, markPhoneVerifiedForUser, resolveUserById } from './adminUsers'
 import { saveUser } from './authStorage'
 import { getIdentityVerification, normalizeUserIdentity } from './identityVerification'
@@ -73,7 +74,10 @@ export async function requestVerificationCodeForUser(
   return createVerificationCodeRequest(userId, userName, normalizedPhone)
 }
 
-export async function adminSendVerificationCodeToUser(userId: string): Promise<{
+export async function adminSendVerificationCodeToUser(
+  userId: string,
+  actingUser?: User | null,
+): Promise<{
   ok: boolean
   code?: string
   userName?: string
@@ -91,13 +95,17 @@ export async function adminSendVerificationCodeToUser(userId: string): Promise<{
   await markVerificationCodeSent(userId, code)
 
   if (isSupabaseConfigured()) {
-    const patchResult = await adminPatchIdentityVerification(userId, {
-      ...getIdentityVerification(user),
-      codeRequestStatus: 'code_sent',
-      codeSentAt: new Date().toISOString(),
-      assignedVerificationCode: code,
-      verifiedPhone: request.phone,
-    })
+    const patchResult = await adminPatchIdentityVerification(
+      userId,
+      {
+        ...getIdentityVerification(user),
+        codeRequestStatus: 'code_sent',
+        codeSentAt: new Date().toISOString(),
+        assignedVerificationCode: code,
+        verifiedPhone: request.phone,
+      },
+      actingUser,
+    )
     if (!patchResult.ok) {
       return { ok: false, error: patchResult.error }
     }
