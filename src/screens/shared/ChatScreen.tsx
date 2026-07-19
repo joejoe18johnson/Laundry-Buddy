@@ -3,10 +3,12 @@ import {
   FlatList,
   Image,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
@@ -15,7 +17,7 @@ import { AppIcon } from '../../components/AppIcon'
 import { BrandActionSheet, BrandAlert, type BrandDialogAction } from '../../components/BrandDialog'
 import { ImageLightbox } from '../../components/ImageLightbox'
 import { PaymentProofChip } from '../../components/PaymentProofChip'
-import { AppTextInput, BackButton, PrimaryButton, SuccessButton } from '../../components/ui'
+import { BackButton, PrimaryButton, SuccessButton } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { formatChatTime, senderRoleLabel, useMessages } from '../../context/MessageContext'
@@ -157,7 +159,7 @@ export function ChatThreadPanel({
   subtitleOverride?: string
 }) {
   const { user } = useAuth()
-  const { colors } = useTheme()
+  const { colors, formStyles } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const { getMessages, refreshThread, sendMessage, markRead } = useMessages()
@@ -165,7 +167,7 @@ export function ChatThreadPanel({
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null)
   const [lightboxUri, setLightboxUri] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
-  const [keyboardHeight, setKeyboardHeight] = useState(0)
+  const [keyboardVisible, setKeyboardVisible] = useState(false)
   const [attachSheetOpen, setAttachSheetOpen] = useState(false)
   const [permissionAlert, setPermissionAlert] = useState<{ title: string; message: string } | null>(null)
   const listRef = useRef<FlatList<ChatMessage>>(null)
@@ -191,14 +193,14 @@ export function ChatThreadPanel({
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
-    const show = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardHeight(event.endCoordinates.height)
+    const show = Keyboard.addListener(showEvent, () => {
+      setKeyboardVisible(true)
       setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true })
-      }, Platform.OS === 'ios' ? event.duration ?? 100 : 100)
+      }, 100)
     })
     const hide = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0)
+      setKeyboardVisible(false)
     })
     return () => {
       show.remove()
@@ -317,7 +319,11 @@ export function ChatThreadPanel({
   }
 
   return (
-    <View style={[styles.wrap, { paddingBottom: keyboardHeight }]}>
+    <KeyboardAvoidingView
+      style={styles.wrap}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
         <View style={styles.header}>
         {showBackButton && onBack ? <BackButton onPress={onBack} label="Back" /> : null}
         <View style={styles.headerCopy}>
@@ -386,26 +392,38 @@ export function ChatThreadPanel({
         </View>
       ) : null}
 
-      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
-        <Pressable onPress={showAttachOptions} style={styles.attachBtn} hitSlop={8}>
-          <AppIcon name="image" size={22} color={colors.black} />
-        </Pressable>
-        <AppTextInput
-          style={styles.input}
-          placeholder="Write a message"
-          value={draft}
-          onChangeText={setDraft}
-          onFocus={scrollToLatest}
-          multiline
-          maxLength={1000}
-        />
-        <Pressable
-          onPress={() => void handleSend()}
-          disabled={sending || (!draft.trim() && !pendingImageUri)}
-          style={[styles.sendBtn, (!draft.trim() && !pendingImageUri) && styles.sendBtnDisabled]}
-        >
-          <AppIcon name="send" size={18} color={colors.white} />
-        </Pressable>
+      <View
+        style={[
+          styles.composer,
+          { paddingBottom: keyboardVisible ? spacing.sm : Math.max(insets.bottom, spacing.sm) },
+        ]}
+      >
+        <View style={styles.composerRow}>
+          <Pressable onPress={showAttachOptions} style={styles.attachBtn} hitSlop={8}>
+            <AppIcon name="image" size={22} color={colors.black} />
+          </Pressable>
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={styles.input}
+              placeholder={toTitleCase('Write a message')}
+              placeholderTextColor={formStyles.placeholderColor}
+              value={draft}
+              onChangeText={setDraft}
+              onFocus={scrollToLatest}
+              multiline
+              scrollEnabled
+              textAlignVertical="top"
+              maxLength={1000}
+            />
+          </View>
+          <Pressable
+            onPress={() => void handleSend()}
+            disabled={sending || (!draft.trim() && !pendingImageUri)}
+            style={[styles.sendBtn, (!draft.trim() && !pendingImageUri) && styles.sendBtnDisabled]}
+          >
+            <AppIcon name="send" size={18} color={colors.white} />
+          </Pressable>
+        </View>
       </View>
       <ImageLightbox
         visible={!!lightboxUri}
@@ -429,7 +447,7 @@ export function ChatThreadPanel({
         icon="alert-circle"
         onClose={() => setPermissionAlert(null)}
       />
-    </View>
+    </KeyboardAvoidingView>
   )
 }
 
@@ -556,41 +574,54 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       justifyContent: 'center',
     },
     composer: {
-      flexDirection: 'row',
-      alignItems: 'flex-end',
-      gap: spacing.sm,
       paddingHorizontal: spacing.screen,
       paddingTop: spacing.sm,
       borderTopWidth: 1,
       borderTopColor: colors.gray100,
       backgroundColor: colors.white,
     },
+    composerRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      gap: spacing.sm,
+      width: '100%',
+    },
     attachBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.gray50,
+      flexShrink: 0,
+    },
+    inputWrap: {
+      flex: 1,
+      minWidth: 0,
     },
     input: {
-      flex: 1,
-      minHeight: 40,
+      width: '100%',
+      minHeight: 44,
       maxHeight: 120,
       borderWidth: 1,
       borderColor: colors.gray200,
       borderRadius: radius.lg,
       paddingHorizontal: spacing.md,
-      paddingVertical: 10,
+      paddingTop: Platform.OS === 'ios' ? 11 : 10,
+      paddingBottom: Platform.OS === 'ios' ? 11 : 10,
       backgroundColor: colors.white,
+      fontSize: 16,
+      lineHeight: 22,
+      color: colors.black,
     },
     sendBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.black,
+      flexShrink: 0,
     },
     sendBtnDisabled: { opacity: 0.45 },
   })
