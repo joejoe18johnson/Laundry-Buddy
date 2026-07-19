@@ -1,6 +1,18 @@
-import { createContext, ReactNode, useContext, useEffect, useRef, useState, type ComponentProps } from 'react'
 import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type RefObject,
+} from 'react'
+import {
+  Dimensions,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
@@ -21,6 +33,7 @@ import { radius, spacing } from '../theme'
 
 type ScreenScrollContextValue = {
   scrollToEnd: () => void
+  scrollFieldIntoView: (fieldRef: RefObject<View | null>) => void
 }
 
 const ScreenScrollContext = createContext<ScreenScrollContextValue | null>(null)
@@ -29,34 +42,61 @@ export function useScreenScroll() {
   return useContext(ScreenScrollContext)
 }
 
-export function AppTextInput({ style, multiline, placeholderTextColor, placeholder, ...props }: TextInputProps) {
+export function AppTextInput({
+  style,
+  multiline,
+  placeholderTextColor,
+  placeholder,
+  onFocus,
+  ...props
+}: TextInputProps) {
   const { uiStyles: styles, formStyles } = useTheme()
+  const scroll = useScreenScroll()
+  const fieldRef = useRef<View>(null)
   const resolvedPlaceholder =
     typeof placeholder === 'string' ? toTitleCase(placeholder) : placeholder
+
+  const handleFocus: TextInputProps['onFocus'] = (event) => {
+    scroll?.scrollFieldIntoView(fieldRef)
+    onFocus?.(event)
+  }
+
   return (
-    <TextInput
-      {...props}
-      placeholder={resolvedPlaceholder}
-      multiline={multiline}
-      placeholderTextColor={placeholderTextColor ?? formStyles.placeholderColor}
-      style={[styles.appInput, multiline && styles.appInputMultiline, style]}
-    />
+    <View ref={fieldRef} collapsable={false}>
+      <TextInput
+        {...props}
+        onFocus={handleFocus}
+        placeholder={resolvedPlaceholder}
+        multiline={multiline}
+        placeholderTextColor={placeholderTextColor ?? formStyles.placeholderColor}
+        style={[styles.appInput, multiline && styles.appInputMultiline, style]}
+      />
+    </View>
   )
 }
 
 export function PasswordInput({
   style,
   placeholder = 'Your password',
+  onFocus,
   ...props
 }: Omit<TextInputProps, 'secureTextEntry'>) {
   const { uiStyles: styles, formStyles, colors } = useTheme()
+  const scroll = useScreenScroll()
+  const fieldRef = useRef<View>(null)
   const [visible, setVisible] = useState(false)
   const resolvedPlaceholder = typeof placeholder === 'string' ? toTitleCase(placeholder) : placeholder
 
+  const handleFocus: TextInputProps['onFocus'] = (event) => {
+    scroll?.scrollFieldIntoView(fieldRef)
+    onFocus?.(event)
+  }
+
   return (
-    <View style={[styles.passwordRow, style]}>
+    <View ref={fieldRef} collapsable={false} style={[styles.passwordRow, style]}>
       <TextInput
         {...props}
+        onFocus={handleFocus}
         placeholder={resolvedPlaceholder}
         placeholderTextColor={formStyles.placeholderColor}
         secureTextEntry={!visible}
@@ -78,6 +118,8 @@ export function Screen({ children, style }: { children: ReactNode; style?: ViewS
   const insets = useSafeAreaInsets()
   const { uiStyles: styles } = useTheme()
   const scrollRef = useRef<ScrollView>(null)
+  const scrollYRef = useRef(0)
+  const pendingFieldRef = useRef<RefObject<View | null> | null>(null)
   const [keyboardHeight, setKeyboardHeight] = useState(0)
 
   useEffect(() => {
@@ -88,6 +130,7 @@ export function Screen({ children, style }: { children: ReactNode; style?: ViewS
     })
     const hide = Keyboard.addListener(hideEvent, () => {
       setKeyboardHeight(0)
+      pendingFieldRef.current = null
     })
     return () => {
       show.remove()
@@ -101,26 +144,78 @@ export function Screen({ children, style }: { children: ReactNode; style?: ViewS
     })
   }
 
-  const keyboardPadding = keyboardHeight
+  const scrollFieldIntoView = useCallback(
+    (fieldRef: RefObject<View | null>) => {
+      const field = fieldRef.current
+      if (!field) return
+
+      pendingFieldRef.current = fieldRef
+
+      const run = () => {
+        const activeField = fieldRef.current
+        if (!activeField || !scrollRef.current) return
+
+        activeField.measureInWindow((_x, y, _width, height) => {
+          const windowHeight = Dimensions.get('window').height
+          const keyboardInset = keyboardHeight || Keyboard.metrics()?.height || 0
+          const visibleBottom = windowHeight - keyboardInset - spacing.lg
+          const fieldBottom = y + height
+          const labelBuffer = 44
+          const overflow = fieldBottom - visibleBottom + labelBuffer
+
+          if (overflow > 0) {
+            scrollRef.current?.scrollTo({
+              y: scrollYRef.current + overflow,
+              animated: true,
+            })
+          }
+        })
+      }
+
+      requestAnimationFrame(run)
+      setTimeout(run, Platform.OS === 'ios' ? 250 : 100)
+    },
+    [keyboardHeight],
+  )
+
+  useEffect(() => {
+    if (keyboardHeight > 0 && pendingFieldRef.current) {
+      scrollFieldIntoView(pendingFieldRef.current)
+    }
+  }, [keyboardHeight, scrollFieldIntoView])
+
+  const keyboardPadding = keyboardHeight > 0 ? keyboardHeight + spacing.md : 0
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <ScreenScrollContext.Provider value={{ scrollToEnd }}>
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={[
-            styles.scroll,
-            {
-              paddingBottom: bottomSafePadding(insets.bottom, spacing.lg) + keyboardPadding,
-            },
-            style,
-          ]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
-      </ScreenScrollContext.Provider>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      >
+        <ScreenScrollContext.Provider value={{ scrollToEnd, scrollFieldIntoView }}>
+          <ScrollView
+            ref={scrollRef}
+            automaticallyAdjustKeyboardInsets
+            contentContainerStyle={[
+              styles.scroll,
+              {
+                paddingBottom: bottomSafePadding(insets.bottom, spacing.lg) + keyboardPadding,
+              },
+              style,
+            ]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            onScroll={(event) => {
+              scrollYRef.current = event.nativeEvent.contentOffset.y
+            }}
+            scrollEventThrottle={16}
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
+        </ScreenScrollContext.Provider>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   )
 }

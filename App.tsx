@@ -40,6 +40,7 @@ import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
 import { isFullFlowTesting, TESTING_SPLASH_MS } from './src/lib/testingFlow'
 import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
+import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
 import {
   addNotificationResponseListener,
@@ -593,9 +594,12 @@ function AuthenticatedApp() {
             {user!.role === 'admin' ? (
               <AdminAppShell />
             ) : (
-              <AppProvider>
-                <AppShell />
-              </AppProvider>
+              <>
+                <VerificationStatusSync />
+                <AppProvider>
+                  <AppShell />
+                </AppProvider>
+              </>
             )}
           </ToastProvider>
         </MessageProvider>

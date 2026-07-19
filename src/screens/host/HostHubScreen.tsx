@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -21,6 +22,7 @@ import { parseListingInt } from '../../lib/hostListing'
 import { parsePriceInput } from '../../lib/hostPricing'
 import { formatTurnaroundHours, TURNAROUND_HOUR_OPTIONS } from '../../lib/turnaroundTime'
 import { formatDropOffAvailability, formatDropOffHoursWindow } from '../../lib/dropOffAvailability'
+import { resolveHostLocationFromGps } from '../../lib/hostLocation'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
@@ -181,6 +183,7 @@ export function HostHubScreen() {
     normalizeHostSettings(hostSettings, host),
   )
   const [saved, setSaved] = useState(true)
+  const [locatingListing, setLocatingListing] = useState(false)
 
   useEffect(() => {
     if (!hostSettings || !user) return
@@ -281,6 +284,30 @@ export function HostHubScreen() {
     await updateHostSettings(cleaned)
     setSaved(true)
     showToast('Host profile saved', { icon: 'check' })
+  }
+
+  const handleUseGpsForListing = async () => {
+    setLocatingListing(true)
+    try {
+      const resolved = await resolveHostLocationFromGps()
+      if (!resolved) {
+        showToast('Location permission denied or GPS unavailable', { icon: 'map-pin' })
+        return
+      }
+
+      patchListing({
+        location: resolved.location,
+        district: resolved.district,
+        latitude: resolved.latitude,
+        longitude: resolved.longitude,
+        ...(resolved.address && !listing.address.trim() ? { address: resolved.address } : {}),
+      })
+      showToast(`Location set to ${resolved.location}`, { icon: 'map-pin' })
+    } catch {
+      showToast('Could not get your location', { icon: 'map-pin' })
+    } finally {
+      setLocatingListing(false)
+    }
   }
 
   const paymentSummary = [
@@ -388,6 +415,25 @@ export function HostHubScreen() {
         <Text style={styles.sectionHint}>
           {toTitleCase('Location and contact info guests need for drop-off.')}
         </Text>
+        <Pressable
+          style={({ pressed }) => [styles.gpsBtn, pressed && styles.gpsBtnPressed]}
+          onPress={() => void handleUseGpsForListing()}
+          disabled={locatingListing}
+        >
+          {locatingListing ? (
+            <ActivityIndicator color={colors.black} size="small" />
+          ) : (
+            <AppIcon name="crosshair" size={16} color={colors.black} />
+          )}
+          <Text style={styles.gpsBtnText}>
+            {locatingListing ? toTitleCase('Finding you…') : toTitleCase('Use current GPS location')}
+          </Text>
+        </Pressable>
+        {listing.latitude != null && listing.longitude != null ? (
+          <Text style={styles.gpsHint}>
+            {toTitleCase('GPS pinned for map and directions. You can still edit the fields below.')}
+          </Text>
+        ) : null}
         <Field
           label="Area / neighborhood"
           value={listing.location}
@@ -684,6 +730,21 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   sectionHint: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
+  gpsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.black,
+    borderRadius: radius.pill,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.white,
+  },
+  gpsBtnPressed: { backgroundColor: colors.gray50 },
+  gpsBtnText: { fontSize: 14, fontWeight: '600', color: colors.black },
+  gpsHint: { fontSize: 12, color: colors.green, fontWeight: '600', lineHeight: 18 },
   row: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   rowText: { flex: 1, gap: 2 },
   rowLabel: { fontSize: 12, color: colors.gray500, fontWeight: '500' },

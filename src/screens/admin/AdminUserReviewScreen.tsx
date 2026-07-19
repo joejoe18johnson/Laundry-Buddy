@@ -12,6 +12,7 @@ import {
   SuccessButton,
 } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
 import { getAdminUserById } from '../../lib/adminUsers'
 import {
@@ -20,7 +21,8 @@ import {
   hasAddressProof,
   verificationStatusLabel,
 } from '../../lib/identityVerification'
-import { buildWhatsAppVerificationCodeMessage } from '../../lib/verificationCodes'
+import { buildWhatsAppVerificationCodeMessage, buildVerificationApprovedBody, VERIFICATION_APPROVED_TITLE } from '../../lib/verificationCodes'
+import { verificationApprovedLink } from '../../lib/notificationLinks'
 import { getAssignedCodeForUser } from '../../lib/verificationCodeStorage'
 import {
   getVerificationCodeRequestForUser,
@@ -69,6 +71,7 @@ function DetailRow({
 
 export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserReviewScreenProps) {
   const { adminApproveUser, adminRejectUser, adminSendVerificationCode } = useAuth()
+  const { push } = useNotifications()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [user, setUser] = useState<User | null>(null)
@@ -140,6 +143,13 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
       setActionError('Could not approve this user. Try refreshing the dashboard.')
     } else {
       setActionMessage('User verification approved.')
+      const notifyRole = updated.role === 'host' ? 'host' : 'customer'
+      await push(
+        userId,
+        VERIFICATION_APPROVED_TITLE,
+        buildVerificationApprovedBody(notifyRole),
+        verificationApprovedLink(updated.role),
+      )
     }
     await reload()
     onUpdated?.()

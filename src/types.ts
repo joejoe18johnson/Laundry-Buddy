@@ -67,6 +67,8 @@ export interface HostListing {
   address: string
   gateCode: string
   whatsapp: string
+  latitude?: number
+  longitude?: number
   turnaroundHours: number
   slotsLeft: number
   hasGenerator: boolean

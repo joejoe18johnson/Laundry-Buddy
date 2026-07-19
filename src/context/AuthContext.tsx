@@ -105,6 +105,7 @@ interface AuthState {
   }>
   submitVerificationCode: (code: string) => Promise<boolean>
   syncUserAfterVerification: (userId: string) => Promise<void>
+  refreshCurrentUser: () => Promise<void>
   adminListUsers: () => Promise<User[]>
   adminApproveUser: (userId: string) => Promise<User | null>
   adminRejectUser: (userId: string) => Promise<User | null>
@@ -574,6 +575,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   )
 
+  const refreshCurrentUser = useCallback(async () => {
+    if (!user) return
+    const updated = await resolveUserById(user.id)
+    if (updated) setUser(updated)
+  }, [user])
+
   const syncUserAfterVerification = useCallback(
     async (userId: string) => {
       if (user?.id !== userId) return
@@ -629,6 +636,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminSendVerificationCode,
       submitVerificationCode,
       syncUserAfterVerification,
+      refreshCurrentUser,
       adminListUsers,
       adminApproveUser,
       adminRejectUser,
@@ -659,6 +667,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminSendVerificationCode,
       submitVerificationCode,
       syncUserAfterVerification,
+      refreshCurrentUser,
       adminListUsers,
       adminApproveUser,
       adminRejectUser,

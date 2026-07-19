@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AppState, StyleSheet, Text, View } from 'react-native'
+import { Alert, AppState, StyleSheet, Text, View } from 'react-native'
 import { AddressProofCapture, type AddressProofFile } from '../../components/AddressProofCapture'
 import { IdDocumentCapture } from '../../components/IdDocumentCapture'
 import { AppIcon } from '../../components/AppIcon'
@@ -49,6 +49,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     submitIdentityVerification,
     requestVerificationCode,
     submitVerificationCode,
+    refreshCurrentUser,
     logout,
     authError,
     clearAuthError,
@@ -98,13 +99,15 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
 
   useEffect(() => {
     if (!user) return
+    void refreshCurrentUser()
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         void getVerificationCodeRequestForUser(user.id).then(setCodeRequest)
+        void refreshCurrentUser()
       }
     })
     return () => subscription.remove()
-  }, [user])
+  }, [user, refreshCurrentUser])
 
   if (!user || !verification) return null
 
@@ -151,6 +154,14 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     if (ok) {
       setCodeInput('')
       setCodeRequest(null)
+      Alert.alert(
+        toTitleCase('Code accepted'),
+        toTitleCase(
+          'Your phone number is verified. Continue below to upload your ID' +
+            (isHost ? ' and address proof.' : '.'),
+        ),
+        [{ text: toTitleCase('Continue') }],
+      )
     }
     setVerifyingCode(false)
   }
@@ -275,7 +286,11 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
         <View style={styles.verifiedNote}>
           <AppIcon name="check-circle" size={18} color={colors.green} />
           <Text style={styles.verifiedNoteText}>
-            {toTitleCase('You are verified — booking and hosting are unlocked.')}
+            {toTitleCase(
+              user.role === 'host'
+                ? 'You are verified — hosting is unlocked. You will not need to complete verification again.'
+                : 'You are verified — booking is unlocked. You will not need to complete verification again.',
+            )}
           </Text>
         </View>
       ) : null}

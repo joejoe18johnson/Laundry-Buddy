@@ -60,9 +60,13 @@ export function VerificationCenter({ user, status, wizardStep, children, footer 
 
       {status === 'pending' ? (
         <View style={styles.hintCard}>
-          <AppIcon name="message-circle" size={18} color={colors.gray600} />
+          <AppIcon name="clock" size={18} color={colors.gray600} />
           <Text style={styles.hintText}>
-            {toTitleCase('Enter the 6-digit code from WhatsApp, then wait for team review.')}
+            {toTitleCase(
+              user.role === 'host'
+                ? 'We are verifying your address and identification documents. Usually done within 30 mins.'
+                : 'We are verifying your identification documents. Usually done within 30 mins.',
+            )}
           </Text>
         </View>
       ) : null}

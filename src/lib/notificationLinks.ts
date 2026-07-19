@@ -20,6 +20,10 @@ export function chatLink(threadId: string, bookingId?: string): NotificationLink
   return { screen: 'chat', threadId, bookingId }
 }
 
+export function verificationApprovedLink(role: AppRole): NotificationLink {
+  return role === 'host' ? { screen: 'host-dashboard' } : { screen: 'customer-home' }
+}
+
 export function identityVerificationLink(): NotificationLink {
   return { screen: 'identity-verification' }
 }
@@ -97,6 +101,10 @@ export function inferNotificationLink(title: string, role: AppRole): Notificatio
   if (lower.includes('verification code')) {
     if (role === 'admin') return { screen: 'admin-dashboard' }
     return { screen: 'identity-verification' }
+  }
+
+  if (lower.includes("you're verified") || lower.includes('you are verified')) {
+    return role === 'host' ? { screen: 'host-dashboard' } : { screen: 'customer-home' }
   }
 
   if (role === 'host') {

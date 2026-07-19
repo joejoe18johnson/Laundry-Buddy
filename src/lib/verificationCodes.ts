@@ -39,6 +39,7 @@ export function isSixDigitCode(text: string): boolean {
 
 export const VERIFICATION_CODE_REQUEST_TITLE = 'Verification code requested'
 export const VERIFICATION_CODE_SENT_TITLE = 'Your verification code'
+export const VERIFICATION_APPROVED_TITLE = "You're verified!"
 
 export function buildAdminVerificationRequestBody(userName: string, phone: string): string {
   return `${userName} requested a 6-digit verification code for ${phone}.`
@@ -67,4 +68,11 @@ export function buildCodeAcceptedMessage(): string {
 
 export function buildCodeRejectedMessage(): string {
   return 'That code does not match. Check the 6-digit code we sent and try again.'
+}
+
+export function buildVerificationApprovedBody(role: 'customer' | 'host'): string {
+  if (role === 'host') {
+    return 'Your ID and address are approved. You are verified — hosting is unlocked and you will not need to verify again.'
+  }
+  return 'Your ID is approved. You are verified — booking is unlocked and you will not need to verify again.'
 }

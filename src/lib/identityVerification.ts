@@ -104,6 +104,12 @@ type WizardStep = 'phone' | 'id' | 'address'
 
 const PHONE_WHATSAPP_DETAIL = 'Verification code sent via WhatsApp'
 
+function teamReviewPendingDetail(role: AppRole): string {
+  return role === 'host'
+    ? 'Verifying address and identification documents. Usually done within 30 mins.'
+    : 'Verifying identification documents. Usually done within 30 mins.'
+}
+
 function unlockLabel(role: AppRole): string {
   return role === 'host' ? 'Hosting unlocked' : 'Booking unlocked'
 }
@@ -167,7 +173,7 @@ export function getVerificationTrackSteps(
     return buildCoreTrack(
       user,
       { phone: 'done', review: 'waiting', unlock: 'upcoming' },
-      { phone: phoneDisplay, review: 'Usually within 1 business day' },
+      { phone: phoneDisplay, review: teamReviewPendingDetail(user.role) },
     )
   }
 
@@ -216,11 +222,11 @@ export function verificationCenterHeadline(status: VerificationStatus, role: App
 export function verificationCenterSubtitle(status: VerificationStatus, role: AppRole): string {
   if (status === 'verified') {
     return role === 'host'
-      ? 'You can host loads and appear in guest search.'
-      : 'You can book dryer sessions with verified hosts.'
+      ? 'You are verified — hosting is unlocked. You will not need to complete verification again.'
+      : 'You are verified — booking is unlocked. You will not need to complete verification again.'
   }
   if (status === 'pending') {
-    return 'Browse the app while we review your details. Booking and hosting stay locked until approval.'
+    return 'Browse the app while we verify your documents. Usually done within 30 minutes.'
   }
   if (status === 'rejected') {
     return 'Please resubmit clear photos and correct details below.'
