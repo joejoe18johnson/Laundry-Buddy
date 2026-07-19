@@ -50,10 +50,12 @@ import {
   approveUserVerification,
   approveUserAddressVerification,
   approveUserIdVerification,
+  approveUserSelfieVerification,
   listAllUsers,
   rejectUserVerification,
   rejectUserAddressVerification,
   rejectUserIdVerification,
+  rejectUserSelfieVerification,
   resolveUserById,
   type AdminUserActionResult,
 } from '../lib/adminUsers'
@@ -98,6 +100,7 @@ interface AuthState {
     phone: string
     idType: IdDocumentType
     idPhotoUri?: string
+    selfiePhotoUri?: string
     address?: string
     addressProofUri?: string
     addressProofMimeType?: string
@@ -120,6 +123,8 @@ interface AuthState {
   adminRejectUserId: (userId: string) => Promise<AdminUserActionResult>
   adminApproveUserAddress: (userId: string) => Promise<AdminUserActionResult>
   adminRejectUserAddress: (userId: string) => Promise<AdminUserActionResult>
+  adminApproveUserSelfie: (userId: string) => Promise<AdminUserActionResult>
+  adminRejectUserSelfie: (userId: string) => Promise<AdminUserActionResult>
   clearAuthError: () => void
 }
 
@@ -516,6 +521,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phone: string
       idType: IdDocumentType
       idPhotoUri?: string
+      selfiePhotoUri?: string
       address?: string
       addressProofUri?: string
       addressProofMimeType?: string
@@ -525,6 +531,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const normalizedPhone = normalizePhone(data.phone)
       const hostAddressProof = user.role === 'host' ? !!data.addressProofUri : false
+      if (!data.selfiePhotoUri) {
+        setAuthError('A verification selfie is required.')
+        return false
+      }
+      if (user.role === 'host' && !hostAddressProof) {
+        setAuthError('Address proof is required for hosts.')
+        return false
+      }
 
       if (isSupabaseConfigured()) {
         try {
@@ -536,6 +550,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             idUploaded: true,
             idPhotoUri: data.idPhotoUri,
             idReviewStatus: 'pending',
+            selfiePhotoUri: data.selfiePhotoUri,
+            selfieUploaded: true,
+            selfieReviewStatus: 'pending',
             address: data.address?.trim() ?? '',
             addressUploaded: hostAddressProof ? true : undefined,
             addressProofUri: data.addressProofUri,
@@ -573,6 +590,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         idUploaded: true,
         idPhotoUri: data.idPhotoUri,
         idReviewStatus: 'pending',
+        selfiePhotoUri: data.selfiePhotoUri,
+        selfieUploaded: true,
+        selfieReviewStatus: 'pending',
         address: data.address?.trim() ?? '',
         addressUploaded: hostAddressProof ? true : undefined,
         addressProofUri: data.addressProofUri,
@@ -724,6 +744,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   )
 
+  const adminApproveUserSelfie = useCallback(
+    async (userId: string) => {
+      const result = await approveUserSelfieVerification(userId, user)
+      if (result.user && user?.id === userId) setUser(result.user)
+      return result
+    },
+    [user],
+  )
+
+  const adminRejectUserSelfie = useCallback(
+    async (userId: string) => {
+      const result = await rejectUserSelfieVerification(userId, user)
+      if (result.user && user?.id === userId) setUser(result.user)
+      return result
+    },
+    [user],
+  )
+
   const value = useMemo(
     () => ({
       user,
@@ -758,6 +796,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminRejectUserId,
       adminApproveUserAddress,
       adminRejectUserAddress,
+      adminApproveUserSelfie,
+      adminRejectUserSelfie,
       clearAuthError,
     }),
     [
@@ -793,6 +833,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminRejectUserId,
       adminApproveUserAddress,
       adminRejectUserAddress,
+      adminApproveUserSelfie,
+      adminRejectUserSelfie,
       clearAuthError,
     ],
   )

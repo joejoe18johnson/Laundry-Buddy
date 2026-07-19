@@ -7,12 +7,13 @@ import {
   verificationCenterHeadline,
   verificationCenterSubtitle,
   type VerificationTrackStep,
+  type VerificationWizardStep,
 } from '../lib/identityVerification'
 import { toTitleCase } from '../lib/titleCase'
 import { radius, spacing } from '../theme'
 import type { User, VerificationStatus } from '../types'
 
-type WizardStep = 'phone' | 'id' | 'address'
+type WizardStep = VerificationWizardStep
 
 type VerificationCenterProps = {
   user: User

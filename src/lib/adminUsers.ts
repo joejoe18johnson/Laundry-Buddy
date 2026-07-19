@@ -4,7 +4,10 @@ import {
   getIdentityVerification,
   getAddressReviewStatus,
   getIdReviewStatus,
+  getSelfieReviewStatus,
   hasAddressProof,
+  hasIdDocument,
+  hasSelfie,
   mergeUserProfiles,
   normalizeUserIdentity,
   recomputeOverallVerification,
@@ -131,13 +134,14 @@ export function usersPendingIdReview(users: User[]): User[] {
       const verification = getIdentityVerification(entry)
       if (!verification.phoneVerified) return false
 
-      const idNeedsReview = verification.idUploaded && getIdReviewStatus(verification) === 'pending'
+      const idNeedsReview = hasIdDocument(verification) && getIdReviewStatus(verification) === 'pending'
+      const selfieNeedsReview = hasSelfie(verification) && getSelfieReviewStatus(verification) === 'pending'
       const addressNeedsReview =
         entry.role === 'host' &&
         hasAddressProof(verification) &&
         getAddressReviewStatus(verification) === 'pending'
 
-      return idNeedsReview || addressNeedsReview
+      return idNeedsReview || selfieNeedsReview || addressNeedsReview
     }),
   )
 }
@@ -230,12 +234,14 @@ export async function updateUserVerificationStatus(
   }
 
   if (status === 'verified') {
-    if (current.idUploaded) patch.idReviewStatus = 'approved'
+    if (hasIdDocument(current)) patch.idReviewStatus = 'approved'
+    if (hasSelfie(current)) patch.selfieReviewStatus = 'approved'
     if (user.role === 'host' && hasAddressProof(current)) patch.addressReviewStatus = 'approved'
   }
 
   if (status === 'rejected') {
-    if (current.idUploaded) patch.idReviewStatus = 'rejected'
+    if (hasIdDocument(current)) patch.idReviewStatus = 'rejected'
+    if (hasSelfie(current)) patch.selfieReviewStatus = 'rejected'
     if (user.role === 'host' && hasAddressProof(current)) patch.addressReviewStatus = 'rejected'
   }
 
@@ -282,4 +288,18 @@ export async function rejectUserAddressVerification(
   actingUser?: User | null,
 ): Promise<AdminUserActionResult> {
   return patchUserIdentityVerification(userId, { addressReviewStatus: 'rejected' }, actingUser)
+}
+
+export async function approveUserSelfieVerification(
+  userId: string,
+  actingUser?: User | null,
+): Promise<AdminUserActionResult> {
+  return patchUserIdentityVerification(userId, { selfieReviewStatus: 'approved' }, actingUser)
+}
+
+export async function rejectUserSelfieVerification(
+  userId: string,
+  actingUser?: User | null,
+): Promise<AdminUserActionResult> {
+  return patchUserIdentityVerification(userId, { selfieReviewStatus: 'rejected' }, actingUser)
 }

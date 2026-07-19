@@ -18,6 +18,9 @@ export interface IdentityVerification {
   idUploaded: boolean
   idPhotoUri?: string
   idReviewStatus?: DocumentReviewStatus
+  selfiePhotoUri?: string
+  selfieUploaded?: boolean
+  selfieReviewStatus?: DocumentReviewStatus
   address?: string
   addressUploaded?: boolean
   addressProofUri?: string

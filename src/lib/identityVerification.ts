@@ -72,6 +72,8 @@ export function mergeIdentityVerification(
     idUploaded: primary.idUploaded || secondary.idUploaded,
     addressUploaded: primary.addressUploaded || secondary.addressUploaded,
     idPhotoUri: primary.idPhotoUri ?? secondary.idPhotoUri,
+    selfiePhotoUri: primary.selfiePhotoUri ?? secondary.selfiePhotoUri,
+    selfieUploaded: primary.selfieUploaded || secondary.selfieUploaded,
     addressProofUri: primary.addressProofUri ?? secondary.addressProofUri,
     addressProofMimeType: primary.addressProofMimeType ?? secondary.addressProofMimeType,
     addressProofName: primary.addressProofName ?? secondary.addressProofName,
@@ -85,6 +87,7 @@ export function mergeIdentityVerification(
     assignedVerificationCode:
       primary.assignedVerificationCode ?? secondary.assignedVerificationCode,
     idReviewStatus: primary.idReviewStatus ?? secondary.idReviewStatus,
+    selfieReviewStatus: primary.selfieReviewStatus ?? secondary.selfieReviewStatus,
     addressReviewStatus: primary.addressReviewStatus ?? secondary.addressReviewStatus,
   }
 }
@@ -149,11 +152,27 @@ export function hasAddressProof(verification: IdentityVerification): boolean {
   return !!verification.addressProofUri || !!verification.addressUploaded
 }
 
+export function hasIdDocument(verification: IdentityVerification): boolean {
+  return !!verification.idPhotoUri || !!verification.idUploaded
+}
+
+export function hasSelfie(verification: IdentityVerification): boolean {
+  return !!verification.selfiePhotoUri || !!verification.selfieUploaded
+}
+
 export function getIdReviewStatus(verification: IdentityVerification): DocumentReviewStatus | 'none' {
   if (verification.idReviewStatus) return verification.idReviewStatus
-  if (verification.status === 'verified' && verification.idUploaded) return 'approved'
-  if (verification.status === 'rejected' && verification.idUploaded) return 'rejected'
-  if (verification.idUploaded && verification.status === 'pending') return 'pending'
+  if (verification.status === 'verified' && hasIdDocument(verification)) return 'approved'
+  if (verification.status === 'rejected' && hasIdDocument(verification)) return 'rejected'
+  if (hasIdDocument(verification) && verification.status === 'pending') return 'pending'
+  return 'none'
+}
+
+export function getSelfieReviewStatus(verification: IdentityVerification): DocumentReviewStatus | 'none' {
+  if (verification.selfieReviewStatus) return verification.selfieReviewStatus
+  if (verification.status === 'verified' && hasSelfie(verification)) return 'approved'
+  if (verification.status === 'rejected' && hasSelfie(verification)) return 'rejected'
+  if (hasSelfie(verification) && verification.status === 'pending') return 'pending'
   return 'none'
 }
 
@@ -174,40 +193,39 @@ export function documentReviewStatusLabel(status: DocumentReviewStatus | 'none')
 
 export function canAdminReviewId(user: User): boolean {
   const verification = getIdentityVerification(user)
-  return (
-    isPhoneVerificationComplete(user) &&
-    verification.idUploaded &&
-    getIdReviewStatus(verification) === 'pending'
-  )
+  return hasIdDocument(verification) && getIdReviewStatus(verification) === 'pending'
+}
+
+export function canAdminReviewSelfie(user: User): boolean {
+  const verification = getIdentityVerification(user)
+  return hasSelfie(verification) && getSelfieReviewStatus(verification) === 'pending'
 }
 
 export function canAdminReviewAddress(user: User): boolean {
   if (user.role !== 'host') return false
   const verification = getIdentityVerification(user)
-  return (
-    isPhoneVerificationComplete(user) &&
-    hasAddressProof(verification) &&
-    getAddressReviewStatus(verification) === 'pending'
-  )
+  return hasAddressProof(verification) && getAddressReviewStatus(verification) === 'pending'
 }
 
-/** Derive overall verification status from phone, ID, and address review states. */
+/** Derive overall verification status from phone, ID, selfie, and address review states. */
 export function recomputeOverallVerification(user: User, verification: IdentityVerification): IdentityVerification {
   const idStatus = getIdReviewStatus(verification)
+  const selfieStatus = getSelfieReviewStatus(verification)
   const addressStatus = getAddressReviewStatus(verification)
 
-  if (idStatus === 'rejected' || addressStatus === 'rejected') {
+  if (idStatus === 'rejected' || selfieStatus === 'rejected' || addressStatus === 'rejected') {
     return { ...verification, status: 'rejected' }
   }
 
   const idOk = idStatus === 'approved'
+  const selfieOk = selfieStatus === 'approved'
   const addressOk = user.role !== 'host' || addressStatus === 'approved'
 
-  if (verification.phoneVerified && idOk && addressOk) {
+  if (verification.phoneVerified && idOk && selfieOk && addressOk) {
     return { ...verification, status: 'verified', phoneVerified: true }
   }
 
-  if (verification.idUploaded || hasAddressProof(verification)) {
+  if (hasIdDocument(verification) || hasSelfie(verification) || hasAddressProof(verification)) {
     return { ...verification, status: 'pending' }
   }
 
@@ -236,9 +254,11 @@ export function verificationStatusLabel(status: VerificationStatus, role: AppRol
 
 export function identityVerificationSteps(role: AppRole): string[] {
   return role === 'host'
-    ? ['Phone number', 'Government ID', 'Host address']
-    : ['Phone number', 'Government ID']
+    ? ['Phone number', 'Government ID', 'Selfie verification', 'Host address']
+    : ['Phone number', 'Government ID', 'Selfie verification']
 }
+
+export type VerificationWizardStep = 'phone' | 'id' | 'selfie' | 'address'
 
 export type VerificationTrackState = 'done' | 'active' | 'upcoming' | 'waiting'
 
@@ -249,14 +269,14 @@ export type VerificationTrackStep = {
   state: VerificationTrackState
 }
 
-type WizardStep = 'phone' | 'id' | 'address'
+type WizardStep = VerificationWizardStep
 
 const PHONE_WHATSAPP_DETAIL = 'Verification code sent via WhatsApp'
 
 function teamReviewPendingDetail(role: AppRole): string {
   return role === 'host'
-    ? 'Verifying address and identification documents. Usually done within 30 mins.'
-    : 'Verifying identification documents. Usually done within 30 mins.'
+    ? 'Verifying your ID, selfie, and address proof. Usually done within 30 mins.'
+    : 'Verifying your ID and selfie. Usually done within 30 mins.'
 }
 
 function unlockLabel(role: AppRole): string {
@@ -297,7 +317,8 @@ function buildCoreTrack(
 function wizardStepIndex(step: WizardStep): number {
   if (step === 'phone') return 0
   if (step === 'id') return 1
-  return 2
+  if (step === 'selfie') return 2
+  return 3
 }
 
 /** Steps shown in the Verification Center progress tracker. */
@@ -351,11 +372,15 @@ export function getVerificationTrackSteps(
             : undefined,
       review:
         reviewState === 'active'
-          ? wizardIndex >= 2 && user.role === 'host'
+          ? wizardIndex >= 3 && user.role === 'host'
             ? 'Upload your address proof'
-            : wizardIndex >= 1
-              ? 'Upload your government ID'
-              : undefined
+            : wizardIndex >= 2 && user.role === 'host'
+              ? 'Take a selfie to match your ID'
+              : wizardIndex >= 2
+                ? 'Take a selfie to match your ID'
+                : wizardIndex >= 1
+                  ? 'Upload your government ID'
+                  : undefined
           : undefined,
     },
   )
@@ -381,6 +406,6 @@ export function verificationCenterSubtitle(status: VerificationStatus, role: App
     return 'Please resubmit clear photos and correct details below.'
   }
   return role === 'host'
-    ? 'Add your phone number, verify via WhatsApp code, then submit ID for review.'
-    : 'Add your phone number, verify via WhatsApp code, then submit ID for review.'
+    ? 'Add your phone number, verify via WhatsApp code, then submit your ID, a matching selfie, and address proof.'
+    : 'Add your phone number, verify via WhatsApp code, then submit your ID and a matching selfie.'
 }

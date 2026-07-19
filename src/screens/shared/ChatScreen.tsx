@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Alert,
   FlatList,
   Image,
   Keyboard,
@@ -13,6 +12,7 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
+import { BrandActionSheet, BrandAlert, type BrandDialogAction } from '../../components/BrandDialog'
 import { ImageLightbox } from '../../components/ImageLightbox'
 import { PaymentProofChip } from '../../components/PaymentProofChip'
 import { AppTextInput, BackButton, PrimaryButton, SuccessButton } from '../../components/ui'
@@ -166,6 +166,8 @@ export function ChatThreadPanel({
   const [lightboxUri, setLightboxUri] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [keyboardHeight, setKeyboardHeight] = useState(0)
+  const [attachSheetOpen, setAttachSheetOpen] = useState(false)
+  const [permissionAlert, setPermissionAlert] = useState<{ title: string; message: string } | null>(null)
   const listRef = useRef<FlatList<ChatMessage>>(null)
 
   const messages = getMessages(threadId)
@@ -219,12 +221,12 @@ export function ChatThreadPanel({
       : await ImagePicker.requestMediaLibraryPermissionsAsync()
 
     if (!permission.granted) {
-      Alert.alert(
-        toTitleCase('Permission needed'),
-        useCamera
-          ? toTitleCase('Allow camera access to attach a photo.')
-          : toTitleCase('Allow photo library access to attach an image.'),
-      )
+      setPermissionAlert({
+        title: 'Permission needed',
+        message: useCamera
+          ? 'Allow camera access to attach a photo.'
+          : 'Allow photo library access to attach an image.',
+      })
       return
     }
 
@@ -237,15 +239,47 @@ export function ChatThreadPanel({
     }
   }
 
+  const attachSheetActions: BrandDialogAction[] = [
+    {
+      label: 'Take photo',
+      icon: 'camera',
+      variant: 'primary',
+      onPress: () => {
+        setAttachSheetOpen(false)
+        void pickImage(true)
+      },
+    },
+    {
+      label: 'Choose photo',
+      icon: 'image',
+      variant: 'outline',
+      onPress: () => {
+        setAttachSheetOpen(false)
+        void pickImage(false)
+      },
+    },
+    ...(pendingImageUri
+      ? [
+          {
+            label: 'Remove photo',
+            icon: 'trash-2' as const,
+            variant: 'danger' as const,
+            onPress: () => {
+              setAttachSheetOpen(false)
+              setPendingImageUri(null)
+            },
+          },
+        ]
+      : []),
+    {
+      label: 'Cancel',
+      variant: 'ghost',
+      onPress: () => setAttachSheetOpen(false),
+    },
+  ]
+
   const showAttachOptions = () => {
-    Alert.alert(toTitleCase('Attach photo'), toTitleCase('Send a screenshot or photo in this chat.'), [
-      { text: toTitleCase('Take photo'), onPress: () => pickImage(true) },
-      { text: toTitleCase('Choose photo'), onPress: () => pickImage(false) },
-      ...(pendingImageUri
-        ? [{ text: toTitleCase('Remove photo'), style: 'destructive' as const, onPress: () => setPendingImageUri(null) }]
-        : []),
-      { text: toTitleCase('Cancel'), style: 'cancel' as const },
-    ])
+    setAttachSheetOpen(true)
   }
 
   const handleSend = useCallback(async () => {
@@ -377,6 +411,23 @@ export function ChatThreadPanel({
         visible={!!lightboxUri}
         imageUri={lightboxUri}
         onClose={() => setLightboxUri(null)}
+      />
+
+      <BrandActionSheet
+        visible={attachSheetOpen}
+        title="Attach photo"
+        message="Send a screenshot or photo in this chat."
+        icon="image"
+        actions={attachSheetActions}
+        onClose={() => setAttachSheetOpen(false)}
+      />
+
+      <BrandAlert
+        visible={!!permissionAlert}
+        title={permissionAlert?.title ?? ''}
+        message={permissionAlert?.message}
+        icon="alert-circle"
+        onClose={() => setPermissionAlert(null)}
       />
     </View>
   )

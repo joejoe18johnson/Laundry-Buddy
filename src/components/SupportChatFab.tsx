@@ -31,7 +31,7 @@ export function SupportChatFab({ visible, aboveBottomNav = true, onPress }: Prop
         accessibilityRole="button"
         accessibilityLabel="Message support"
       >
-        <AppIcon name="life-buoy" size={22} color={colors.white} />
+        <AppIcon name="message-circle" size={24} color={colors.white} />
       </Pressable>
     </View>
   )

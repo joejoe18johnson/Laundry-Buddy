@@ -18,12 +18,16 @@ import { getAdminUserById } from '../../lib/adminUsers'
 import {
   canAdminReviewAddress,
   canAdminReviewId,
+  canAdminReviewSelfie,
   documentReviewStatusLabel,
   formatIdDocumentType,
   getAddressReviewStatus,
   getIdentityVerification,
   getIdReviewStatus,
+  getSelfieReviewStatus,
   hasAddressProof,
+  hasIdDocument,
+  hasSelfie,
   isIdentityVerified,
   isPhoneVerificationComplete,
   verificationStatusLabel,
@@ -94,6 +98,7 @@ function DocumentReviewActions({
   busy,
   onApprove,
   onReject,
+  waitingLabel,
 }: {
   approveLabel: string
   rejectLabel: string
@@ -102,11 +107,17 @@ function DocumentReviewActions({
   busy: boolean
   onApprove: () => void
   onReject: () => void
+  waitingLabel?: string
 }) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
-  if (!canReview) return null
+  if (!canReview) {
+    if (waitingLabel) {
+      return <Text style={styles.emptyText}>{toTitleCase(waitingLabel)}</Text>
+    }
+    return null
+  }
 
   return (
     <>
@@ -136,6 +147,8 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
   const {
     adminApproveUserId,
     adminRejectUserId,
+    adminApproveUserSelfie,
+    adminRejectUserSelfie,
     adminApproveUserAddress,
     adminRejectUserAddress,
     adminSendVerificationCode,
@@ -181,8 +194,10 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
   const verification = getIdentityVerification(user)
   const phoneVerified = isPhoneVerificationComplete(user)
   const idReviewStatus = getIdReviewStatus(verification)
+  const selfieReviewStatus = getSelfieReviewStatus(verification)
   const addressReviewStatus = getAddressReviewStatus(verification)
   const reviewId = canAdminReviewId(user)
+  const reviewSelfie = canAdminReviewSelfie(user)
   const reviewAddress = canAdminReviewAddress(user)
   const canSendCode = codeRequest?.status === 'pending'
 
@@ -248,6 +263,12 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
 
   const handleRejectAddress = () =>
     void runReviewAction(() => adminRejectUserAddress(userId), 'Address proof rejected.')
+
+  const handleApproveSelfie = () =>
+    void runReviewAction(() => adminApproveUserSelfie(userId), 'Verification selfie approved.')
+
+  const handleRejectSelfie = () =>
+    void runReviewAction(() => adminRejectUserSelfie(userId), 'Verification selfie rejected.')
 
   return (
     <Screen>
@@ -324,7 +345,7 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
         <View style={styles.section}>
           <View style={styles.sectionTitleRow}>
             <Text style={styles.sectionTitle}>{toTitleCase('ID verification')}</Text>
-            {verification.idUploaded ? (
+            {hasIdDocument(verification) ? (
               <ReviewStatusBadge label={documentReviewStatusLabel(idReviewStatus)} />
             ) : null}
           </View>
@@ -350,6 +371,52 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
               busy={busy}
               onApprove={handleApproveId}
               onReject={handleRejectId}
+              waitingLabel={
+                hasIdDocument(verification) && idReviewStatus === 'approved'
+                  ? 'Government ID approved.'
+                  : hasIdDocument(verification) && idReviewStatus === 'rejected'
+                    ? 'Government ID rejected.'
+                    : undefined
+              }
+            />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>{toTitleCase('Selfie verification')}</Text>
+            {hasSelfie(verification) ? (
+              <ReviewStatusBadge label={documentReviewStatusLabel(selfieReviewStatus)} />
+            ) : null}
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.reviewHint}>
+              {toTitleCase('Compare this live selfie with the photo on the government ID above.')}
+            </Text>
+            {verification.selfiePhotoUri ? (
+              <VerificationDocumentPreview
+                uri={verification.selfiePhotoUri}
+                label="Verification selfie"
+                onViewImage={setLightboxUri}
+              />
+            ) : (
+              <Text style={styles.emptyText}>{toTitleCase('No verification selfie uploaded yet.')}</Text>
+            )}
+            <DocumentReviewActions
+              approveLabel="Approve selfie"
+              rejectLabel="Reject selfie"
+              canReview={reviewSelfie}
+              phoneVerified={phoneVerified}
+              busy={busy}
+              onApprove={handleApproveSelfie}
+              onReject={handleRejectSelfie}
+              waitingLabel={
+                hasSelfie(verification) && selfieReviewStatus === 'approved'
+                  ? 'Verification selfie approved.'
+                  : hasSelfie(verification) && selfieReviewStatus === 'rejected'
+                    ? 'Verification selfie rejected.'
+                    : undefined
+              }
             />
           </View>
         </View>
@@ -383,20 +450,29 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
                 busy={busy}
                 onApprove={handleApproveAddress}
                 onReject={handleRejectAddress}
+                waitingLabel={
+                  hasAddressProof(verification) && addressReviewStatus === 'approved'
+                    ? 'Address proof approved.'
+                    : hasAddressProof(verification) && addressReviewStatus === 'rejected'
+                      ? 'Address proof rejected.'
+                      : undefined
+                }
               />
             </View>
           </View>
         ) : null}
 
         {verification.status === 'pending' &&
-        (idReviewStatus === 'approved' || addressReviewStatus === 'approved') ? (
+        (idReviewStatus === 'approved' ||
+          selfieReviewStatus === 'approved' ||
+          addressReviewStatus === 'approved') ? (
           <View style={styles.section}>
             <View style={styles.card}>
               <Text style={styles.reviewHint}>
                 {toTitleCase(
                   user.role === 'host'
-                    ? 'One document is approved — finish reviewing the remaining item to fully verify this host.'
-                    : 'ID approved — user will be fully verified once you complete review.',
+                    ? 'Some documents are approved — finish reviewing ID, selfie, and address to fully verify this host.'
+                    : 'Some documents are approved — finish reviewing ID and selfie to fully verify this guest.',
                 )}
               </Text>
             </View>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Alert, ScrollView, Text, View } from 'react-native'
+import { ScrollView, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
+import { BrandAlert } from '../../components/BrandDialog'
 import { OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -25,6 +26,7 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
   const { loading, codeRequests, idReviewUsers, queueCount, reload } = useAdminDashboardData(refreshKey)
   const [busyUserId, setBusyUserId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [errorAlert, setErrorAlert] = useState<string | null>(null)
 
   const handleSendCode = async (request: VerificationCodeRequest) => {
     setBusyUserId(request.userId)
@@ -36,7 +38,7 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
     } else {
       const message = result.error ?? 'Could not send verification code.'
       setActionError(message)
-      Alert.alert('Could not send code', message)
+      setErrorAlert(message)
     }
     await reload()
     setBusyUserId(null)
@@ -117,6 +119,14 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
           </>
         )}
       </ScrollView>
+
+      <BrandAlert
+        visible={!!errorAlert}
+        title="Could not send code"
+        message={errorAlert ?? undefined}
+        icon="alert-circle"
+        onClose={() => setErrorAlert(null)}
+      />
     </Screen>
   )
 }

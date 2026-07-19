@@ -157,8 +157,8 @@ export function SignupScreen() {
                 ? 'After sign-up, add your phone number and verify via WhatsApp code, then upload your ID for team review.'
                 : 'After sign-up, add your phone number and verify via WhatsApp code, then upload your ID for team review.'
               : role === 'host'
-              ? 'Next: phone number, WhatsApp verification code, government ID, and host address.'
-              : 'Next: phone number, WhatsApp verification code, and government ID.',
+              ? 'Next: phone number, WhatsApp code, government ID, matching selfie, and host address proof.'
+              : 'Next: phone number, WhatsApp code, government ID, and a matching selfie.',
           )}
         </Text>
       </View>

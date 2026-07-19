@@ -72,7 +72,7 @@ export function buildCodeRejectedMessage(): string {
 
 export function buildVerificationApprovedBody(role: 'customer' | 'host'): string {
   if (role === 'host') {
-    return 'Your ID and address are approved. You are verified — hosting is unlocked and you will not need to verify again.'
+    return 'Your ID, selfie, and address are approved. You are verified — hosting is unlocked and you will not need to verify again.'
   }
-  return 'Your ID is approved. You are verified — booking is unlocked and you will not need to verify again.'
+  return 'Your ID and selfie are approved. You are verified — booking is unlocked and you will not need to verify again.'
 }

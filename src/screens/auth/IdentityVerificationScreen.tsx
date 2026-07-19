@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, AppState, StyleSheet, Text, View } from 'react-native'
+import { AppState, StyleSheet, Text, View } from 'react-native'
 import { AddressProofCapture, type AddressProofFile } from '../../components/AddressProofCapture'
 import { IdDocumentCapture } from '../../components/IdDocumentCapture'
+import { SelfieCapture } from '../../components/SelfieCapture'
+import { BrandAlert } from '../../components/BrandDialog'
 import { AppIcon } from '../../components/AppIcon'
 import { VerificationCenter } from '../../components/VerificationCenter'
 import {
@@ -23,6 +25,7 @@ import {
   ID_DOCUMENT_OPTIONS,
   isIdentityVerified,
   isPhoneVerificationComplete,
+  type VerificationWizardStep,
 } from '../../lib/identityVerification'
 import { adminDashboardLink } from '../../lib/notificationLinks'
 import { normalizePhone } from '../../lib/phone'
@@ -40,7 +43,7 @@ import { toTitleCase } from '../../lib/titleCase'
 import type { IdDocumentType } from '../../types'
 import type { VerificationCodeRequest } from '../../lib/verificationRequestStorage'
 
-type WizardStep = 'phone' | 'id' | 'address'
+type WizardStep = VerificationWizardStep
 
 export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void }) {
   const {
@@ -58,6 +61,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
   const [phone, setPhone] = useState('')
   const [idType, setIdType] = useState<IdDocumentType | null>(null)
   const [idPhotoUri, setIdPhotoUri] = useState<string | null>(null)
+  const [selfiePhotoUri, setSelfiePhotoUri] = useState<string | null>(null)
   const [address, setAddress] = useState('')
   const [addressProof, setAddressProof] = useState<AddressProofFile | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -65,6 +69,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
   const [verifyingCode, setVerifyingCode] = useState(false)
   const [codeInput, setCodeInput] = useState('')
   const [codeRequest, setCodeRequest] = useState<VerificationCodeRequest | null>(null)
+  const [codeAcceptedAlertOpen, setCodeAcceptedAlertOpen] = useState(false)
 
   const verification = user ? getIdentityVerification(user) : null
   const isHost = user?.role === 'host'
@@ -89,7 +94,10 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
         name: verification.addressProofName ?? 'Utility bill',
       })
     }
-  }, [user, address, addressProof])
+    if (verification.selfiePhotoUri && !selfiePhotoUri) {
+      setSelfiePhotoUri(verification.selfiePhotoUri)
+    }
+  }, [user, address, addressProof, selfiePhotoUri])
 
   useEffect(() => {
     if (!user) return
@@ -119,6 +127,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
 
   const phoneReady = isValidWhatsAppNumber(phone)
   const idReady = !!idType && !!idPhotoUri
+  const selfieReady = !!selfiePhotoUri
   const addressReady = !isHost || (address.trim().length > 0 && !!addressProof)
   const codeReady = /^\d{6}$/.test(codeInput.trim())
   const hasOpenCodeRequest = !!codeRequest
@@ -162,14 +171,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
       await refreshCurrentUser()
       await refreshCodeRequest()
       setStep('id')
-      Alert.alert(
-        toTitleCase('Code accepted'),
-        toTitleCase(
-          'Your phone number is verified. Continue below to upload your ID' +
-            (isHost ? ' and address proof.' : '.'),
-        ),
-        [{ text: toTitleCase('Continue') }],
-      )
+      setCodeAcceptedAlertOpen(true)
     }
     setVerifyingCode(false)
   }
@@ -177,6 +179,11 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
 
   const handleContinueFromId = () => {
     if (!idReady) return
+    setStep('selfie')
+  }
+
+  const handleContinueFromSelfie = () => {
+    if (!selfieReady) return
     if (isHost) {
       setStep('address')
       return
@@ -185,7 +192,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
   }
 
   const handleSubmit = async () => {
-    if (!phoneReady || !idReady || !idType || !idPhotoUri) return
+    if (!phoneReady || !idReady || !idType || !idPhotoUri || !selfiePhotoUri) return
     if (isHost && !addressReady) return
 
     setSubmitting(true)
@@ -195,6 +202,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
         phone: normalizePhone(phone),
         idType,
         idPhotoUri,
+        selfiePhotoUri,
         address: isHost ? address.trim() : undefined,
         addressProofUri: isHost ? addressProof?.uri : undefined,
         addressProofMimeType: isHost ? addressProof?.mimeType : undefined,
@@ -326,7 +334,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
               <Text style={styles.sectionTitle}>{toTitleCase('Step 2 · Government ID')}</Text>
             </View>
             <Text style={styles.sectionSub}>
-              {toTitleCase('Select your document type first, then upload a clear photo.')}
+              {toTitleCase('Select your document type first, then upload a clear photo of your government ID.')}
             </Text>
             <View style={styles.idTypeRow}>
               {ID_DOCUMENT_OPTIONS.map((option) => (
@@ -355,8 +363,8 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
             {authError ? <Text style={styles.error}>{authError}</Text> : null}
             <View style={styles.actionStack}>
               <PrimaryButton
-                title={isHost ? 'Continue to address' : 'Submit verification'}
-                icon={isHost ? 'arrow-right' : 'check-circle'}
+                title="Continue to selfie"
+                icon="arrow-right"
                 full
                 disabled={!idReady || submitting}
                 onPress={handleContinueFromId}
@@ -366,14 +374,51 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
           </View>
         )}
 
+        {step === 'selfie' && (
+          <View style={styles.stepBlock}>
+            <View style={styles.sectionHeader}>
+              <AppIcon name="user" size={18} />
+              <Text style={styles.sectionTitle}>
+                {toTitleCase(isHost ? 'Step 3 · Verification selfie' : 'Step 3 · Verification selfie')}
+              </Text>
+            </View>
+            <Text style={styles.sectionSub}>
+              {toTitleCase(
+                'Take a live selfie so we can confirm your face matches the photo on your ID. Hold your phone at eye level in good lighting.',
+              )}
+            </Text>
+            <SelfieCapture
+              photoUri={selfiePhotoUri}
+              onPhotoChange={(uri) => {
+                setSelfiePhotoUri(uri)
+                clearAuthError()
+              }}
+              label={toTitleCase('Take verification selfie')}
+            />
+            {authError ? <Text style={styles.error}>{authError}</Text> : null}
+            <View style={styles.actionStack}>
+              <PrimaryButton
+                title={isHost ? 'Continue to address' : 'Submit verification'}
+                icon={isHost ? 'arrow-right' : 'check-circle'}
+                full
+                disabled={!selfieReady || submitting}
+                onPress={handleContinueFromSelfie}
+              />
+              <GhostButton title="Back to ID upload" icon="arrow-left" full onPress={() => setStep('id')} />
+            </View>
+          </View>
+        )}
+
         {step === 'address' && isHost && (
           <View style={styles.stepBlock}>
             <View style={styles.sectionHeader}>
               <AppIcon name="home" size={18} />
-              <Text style={styles.sectionTitle}>{toTitleCase('Step 3 · Host address')}</Text>
+              <Text style={styles.sectionTitle}>{toTitleCase('Step 4 · Host address')}</Text>
             </View>
             <Text style={styles.sectionSub}>
-              {toTitleCase('Where guests drop off laundry, plus proof that you live there.')}
+              {toTitleCase(
+                'Hosts must verify where guests drop off laundry. Enter your address and upload proof that you live there.',
+              )}
             </Text>
             <AppTextInput
               style={styles.addressInput}
@@ -401,7 +446,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
                 onPress={() => void handleSubmit()}
               />
               {authError ? <Text style={styles.error}>{authError}</Text> : null}
-              <GhostButton title="Back to ID upload" icon="arrow-left" full onPress={() => setStep('id')} />
+              <GhostButton title="Back to selfie" icon="arrow-left" full onPress={() => setStep('selfie')} />
             </View>
           </View>
         )}
@@ -419,7 +464,9 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
           showDocumentWizard
             ? step === 'address'
               ? 'address'
-              : 'id'
+              : step === 'selfie'
+                ? 'selfie'
+                : 'id'
             : showVerificationCodePanel
               ? 'phone'
               : undefined
@@ -429,6 +476,18 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
         {verificationCodePanel}
         {wizardContent}
       </VerificationCenter>
+
+      <BrandAlert
+        visible={codeAcceptedAlertOpen}
+        title="Code accepted"
+        message={
+          'Your phone number is verified. Continue below to upload your ID' +
+          (isHost ? ', take a matching selfie, and add address proof.' : ' and take a matching selfie.')
+        }
+        icon="check-circle"
+        confirmLabel="Continue"
+        onClose={() => setCodeAcceptedAlertOpen(false)}
+      />
     </Screen>
   )
 }

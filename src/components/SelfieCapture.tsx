@@ -5,47 +5,36 @@ import { AppIcon } from './AppIcon'
 import { BrandActionSheet, BrandAlert, type BrandDialogAction } from './BrandDialog'
 import { useTheme } from '../context/ThemeContext'
 import { toTitleCase } from '../lib/titleCase'
-import { radius, spacing } from '../theme'
+import { colors, radius, spacing } from '../theme'
 
-interface IdDocumentCaptureProps {
+interface SelfieCaptureProps {
   photoUri: string | null
   onPhotoChange: (uri: string | null) => void
   label?: string
   disabled?: boolean
 }
 
-export function IdDocumentCapture({ photoUri, onPhotoChange, label, disabled }: IdDocumentCaptureProps) {
-  const { colors } = useTheme()
-  const styles = useMemo(() => createStyles(colors), [colors])
+export function SelfieCapture({ photoUri, onPhotoChange, label, disabled }: SelfieCaptureProps) {
+  const styles = useMemo(() => createStyles(), [])
   const [sheetOpen, setSheetOpen] = useState(false)
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null)
 
-  const pickPhoto = async (useCamera: boolean) => {
-    const permission = useCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync()
-
+  const takeSelfie = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync()
     if (!permission.granted) {
       setAlert({
         title: 'Permission needed',
-        message: useCamera
-          ? 'Allow camera access to photograph your ID.'
-          : 'Allow photo library access to choose your ID photo.',
+        message: 'Allow camera access to take a verification selfie.',
       })
       return
     }
 
-    const result = useCamera
-      ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          allowsEditing: false,
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          allowsEditing: false,
-        })
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+      allowsEditing: false,
+      cameraType: ImagePicker.CameraType.front,
+    })
 
     if (!result.canceled && result.assets[0]?.uri) {
       onPhotoChange(result.assets[0].uri)
@@ -54,25 +43,25 @@ export function IdDocumentCapture({ photoUri, onPhotoChange, label, disabled }: 
 
   const sheetActions: BrandDialogAction[] = [
     {
-      label: 'Take photo',
+      label: 'Take selfie',
       icon: 'camera',
       variant: 'primary',
       onPress: () => {
         setSheetOpen(false)
-        void pickPhoto(true)
-      },
-    },
-    {
-      label: 'Choose from library',
-      icon: 'image',
-      variant: 'outline',
-      onPress: () => {
-        setSheetOpen(false)
-        void pickPhoto(false)
+        void takeSelfie()
       },
     },
     ...(photoUri
       ? [
+          {
+            label: 'Retake selfie',
+            icon: 'refresh-cw' as const,
+            variant: 'outline' as const,
+            onPress: () => {
+              setSheetOpen(false)
+              void takeSelfie()
+            },
+          },
           {
             label: 'Remove photo',
             icon: 'trash-2' as const,
@@ -91,21 +80,10 @@ export function IdDocumentCapture({ photoUri, onPhotoChange, label, disabled }: 
     },
   ]
 
-  const showOptions = () => {
-    if (disabled) {
-      setAlert({
-        title: 'Select document type',
-        message: "Choose passport, driver's license, or social security card before uploading.",
-      })
-      return
-    }
-    setSheetOpen(true)
-  }
-
   return (
     <View>
       <Pressable
-        onPress={showOptions}
+        onPress={() => !disabled && setSheetOpen(true)}
         disabled={disabled}
         style={[styles.upload, photoUri && styles.uploadDone, disabled && styles.uploadDisabled]}
       >
@@ -113,17 +91,18 @@ export function IdDocumentCapture({ photoUri, onPhotoChange, label, disabled }: 
           <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
         ) : (
           <>
-            <AppIcon name="upload" size={24} color={colors.gray500} />
-            <Text style={styles.uploadText}>{label ?? toTitleCase('Upload ID photo')}</Text>
+            <AppIcon name="user" size={24} color={colors.gray500} />
+            <Text style={styles.uploadText}>{label ?? toTitleCase('Take verification selfie')}</Text>
+            <Text style={styles.uploadHint}>{toTitleCase('Front camera only — face clearly visible')}</Text>
           </>
         )}
       </Pressable>
 
       <BrandActionSheet
         visible={sheetOpen}
-        title="ID photo"
-        message="Upload a clear photo of your passport, driver's license, or social security card."
-        icon="credit-card"
+        title="Verification selfie"
+        message="Take a clear selfie in good lighting. We use this to confirm your face matches the photo on your ID."
+        icon="user"
         actions={sheetActions}
         onClose={() => setSheetOpen(false)}
       />
@@ -139,10 +118,10 @@ export function IdDocumentCapture({ photoUri, onPhotoChange, label, disabled }: 
   )
 }
 
-function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
+function createStyles() {
   return StyleSheet.create({
     upload: {
-      minHeight: 140,
+      minHeight: 160,
       borderWidth: 2,
       borderStyle: 'dashed',
       borderColor: colors.gray200,
@@ -163,7 +142,8 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       opacity: 0.55,
       backgroundColor: colors.gray75,
     },
-    uploadText: { fontSize: 15, fontWeight: '500', color: colors.gray500 },
-    preview: { width: '100%', height: 180, borderRadius: radius.sm },
+    uploadText: { fontSize: 15, fontWeight: '600', color: colors.gray600, textAlign: 'center' },
+    uploadHint: { fontSize: 12, color: colors.gray500, textAlign: 'center' },
+    preview: { width: '100%', height: 220, borderRadius: radius.sm },
   })
 }

@@ -1,28 +1,16 @@
-import { useEffect, useRef } from 'react'
-import { Alert, AppState } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { AppState } from 'react-native'
+import { BrandAlert } from './BrandDialog'
 import { useAuth } from '../context/AuthContext'
 import { useUserNotifications } from '../context/NotificationContext'
 import { getIdentityVerification } from '../lib/identityVerification'
-import { toTitleCase } from '../lib/titleCase'
 import { VERIFICATION_APPROVED_TITLE } from '../lib/verificationCodes'
 
 function verificationApprovedAlertMessage(role: 'customer' | 'host'): string {
   if (role === 'host') {
-    return toTitleCase(
-      'Your ID and address are approved. You are fully verified — hosting is unlocked and you will not need to complete verification again.',
-    )
+    return 'Your ID, selfie, and address are approved. You are fully verified — hosting is unlocked and you will not need to complete verification again.'
   }
-  return toTitleCase(
-    'Your ID is approved. You are fully verified — booking is unlocked and you will not need to complete verification again.',
-  )
-}
-
-function showVerificationApprovedAlert(role: 'customer' | 'host') {
-  Alert.alert(
-    toTitleCase("You're verified!"),
-    verificationApprovedAlertMessage(role),
-    [{ text: toTitleCase('Great') }],
-  )
+  return 'Your ID and selfie are approved. You are fully verified — booking is unlocked and you will not need to complete verification again.'
 }
 
 /** Keeps the signed-in user in sync after admin approval and shows a verified popup once. */
@@ -31,6 +19,7 @@ export function VerificationStatusSync() {
   const { notifications, markRead } = useUserNotifications(user?.id)
   const previousStatusRef = useRef<string | null>(null)
   const alertedUserIdRef = useRef<string | null>(null)
+  const [verifiedAlert, setVerifiedAlert] = useState<{ role: 'customer' | 'host' } | null>(null)
 
   useEffect(() => {
     if (!user || user.role === 'admin') return
@@ -85,8 +74,17 @@ export function VerificationStatusSync() {
     if (!justVerified || alreadyAlertedForUser) return
 
     alertedUserIdRef.current = user.id
-    showVerificationApprovedAlert(role)
+    setVerifiedAlert({ role })
   }, [user])
 
-  return null
+  return (
+    <BrandAlert
+      visible={!!verifiedAlert}
+      title="You're verified!"
+      message={verifiedAlert ? verificationApprovedAlertMessage(verifiedAlert.role) : undefined}
+      icon="check-circle"
+      confirmLabel="Great"
+      onClose={() => setVerifiedAlert(null)}
+    />
+  )
 }
