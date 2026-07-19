@@ -1,4 +1,5 @@
 import { Linking, Platform } from 'react-native'
+import { formatHostDisplayName } from './displayName'
 
 type DirectionsTarget = {
   latitude?: number
@@ -71,7 +72,7 @@ export function openHostDirections(host: {
   return openDirections({
     latitude: host.latitude,
     longitude: host.longitude,
-    label: host.name,
+    label: formatHostDisplayName(host.name),
     address: host.address,
   })
 }

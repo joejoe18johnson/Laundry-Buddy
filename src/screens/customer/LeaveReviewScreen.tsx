@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { getHostById } from '../../data/mockData'
+import { formatHostDisplayName } from '../../lib/displayName'
 import { hasReviewedBooking } from '../../lib/reviewStorage'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
@@ -114,6 +115,7 @@ export function LeaveReviewScreen() {
   const screenScroll = useScreenScroll()
 
   const host = reviewHostId ? getHostById(reviewHostId) : undefined
+  const displayName = host ? formatHostDisplayName(host.name) : ''
 
   useEffect(() => {
     let cancelled = false
@@ -181,14 +183,14 @@ export function LeaveReviewScreen() {
 
       <View style={styles.header}>
         <View style={styles.hostAvatar}>
-          <Text style={styles.hostInitial}>{host.name[0]}</Text>
+          <Text style={styles.hostInitial}>{displayName[0]}</Text>
         </View>
-        <Text style={styles.title}>Rate {host.name}</Text>
+        <Text style={styles.title}>Rate {displayName}</Text>
         <Text style={styles.subtitle}>
           {titleCaseWithName(
             titleCaseWithName(
-              `How was your pickup with ${host.name} in ${host.location}?`,
-              host.name,
+              `How was your pickup with ${displayName} in ${host.location}?`,
+              displayName,
             ),
             host.location,
           )}

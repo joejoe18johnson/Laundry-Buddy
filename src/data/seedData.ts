@@ -4,7 +4,7 @@ import { GENERATED_SEED_HOSTS } from './generatedHosts'
 import { getRuntimeDynamicHosts } from '../lib/dynamicHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '26'
+export const SEED_DATA_VERSION = '27'
 
 /** Shared Ana (guest) ↔ Maria (host) demo loads — same ids on both accounts. */
 export const DEMO_ANA_MARIA_BOOKING_ID = 'demo-ana-maria-1'
@@ -15,7 +15,7 @@ export const DEMO_ANA_MARIA_BOOKING_IDS = [DEMO_ANA_MARIA_BOOKING_ID, DEMO_ANA_M
 export const DEMO_ANA_MARIA_BOOKING: Booking = {
   id: DEMO_ANA_MARIA_BOOKING_ID,
   hostId: 'maria',
-  hostName: 'Maria',
+  hostName: 'Maria G.',
   customerId: 'user-ana',
   customerName: 'Ana',
   location: 'Las Flores',
@@ -49,7 +49,7 @@ export const DEMO_ANA_MARIA_BOOKING: Booking = {
 export const DEMO_ANA_MARIA_PAY_BOOKING: Booking = {
   id: DEMO_ANA_MARIA_PAY_BOOKING_ID,
   hostId: 'maria',
-  hostName: 'Maria',
+  hostName: 'Maria G.',
   customerId: 'user-ana',
   customerName: 'Ana',
   location: 'Las Flores',
@@ -118,7 +118,7 @@ export const SEED_USERS: User[] = [
   },
   {
     id: 'user-maria',
-    name: 'Maria',
+    name: 'Maria Garcia',
     email: 'maria@example.com',
     phone: '5016001234',
     password: TRAINING_PASSWORD,
@@ -169,7 +169,7 @@ export const SEED_HOSTS: Host[] = [
   {
     id: 'maria',
     hostUserId: 'user-maria',
-    name: 'Maria',
+    name: 'Maria Garcia',
     location: 'Las Flores',
     district: 'Cayo',
     distanceKm: 0.8,
@@ -256,7 +256,7 @@ export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
     {
       id: 'past-ana-1',
       hostId: 'maria',
-      hostName: 'Maria',
+      hostName: 'Maria G.',
       customerId: 'user-ana',
       customerName: 'Ana',
       location: 'Las Flores',
@@ -282,7 +282,7 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
     {
       id: 'past-maria-1',
       hostId: 'maria',
-      hostName: 'Maria',
+      hostName: 'Maria G.',
       customerId: 'user-ana',
       customerName: 'Ana',
       location: 'Las Flores',

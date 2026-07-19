@@ -81,6 +81,7 @@ interface AuthState {
   ready: boolean
   authScreen: AuthScreen
   authError: string | null
+  authNotice: string | null
   biometricSupport: BiometricSupport
   biometricEnabled: boolean
   showBiometricSetupPrompt: boolean
@@ -126,6 +127,7 @@ interface AuthState {
   adminApproveUserSelfie: (userId: string) => Promise<AdminUserActionResult>
   adminRejectUserSelfie: (userId: string) => Promise<AdminUserActionResult>
   clearAuthError: () => void
+  clearAuthNotice: () => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -135,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [authScreen, setAuthScreen] = useState<AuthScreen>('welcome')
   const [authError, setAuthError] = useState<string | null>(null)
+  const [authNotice, setAuthNotice] = useState<string | null>(null)
   const [biometricSupport, setBiometricSupport] = useState<BiometricSupport>({
     available: false,
     enrolled: false,
@@ -221,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const clearAuthError = useCallback(() => setAuthError(null), [])
+  const clearAuthNotice = useCallback(() => setAuthNotice(null), [])
 
   const maybeOfferBiometricSetup = useCallback(async () => {
     const [support, enabled] = await Promise.all([
@@ -425,7 +429,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isSupabaseConfigured()) {
       const { user: created, error, needsEmailConfirmation } = await supabaseSignUp(input)
       if (needsEmailConfirmation) {
-        setAuthError('Check your email and tap the confirmation link, then log in.')
+        const confirmedEmail = input.email?.trim().toLowerCase() ?? 'your email'
+        setAuthNotice(
+          `We sent a confirmation link to ${confirmedEmail}. Open your email, tap the link to confirm your account, then log in here.`,
+        )
+        setAuthError(null)
         navigateAuth('login')
         return false
       }
@@ -768,6 +776,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ready,
       authScreen,
       authError,
+      authNotice,
       biometricSupport,
       biometricEnabled,
       showBiometricSetupPrompt,
@@ -799,12 +808,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminApproveUserSelfie,
       adminRejectUserSelfie,
       clearAuthError,
+      clearAuthNotice,
     }),
     [
       user,
       ready,
       authScreen,
       authError,
+      authNotice,
       biometricSupport,
       biometricEnabled,
       showBiometricSetupPrompt,
@@ -836,6 +847,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminApproveUserSelfie,
       adminRejectUserSelfie,
       clearAuthError,
+      clearAuthNotice,
     ],
   )
 

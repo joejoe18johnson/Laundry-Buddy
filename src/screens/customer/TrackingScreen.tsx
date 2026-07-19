@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useMessages } from '../../context/MessageContext'
 import { getHostById } from '../../data/mockData'
+import { formatHostDisplayName } from '../../lib/displayName'
 import { getBookingAmount, formatMoney, cashPaymentGuestHint } from '../../lib/bookingPayments'
 import { buildPaymentProofChatNotice } from '../../lib/chatThreads'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
@@ -155,7 +156,7 @@ export function TrackingScreen() {
       void openHostDirections({
         latitude: host.latitude,
         longitude: host.longitude,
-        name: host.name,
+        name: formatHostDisplayName(host.name),
         address: booking.address,
       })
       return

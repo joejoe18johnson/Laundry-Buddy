@@ -130,6 +130,17 @@ export function SignupScreen() {
         {toTitleCase(usingSupabase ? 'Sign up with your email — free to get started' : 'Join as a guest or host your dryer')}
       </Text>
 
+      {usingSupabase ? (
+        <View style={styles.notice}>
+          <AppIcon name="mail" size={16} color={colors.gray600} />
+          <Text style={styles.noticeText}>
+            {toTitleCase(
+              'After you sign up, check your email and tap the confirmation link before logging in.',
+            )}
+          </Text>
+        </View>
+      ) : null}
+
       <View style={styles.roleRow}>
         {(['customer', 'host'] as const).map((r) => (
           <Pressable
@@ -154,11 +165,11 @@ export function SignupScreen() {
           {toTitleCase(
             usingSupabase
               ? role === 'host'
-                ? 'After sign-up, add your phone number and verify via WhatsApp code, then upload your ID for team review.'
-                : 'After sign-up, add your phone number and verify via WhatsApp code, then upload your ID for team review.'
+                ? 'Once your email is confirmed and you log in, verify your phone, ID, selfie, and address to start hosting.'
+                : 'Once your email is confirmed and you log in, verify your phone, ID, and selfie to start booking.'
               : role === 'host'
-              ? 'Next: phone number, WhatsApp code, government ID, matching selfie, and host address proof.'
-              : 'Next: phone number, WhatsApp code, government ID, and a matching selfie.',
+                ? 'Next: phone number, WhatsApp code, government ID, matching selfie, and host address proof.'
+                : 'Next: phone number, WhatsApp code, government ID, and a matching selfie.',
           )}
         </Text>
       </View>

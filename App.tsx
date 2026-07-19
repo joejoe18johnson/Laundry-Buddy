@@ -47,7 +47,6 @@ import { isFullFlowTesting, TESTING_SPLASH_MS } from './src/lib/testingFlow'
 import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
 import { HostRequestAlertSync } from './src/components/HostRequestAlertSync'
-import { SupportChatFab } from './src/components/SupportChatFab'
 import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
 import {
@@ -398,7 +397,6 @@ function AppShell() {
   const tabs = isCustomer ? customerTabs : hostTabs
   const showBottomNav = !HIDE_BOTTOM_NAV.includes(screen)
   const showAppHeader = !HIDE_BOTTOM_NAV.includes(screen)
-  const showSupportFab = screen !== 'chat' && screen !== 'messages'
 
   useEffect(() => {
     const subscription = addNotificationResponseListener((title, data) => {
@@ -444,6 +442,7 @@ function AppShell() {
         onPastLoads={() => navigate('history')}
         onDashboard={!isCustomer ? () => navigate('host-dashboard') : undefined}
         onAccount={() => navigate('account')}
+        onContactSupport={openSupportChat}
         onHelp={() => navigate('help')}
         onNotifications={() => navigate('notifications')}
         onLogout={logout}
@@ -482,12 +481,6 @@ function AppShell() {
           />
         )}
       </View>
-
-      <SupportChatFab
-        visible={showSupportFab}
-        aboveBottomNav={showBottomNav}
-        onPress={openSupportChat}
-      />
 
       {showBottomNav && (
         <SafeAreaView edges={['bottom']} style={shellStyles.bottomNavWrap}>

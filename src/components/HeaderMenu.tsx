@@ -32,6 +32,7 @@ type Props = {
   onDashboard?: () => void
   onAccount?: () => void
   onHelp?: () => void
+  onContactSupport?: () => void
   onNotifications?: () => void
   notificationCount?: number
   isHostOnline?: boolean
@@ -213,6 +214,7 @@ export function HeaderMenu({
   onDashboard,
   onAccount,
   onHelp,
+  onContactSupport,
   onNotifications,
   notificationCount,
   isHostOnline,
@@ -309,6 +311,14 @@ export function HeaderMenu({
                     onPress={() => go(onNotifications)}
                     badge={notificationCount ? String(notificationCount) : undefined}
                     badgeVariant="alert"
+                    styles={styles}
+                  />
+                ) : null}
+                {onContactSupport ? (
+                  <MenuItem
+                    icon="message-circle"
+                    label="Contact support"
+                    onPress={() => go(onContactSupport)}
                     styles={styles}
                   />
                 ) : null}

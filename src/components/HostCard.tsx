@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useApp } from '../context/AppContext'
+import { formatHostDisplayName } from '../lib/displayName'
 import { formatHostPrice } from '../lib/hostFilters'
 import { isTopRatedHost } from '../lib/hostReputation'
 import { toTitleCase } from '../lib/titleCase'
@@ -15,6 +16,7 @@ export function HostCard({ host }: { host: Host }) {
   const isFree = host.price <= 0
   const reviews = getReviewsForHost(host.id)
   const topRated = isTopRatedHost(host, reviews)
+  const displayName = formatHostDisplayName(host.name)
 
   return (
     <Pressable
@@ -26,7 +28,7 @@ export function HostCard({ host }: { host: Host }) {
       <View style={styles.body}>
         <View style={styles.nameRow}>
           <Text style={styles.name} numberOfLines={1}>
-            {host.name}
+            {displayName}
           </Text>
           {topRated ? <TopRatedHostBadge compact /> : null}
         </View>

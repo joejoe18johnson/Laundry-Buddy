@@ -1,6 +1,7 @@
 import { getHostById, getHostByUserId } from '../data/mockData'
 import { getUserById } from './authStorage'
 import { formatMoney } from './bookingPayments'
+import { formatHostDisplayName } from './displayName'
 import { formatWhatsAppDisplay } from './whatsapp'
 import type { Booking, ChatMessageKind, User } from '../types'
 
@@ -160,7 +161,7 @@ export function getChatThreadTitle(threadId: string, user: User, booking?: Booki
     if (!parsed) return 'Messages'
     if (user.role === 'host') return 'Guest inquiry'
     const host = getHostByUserId(parsed.hostUserId)
-    return host?.name ?? 'Host'
+    return host ? formatHostDisplayName(host.name) : 'Host'
   }
 
   if (booking) {

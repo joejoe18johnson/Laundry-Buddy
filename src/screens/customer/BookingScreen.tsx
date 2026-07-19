@@ -21,6 +21,7 @@ import {
   bookingTotalLabel,
 } from '../../lib/hostPricing'
 import { formatMoney, cashPaymentGuestHint } from '../../lib/bookingPayments'
+import { formatHostDisplayName } from '../../lib/displayName'
 import { formatDropOffHoursWindow, sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
@@ -73,6 +74,7 @@ export function BookingScreen() {
 
   if (!selectedHost) return null
 
+  const displayName = formatHostDisplayName(selectedHost.name)
   const dryPrice = selectedHost.price
   const foldingPrice = selectedHost.foldingPrice ?? 0
   const sheetsPrice = DRYER_SHEETS_PRICE
@@ -130,7 +132,7 @@ export function BookingScreen() {
         <BackButton onPress={() => navigate('customer-host-profile')} />
         <Text style={styles.eyebrow}>{selectedHost.location}</Text>
         <Text style={styles.title}>
-          {titleCaseWithName(`Book with ${selectedHost.name}`, selectedHost.name)}
+          {titleCaseWithName(`Book with ${displayName}`, displayName)}
         </Text>
 
         <StepIndicator
@@ -199,14 +201,14 @@ export function BookingScreen() {
             {paymentMethod === 'bank_transfer' && (
               <Text style={styles.paymentNote}>
                 {titleCaseWithName(
-                  `After ${selectedHost.name} accepts, open My loads for bank details. Transfer in the app and submit your receipt screenshot — no WhatsApp needed.`,
-                  selectedHost.name,
+                  `After ${displayName} accepts, open My loads for bank details. Transfer in the app and submit your receipt screenshot — no WhatsApp needed.`,
+                  displayName,
                 )}
               </Text>
             )}
             {paymentMethod === 'cash' && (
               <Text style={styles.paymentNote}>
-                {titleCaseWithName(cashPaymentGuestHint(selectedHost.name), selectedHost.name)}
+                {titleCaseWithName(cashPaymentGuestHint(displayName), displayName)}
               </Text>
             )}
           </>

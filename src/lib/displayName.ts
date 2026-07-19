@@ -14,3 +14,8 @@ export function getGreetingName(fullName: string): string {
   const lastInitial = nameParts[nameParts.length - 1].charAt(0).toUpperCase()
   return `${firstName} ${lastInitial}.`
 }
+
+/** Public-facing host label — same format as greetings, safe to call on already-formatted names. */
+export function formatHostDisplayName(fullName: string): string {
+  return getGreetingName(fullName)
+}

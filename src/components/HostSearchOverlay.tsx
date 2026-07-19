@@ -16,6 +16,7 @@ import { CloseToMeButton } from './CloseToMeButton'
 import { HostSearchBar } from './HostSearchBar'
 import { ChoiceChip } from './ui'
 import { TopRatedHostBadge } from './TopRatedHostBadge'
+import { formatHostDisplayName } from '../lib/displayName'
 import { isTopRatedHost } from '../lib/hostReputation'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
@@ -54,6 +55,7 @@ function HostSearchRow({
 }) {
   const isFree = host.price <= 0
   const topRated = isTopRatedHost(host, reviews)
+  const displayName = formatHostDisplayName(host.name)
 
   return (
     <Pressable style={({ pressed }) => [styles.row, pressed && styles.rowPressed]} onPress={onPress}>
@@ -61,7 +63,7 @@ function HostSearchRow({
       <View style={styles.rowBody}>
         <View style={styles.rowNameLine}>
           <Text style={styles.rowName} numberOfLines={1}>
-            {host.name}
+            {displayName}
           </Text>
           {topRated ? <TopRatedHostBadge compact /> : null}
         </View>

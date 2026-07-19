@@ -1,5 +1,6 @@
 import type { AppRole, Host } from '../types'
 import { BELIZE_FILTER_AREAS, FILTER_AREA_DISTRICT, hostMatchesFilterArea } from './belizeDistricts'
+import { formatHostDisplayName } from './displayName'
 import { toTitleCase } from './titleCase'
 import { formatTurnaroundHoursLabel } from './turnaroundTime'
 
@@ -55,6 +56,7 @@ export function countActiveFilters(filters: HostFilters): number {
 function hostSearchHaystack(host: Host): string {
   return [
     host.name,
+    formatHostDisplayName(host.name),
     host.location,
     host.district,
     host.address,
@@ -69,15 +71,16 @@ export function getSearchRelevance(host: Host, query: string): number {
   if (!q) return 0
 
   const name = host.name.toLowerCase()
+  const displayName = formatHostDisplayName(host.name).toLowerCase()
   const location = host.location.toLowerCase()
   const district = (host.district ?? '').toLowerCase()
   const address = host.address.toLowerCase()
 
-  if (name === q) return 120
-  if (name.startsWith(q)) return 100
+  if (name === q || displayName === q) return 120
+  if (name.startsWith(q) || displayName.startsWith(q)) return 100
   if (location === q || district === q) return 95
   if (location.startsWith(q) || district.startsWith(q)) return 85
-  if (name.includes(q)) return 75
+  if (name.includes(q) || displayName.includes(q)) return 75
   if (location.includes(q)) return 65
   if (district.includes(q)) return 60
   if (address.includes(q)) return 50
@@ -202,7 +205,7 @@ export function getSearchSuggestionItems(hosts: Host[], query: string, limit = 8
     const key = `host:${host.id}`
     if (seen.has(key)) return
     seen.add(key)
-    items.push({ type: 'host', host, label: host.name })
+    items.push({ type: 'host', host, label: formatHostDisplayName(host.name) })
   }
 
   if (!q) {
@@ -217,7 +220,7 @@ export function getSearchSuggestionItems(hosts: Host[], query: string, limit = 8
 
   for (const host of rankedHosts) {
     if (items.length >= limit) break
-    if (host.name.toLowerCase().includes(q)) addHost(host)
+    if (host.name.toLowerCase().includes(q) || formatHostDisplayName(host.name).toLowerCase().includes(q)) addHost(host)
   }
 
   for (const host of hosts) {

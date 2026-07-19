@@ -26,6 +26,7 @@ import { refreshDynamicHostCatalog } from '../lib/hostCatalog'
 import { resolveGuestFacingHostSettings } from '../lib/defaultHostSettings'
 import { scheduleDropOffReminder } from '../lib/pushNotifications'
 import { formatClothesListSummary, hasDelicates } from '../lib/clothesList'
+import { formatHostDisplayName } from '../lib/displayName'
 import { getIdentityVerification, isIdentityVerified, marketplaceLockMessage } from '../lib/identityVerification'
 import { VERIFICATION_APPROVED_TITLE } from '../lib/verificationCodes'
 import { NEW_BOOKING_NOTIFICATION_TITLE, isNewBookingNotification } from '../lib/hostNotifications'
@@ -493,8 +494,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             customers.map((c) =>
               push(
                 c.id,
-                `${hostProfile.name} is online`,
-                `${hostProfile.name} is accepting loads in ${hostProfile.location}. Book now while slots last.`,
+                `${formatHostDisplayName(hostProfile.name)} is online`,
+                `${formatHostDisplayName(hostProfile.name)} is accepting loads in ${hostProfile.location}. Book now while slots last.`,
               ),
             ),
           )
@@ -548,7 +549,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return {
           id: request.id,
           hostId: hostProfile.id,
-          hostName: hostProfile.name,
+          hostName: formatHostDisplayName(hostProfile.name),
           customerId: request.customerId,
           customerName: request.customerName,
           location: request.location,
@@ -897,7 +898,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const newBooking: Booking = {
         id: bookingId,
         hostId: selectedHost.id,
-        hostName: selectedHost.name,
+        hostName: formatHostDisplayName(selectedHost.name),
         customerId: user.id,
         customerName: user.name,
         location: selectedHost.location,
@@ -960,7 +961,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       notifyCustomer(
         user.id,
         'Request sent',
-        `${selectedHost.name} will review your load request. We'll notify you when they accept.`,
+        `${formatHostDisplayName(selectedHost.name)} will review your load request. We'll notify you when they accept.`,
         bookingTrackingLink(bookingId),
       )
       showToast('Request sent to host', { icon: 'send' })
@@ -990,7 +991,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let load: Booking = {
         id: request.id,
         hostId: hostProfile?.id ?? 'unknown',
-        hostName: hostProfile?.name ?? user.name,
+        hostName: formatHostDisplayName(hostProfile?.name ?? user.name),
         customerId: request.customerId,
         customerName: request.customerName,
         location: request.location,
@@ -1034,7 +1035,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       )
 
       if (request.customerId) {
-        const hostName = hostProfile?.name ?? user.name
+        const hostName = formatHostDisplayName(hostProfile?.name ?? user.name)
         if (needsTransfer) {
           void deliverPaymentRequest({
             load,
@@ -1357,7 +1358,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       void deliverPaymentRequest({
         load: target,
         hostUserId: user.id,
-        hostName: hostProfile?.name ?? user.name,
+        hostName: formatHostDisplayName(hostProfile?.name ?? user.name),
         bankDetails: settings.bankDetails,
         notifyCustomer,
         timestamp,

@@ -1,17 +1,18 @@
 import { useEffect, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
-import { StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { TopRatedHostBadge } from '../../components/TopRatedHostBadge'
-import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
+import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { getHostProfileDetails } from '../../data/mockData'
 import { summarizeRatings } from '../../lib/reviewStorage'
-import { formatHostFooterMeta, formatHostPrice } from '../../lib/hostFilters'
+import { formatHostDisplayName } from '../../lib/displayName'
+import { formatHostPrice } from '../../lib/hostFilters'
 import { isTopRatedHost } from '../../lib/hostReputation'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
@@ -65,6 +66,22 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
     heroLocationText: { fontSize: 14, color: 'rgba(255,255,255,0.9)' },
     heroRating: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
     heroRatingText: { fontSize: 14, fontWeight: '600', color: colors.white },
+    heroMessageBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      alignSelf: 'stretch',
+      marginTop: spacing.lg,
+      paddingVertical: 12,
+      paddingHorizontal: spacing.lg,
+      borderRadius: radius.pill,
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.85)',
+      backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    heroMessageBtnPressed: { backgroundColor: 'rgba(255,255,255,0.22)' },
+    heroMessageBtnText: { fontSize: 15, fontWeight: '700', color: colors.white },
     stars: { flexDirection: 'row', gap: 2 },
     statsRow: {
       flexDirection: 'row',
@@ -136,30 +153,35 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
       alignItems: 'center',
       gap: spacing.lg,
       paddingHorizontal: spacing.screen,
-      paddingTop: spacing.lg,
+      paddingTop: spacing.md,
       paddingBottom: spacing.md,
     },
-    footerInfo: { flex: 1, minWidth: 0, justifyContent: 'center' },
-    footerSummary: { lineHeight: 22 },
+    footerPricing: { flex: 1, minWidth: 0, gap: 4 },
+    footerPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
     footerPrice: {
-      fontSize: 22,
+      fontSize: 24,
       fontWeight: '700',
       letterSpacing: -0.5,
       color: colors.black,
     },
     footerPriceFree: { color: colors.green },
-    footerMetaInline: {
-      fontSize: 13,
+    footerPriceUnit: {
+      fontSize: 14,
       fontWeight: '600',
       color: colors.gray500,
+    },
+    footerMeta: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.gray500,
+      lineHeight: 18,
     },
     browseOnlyNote: {
       fontSize: 13,
       color: colors.gray500,
       lineHeight: 20,
-      marginTop: 4,
     },
-    footerAction: { flexShrink: 0, alignSelf: 'stretch', gap: spacing.sm },
+    footerButton: { flexShrink: 0, minWidth: 132 },
   })
 }
 
@@ -281,6 +303,7 @@ export function HostProfileScreen() {
   if (!selectedHost) return null
 
   const host = selectedHost
+  const displayName = formatHostDisplayName(host.name)
   const profile = getHostProfileDetails(host.id)
   const settings = getSettingsForHost(host.hostUserId)
   const reviews = getReviewsForHost(host.id)
@@ -296,8 +319,13 @@ export function HostProfileScreen() {
   ].filter(Boolean)
   const gradient = coverColors[host.id] ?? ['#667eea', '#764ba2']
   const verified = user ? canBookOrHost(user) : false
-  const canBook = settings.isOnline && verified
   const activeLoadCount = activeGuestBookings.length
+  const foldingPrice = host.foldingPrice ?? 0
+  const footerMetaParts = [
+    `${host.slotsLeft} slot${host.slotsLeft === 1 ? '' : 's'}`,
+    `${formatTurnaroundHours(host.turnaroundHours)} dry`,
+    foldingPrice > 0 ? `${formatHostPrice(foldingPrice)} folding` : null,
+  ].filter(Boolean)
 
   return (
     <View style={styles.wrapper}>
@@ -309,9 +337,9 @@ export function HostProfileScreen() {
 
         <LinearGradient colors={gradient} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{host.name[0]}</Text>
+            <Text style={styles.avatarText}>{displayName[0]}</Text>
           </View>
-          <Text style={styles.heroName}>{host.name}</Text>
+          <Text style={styles.heroName}>{displayName}</Text>
           {topRated ? (
             <View style={styles.topRatedWrap}>
               <TopRatedHostBadge light />
@@ -345,6 +373,15 @@ export function HostProfileScreen() {
                 : ''}
             </Text>
           </View>
+          {!browseOnly ? (
+            <Pressable
+              style={({ pressed }) => [styles.heroMessageBtn, pressed && styles.heroMessageBtnPressed]}
+              onPress={() => openHostInquiryChat(host)}
+            >
+              <AppIcon name="message-circle" size={16} color="#fff" />
+              <Text style={styles.heroMessageBtnText}>{toTitleCase('Message host')}</Text>
+            </Pressable>
+          ) : null}
         </LinearGradient>
 
         <View style={styles.statsRow}>
@@ -438,26 +475,21 @@ export function HostProfileScreen() {
           )}
         </View>
 
-        <View style={{ height: 160 }} />
+        <View style={{ height: 120 }} />
       </Screen>
 
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
         <View style={styles.footer}>
-          <View style={styles.footerInfo}>
-            <Text style={styles.footerSummary} numberOfLines={browseOnly ? 3 : 2}>
+          <View style={styles.footerPricing}>
+            <View style={styles.footerPriceRow}>
               <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
                 {formatHostPrice(host.price)}
               </Text>
-              <Text style={styles.footerMetaInline}>
-                {' · '}
-                {formatHostFooterMeta(host.slotsLeft, host.turnaroundHours)}
-              </Text>
+              <Text style={styles.footerPriceUnit}>{toTitleCase('Per Load')}</Text>
+            </View>
+            <Text style={styles.footerMeta} numberOfLines={2}>
+              {footerMetaParts.join(' · ')}
             </Text>
-            {(host.foldingPrice ?? 0) > 0 ? (
-              <Text style={styles.browseOnlyNote}>
-                {toTitleCase('Folding')} — {formatHostPrice(host.foldingPrice!)}
-              </Text>
-            ) : null}
             {browseOnly ? (
               <Text style={styles.browseOnlyNote}>
                 {toTitleCase('Browse only — hosts can compare prices but cannot book or message each other.')}
@@ -465,13 +497,7 @@ export function HostProfileScreen() {
             ) : null}
           </View>
           {!browseOnly ? (
-            <View style={styles.footerAction}>
-              <OutlineButton
-                title="Message host"
-                icon="message-circle"
-                full
-                onPress={() => openHostInquiryChat(host)}
-              />
+            <View style={styles.footerButton}>
               <PrimaryButton
                 title={
                   !verified

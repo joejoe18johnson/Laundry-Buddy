@@ -18,6 +18,21 @@ const FIRST_NAMES = [
   'Ines', 'Raul', 'Gloria', 'Emilio', 'Diana', 'Arturo', 'Olga', 'Manuel',
 ]
 
+const LAST_NAMES = [
+  'Lopez', 'Garcia', 'Martinez', 'Hernandez', 'Perez', 'Rodriguez', 'Sanchez', 'Ramirez',
+  'Flores', 'Castillo', 'Morales', 'Reyes', 'Cruz', 'Ortiz', 'Gomez', 'Vasquez',
+  'Mendoza', 'Jimenez', 'Ruiz', 'Alvarez', 'Romero', 'Herrera', 'Medina', 'Aguilar',
+  'Vargas', 'Castro', 'Ramos', 'Gutierrez', 'Chavez', 'Rojas', 'Molina', 'Delgado',
+  'Ochoa', 'Salazar', 'Mejia', 'Avila', 'Zuniga', 'Pineda', 'Escobar', 'Cardoza',
+  'Tzib', 'Puc', 'Sho', 'Ayala', 'Bautista', 'Palacio', 'Young', 'Patton',
+  'Gillett', 'Swasey', 'Usher', 'Fairweather', 'Garbutt', 'Arzu', 'Castellanos',
+  'Chan', 'Coye', 'Dunn', 'Flowers', 'Galvez', 'Goff', 'Hall', 'Itza',
+  'Ku', 'Lopez', 'Myvett', 'Novelo', 'Pott', 'Quan', 'Riverol', 'Smith',
+  'Tillett', 'Vega', 'Wade', 'Xol', 'Yorke', 'Zetina', 'Bol', 'Cal',
+  'Dai', 'Estrada', 'Fuentes', 'Guerrero', 'Hu', 'Ibarra', 'Juarez', 'Kuk',
+  'Lima', 'Mckoy', 'Nunez', 'Ortega', 'Penner', 'Quiroz', 'Rosado', 'Santos',
+]
+
 const DRYER_TYPES = ['Electric', 'Gas', 'Electric', 'Electric', 'Gas']
 
 function slugify(value: string): string {
@@ -56,7 +71,9 @@ type HostSeedInput = {
 
 function createHost(input: HostSeedInput): Host {
   const { globalIndex, id, village, slot, spreadKm = 1.2 } = input
-  const name = FIRST_NAMES[(globalIndex + slot) % FIRST_NAMES.length]
+  const firstName = FIRST_NAMES[(globalIndex + slot) % FIRST_NAMES.length]
+  const lastName = LAST_NAMES[(globalIndex * 3 + slot * 11) % LAST_NAMES.length]
+  const name = `${firstName} ${lastName}`
   const { latitude, longitude } = jitterCoord(village.latitude, village.longitude, slot, spreadKm)
   const price = [3, 4, 5, 6, 4, 5][globalIndex % 6]
   const foldingPrice = [0, 2, 3, 4][globalIndex % 4]
@@ -65,7 +82,7 @@ function createHost(input: HostSeedInput): Host {
   return {
     id,
     hostUserId: districtHostUserId(globalIndex),
-    name: globalIndex > FIRST_NAMES.length ? `${name} ${Math.floor(globalIndex / FIRST_NAMES.length)}` : name,
+    name,
     location: village.name,
     district: village.district,
     rating: Math.min(5, Math.round(rating * 10) / 10),

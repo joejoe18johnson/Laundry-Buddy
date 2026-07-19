@@ -48,6 +48,18 @@ function createLoginStyles(colors: ReturnType<typeof useTheme>['colors']) {
       fontSize: 14,
       lineHeight: 20,
     },
+    info: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      backgroundColor: colors.greenBg,
+      padding: spacing.md,
+      borderRadius: radius.sm,
+      marginBottom: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.green,
+    },
+    infoText: { flex: 1, fontSize: 14, color: colors.green, lineHeight: 20, fontWeight: '600' },
     switch: { marginTop: spacing.xl, alignItems: 'center', paddingVertical: spacing.sm },
     switchText: { fontSize: 14, color: colors.gray500 },
     link: { fontWeight: '600', color: colors.black, textDecorationLine: 'underline' },
@@ -60,7 +72,9 @@ export function LoginScreen() {
     loginWithBiometrics,
     navigateAuth,
     authError,
+    authNotice,
     clearAuthError,
+    clearAuthNotice,
     biometricSupport,
     biometricEnabled,
   } = useAuth()
@@ -77,6 +91,7 @@ export function LoginScreen() {
 
   const handleLogin = async () => {
     clearAuthError()
+    clearAuthNotice()
     const loginMethod = usingSupabase ? 'email' : method
     await login(loginMethod, loginMethod === 'phone' ? phone : email, password)
   }
@@ -166,6 +181,13 @@ export function LoginScreen() {
           onChangeText={setPassword}
         />
       </View>
+
+      {authNotice ? (
+        <View style={styles.info}>
+          <AppIcon name="mail" size={18} color={colors.green} />
+          <Text style={styles.infoText}>{toTitleCase(authNotice)}</Text>
+        </View>
+      ) : null}
 
       {authError && <Text style={styles.error}>{authError}</Text>}
 
