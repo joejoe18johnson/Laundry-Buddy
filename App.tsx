@@ -30,9 +30,15 @@ import { AccountScreen } from './src/screens/shared/AccountScreen'
 import { HelpScreen } from './src/screens/shared/HelpScreen'
 import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
 import { MessagesScreen } from './src/screens/shared/MessagesScreen'
-import { AdminDashboardScreen } from './src/screens/admin/AdminDashboardScreen'
+import { AdminBottomNav, type AdminTabId } from './src/components/AdminBottomNav'
+import { UnreadCountBadge } from './src/components/UnreadCountBadge'
 import { AdminNotificationsScreen } from './src/screens/admin/AdminNotificationsScreen'
+import { AdminOverviewScreen } from './src/screens/admin/AdminOverviewScreen'
 import { AdminUserReviewScreen } from './src/screens/admin/AdminUserReviewScreen'
+import { AdminUsersScreen } from './src/screens/admin/AdminUsersScreen'
+import { AdminVerificationCodesScreen } from './src/screens/admin/AdminVerificationCodesScreen'
+import { AdminVerificationQueueScreen } from './src/screens/admin/AdminVerificationQueueScreen'
+import { useAdminDashboardData } from './src/hooks/useAdminDashboardData'
 import { ChatScreen } from './src/screens/shared/ChatScreen'
 import { colors, spacing } from './src/theme'
 import { ThemeProvider, useTheme } from './src/context/ThemeContext'
@@ -40,6 +46,7 @@ import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
 import { isFullFlowTesting, TESTING_SPLASH_MS } from './src/lib/testingFlow'
 import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
+import { HostRequestAlertSync } from './src/components/HostRequestAlertSync'
 import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
 import {
@@ -70,10 +77,13 @@ function AdminAppShell() {
   const { user, logout } = useAuth()
   const { colors } = useTheme()
   const { unreadCount } = useUserNotifications(user!.id)
-  const [screen, setScreen] = useState<'dashboard' | 'notifications' | 'user-review'>('dashboard')
+  const [screen, setScreen] = useState<'overview' | 'queue' | 'users' | 'codes' | 'notifications' | 'user-review'>(
+    'overview',
+  )
   const [highlightUserId, setHighlightUserId] = useState<string | undefined>()
   const [reviewUserId, setReviewUserId] = useState<string | null>(null)
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
+  const { queueCount } = useAdminDashboardData(dashboardRefreshKey)
 
   const openUserReview = (userId: string) => {
     setReviewUserId(userId)
@@ -83,6 +93,36 @@ function AdminAppShell() {
   const handleReviewUpdated = () => {
     setDashboardRefreshKey((key) => key + 1)
   }
+
+  const adminTab: AdminTabId =
+    screen === 'queue' || screen === 'users' || screen === 'codes' || screen === 'overview'
+      ? screen
+      : 'overview'
+
+  const headerTitle =
+    screen === 'overview'
+      ? 'Overview'
+      : screen === 'queue'
+        ? 'Verification queue'
+        : screen === 'users'
+          ? 'All users'
+          : screen === 'codes'
+            ? 'Verification codes'
+            : screen === 'notifications'
+              ? 'Notifications'
+              : 'Support admin'
+
+  const adminTabs = useMemo(
+    () => [
+      { id: 'overview' as const, label: 'Overview', icon: 'home' as const },
+      { id: 'queue' as const, label: 'Queue', icon: 'inbox' as const, badgeCount: queueCount },
+      { id: 'users' as const, label: 'Users', icon: 'users' as const },
+      { id: 'codes' as const, label: 'Codes', icon: 'key' as const },
+    ],
+    [queueCount],
+  )
+
+  const showAdminNav = screen !== 'user-review' && screen !== 'notifications'
 
   const shellStyles = useMemo(
     () =>
@@ -106,40 +146,32 @@ function AdminAppShell() {
           alignItems: 'center',
           justifyContent: 'center',
         },
-        bellBadge: {
-          position: 'absolute',
-          top: 2,
-          right: 2,
-          minWidth: 16,
-          height: 16,
-          borderRadius: 8,
-          backgroundColor: colors.black,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 3,
-        },
-        bellBadgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
         main: { flex: 1 },
+        bottomNavWrap: {
+          borderTopWidth: 1,
+          borderTopColor: colors.gray100,
+          backgroundColor: colors.white,
+        },
       }),
     [colors],
   )
 
   return (
-    <SafeAreaView style={shellStyles.app} edges={['top', 'bottom']}>
+    <SafeAreaView style={shellStyles.app} edges={['top']}>
       <StatusBar style="dark" />
       {screen !== 'user-review' ? (
         <View style={shellStyles.header}>
-          <Text style={shellStyles.title}>Support admin</Text>
+          <Text style={shellStyles.title}>{headerTitle}</Text>
           <View style={shellStyles.headerRight}>
             <Pressable
-              onPress={() => setScreen(screen === 'notifications' ? 'dashboard' : 'notifications')}
+              onPress={() => setScreen(screen === 'notifications' ? adminTab : 'notifications')}
               style={shellStyles.bellBtn}
               hitSlop={8}
             >
               <AppIcon name="bell" size={22} color={colors.black} />
               {unreadCount > 0 ? (
-                <View style={shellStyles.bellBadge}>
-                  <Text style={shellStyles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                <View style={{ position: 'absolute', top: 2, right: 2 }}>
+                  <UnreadCountBadge count={unreadCount} />
                 </View>
               ) : null}
             </Pressable>
@@ -150,35 +182,53 @@ function AdminAppShell() {
         </View>
       ) : null}
       <View style={shellStyles.main}>
-        {screen === 'dashboard' ? (
-          <AdminDashboardScreen
+        {screen === 'overview' ? (
+          <AdminOverviewScreen
+            refreshKey={dashboardRefreshKey}
+            onNavigate={(tab) => setScreen(tab)}
+          />
+        ) : screen === 'queue' ? (
+          <AdminVerificationQueueScreen
             highlightUserId={highlightUserId}
             refreshKey={dashboardRefreshKey}
             onReviewUser={openUserReview}
           />
+        ) : screen === 'users' ? (
+          <AdminUsersScreen
+            highlightUserId={highlightUserId}
+            refreshKey={dashboardRefreshKey}
+            onReviewUser={openUserReview}
+          />
+        ) : screen === 'codes' ? (
+          <AdminVerificationCodesScreen refreshKey={dashboardRefreshKey} />
         ) : screen === 'notifications' ? (
           <AdminNotificationsScreen
-            onBack={() => setScreen('dashboard')}
+            onBack={() => setScreen(adminTab)}
             onOpenRequest={(userId) => {
               if (userId) {
                 setHighlightUserId(userId)
                 openUserReview(userId)
                 return
               }
-              setScreen('dashboard')
+              setScreen('queue')
             }}
           />
         ) : reviewUserId ? (
           <AdminUserReviewScreen
             userId={reviewUserId}
             onBack={() => {
-              setScreen('dashboard')
+              setScreen('queue')
               setReviewUserId(null)
             }}
             onUpdated={handleReviewUpdated}
           />
         ) : null}
       </View>
+      {showAdminNav ? (
+        <SafeAreaView edges={['bottom']} style={shellStyles.bottomNavWrap}>
+          <AdminBottomNav tabs={adminTabs} currentTab={adminTab} onNavigate={setScreen} />
+        </SafeAreaView>
+      ) : null}
     </SafeAreaView>
   )
 }
@@ -218,19 +268,6 @@ function AppShell() {
           alignItems: 'center',
           justifyContent: 'center',
         },
-        bellBadge: {
-          position: 'absolute',
-          top: 2,
-          right: 2,
-          minWidth: 16,
-          height: 16,
-          borderRadius: 8,
-          backgroundColor: colors.black,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: 3,
-        },
-        bellBadgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
         menuBtn: {
           width: 40,
           height: 40,
@@ -249,6 +286,7 @@ function AppShell() {
   )
   const {
     screen,
+    hostRequests,
     activeGuestBookings,
     navigate,
     hostSettings,
@@ -310,6 +348,8 @@ function AppShell() {
     [loadNeedsAttention, totalUnreadCount],
   )
 
+  const pendingRequestCount = hostRequests.length
+
   const hostTabs: NavTab[] = useMemo(
     () => [
       {
@@ -318,6 +358,8 @@ function AppShell() {
         icon: 'home',
         screen: 'host-dashboard',
         matchScreens: ['host-dashboard'],
+        badge: pendingRequestCount > 0,
+        badgeCount: pendingRequestCount,
       },
       {
         id: 'browse',
@@ -343,7 +385,7 @@ function AppShell() {
         matchScreens: ['account'],
       },
     ],
-    [totalUnreadCount],
+    [pendingRequestCount, totalUnreadCount],
   )
 
   const tabs = isCustomer ? customerTabs : hostTabs
@@ -366,11 +408,11 @@ function AppShell() {
         <View style={shellStyles.headerRight}>
           <Pressable onPress={() => navigate('notifications')} style={shellStyles.bellBtn} hitSlop={8}>
             <AppIcon name="bell" size={22} color={colors.black} />
-            {unreadCount > 0 && (
-              <View style={shellStyles.bellBadge}>
-                <Text style={shellStyles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            {unreadCount > 0 ? (
+              <View style={{ position: 'absolute', top: 2, right: 2 }}>
+                <UnreadCountBadge count={unreadCount} />
               </View>
-            )}
+            ) : null}
           </Pressable>
           <Pressable onPress={() => setMenuOpen(true)} style={shellStyles.menuBtn} hitSlop={8}>
             <AppIcon name="menu" size={22} color={colors.black} />
@@ -602,6 +644,7 @@ function AuthenticatedApp() {
               <>
                 <VerificationStatusSync />
                 <AppProvider>
+                  <HostRequestAlertSync />
                   <AppShell />
                 </AppProvider>
               </>

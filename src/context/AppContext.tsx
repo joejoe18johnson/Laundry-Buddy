@@ -27,6 +27,8 @@ import { resolveGuestFacingHostSettings } from '../lib/defaultHostSettings'
 import { scheduleDropOffReminder } from '../lib/pushNotifications'
 import { formatClothesListSummary, hasDelicates } from '../lib/clothesList'
 import { getIdentityVerification, isIdentityVerified, marketplaceLockMessage } from '../lib/identityVerification'
+import { VERIFICATION_APPROVED_TITLE } from '../lib/verificationCodes'
+import { NEW_BOOKING_NOTIFICATION_TITLE, isNewBookingNotification } from '../lib/hostNotifications'
 import {
   saveCompletedCustomerPayment,
   saveCompletedHostPayment,
@@ -133,6 +135,7 @@ interface AppState {
   setSearchRadiusKm: (km: RadiusOptionKm) => void
   showMap: boolean
   refreshHostData: () => Promise<void>
+  refreshHostOrders: () => Promise<void>
   navigate: (screen: Screen) => void
   viewHostProfile: (host: Host) => void
   openLeaveReview: (hostId: string, bookingId?: string) => void
@@ -206,7 +209,7 @@ function defaultScreen(role: 'customer' | 'host'): Screen {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth()
+  const { user, refreshCurrentUser } = useAuth()
   const { push } = useNotifications()
   const { showToast } = useToast()
   // AppProvider is only mounted for customer/host sessions (see App.tsx).
@@ -500,6 +503,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [role, user, hostSettingsMap, push, showToast],
   )
 
+  const refreshHostOrders = useCallback(async () => {
+    if (role !== 'host' || !user) return
+    const seed = getHostDashboardSeed(user.id)
+    const stored = await getHostOrders(user.id)
+    const mergedLoads = dedupeActiveLoads(mergeActiveLoads(seed.activeLoads, stored.activeLoads))
+    const activeLoadIds = mergedLoads.map((load) => load.id)
+    setHostRequests(mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds))
+    setActiveLoads(mergedLoads)
+  }, [role, user])
+
   const refreshHostData = useCallback(async () => {
     const map = await getAllHostSettings()
     setHostSettingsMap(map)
@@ -754,6 +767,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const openNotification = useCallback(
     async (notification: AppNotification) => {
+      if (notification.title === VERIFICATION_APPROVED_TITLE) {
+        await refreshCurrentUser()
+      }
+      if (isNewBookingNotification(notification.title)) {
+        await refreshHostOrders()
+      }
+
       const link = resolveNotificationLink(notification, role)
       if (!link) {
         setScreen('notifications')
@@ -813,7 +833,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setScreen('customer-home')
     },
-    [openChat, openLeaveReview, restoreBookingForGuest, role, showToast, viewHostProfile],
+    [openChat, openLeaveReview, refreshCurrentUser, refreshHostOrders, restoreBookingForGuest, role, showToast, viewHostProfile],
   )
 
   const openNotificationFromPush = useCallback(
@@ -916,7 +936,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       notifyHost(
         selectedHost.hostUserId,
-        'New booking',
+        NEW_BOOKING_NOTIFICATION_TITLE,
         `${user.name} · ${formatDropOffHour(details.dropOffTime)}${clothesSummary ? ` · ${clothesSummary}` : ''}${details.notes.trim() ? ` · "${details.notes.trim()}"` : ''}${delicateNote}${details.loadPhotoUri ? ' · Photo attached' : ''}`,
         hostDashboardLink(bookingId),
       )
@@ -1408,6 +1428,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSearchRadiusKm,
       showMap,
       refreshHostData,
+      refreshHostOrders,
       navigate,
       viewHostProfile,
       openLeaveReview,
@@ -1469,6 +1490,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSearchRadiusKm,
       showMap,
       refreshHostData,
+      refreshHostOrders,
       navigate,
       viewHostProfile,
       openLeaveReview,

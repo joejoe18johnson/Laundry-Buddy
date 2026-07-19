@@ -13,6 +13,7 @@ type MenuAction = {
   label: string
   onPress: () => void
   badge?: string
+  badgeVariant?: 'active' | 'alert'
   hint?: string
 }
 
@@ -109,6 +110,16 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
       borderColor: colors.green,
     },
     badgeText: { fontSize: 10, fontWeight: '700', color: colors.green },
+    alertBadge: {
+      minWidth: 22,
+      height: 22,
+      borderRadius: 11,
+      paddingHorizontal: 6,
+      backgroundColor: colors.danger,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    alertBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
     footer: {
       borderTopWidth: 1,
       borderTopColor: colors.gray100,
@@ -139,6 +150,7 @@ function MenuItem({
   label,
   onPress,
   badge,
+  badgeVariant = 'active',
   hint,
   styles,
 }: MenuAction & { styles: ReturnType<typeof createHeaderMenuStyles> }) {
@@ -154,9 +166,15 @@ function MenuItem({
         {hint ? <Text style={styles.menuHint}>{hint}</Text> : null}
       </View>
       {badge ? (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge}</Text>
-        </View>
+        badgeVariant === 'alert' ? (
+          <View style={styles.alertBadge}>
+            <Text style={styles.alertBadgeText}>{badge}</Text>
+          </View>
+        ) : (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        )
       ) : null}
       <AppIcon name="chevron-right" size={18} color={colors.gray400} />
     </Pressable>
@@ -290,6 +308,7 @@ export function HeaderMenu({
                     label="Notifications"
                     onPress={() => go(onNotifications)}
                     badge={notificationCount ? String(notificationCount) : undefined}
+                    badgeVariant="alert"
                     styles={styles}
                   />
                 ) : null}

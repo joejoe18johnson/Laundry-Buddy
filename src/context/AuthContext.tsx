@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -270,6 +271,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthError(error ?? 'Invalid credentials. Check your details and try again.')
         return false
       }
+      await saveUser(signedIn)
       setUser(signedIn)
       setAuthError(null)
       bumpAuthSession()
@@ -374,6 +376,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthError(error ?? 'Sign up failed. Try again.')
         return false
       }
+      await saveUser(created)
       setUser(created)
       setAuthError(null)
       bumpAuthSession()
@@ -575,11 +578,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   )
 
+  const userIdRef = useRef<string | undefined>(user?.id)
+  userIdRef.current = user?.id
+
   const refreshCurrentUser = useCallback(async () => {
-    if (!user) return
-    const updated = await resolveUserById(user.id)
+    const userId = userIdRef.current
+    if (!userId) return
+    const updated = await resolveUserById(userId)
     if (updated) setUser(updated)
-  }, [user])
+  }, [])
 
   const syncUserAfterVerification = useCallback(
     async (userId: string) => {

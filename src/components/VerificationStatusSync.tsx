@@ -25,15 +25,17 @@ function showVerificationApprovedAlert(role: 'customer' | 'host') {
   )
 }
 
-/** Keeps the signed-in user in sync after admin approval and shows a verified popup. */
+/** Keeps the signed-in user in sync after admin approval and shows a verified popup once. */
 export function VerificationStatusSync() {
   const { user, refreshCurrentUser } = useAuth()
   const { notifications, markRead } = useUserNotifications(user?.id)
   const previousStatusRef = useRef<string | null>(null)
-  const alertedRef = useRef(false)
+  const alertedUserIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!user || user.role === 'admin') return
+
+    void refreshCurrentUser()
 
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
@@ -42,7 +44,19 @@ export function VerificationStatusSync() {
     })
 
     return () => subscription.remove()
-  }, [refreshCurrentUser, user])
+  }, [refreshCurrentUser, user?.id, user?.role])
+
+  useEffect(() => {
+    if (!user || user.role === 'admin') return
+    if (getIdentityVerification(user).status !== 'pending') return
+
+    void refreshCurrentUser()
+    const interval = setInterval(() => {
+      void refreshCurrentUser()
+    }, 15000)
+
+    return () => clearInterval(interval)
+  }, [refreshCurrentUser, user?.id, user?.role, user?.identityVerification?.status])
 
   useEffect(() => {
     if (!user || user.role === 'admin') return
@@ -51,9 +65,9 @@ export function VerificationStatusSync() {
       (entry) => !entry.read && entry.title === VERIFICATION_APPROVED_TITLE,
     )
     if (unreadApproved) {
-      void refreshCurrentUser()
+      void refreshCurrentUser().then(() => markRead(unreadApproved.id))
     }
-  }, [notifications, refreshCurrentUser, user])
+  }, [markRead, notifications, refreshCurrentUser, user?.id, user?.role])
 
   useEffect(() => {
     if (!user || user.role === 'admin') return
@@ -62,28 +76,17 @@ export function VerificationStatusSync() {
     const previous = previousStatusRef.current
     previousStatusRef.current = status
 
-    if (status !== 'verified') {
-      alertedRef.current = false
-      return
-    }
+    if (status !== 'verified') return
 
     const role = user.role === 'host' ? 'host' : 'customer'
-    const unreadApproved = notifications.find(
-      (entry) => !entry.read && entry.title === VERIFICATION_APPROVED_TITLE,
-    )
-
     const justVerified = previous !== null && previous !== 'verified'
-    const shouldAlert =
-      !alertedRef.current && (justVerified || !!unreadApproved)
+    const alreadyAlertedForUser = alertedUserIdRef.current === user.id
 
-    if (!shouldAlert) return
+    if (!justVerified || alreadyAlertedForUser) return
 
-    alertedRef.current = true
+    alertedUserIdRef.current = user.id
     showVerificationApprovedAlert(role)
-    if (unreadApproved) {
-      void markRead(unreadApproved.id)
-    }
-  }, [markRead, notifications, user])
+  }, [user])
 
   return null
 }

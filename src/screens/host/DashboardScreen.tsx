@@ -252,6 +252,22 @@ export function DashboardScreen() {
       ) : null}
 
       {hostRequests.length > 0 && (
+        <View style={styles.newOrdersBanner}>
+          <View style={styles.newOrdersBannerIcon}>
+            <AppIcon name="inbox" size={18} color={colors.white} />
+          </View>
+          <View style={styles.newOrdersBannerCopy}>
+            <Text style={styles.newOrdersBannerTitle}>
+              {toTitleCase(`${hostRequests.length} new load request${hostRequests.length === 1 ? '' : 's'}`)}
+            </Text>
+            <Text style={styles.newOrdersBannerSub}>
+              {toTitleCase('Accept or decline below — guests are waiting for your response.')}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {hostRequests.length > 0 && (
         <View style={styles.sectionHeader}>
           <AppIcon name="inbox" size={14} color={colors.black} />
           <Text style={styles.sectionHeaderText}>
@@ -262,7 +278,7 @@ export function DashboardScreen() {
 
       {hostRequests.map((request) => (
         <View key={request.id} style={styles.section}>
-          <View style={styles.card}>
+          <View style={[styles.card, styles.requestCard]}>
             <GuestCardHeader
               name={request.customerName}
               metaParts={[
@@ -517,6 +533,26 @@ function createDashboardStyles(colors: ReturnType<typeof useTheme>['colors']) {
     marginBottom: spacing.md,
   },
   sectionHeaderText: { fontSize: 16, fontWeight: '700' },
+  newOrdersBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.black,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  newOrdersBannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newOrdersBannerCopy: { flex: 1, gap: 4 },
+  newOrdersBannerTitle: { fontSize: 16, fontWeight: '700', color: colors.white },
+  newOrdersBannerSub: { fontSize: 13, color: 'rgba(255,255,255,0.78)', lineHeight: 18 },
   section: { marginBottom: spacing.lg },
   sectionLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
   sectionLabel: {
@@ -531,6 +567,10 @@ function createDashboardStyles(colors: ReturnType<typeof useTheme>['colors']) {
     borderRadius: radius.lg,
     padding: spacing.lg,
     gap: spacing.md,
+  },
+  requestCard: {
+    borderWidth: 2,
+    backgroundColor: colors.gray50,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   guestHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },

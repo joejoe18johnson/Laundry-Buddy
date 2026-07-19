@@ -1,21 +1,54 @@
 import type { User, VerificationStatus } from '../types'
 import { getAllUsers, getUserById, saveUser } from './authStorage'
-import { getIdentityVerification, hasAddressProof, normalizeUserIdentity } from './identityVerification'
+import {
+  getIdentityVerification,
+  hasAddressProof,
+  mergeUserProfiles,
+  normalizeUserIdentity,
+} from './identityVerification'
 import { isSupabaseConfigured } from './supabase'
 import { fetchProfileById } from './supabase/authService'
 import { getSupabaseClient } from './supabase/client'
 import { identityVerificationToJson, profileRowToUser } from './supabase/mappers'
 
-/** Resolve a user from local training storage first, then Supabase. */
+function verificationChanged(before: User, after: User): boolean {
+  return (
+    getIdentityVerification(before).status !== getIdentityVerification(after).status ||
+    JSON.stringify(getIdentityVerification(before)) !== JSON.stringify(getIdentityVerification(after))
+  )
+}
+
+async function cacheResolvedUser(user: User, local: User | null): Promise<User> {
+  if (!local || verificationChanged(local, user)) {
+    await saveUser(user)
+  }
+  return user
+}
+
+/** Resolve a user from local cache and Supabase, preferring the latest verification state. */
 export async function resolveUserById(userId: string): Promise<User | null> {
   const local = await getUserById(userId)
-  if (local) return local
 
-  if (isSupabaseConfigured()) {
-    return fetchProfileById(userId)
+  if (!isSupabaseConfigured()) {
+    return local
   }
 
-  return null
+  let remote: User | null = null
+  try {
+    remote = await fetchProfileById(userId)
+  } catch {
+    remote = null
+  }
+
+  if (local && remote) {
+    return cacheResolvedUser(mergeUserProfiles(remote, local), local)
+  }
+
+  if (remote) {
+    return cacheResolvedUser(remote, local)
+  }
+
+  return local
 }
 
 export async function getAdminUsers(): Promise<User[]> {
@@ -45,7 +78,8 @@ export async function listAllUsers(): Promise<User[]> {
     merged.set(entry.id, entry)
   }
   for (const entry of localUsers) {
-    merged.set(entry.id, entry)
+    const remote = merged.get(entry.id)
+    merged.set(entry.id, remote ? mergeUserProfiles(remote, entry) : entry)
   }
 
   return Array.from(merged.values())
@@ -86,13 +120,14 @@ export async function markPhoneVerifiedForUser(userId: string, phone?: string): 
   if (isSupabaseConfigured()) {
     const supabase = getSupabaseClient()
     if (supabase) {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({
           phone: updated.phone ?? null,
           identity_verification: identityVerificationToJson(verification),
         })
         .eq('id', userId)
+      if (error) throw error
     }
   }
 
@@ -121,10 +156,11 @@ export async function updateUserVerificationStatus(
   if (isSupabaseConfigured()) {
     const supabase = getSupabaseClient()
     if (supabase) {
-      await supabase
+      const { error } = await supabase
         .from('profiles')
         .update({ identity_verification: identityVerificationToJson(verification) })
         .eq('id', userId)
+      if (error) throw error
     }
   }
 

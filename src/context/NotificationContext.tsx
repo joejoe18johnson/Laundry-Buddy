@@ -16,6 +16,7 @@ import {
   updateBadgeCount,
 } from '../lib/pushNotifications'
 import { linkToPushData } from '../lib/notificationLinks'
+import { isNewBookingNotification } from '../lib/hostNotifications'
 import { PAYMENT_REQUEST_NOTIFICATION_TITLE } from '../lib/paymentRequestDelivery'
 
 const NOTIFICATIONS_KEY = 'laundry-buddy-notifications'
@@ -71,6 +72,7 @@ export function NotificationProvider({
         !item.read &&
         !deliveredPhoneAlertsRef.current.has(item.id) &&
         (item.title === PAYMENT_REQUEST_NOTIFICATION_TITLE ||
+          isNewBookingNotification(item.title) ||
           /pay now|payment request/i.test(item.title)),
     )
     if (!urgent) return

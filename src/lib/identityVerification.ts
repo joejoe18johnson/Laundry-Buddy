@@ -42,6 +42,60 @@ export function isIdentityVerified(user: User): boolean {
   return getIdentityVerification(user).status === 'verified'
 }
 
+function verificationStatusRank(status: VerificationStatus): number {
+  switch (status) {
+    case 'verified':
+      return 4
+    case 'pending':
+      return 3
+    case 'rejected':
+      return 2
+    default:
+      return 1
+  }
+}
+
+/** Prefer the furthest-along verification state when local and Supabase differ. */
+export function mergeIdentityVerification(
+  a: IdentityVerification,
+  b: IdentityVerification,
+): IdentityVerification {
+  const primary =
+    verificationStatusRank(a.status) >= verificationStatusRank(b.status) ? a : b
+  const secondary = primary === a ? b : a
+
+  return {
+    ...secondary,
+    ...primary,
+    phoneVerified: primary.phoneVerified || secondary.phoneVerified,
+    idUploaded: primary.idUploaded || secondary.idUploaded,
+    addressUploaded: primary.addressUploaded || secondary.addressUploaded,
+    idPhotoUri: primary.idPhotoUri ?? secondary.idPhotoUri,
+    addressProofUri: primary.addressProofUri ?? secondary.addressProofUri,
+    addressProofMimeType: primary.addressProofMimeType ?? secondary.addressProofMimeType,
+    addressProofName: primary.addressProofName ?? secondary.addressProofName,
+    verifiedPhone: primary.verifiedPhone ?? secondary.verifiedPhone,
+    address: primary.address ?? secondary.address,
+    idType: primary.idType ?? secondary.idType,
+    submittedAt: primary.submittedAt ?? secondary.submittedAt,
+  }
+}
+
+/** Merge Supabase profile data with local training cache without losing approval status. */
+export function mergeUserProfiles(supabaseUser: User, localUser: User): User {
+  const verification = mergeIdentityVerification(
+    getIdentityVerification(supabaseUser),
+    getIdentityVerification(localUser),
+  )
+
+  return normalizeUserIdentity({
+    ...localUser,
+    ...supabaseUser,
+    password: localUser.password || supabaseUser.password,
+    identityVerification: verification,
+  })
+}
+
 export function canBookOrHost(user: User): boolean {
   return isIdentityVerified(user)
 }
