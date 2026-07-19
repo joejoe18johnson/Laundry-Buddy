@@ -40,7 +40,8 @@ export function useAdminDashboardData(refreshKey = 0) {
 
   const idReviewUsers = useMemo(() => usersPendingIdReview(users), [users])
   const pendingUsers = useMemo(
-    () => users.filter((entry) => getIdentityVerification(entry).status === 'pending'),
+    () =>
+      users.filter((entry) => getIdentityVerification(entry).status === 'pending'),
     [users],
   )
   const verifiedCount = useMemo(

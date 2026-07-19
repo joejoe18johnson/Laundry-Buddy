@@ -136,6 +136,7 @@ export interface User {
   email?: string
   password: string
   role: AppRole
+  createdAt?: string
   identityVerification?: IdentityVerification
   /** @deprecated Use identityVerification */
   hostVerification?: HostVerification

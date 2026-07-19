@@ -17,6 +17,33 @@ export type AdminUserActionResult = {
   error?: string
 }
 
+/** Best-effort timestamp for admin lists — prefers profile created_at, then verification activity. */
+export function getUserSortTime(user: User): number {
+  if (user.createdAt) {
+    const parsed = Date.parse(user.createdAt)
+    if (!Number.isNaN(parsed)) return parsed
+  }
+
+  const verification = getIdentityVerification(user)
+  for (const iso of [verification.submittedAt, verification.codeRequestedAt]) {
+    if (!iso) continue
+    const parsed = Date.parse(iso)
+    if (!Number.isNaN(parsed)) return parsed
+  }
+
+  const fromId = user.id.match(/(\d{10,})/)
+  if (fromId) {
+    const parsed = Number(fromId[1])
+    if (!Number.isNaN(parsed)) return parsed
+  }
+
+  return 0
+}
+
+export function sortUsersNewestFirst(users: User[]): User[] {
+  return [...users].sort((a, b) => getUserSortTime(b) - getUserSortTime(a))
+}
+
 function verificationChanged(before: User, after: User): boolean {
   return (
     getIdentityVerification(before).status !== getIdentityVerification(after).status ||
@@ -66,17 +93,17 @@ export async function listAllUsers(): Promise<User[]> {
   const localUsers = await getAllUsers()
 
   if (!isSupabaseConfigured()) {
-    return localUsers
+    return sortUsersNewestFirst(localUsers)
   }
 
   const supabase = getSupabaseClient()
   if (!supabase) {
-    return localUsers
+    return sortUsersNewestFirst(localUsers)
   }
 
   const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
   if (error || !data) {
-    return localUsers
+    return sortUsersNewestFirst(localUsers)
   }
 
   const merged = new Map<string, User>()
@@ -88,7 +115,7 @@ export async function listAllUsers(): Promise<User[]> {
     merged.set(entry.id, remote ? mergeUserProfiles(remote, entry) : entry)
   }
 
-  return Array.from(merged.values())
+  return sortUsersNewestFirst(Array.from(merged.values()))
 }
 
 export async function getAdminUserById(userId: string): Promise<User | null> {
@@ -96,15 +123,17 @@ export async function getAdminUserById(userId: string): Promise<User | null> {
 }
 
 export function usersPendingIdReview(users: User[]): User[] {
-  return users.filter((entry) => {
-    const verification = getIdentityVerification(entry)
-    if (verification.status !== 'pending' || !verification.idUploaded) return false
-    if (!verification.phoneVerified) return false
-    if (entry.role === 'host') {
-      return hasAddressProof(verification)
-    }
-    return true
-  })
+  return sortUsersNewestFirst(
+    users.filter((entry) => {
+      const verification = getIdentityVerification(entry)
+      if (verification.status !== 'pending' || !verification.idUploaded) return false
+      if (!verification.phoneVerified) return false
+      if (entry.role === 'host') {
+        return hasAddressProof(verification)
+      }
+      return true
+    }),
+  )
 }
 
 export async function markPhoneVerifiedForUser(userId: string, phone?: string): Promise<User | null> {

@@ -1,5 +1,5 @@
 import type { IdentityVerification, User } from '../../types'
-import { emptyIdentityVerification, normalizeUserIdentity } from '../identityVerification'
+import { emptyIdentityVerification, getIdentityVerification, normalizeUserIdentity } from '../identityVerification'
 import type { Database } from './database.types'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
@@ -21,6 +21,7 @@ export function profileRowToUser(row: ProfileRow): User {
     email: row.email ?? undefined,
     password: '',
     role: row.role,
+    createdAt: row.created_at,
     identityVerification: parseIdentityVerification(row.identity_verification),
   }
   return normalizeUserIdentity(user)
