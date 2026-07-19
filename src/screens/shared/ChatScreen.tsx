@@ -143,6 +143,8 @@ export function ChatThreadPanel({
   showBackButton = true,
   onConfirmPayment,
   onPaymentProofSent,
+  titleOverride,
+  subtitleOverride,
 }: {
   threadId: string
   booking?: Booking | null
@@ -150,6 +152,8 @@ export function ChatThreadPanel({
   showBackButton?: boolean
   onConfirmPayment?: () => void
   onPaymentProofSent?: (proofUri: string) => void
+  titleOverride?: string
+  subtitleOverride?: string
 }) {
   const { user } = useAuth()
   const { colors } = useTheme()
@@ -164,8 +168,8 @@ export function ChatThreadPanel({
   const listRef = useRef<FlatList<ChatMessage>>(null)
 
   const messages = getMessages(threadId)
-  const title = getChatThreadTitle(threadId, user!, booking)
-  const subtitle = getChatThreadSubtitle(threadId, booking)
+  const title = titleOverride ?? getChatThreadTitle(threadId, user!, booking)
+  const subtitle = subtitleOverride ?? getChatThreadSubtitle(threadId, booking)
   const isSupport = isSupportThread(threadId)
   const isBankTransfer = booking?.paymentMethod === 'bank_transfer'
   const paymentPending = isBankTransfer && booking?.paymentStatus === 'pending'
@@ -331,7 +335,7 @@ export function ChatThreadPanel({
             <Text style={styles.emptyThreadTitle}>{toTitleCase('Start the conversation')}</Text>
             <Text style={styles.emptyThreadSub}>
               {isSupport
-                ? toTitleCase('Ask for help or send your verification code here.')
+                ? toTitleCase('Ask for help with your account here.')
                 : toTitleCase('Send messages and payment screenshots without leaving the app.')}
             </Text>
           </View>

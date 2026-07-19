@@ -44,6 +44,17 @@ import * as SplashScreen from 'expo-splash-screen'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
 import { emptyIdentityVerification, needsIdentityVerification } from '../lib/identityVerification'
 import { isValidEmail } from '../lib/email'
+import {
+  approveUserVerification,
+  listAllUsers,
+  rejectUserVerification,
+  resolveUserById,
+} from '../lib/adminUsers'
+import {
+  adminSendVerificationCodeToUser,
+  requestVerificationCodeForUser,
+  submitVerificationCodeForUser,
+} from '../lib/verificationCodeService'
 
 interface SignupInput {
   name: string
@@ -68,6 +79,7 @@ interface AuthState {
   authSessionKey: number
   navigateAuth: (screen: AuthScreen) => void
   login: (method: LoginMethod, identifier: string, password: string) => Promise<boolean>
+  loginTrainingAccount: (method: LoginMethod, identifier: string, password: string) => Promise<boolean>
   loginWithBiometrics: () => Promise<boolean>
   signup: (input: SignupInput) => Promise<boolean>
   logout: () => Promise<void>
@@ -80,8 +92,22 @@ interface AuthState {
     idType: IdDocumentType
     idPhotoUri?: string
     address?: string
-    addressUploaded?: boolean
+    addressProofUri?: string
+    addressProofMimeType?: string
+    addressProofName?: string
   }) => Promise<boolean>
+  requestVerificationCode: (phone: string) => Promise<boolean>
+  adminSendVerificationCode: (userId: string) => Promise<{
+    ok: boolean
+    code?: string
+    userName?: string
+    error?: string
+  }>
+  submitVerificationCode: (code: string) => Promise<boolean>
+  syncUserAfterVerification: (userId: string) => Promise<void>
+  adminListUsers: () => Promise<User[]>
+  adminApproveUser: (userId: string) => Promise<User | null>
+  adminRejectUser: (userId: string) => Promise<User | null>
   clearAuthError: () => void
 }
 
@@ -132,9 +158,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isSupabaseConfigured()) {
         try {
           const u = await fetchCurrentSupabaseUser()
-          setUser(u)
+          if (u) {
+            setUser(u)
+          } else {
+            const local = await getCurrentUser()
+            setUser(local)
+          }
         } catch {
-          setUser(null)
+          const local = await getCurrentUser()
+          setUser(local)
         }
         setReady(true)
         return
@@ -259,6 +291,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void maybeOfferBiometricSetup()
     return true
   }, [bumpAuthSession, maybeOfferBiometricSetup])
+
+  const loginTrainingAccount = useCallback(
+    async (method: LoginMethod, identifier: string, password: string) => {
+      clearAuthError()
+      const found =
+        method === 'phone' ? await findUserByPhone(identifier) : await findUserByEmail(identifier)
+
+      if (!found || found.password !== password) {
+        setAuthError('Training account not found. Reload the app to refresh demo data.')
+        return false
+      }
+
+      if (isSupabaseConfigured()) {
+        await supabaseSignOut()
+      }
+
+      await setSessionUserId(found.id)
+      setUser(found)
+      setAuthError(null)
+      bumpAuthSession()
+      return true
+    },
+    [bumpAuthSession, clearAuthError],
+  )
 
   const signup = useCallback(async (input: SignupInput) => {
     if (!input.name.trim()) {
@@ -405,11 +461,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       idType: IdDocumentType
       idPhotoUri?: string
       address?: string
-      addressUploaded?: boolean
+      addressProofUri?: string
+      addressProofMimeType?: string
+      addressProofName?: string
     }) => {
       if (!user) return false
 
       const normalizedPhone = normalizePhone(data.phone)
+      const hostAddressProof = user.role === 'host' ? !!data.addressProofUri : false
 
       if (isSupabaseConfigured()) {
         try {
@@ -421,10 +480,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             idUploaded: true,
             idPhotoUri: data.idPhotoUri,
             address: data.address?.trim() ?? '',
-            addressUploaded: user.role === 'host' ? !!data.addressUploaded : undefined,
+            addressUploaded: hostAddressProof ? true : undefined,
+            addressProofUri: data.addressProofUri,
+            addressProofMimeType: data.addressProofMimeType,
+            addressProofName: data.addressProofName,
             submittedAt: new Date().toISOString(),
           }
           const updated = await supabaseSubmitIdentityVerification(user, verification, normalizedPhone)
+          await saveUser(updated)
           setUser(updated)
           setAuthError(null)
           return true
@@ -452,7 +515,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         idUploaded: true,
         idPhotoUri: data.idPhotoUri,
         address: data.address?.trim() ?? '',
-        addressUploaded: user.role === 'host' ? !!data.addressUploaded : undefined,
+        addressUploaded: hostAddressProof ? true : undefined,
+        addressProofUri: data.addressProofUri,
+        addressProofMimeType: data.addressProofMimeType,
+        addressProofName: data.addressProofName,
         submittedAt: new Date().toISOString(),
       }
 
@@ -471,6 +537,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   )
 
+  const requestVerificationCode = useCallback(
+    async (phone: string) => {
+      if (!user) return false
+      try {
+        await requestVerificationCodeForUser(user.id, user.name, phone)
+        const updated = await resolveUserById(user.id)
+        if (updated) setUser(updated)
+        setAuthError(null)
+        return true
+      } catch {
+        setAuthError('Could not request a verification code. Try again.')
+        return false
+      }
+    },
+    [user],
+  )
+
+  const adminSendVerificationCode = useCallback(async (userId: string) => {
+    return adminSendVerificationCodeToUser(userId)
+  }, [])
+
+  const submitVerificationCode = useCallback(
+    async (code: string) => {
+      if (!user) return false
+      const result = await submitVerificationCodeForUser(user.id, code)
+      if (!result.ok) {
+        setAuthError(result.error ?? 'Could not verify code.')
+        return false
+      }
+      const updated = await resolveUserById(user.id)
+      if (updated) setUser(updated)
+      setAuthError(null)
+      return true
+    },
+    [user],
+  )
+
+  const syncUserAfterVerification = useCallback(
+    async (userId: string) => {
+      if (user?.id !== userId) return
+      const updated = await resolveUserById(userId)
+      if (updated) setUser(updated)
+    },
+    [user],
+  )
+
+  const adminListUsers = useCallback(() => listAllUsers(), [])
+
+  const adminApproveUser = useCallback(
+    async (userId: string) => {
+      const updated = await approveUserVerification(userId)
+      if (updated && user?.id === userId) setUser(updated)
+      return updated
+    },
+    [user],
+  )
+
+  const adminRejectUser = useCallback(
+    async (userId: string) => {
+      const updated = await rejectUserVerification(userId)
+      if (updated && user?.id === userId) setUser(updated)
+      return updated
+    },
+    [user],
+  )
+
   const value = useMemo(
     () => ({
       user,
@@ -484,6 +616,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authSessionKey,
       navigateAuth,
       login,
+      loginTrainingAccount,
       loginWithBiometrics,
       signup,
       logout,
@@ -492,6 +625,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       acceptBiometricSetup,
       dismissBiometricSetup,
       submitIdentityVerification,
+      requestVerificationCode,
+      adminSendVerificationCode,
+      submitVerificationCode,
+      syncUserAfterVerification,
+      adminListUsers,
+      adminApproveUser,
+      adminRejectUser,
       clearAuthError,
     }),
     [
@@ -506,6 +646,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authSessionKey,
       navigateAuth,
       login,
+      loginTrainingAccount,
       loginWithBiometrics,
       signup,
       logout,
@@ -514,6 +655,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       acceptBiometricSetup,
       dismissBiometricSetup,
       submitIdentityVerification,
+      requestVerificationCode,
+      adminSendVerificationCode,
+      submitVerificationCode,
+      syncUserAfterVerification,
+      adminListUsers,
+      adminApproveUser,
+      adminRejectUser,
       clearAuthError,
     ],
   )

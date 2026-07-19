@@ -24,6 +24,7 @@ import {
   supportThreadId,
 } from '../lib/chatThreads'
 import { DEMO_ANA_MARIA_BOOKING_IDS } from '../data/seedData'
+import { listAllUsers } from '../lib/adminUsers'
 import { chatLink } from '../lib/notificationLinks'
 import type { AppRole, Booking, ChatMessage } from '../types'
 
@@ -103,13 +104,25 @@ export function MessageProvider({ children }: { children: ReactNode }) {
     const refreshKnownThreads = async () => {
       const supportId = supportThreadId(user.id)
       const storedIds = await loadAllThreadIds()
-      const threadIds = Array.from(
-        new Set([
-          supportId,
-          ...storedIds,
-          ...(user.id === 'user-ana' || user.id === 'user-maria' ? [...DEMO_ANA_MARIA_BOOKING_IDS] : []),
-        ]),
-      )
+
+      let threadIds: string[]
+      if (user.role === 'admin') {
+        const users = await listAllUsers()
+        threadIds = Array.from(
+          new Set([
+            ...users.map((entry) => supportThreadId(entry.id)),
+            ...storedIds.filter((id) => isSupportThread(id)),
+          ]),
+        )
+      } else {
+        threadIds = Array.from(
+          new Set([
+            supportId,
+            ...storedIds,
+            ...(user.id === 'user-ana' || user.id === 'user-maria' ? [...DEMO_ANA_MARIA_BOOKING_IDS] : []),
+          ]),
+        )
+      }
       await refreshThreads(threadIds)
     }
 
@@ -173,10 +186,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
           senderId: 'support',
           senderName: 'Laundry Buddy Support',
           senderRole: 'support',
-          text:
-            trimmed?.includes('verification code') || trimmed?.includes('Verification code')
-              ? 'Thanks! We received your request. Reply here with your verification code when you get it, and we will review your account.'
-              : 'Thanks for your message. Our team will reply here in the app as soon as we can.',
+          text: 'Thanks for your message. Our team will reply here in the app as soon as we can.',
           kind: 'system',
           createdAt: nowIso(),
         }
@@ -248,5 +258,6 @@ export function useMessages() {
 
 export function senderRoleLabel(role: AppRole | 'support'): string {
   if (role === 'support') return 'Support'
+  if (role === 'admin') return 'Admin'
   return role === 'host' ? 'Host' : 'Guest'
 }

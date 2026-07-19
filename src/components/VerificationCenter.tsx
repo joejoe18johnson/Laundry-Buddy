@@ -62,7 +62,7 @@ export function VerificationCenter({ user, status, wizardStep, children, footer 
         <View style={styles.hintCard}>
           <AppIcon name="message-circle" size={18} color={colors.gray600} />
           <Text style={styles.hintText}>
-            {toTitleCase('Reply in support chat with your verification code when you receive it.')}
+            {toTitleCase('Enter the 6-digit code from WhatsApp, then wait for team review.')}
           </Text>
         </View>
       ) : null}

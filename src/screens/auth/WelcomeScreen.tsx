@@ -66,11 +66,18 @@ function createWelcomeStyles(colors: ReturnType<typeof useTheme>['colors']) {
     trainingLoginBusy: { color: colors.gray500, textDecorationLine: 'none' },
     demoSteps: { marginTop: spacing.md, gap: 6, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.gray100 },
     demoStep: { fontSize: 12, color: colors.gray600, lineHeight: 18 },
+    error: {
+      marginTop: spacing.sm,
+      color: colors.danger,
+      fontSize: 13,
+      lineHeight: 18,
+      textAlign: 'center',
+    },
   })
 }
 
 export function WelcomeScreen() {
-  const { navigateAuth, login, loginWithBiometrics, biometricSupport, biometricEnabled } = useAuth()
+  const { navigateAuth, loginTrainingAccount, loginWithBiometrics, biometricSupport, biometricEnabled, authError, clearAuthError } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createWelcomeStyles(colors), [colors])
   const [signingIn, setSigningIn] = useState<string | null>(null)
@@ -99,8 +106,9 @@ export function WelcomeScreen() {
   }
 
   const handleTrainingLogin = async (loginId: string, type: 'phone' | 'email') => {
+    clearAuthError()
     setSigningIn(loginId)
-    await login(type, loginId, TRAINING_PASSWORD)
+    await loginTrainingAccount(type, loginId, TRAINING_PASSWORD)
     setSigningIn(null)
   }
 
@@ -145,7 +153,13 @@ export function WelcomeScreen() {
             disabled={signingIn !== null}
           >
             <AppIcon
-              name={a.label.includes('host') ? 'home' : 'user'}
+              name={
+                a.label.includes('admin')
+                  ? 'settings'
+                  : a.label.includes('host')
+                    ? 'home'
+                    : 'user'
+              }
               size={16}
               color={colors.accent}
             />
@@ -161,6 +175,7 @@ export function WelcomeScreen() {
             </Text>
           ))}
         </View>
+        {authError ? <Text style={styles.error}>{authError}</Text> : null}
       </View>
     </Screen>
   )

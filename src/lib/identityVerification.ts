@@ -61,6 +61,10 @@ export function hostNeedsAddressProof(role: AppRole): boolean {
   return role === 'host'
 }
 
+export function hasAddressProof(verification: IdentityVerification): boolean {
+  return !!verification.addressProofUri || !!verification.addressUploaded
+}
+
 export function formatIdDocumentType(type?: IdDocumentType): string {
   if (type === 'passport') return 'Passport'
   if (type === 'drivers_license') return "Driver's License"
@@ -83,8 +87,8 @@ export function verificationStatusLabel(status: VerificationStatus, role: AppRol
 
 export function identityVerificationSteps(role: AppRole): string[] {
   return role === 'host'
-    ? ['WhatsApp', 'Government ID', 'Host Address']
-    : ['WhatsApp', 'Government ID']
+    ? ['Phone number', 'Government ID', 'Host address']
+    : ['Phone number', 'Government ID']
 }
 
 export type VerificationTrackState = 'done' | 'active' | 'upcoming' | 'waiting'
@@ -98,6 +102,43 @@ export type VerificationTrackStep = {
 
 type WizardStep = 'phone' | 'id' | 'address'
 
+const PHONE_WHATSAPP_DETAIL = 'Verification code sent via WhatsApp'
+
+function unlockLabel(role: AppRole): string {
+  return role === 'host' ? 'Hosting unlocked' : 'Booking unlocked'
+}
+
+function buildCoreTrack(
+  user: User,
+  states: {
+    phone: VerificationTrackState
+    review: VerificationTrackState
+    unlock: VerificationTrackState
+  },
+  details?: { phone?: string; review?: string },
+): VerificationTrackStep[] {
+  return [
+    { key: 'account', label: 'Account created', state: 'done' },
+    {
+      key: 'phone',
+      label: 'Phone number',
+      detail: details?.phone ?? (states.phone === 'active' ? PHONE_WHATSAPP_DETAIL : undefined),
+      state: states.phone,
+    },
+    {
+      key: 'review',
+      label: 'Team review',
+      detail: details?.review,
+      state: states.review,
+    },
+    {
+      key: 'unlock',
+      label: unlockLabel(user.role),
+      state: states.unlock,
+    },
+  ]
+}
+
 function wizardStepIndex(step: WizardStep): number {
   if (step === 'phone') return 0
   if (step === 'id') return 1
@@ -110,111 +151,59 @@ export function getVerificationTrackSteps(
   options?: { wizardStep?: WizardStep },
 ): VerificationTrackStep[] {
   const verification = getIdentityVerification(user)
-  const isHost = user.role === 'host'
   const wizard = options?.wizardStep
   const status = verification.status
+  const phoneDisplay = verification.verifiedPhone ?? user.phone
 
   if (status === 'verified') {
-    return [
-      { key: 'account', label: 'Account created', state: 'done' },
-      {
-        key: 'whatsapp',
-        label: 'WhatsApp number',
-        detail: verification.verifiedPhone ?? user.phone,
-        state: 'done',
-      },
-      {
-        key: 'id',
-        label: 'Government ID',
-        detail: verification.idType ? formatIdDocumentType(verification.idType) : undefined,
-        state: 'done',
-      },
-      ...(isHost
-        ? [{ key: 'address', label: 'Host address', detail: verification.address, state: 'done' as const }]
-        : []),
-      { key: 'review', label: 'Team review', state: 'done' },
-      {
-        key: 'unlock',
-        label: isHost ? 'Hosting unlocked' : 'Booking unlocked',
-        state: 'done',
-      },
-    ]
+    return buildCoreTrack(
+      user,
+      { phone: 'done', review: 'done', unlock: 'done' },
+      { phone: phoneDisplay, review: 'Approved' },
+    )
   }
 
   if (status === 'pending') {
-    return [
-      { key: 'account', label: 'Account created', state: 'done' },
-      {
-        key: 'whatsapp',
-        label: 'WhatsApp number',
-        detail: verification.verifiedPhone ?? user.phone,
-        state: 'done',
-      },
-      {
-        key: 'id',
-        label: 'Government ID',
-        detail: verification.idType ? formatIdDocumentType(verification.idType) : 'Uploaded',
-        state: 'done',
-      },
-      ...(isHost && verification.address
-        ? [{ key: 'address', label: 'Host address', detail: verification.address, state: 'done' as const }]
-        : isHost
-          ? [{ key: 'address', label: 'Host address', state: 'done' as const }]
-          : []),
-      {
-        key: 'review',
-        label: 'Team review',
-        detail: 'Usually within 1 business day',
-        state: 'waiting',
-      },
-      {
-        key: 'unlock',
-        label: isHost ? 'Hosting unlocked' : 'Booking unlocked',
-        state: 'upcoming',
-      },
-    ]
+    return buildCoreTrack(
+      user,
+      { phone: 'done', review: 'waiting', unlock: 'upcoming' },
+      { phone: phoneDisplay, review: 'Usually within 1 business day' },
+    )
   }
 
   if (status === 'rejected') {
-    return [
-      { key: 'account', label: 'Account created', state: 'done' },
-      { key: 'whatsapp', label: 'WhatsApp number', state: 'upcoming' },
-      { key: 'id', label: 'Government ID', state: 'upcoming' },
-      ...(isHost ? [{ key: 'address', label: 'Host address', state: 'upcoming' as const }] : []),
-      { key: 'review', label: 'Resubmit required', detail: 'Previous submission declined', state: 'active' },
-      { key: 'unlock', label: isHost ? 'Hosting unlocked' : 'Booking unlocked', state: 'upcoming' },
-    ]
+    return buildCoreTrack(
+      user,
+      { phone: 'upcoming', review: 'active', unlock: 'upcoming' },
+      { review: 'Previous submission declined — resubmit below' },
+    )
   }
 
   const wizardIndex = wizard ? wizardStepIndex(wizard) : 0
-  const track: VerificationTrackStep[] = [
-    { key: 'account', label: 'Account created', state: 'done' },
-    {
-      key: 'whatsapp',
-      label: 'WhatsApp number',
-      state: wizardIndex > 0 ? 'done' : wizardIndex === 0 ? 'active' : 'upcoming',
-    },
-    {
-      key: 'id',
-      label: 'Government ID',
-      state: wizardIndex > 1 ? 'done' : wizardIndex === 1 ? 'active' : 'upcoming',
-    },
-  ]
+  const phoneState: VerificationTrackState =
+    wizardIndex > 0 ? 'done' : wizardIndex === 0 ? 'active' : 'upcoming'
+  const reviewState: VerificationTrackState = wizardIndex >= 1 ? 'active' : 'upcoming'
 
-  if (isHost) {
-    track.push({
-      key: 'address',
-      label: 'Host address',
-      state: wizardIndex > 2 ? 'done' : wizardIndex === 2 ? 'active' : 'upcoming',
-    })
-  }
-
-  track.push(
-    { key: 'review', label: 'Team review', state: 'upcoming' },
-    { key: 'unlock', label: isHost ? 'Hosting unlocked' : 'Booking unlocked', state: 'upcoming' },
+  return buildCoreTrack(
+    user,
+    { phone: phoneState, review: reviewState, unlock: 'upcoming' },
+    {
+      phone:
+        phoneState === 'done'
+          ? phoneDisplay
+          : phoneState === 'active'
+            ? PHONE_WHATSAPP_DETAIL
+            : undefined,
+      review:
+        reviewState === 'active'
+          ? wizardIndex >= 2 && user.role === 'host'
+            ? 'Upload your address proof'
+            : wizardIndex >= 1
+              ? 'Upload your government ID'
+              : undefined
+          : undefined,
+    },
   )
-
-  return track
 }
 
 export function verificationCenterHeadline(status: VerificationStatus, role: AppRole): string {
@@ -237,6 +226,6 @@ export function verificationCenterSubtitle(status: VerificationStatus, role: App
     return 'Please resubmit clear photos and correct details below.'
   }
   return role === 'host'
-    ? 'Complete each step to unlock hosting and accept loads.'
-    : 'Complete each step to unlock booking dryer sessions.'
+    ? 'Add your phone number, verify via WhatsApp code, then submit ID for review.'
+    : 'Add your phone number, verify via WhatsApp code, then submit ID for review.'
 }

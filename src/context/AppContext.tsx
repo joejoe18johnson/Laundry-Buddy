@@ -208,7 +208,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { push } = useNotifications()
   const { showToast } = useToast()
-  const role = user!.role
+  // AppProvider is only mounted for customer/host sessions (see App.tsx).
+  const role = user!.role as 'customer' | 'host'
 
   const hostSeed = role === 'host' ? getHostDashboardSeed(user!.id) : null
   const customerSeedBookings =
@@ -782,6 +783,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (link.screen === 'history') {
         setScreen('history')
+        return
+      }
+
+      if (link.screen === 'identity-verification') {
+        setScreen('identity-verification')
         return
       }
 

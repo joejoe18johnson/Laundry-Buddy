@@ -8,9 +8,10 @@ interface IdDocumentCaptureProps {
   photoUri: string | null
   onPhotoChange: (uri: string | null) => void
   label?: string
+  disabled?: boolean
 }
 
-export function IdDocumentCapture({ photoUri, onPhotoChange, label }: IdDocumentCaptureProps) {
+export function IdDocumentCapture({ photoUri, onPhotoChange, label, disabled }: IdDocumentCaptureProps) {
   const pickPhoto = async (useCamera: boolean) => {
     const permission = useCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -44,6 +45,14 @@ export function IdDocumentCapture({ photoUri, onPhotoChange, label }: IdDocument
   }
 
   const showOptions = () => {
+    if (disabled) {
+      Alert.alert(
+        toTitleCase('Select document type'),
+        toTitleCase('Choose passport, driver\'s license, or social security card before uploading.'),
+      )
+      return
+    }
+
     Alert.alert(
       toTitleCase('ID photo'),
       toTitleCase('Upload a clear photo of your passport, driver\'s license, or social security card.'),
@@ -60,7 +69,11 @@ export function IdDocumentCapture({ photoUri, onPhotoChange, label }: IdDocument
 
   return (
     <View>
-      <Pressable onPress={showOptions} style={[styles.upload, photoUri && styles.uploadDone]}>
+      <Pressable
+        onPress={showOptions}
+        disabled={disabled}
+        style={[styles.upload, photoUri && styles.uploadDone, disabled && styles.uploadDisabled]}
+      >
         {photoUri ? (
           <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
         ) : (
@@ -92,6 +105,10 @@ const styles = StyleSheet.create({
     borderStyle: 'solid',
     borderColor: colors.green,
     backgroundColor: colors.greenBg,
+  },
+  uploadDisabled: {
+    opacity: 0.55,
+    backgroundColor: colors.gray75,
   },
   uploadText: { fontSize: 15, fontWeight: '500', color: colors.gray500 },
   preview: { width: '100%', height: 180, borderRadius: radius.sm },

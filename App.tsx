@@ -30,6 +30,9 @@ import { AccountScreen } from './src/screens/shared/AccountScreen'
 import { HelpScreen } from './src/screens/shared/HelpScreen'
 import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
 import { MessagesScreen } from './src/screens/shared/MessagesScreen'
+import { AdminDashboardScreen } from './src/screens/admin/AdminDashboardScreen'
+import { AdminNotificationsScreen } from './src/screens/admin/AdminNotificationsScreen'
+import { AdminUserReviewScreen } from './src/screens/admin/AdminUserReviewScreen'
 import { ChatScreen } from './src/screens/shared/ChatScreen'
 import { colors, spacing } from './src/theme'
 import { ThemeProvider, useTheme } from './src/context/ThemeContext'
@@ -61,6 +64,123 @@ const HIDE_BOTTOM_NAV: Screen[] = [
   'chat',
   'identity-verification',
 ]
+
+function AdminAppShell() {
+  const { user, logout } = useAuth()
+  const { colors } = useTheme()
+  const { unreadCount } = useUserNotifications(user!.id)
+  const [screen, setScreen] = useState<'dashboard' | 'notifications' | 'user-review'>('dashboard')
+  const [highlightUserId, setHighlightUserId] = useState<string | undefined>()
+  const [reviewUserId, setReviewUserId] = useState<string | null>(null)
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
+
+  const openUserReview = (userId: string) => {
+    setReviewUserId(userId)
+    setScreen('user-review')
+  }
+
+  const handleReviewUpdated = () => {
+    setDashboardRefreshKey((key) => key + 1)
+  }
+
+  const shellStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        app: { flex: 1, backgroundColor: colors.white },
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: spacing.screen,
+          paddingVertical: 14,
+          borderBottomWidth: 1,
+          borderBottomColor: colors.gray100,
+        },
+        title: { fontSize: 20, fontWeight: '700', color: colors.black, flex: 1 },
+        headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+        bellBtn: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        bellBadge: {
+          position: 'absolute',
+          top: 2,
+          right: 2,
+          minWidth: 16,
+          height: 16,
+          borderRadius: 8,
+          backgroundColor: colors.black,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 3,
+        },
+        bellBadgeText: { fontSize: 9, fontWeight: '700', color: colors.white },
+        main: { flex: 1 },
+      }),
+    [colors],
+  )
+
+  return (
+    <SafeAreaView style={shellStyles.app} edges={['top', 'bottom']}>
+      <StatusBar style="dark" />
+      {screen !== 'user-review' ? (
+        <View style={shellStyles.header}>
+          <Text style={shellStyles.title}>Support admin</Text>
+          <View style={shellStyles.headerRight}>
+            <Pressable
+              onPress={() => setScreen(screen === 'notifications' ? 'dashboard' : 'notifications')}
+              style={shellStyles.bellBtn}
+              hitSlop={8}
+            >
+              <AppIcon name="bell" size={22} color={colors.black} />
+              {unreadCount > 0 ? (
+                <View style={shellStyles.bellBadge}>
+                  <Text style={shellStyles.bellBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              ) : null}
+            </Pressable>
+            <Pressable onPress={() => void logout()} style={shellStyles.bellBtn} hitSlop={8}>
+              <AppIcon name="log-out" size={20} color={colors.black} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+      <View style={shellStyles.main}>
+        {screen === 'dashboard' ? (
+          <AdminDashboardScreen
+            highlightUserId={highlightUserId}
+            refreshKey={dashboardRefreshKey}
+            onReviewUser={openUserReview}
+          />
+        ) : screen === 'notifications' ? (
+          <AdminNotificationsScreen
+            onBack={() => setScreen('dashboard')}
+            onOpenRequest={(userId) => {
+              if (userId) {
+                setHighlightUserId(userId)
+                openUserReview(userId)
+                return
+              }
+              setScreen('dashboard')
+            }}
+          />
+        ) : reviewUserId ? (
+          <AdminUserReviewScreen
+            userId={reviewUserId}
+            onBack={() => {
+              setScreen('dashboard')
+              setReviewUserId(null)
+            }}
+            onUpdated={handleReviewUpdated}
+          />
+        ) : null}
+      </View>
+    </SafeAreaView>
+  )
+}
 
 function AppShell() {
   const { user, logout } = useAuth()
@@ -470,14 +590,18 @@ function AuthenticatedApp() {
       <NotificationProvider activeUserId={user!.id}>
         <MessageProvider>
           <ToastProvider>
-            <AppProvider>
-              <AppShell />
-            </AppProvider>
+            {user!.role === 'admin' ? (
+              <AdminAppShell />
+            ) : (
+              <AppProvider>
+                <AppShell />
+              </AppProvider>
+            )}
           </ToastProvider>
         </MessageProvider>
       </NotificationProvider>
       <BiometricOverlays />
-      <PushNotificationPromptGate />
+      {user!.role !== 'admin' ? <PushNotificationPromptGate /> : null}
     </>
   )
 }

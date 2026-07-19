@@ -20,6 +20,14 @@ export function chatLink(threadId: string, bookingId?: string): NotificationLink
   return { screen: 'chat', threadId, bookingId }
 }
 
+export function identityVerificationLink(): NotificationLink {
+  return { screen: 'identity-verification' }
+}
+
+export function adminDashboardLink(userId?: string): NotificationLink {
+  return { screen: 'admin-dashboard', userId }
+}
+
 export function linkFromPushData(data: Record<string, unknown>): NotificationLink | undefined {
   const screen = data.screen as NotificationLink['screen'] | undefined
   if (!screen) return undefined
@@ -50,6 +58,15 @@ export function linkFromPushData(data: Record<string, unknown>): NotificationLin
       bookingId: typeof data.bookingId === 'string' ? data.bookingId : undefined,
     }
   }
+  if (screen === 'identity-verification') {
+    return { screen }
+  }
+  if (screen === 'admin-dashboard') {
+    return {
+      screen,
+      userId: typeof data.userId === 'string' ? data.userId : undefined,
+    }
+  }
   if (screen === 'customer-home' || screen === 'history') {
     return { screen }
   }
@@ -61,6 +78,7 @@ export function linkToPushData(link: NotificationLink): Record<string, string> {
   if ('bookingId' in link && link.bookingId) data.bookingId = link.bookingId
   if ('hostId' in link && link.hostId) data.hostId = link.hostId
   if ('threadId' in link && link.threadId) data.threadId = link.threadId
+  if ('userId' in link && link.userId) data.userId = link.userId
   return data
 }
 
@@ -74,6 +92,11 @@ export function inferNotificationLink(title: string, role: AppRole): Notificatio
     lower.includes('transfer proof')
   ) {
     return { screen: 'chat', threadId: '' }
+  }
+
+  if (lower.includes('verification code')) {
+    if (role === 'admin') return { screen: 'admin-dashboard' }
+    return { screen: 'identity-verification' }
   }
 
   if (role === 'host') {

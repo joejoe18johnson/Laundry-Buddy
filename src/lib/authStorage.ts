@@ -52,6 +52,10 @@ export async function getCurrentUser(): Promise<User | null> {
   return getUserById(id)
 }
 
+export async function getAllUsers(): Promise<User[]> {
+  return readUsers()
+}
+
 export async function getUserById(id: string): Promise<User | null> {
   const users = await readUsers()
   return users.find((u) => u.id === id) ?? null

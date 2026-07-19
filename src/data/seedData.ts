@@ -3,7 +3,7 @@ import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, Iden
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '22'
+export const SEED_DATA_VERSION = '26'
 
 /** Shared Ana (guest) ↔ Maria (host) demo loads — same ids on both accounts. */
 export const DEMO_ANA_MARIA_BOOKING_ID = 'demo-ana-maria-1'
@@ -123,6 +123,44 @@ export const SEED_USERS: User[] = [
     password: TRAINING_PASSWORD,
     role: 'host',
     identityVerification: VERIFIED_HOST,
+  },
+  {
+    id: 'user-sandra',
+    name: 'Sandra',
+    phone: '5016003456',
+    email: 'sandra@example.com',
+    password: TRAINING_PASSWORD,
+    role: 'customer',
+    identityVerification: {
+      status: 'none',
+      phoneVerified: false,
+      idUploaded: false,
+    },
+  },
+  {
+    id: 'user-carlos',
+    name: 'Carlos',
+    phone: '5016007890',
+    email: 'carlos@example.com',
+    password: TRAINING_PASSWORD,
+    role: 'host',
+    identityVerification: {
+      status: 'none',
+      phoneVerified: false,
+      idUploaded: false,
+    },
+  },
+  {
+    id: 'user-support-admin',
+    name: 'Support Admin',
+    email: 'support@laundrybuddy.app',
+    password: TRAINING_PASSWORD,
+    role: 'admin',
+    identityVerification: {
+      status: 'verified',
+      phoneVerified: true,
+      idUploaded: true,
+    },
   },
 ]
 
@@ -267,6 +305,9 @@ export const SEED_HOST_HISTORY: Record<string, Booking[]> = {
 export const TRAINING_ACCOUNTS = [
   { label: 'Ana (guest)', login: '6001111', type: 'phone' as const },
   { label: 'Maria (host)', login: 'maria@example.com', type: 'email' as const },
+  { label: 'Sandra (pending verify)', login: '6003456', type: 'phone' as const },
+  { label: 'Carlos (host verify)', login: 'carlos@example.com', type: 'email' as const },
+  { label: 'Support admin', login: 'support@laundrybuddy.app', type: 'email' as const },
 ] as const
 
 export const TRAINING_DEMO_STEPS = [

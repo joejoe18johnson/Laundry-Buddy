@@ -15,12 +15,15 @@ export function normalizeWhatsAppPhone(phone: string): string {
   return digits
 }
 
-/** @deprecated Use in-app support chat instead. */
 export function openWhatsAppChat(phone: string, message: string): void {
   const normalized = normalizeWhatsAppPhone(phone)
   if (!normalized) return
   const url = `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`
   Linking.openURL(url).catch(() => {})
+}
+
+export function openWhatsAppVerificationCode(phone: string, message: string): void {
+  openWhatsAppChat(phone, message)
 }
 
 /** @deprecated Use in-app support chat instead. */

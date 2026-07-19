@@ -17,7 +17,7 @@ export function buildVerificationCodeRequestMessage(name: string, phone: string)
   const display = formatWhatsAppDisplay(phone)
   return [
     `Hi Laundry Buddy! This is ${name}.`,
-    `Please send my verification code to my WhatsApp: ${display}.`,
+    `Please send my 6-digit verification code for ${display}.`,
     `I will reply here in the app with the code once I receive it.`,
   ].join('\n')
 }

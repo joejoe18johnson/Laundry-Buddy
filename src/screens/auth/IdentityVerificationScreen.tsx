@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { AppState, StyleSheet, Text, View } from 'react-native'
+import { AddressProofCapture, type AddressProofFile } from '../../components/AddressProofCapture'
 import { IdDocumentCapture } from '../../components/IdDocumentCapture'
 import { AppIcon } from '../../components/AppIcon'
 import { VerificationCenter } from '../../components/VerificationCenter'
@@ -14,24 +14,29 @@ import {
   Screen,
 } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
-import { useMessages } from '../../context/MessageContext'
+import { getAdminUsers } from '../../lib/adminUsers'
 import {
   formatIdDocumentType,
   getIdentityVerification,
   ID_DOCUMENT_OPTIONS,
   isIdentityVerified,
 } from '../../lib/identityVerification'
+import { adminDashboardLink } from '../../lib/notificationLinks'
 import { normalizePhone } from '../../lib/phone'
 import {
-  buildVerificationCodeRequestMessage,
-  supportThreadId,
-} from '../../lib/chatThreads'
+  getVerificationCodeRequestForUser,
+  type VerificationCodeRequest,
+} from '../../lib/verificationRequestStorage'
+import {
+  buildAdminVerificationRequestBody,
+  VERIFICATION_CODE_REQUEST_TITLE,
+} from '../../lib/verificationCodes'
 import {
   formatWhatsAppNumberDisplay,
   isValidWhatsAppNumber,
 } from '../../lib/whatsappVerification'
-import { ChatThreadPanel } from '../shared/ChatScreen'
 import { radius, spacing } from '../../theme'
 import { toTitleCase } from '../../lib/titleCase'
 import type { IdDocumentType } from '../../types'
@@ -39,16 +44,27 @@ import type { IdDocumentType } from '../../types'
 type WizardStep = 'phone' | 'id' | 'address'
 
 export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void }) {
-  const { user, submitIdentityVerification, logout, authError, clearAuthError } = useAuth()
+  const {
+    user,
+    submitIdentityVerification,
+    requestVerificationCode,
+    submitVerificationCode,
+    logout,
+    authError,
+    clearAuthError,
+  } = useAuth()
+  const { push } = useNotifications()
   const [step, setStep] = useState<WizardStep>('phone')
   const [phone, setPhone] = useState('')
   const [idType, setIdType] = useState<IdDocumentType | null>(null)
   const [idPhotoUri, setIdPhotoUri] = useState<string | null>(null)
   const [address, setAddress] = useState('')
-  const [addressUploaded, setAddressUploaded] = useState(false)
+  const [addressProof, setAddressProof] = useState<AddressProofFile | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [supportChatOpen, setSupportChatOpen] = useState(false)
-  const { sendMessage } = useMessages()
+  const [requestingCode, setRequestingCode] = useState(false)
+  const [verifyingCode, setVerifyingCode] = useState(false)
+  const [codeInput, setCodeInput] = useState('')
+  const [codeRequest, setCodeRequest] = useState<VerificationCodeRequest | null>(null)
 
   const verification = user ? getIdentityVerification(user) : null
   const isHost = user?.role === 'host'
@@ -60,20 +76,83 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     setPhone((current) => current || user.phone!.replace(/^501/, ''))
   }, [user?.phone])
 
+  useEffect(() => {
+    if (!user) return
+    const verification = getIdentityVerification(user)
+    if (verification.address && !address) {
+      setAddress(verification.address)
+    }
+    if (verification.addressProofUri && !addressProof) {
+      setAddressProof({
+        uri: verification.addressProofUri,
+        mimeType: verification.addressProofMimeType ?? 'image/jpeg',
+        name: verification.addressProofName ?? 'Utility bill',
+      })
+    }
+  }, [user, address, addressProof])
+
+  useEffect(() => {
+    if (!user) return
+    void getVerificationCodeRequestForUser(user.id).then(setCodeRequest)
+  }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void getVerificationCodeRequestForUser(user.id).then(setCodeRequest)
+      }
+    })
+    return () => subscription.remove()
+  }, [user])
+
   if (!user || !verification) return null
 
   const phoneReady = isValidWhatsAppNumber(phone)
   const idReady = !!idType && !!idPhotoUri
-  const addressReady = !isHost || (address.trim().length > 0 && addressUploaded)
+  const addressReady = !isHost || (address.trim().length > 0 && !!addressProof)
+  const codeReady = /^\d{6}$/.test(codeInput.trim())
+  const hasOpenCodeRequest = !!codeRequest
+  const canEnterCode = codeRequest?.status === 'code_sent'
 
-  const handleRequestCodeInApp = async () => {
+  const refreshCodeRequest = async () => {
+    const next = await getVerificationCodeRequestForUser(user.id)
+    setCodeRequest(next)
+  }
+
+  const handleRequestCode = async () => {
     clearAuthError()
-    if (!phoneReady || !user) return
-    await sendMessage({
-      threadId: supportThreadId(user.id),
-      text: buildVerificationCodeRequestMessage(user.name, normalizePhone(phone)),
-    })
-    setSupportChatOpen(true)
+    if (!phoneReady) return
+    setRequestingCode(true)
+    const ok = await requestVerificationCode(normalizePhone(phone))
+    if (ok) {
+      await refreshCodeRequest()
+      const admins = await getAdminUsers()
+      const normalizedPhone = normalizePhone(phone)
+      await Promise.all(
+        admins.map((admin) =>
+          push(
+            admin.id,
+            VERIFICATION_CODE_REQUEST_TITLE,
+            buildAdminVerificationRequestBody(user.name, normalizedPhone),
+            adminDashboardLink(user.id),
+          ),
+        ),
+      )
+    }
+    setRequestingCode(false)
+  }
+
+  const handleSubmitCode = async () => {
+    clearAuthError()
+    if (!codeReady) return
+    setVerifyingCode(true)
+    const ok = await submitVerificationCode(codeInput.trim())
+    if (ok) {
+      setCodeInput('')
+      setCodeRequest(null)
+    }
+    setVerifyingCode(false)
   }
 
   const handleContinueFromPhone = () => {
@@ -102,7 +181,9 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
         idType,
         idPhotoUri,
         address: isHost ? address.trim() : undefined,
-        addressUploaded: isHost ? addressUploaded : undefined,
+        addressProofUri: isHost ? addressProof?.uri : undefined,
+        addressProofMimeType: isHost ? addressProof?.mimeType : undefined,
+        addressProofName: isHost ? addressProof?.name : undefined,
       })
       if (!ok) setSubmitting(false)
     } catch {
@@ -110,16 +191,86 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     }
   }
 
+  const verificationCodePanel = !isIdentityVerified(user) ? (
+    <View style={styles.stepBlock}>
+      <View style={styles.sectionHeader}>
+        <AppIcon name="key" size={18} />
+        <Text style={styles.sectionTitle}>{toTitleCase('Verification code')}</Text>
+      </View>
+      <Text style={styles.sectionSub}>
+        {toTitleCase(
+          'Request a code — support will send it on WhatsApp. Enter the 6-digit code here once you receive it.',
+        )}
+      </Text>
+      <View style={styles.phoneRow}>
+        <Text style={styles.prefix}>+501</Text>
+        <AppTextInput
+          style={styles.phoneInput}
+          placeholder="600 1234"
+          keyboardType="phone-pad"
+          value={phone}
+          onChangeText={setPhone}
+        />
+      </View>
+      {phoneReady ? (
+        <Text style={styles.phonePreview}>
+          {formatWhatsAppNumberDisplay(normalizePhone(phone))}
+        </Text>
+      ) : null}
+      {hasOpenCodeRequest ? (
+        <View style={styles.requestStatus}>
+          <AppIcon
+            name={codeRequest?.status === 'code_sent' ? 'check-circle' : 'clock'}
+            size={18}
+            color={codeRequest?.status === 'code_sent' ? colors.green : colors.gray600}
+          />
+          <Text style={styles.requestStatusText}>
+            {codeRequest?.status === 'code_sent'
+              ? toTitleCase('Code sent on WhatsApp — enter it below.')
+              : toTitleCase('Request sent — support will WhatsApp your code soon.')}
+          </Text>
+        </View>
+      ) : null}
+      <View style={styles.actionStack}>
+        <PrimaryButton
+          title={hasOpenCodeRequest ? 'Request sent' : 'Request verification code'}
+          icon="send"
+          full
+          disabled={!phoneReady || requestingCode || hasOpenCodeRequest}
+          onPress={() => void handleRequestCode()}
+        />
+      </View>
+      {canEnterCode ? (
+        <>
+          <AppTextInput
+            style={styles.codeInput}
+            placeholder="6-digit code"
+            keyboardType="number-pad"
+            maxLength={6}
+            value={codeInput}
+            onChangeText={(value) => {
+              setCodeInput(value)
+              if (authError) clearAuthError()
+            }}
+          />
+          {authError ? <Text style={styles.error}>{authError}</Text> : null}
+          <PrimaryButton
+            title="Verify code"
+            icon="check-circle"
+            full
+            disabled={!codeReady || verifyingCode}
+            onPress={() => void handleSubmitCode()}
+          />
+        </>
+      ) : null}
+      {!canEnterCode && authError && hasOpenCodeRequest ? (
+        <Text style={styles.error}>{authError}</Text>
+      ) : null}
+    </View>
+  ) : null
+
   const actionFooter = (
     <View style={styles.actionStack}>
-      {verification.status === 'pending' ? (
-        <PrimaryButton
-          title="Open support chat"
-          icon="message-circle"
-          full
-          onPress={() => setSupportChatOpen(true)}
-        />
-      ) : null}
       {isIdentityVerified(user) ? (
         <View style={styles.verifiedNote}>
           <AppIcon name="check-circle" size={18} color={colors.green} />
@@ -141,12 +292,12 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
         {step === 'phone' && (
           <View style={styles.stepBlock}>
             <View style={styles.sectionHeader}>
-              <AppIcon name="message-circle" size={18} />
-              <Text style={styles.sectionTitle}>{toTitleCase('Step 1 · WhatsApp number')}</Text>
+              <AppIcon name="phone" size={18} />
+              <Text style={styles.sectionTitle}>{toTitleCase('Step 1 · Phone number')}</Text>
             </View>
             <Text style={styles.sectionSub}>
               {toTitleCase(
-                'Use the WhatsApp number where we can reach you. Request your code in support chat, then reply with it.',
+                'Enter your phone number. Support will send your verification code via WhatsApp.',
               )}
             </Text>
             <View style={styles.phoneRow}>
@@ -161,17 +312,10 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
             </View>
             {phoneReady ? (
               <Text style={styles.phonePreview}>
-                {toTitleCase('WhatsApp')}: {formatWhatsAppNumberDisplay(normalizePhone(phone))}
+                {formatWhatsAppNumberDisplay(normalizePhone(phone))}
               </Text>
             ) : null}
             <View style={styles.actionStack}>
-              <OutlineButton
-                title="Request code in support chat"
-                icon="message-circle"
-                full
-                disabled={!phoneReady}
-                onPress={() => void handleRequestCodeInApp()}
-              />
               <PrimaryButton
                 title="Continue to ID upload"
                 icon="arrow-right"
@@ -190,7 +334,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
               <Text style={styles.sectionTitle}>{toTitleCase('Step 2 · Government ID')}</Text>
             </View>
             <Text style={styles.sectionSub}>
-              {toTitleCase("Choose passport, driver's license, or social security card — then upload a clear photo.")}
+              {toTitleCase('Select your document type first, then upload a clear photo.')}
             </Text>
             <View style={styles.idTypeRow}>
               {ID_DOCUMENT_OPTIONS.map((option) => (
@@ -198,19 +342,25 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
                   key={option.value}
                   label={option.label}
                   selected={idType === option.value}
-                  onPress={() => setIdType(option.value)}
+                  onPress={() => {
+                    setIdType(option.value)
+                    setIdPhotoUri(null)
+                    clearAuthError()
+                  }}
                 />
               ))}
             </View>
             <IdDocumentCapture
               photoUri={idPhotoUri}
               onPhotoChange={setIdPhotoUri}
+              disabled={!idType}
               label={
                 idType
                   ? toTitleCase(`Upload ${formatIdDocumentType(idType)} photo`)
                   : toTitleCase('Select document type first')
               }
             />
+            {authError ? <Text style={styles.error}>{authError}</Text> : null}
             <View style={styles.actionStack}>
               <PrimaryButton
                 title={isHost ? 'Continue to address' : 'Submit verification'}
@@ -219,7 +369,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
                 disabled={!idReady || submitting}
                 onPress={handleContinueFromId}
               />
-              <GhostButton title="Back to WhatsApp" icon="arrow-left" full onPress={() => setStep('phone')} />
+              <GhostButton title="Back to phone number" icon="arrow-left" full onPress={() => setStep('phone')} />
             </View>
           </View>
         )}
@@ -239,20 +389,17 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
               value={address}
               onChangeText={setAddress}
             />
-            <Text style={styles.sectionSub}>{toTitleCase('Utility bill or lease in your name')}</Text>
-            <Pressable
-              onPress={() => setAddressUploaded(true)}
-              style={[styles.upload, addressUploaded && styles.uploadDone]}
-            >
-              <AppIcon
-                name={addressUploaded ? 'check-circle' : 'upload'}
-                size={24}
-                color={addressUploaded ? colors.green : colors.gray500}
-              />
-              <Text style={[styles.uploadText, addressUploaded && styles.uploadTextDone]}>
-                {addressUploaded ? toTitleCase('Address proof uploaded') : toTitleCase('Upload address proof')}
-              </Text>
-            </Pressable>
+            <Text style={styles.sectionSub}>
+              {toTitleCase('Upload a utility bill, lease, or other proof that shows this address in your name.')}
+            </Text>
+            <AddressProofCapture
+              file={addressProof}
+              onFileChange={(file) => {
+                setAddressProof(file)
+                clearAuthError()
+              }}
+              label={toTitleCase('Upload utility bill or lease')}
+            />
             <View style={styles.actionStack}>
               <PrimaryButton
                 title="Submit verification"
@@ -261,12 +408,11 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
                 disabled={!addressReady || submitting}
                 onPress={() => void handleSubmit()}
               />
+              {authError ? <Text style={styles.error}>{authError}</Text> : null}
               <GhostButton title="Back to ID upload" icon="arrow-left" full onPress={() => setStep('id')} />
             </View>
           </View>
         )}
-
-        {authError ? <Text style={styles.error}>{authError}</Text> : null}
       </>
     ) : null
 
@@ -280,34 +426,10 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
         wizardStep={verification.status === 'none' || verification.status === 'rejected' ? step : undefined}
         footer={actionFooter}
       >
+        {verificationCodePanel}
         {wizardContent}
       </VerificationCenter>
-
-      <SupportChatModal
-        visible={supportChatOpen}
-        userId={user.id}
-        onClose={() => setSupportChatOpen(false)}
-      />
     </Screen>
-  )
-}
-
-function SupportChatModal({
-  visible,
-  userId,
-  onClose,
-}: {
-  visible: boolean
-  userId: string
-  onClose: () => void
-}) {
-  const { colors } = useTheme()
-  return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
-        <ChatThreadPanel threadId={supportThreadId(userId)} onBack={onClose} />
-      </SafeAreaView>
-    </Modal>
   )
 }
 
@@ -321,6 +443,7 @@ function createIdentityVerificationStyles(colors: ReturnType<typeof useTheme>['c
       borderColor: colors.gray200,
       borderRadius: radius.lg,
       backgroundColor: colors.white,
+      marginBottom: spacing.md,
     },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.black },
@@ -343,23 +466,28 @@ function createIdentityVerificationStyles(colors: ReturnType<typeof useTheme>['c
     },
     phoneInput: { flex: 1, borderWidth: 0, padding: 16, backgroundColor: colors.white },
     phonePreview: { fontSize: 14, fontWeight: '600', color: colors.black },
-    idTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-    addressInput: { marginBottom: spacing.sm },
-    upload: {
-      minHeight: 120,
-      borderWidth: 2,
-      borderStyle: 'dashed',
+    codeInput: {
+      borderWidth: 1,
       borderColor: colors.gray200,
+      borderRadius: radius.sm,
+      padding: 16,
+      fontSize: 24,
+      fontWeight: '700',
+      letterSpacing: 6,
+      textAlign: 'center',
+      backgroundColor: colors.white,
+    },
+    requestStatus: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      padding: spacing.md,
       borderRadius: radius.md,
       backgroundColor: colors.gray50,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: spacing.md,
-      gap: spacing.sm,
     },
-    uploadDone: { borderStyle: 'solid', borderColor: colors.green, backgroundColor: colors.greenBg },
-    uploadText: { fontSize: 15, fontWeight: '500', color: colors.gray500 },
-    uploadTextDone: { color: colors.green },
+    requestStatusText: { flex: 1, fontSize: 13, color: colors.gray600, lineHeight: 18 },
+    idTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    addressInput: { marginBottom: spacing.sm },
     actionStack: { gap: spacing.sm, width: '100%' },
     verifiedNote: {
       flexDirection: 'row',
@@ -377,6 +505,7 @@ function createIdentityVerificationStyles(colors: ReturnType<typeof useTheme>['c
       borderRadius: radius.sm,
       fontSize: 14,
       lineHeight: 20,
+      marginTop: spacing.sm,
     },
   })
 }

@@ -154,11 +154,11 @@ export function SignupScreen() {
           {toTitleCase(
             usingSupabase
               ? role === 'host'
-                ? 'After sign-up, verify your ID in the app. WhatsApp can be added later for host contact — not required to create an account.'
-                : 'After sign-up, verify your ID in the app. Email keeps account creation free — no SMS fees.'
+                ? 'After sign-up, add your phone number and verify via WhatsApp code, then upload your ID for team review.'
+                : 'After sign-up, add your phone number and verify via WhatsApp code, then upload your ID for team review.'
               : role === 'host'
-              ? 'Next: add your WhatsApp number, passport, driver\'s license, or social security card, and host address.'
-              : 'Next: add your WhatsApp number, passport, driver\'s license, or social security card.',
+              ? 'Next: phone number, WhatsApp verification code, government ID, and host address.'
+              : 'Next: phone number, WhatsApp verification code, and government ID.',
           )}
         </Text>
       </View>

@@ -3,7 +3,7 @@ import type { DropOffHour } from './lib/dropOffAvailability'
 export type { DropOffHour }
 export type SheetsOption = 'own' | 'buy' | 'none'
 export type BookingStage = 'got-bag' | 'waiting' | 'drying' | 'ready' | 'picked-up'
-export type AppRole = 'customer' | 'host'
+export type AppRole = 'customer' | 'host' | 'admin'
 export type LoginMethod = 'phone' | 'email'
 export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected'
 
@@ -18,6 +18,9 @@ export interface IdentityVerification {
   idPhotoUri?: string
   address?: string
   addressUploaded?: boolean
+  addressProofUri?: string
+  addressProofMimeType?: string
+  addressProofName?: string
   submittedAt?: string
 }
 
@@ -41,6 +44,7 @@ export type Screen =
   | 'notifications'
   | 'chat'
   | 'identity-verification'
+  | 'admin-dashboard'
 
 export type PaymentMethod = 'cash' | 'bank_transfer'
 
@@ -101,6 +105,8 @@ export type NotificationLink =
   | { screen: 'customer-home' }
   | { screen: 'history'; bookingId?: string }
   | { screen: 'chat'; threadId: string; bookingId?: string }
+  | { screen: 'identity-verification' }
+  | { screen: 'admin-dashboard'; userId?: string }
 
 export type ChatMessageKind = 'text' | 'image' | 'payment_proof' | 'system'
 

@@ -5,7 +5,7 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
-export type AppRole = 'customer' | 'host'
+export type AppRole = 'customer' | 'host' | 'admin'
 export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected'
 export type BookingStage = 'got-bag' | 'waiting' | 'drying' | 'ready' | 'picked-up'
 export type PaymentMethod = 'cash' | 'bank_transfer'
