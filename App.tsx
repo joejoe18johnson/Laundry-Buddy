@@ -58,7 +58,6 @@ import {
   requestPushPermissions,
   type PushPermissionStatus,
 } from './src/lib/pushNotifications'
-import { ensureSupabaseAdminProfile } from './src/lib/supabase/adminAccess'
 import { getGreetingName } from './src/lib/displayName'
 import type { Screen } from './src/types'
 
@@ -76,7 +75,7 @@ const HIDE_BOTTOM_NAV: Screen[] = [
 ]
 
 function AdminAppShell() {
-  const { user, logout } = useAuth()
+  const { user, logout, refreshCurrentUser } = useAuth()
   const { colors } = useTheme()
   const { unreadCount } = useUserNotifications(user!.id)
   const [screen, setScreen] = useState<'overview' | 'queue' | 'users' | 'codes' | 'notifications' | 'user-review'>(
@@ -89,8 +88,8 @@ function AdminAppShell() {
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return
-    void ensureSupabaseAdminProfile(user).catch(() => {})
-  }, [user?.id, user?.role])
+    void refreshCurrentUser()
+  }, [refreshCurrentUser, user?.id, user?.role])
 
   const openUserReview = (userId: string) => {
     setReviewUserId(userId)

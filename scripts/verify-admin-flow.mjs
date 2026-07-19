@@ -12,9 +12,13 @@ function hasAddressProof(verification) {
 function usersPendingIdReview(users) {
   return users.filter((entry) => {
     const verification = entry.identityVerification
-    if (verification.status !== 'pending' || !verification.idUploaded) return false
-    if (entry.role === 'host') return hasAddressProof(verification)
-    return true
+    if (!verification.phoneVerified) return false
+    const idNeedsReview = verification.idUploaded && (verification.idReviewStatus ?? (verification.status === 'pending' ? 'pending' : 'none')) === 'pending'
+    const addressNeedsReview =
+      entry.role === 'host' &&
+      hasAddressProof(verification) &&
+      (verification.addressReviewStatus ?? (verification.status === 'pending' ? 'pending' : 'none')) === 'pending'
+    return idNeedsReview || addressNeedsReview
   })
 }
 
@@ -26,8 +30,8 @@ function mergeUsers(localUsers, remoteUsers) {
 }
 
 const localTraining = [
-  { id: 'user-sandra', role: 'customer', identityVerification: { status: 'pending', idUploaded: true } },
-  { id: 'user-carlos', role: 'host', identityVerification: { status: 'pending', idUploaded: true, addressProofUri: 'file://bill.pdf' } },
+  { id: 'user-sandra', role: 'customer', identityVerification: { status: 'pending', idUploaded: true, phoneVerified: true } },
+  { id: 'user-carlos', role: 'host', identityVerification: { status: 'pending', idUploaded: true, phoneVerified: true, addressProofUri: 'file://bill.pdf' } },
 ]
 
 const remoteOnly = [{ id: 'uuid-1', role: 'customer', identityVerification: { status: 'none', idUploaded: false } }]

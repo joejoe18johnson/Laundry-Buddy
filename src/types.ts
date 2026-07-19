@@ -6,6 +6,7 @@ export type BookingStage = 'got-bag' | 'waiting' | 'drying' | 'ready' | 'picked-
 export type AppRole = 'customer' | 'host' | 'admin'
 export type LoginMethod = 'phone' | 'email'
 export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected'
+export type DocumentReviewStatus = 'pending' | 'approved' | 'rejected'
 
 export type IdDocumentType = 'passport' | 'drivers_license' | 'social_security'
 
@@ -16,11 +17,13 @@ export interface IdentityVerification {
   idType?: IdDocumentType
   idUploaded: boolean
   idPhotoUri?: string
+  idReviewStatus?: DocumentReviewStatus
   address?: string
   addressUploaded?: boolean
   addressProofUri?: string
   addressProofMimeType?: string
   addressProofName?: string
+  addressReviewStatus?: DocumentReviewStatus
   submittedAt?: string
   /** WhatsApp code flow — synced to Supabase for admin review across devices. */
   codeRequestStatus?: 'pending' | 'code_sent' | 'completed'

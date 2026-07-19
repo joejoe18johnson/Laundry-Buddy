@@ -16,9 +16,15 @@ import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
 import { getAdminUserById } from '../../lib/adminUsers'
 import {
+  canAdminReviewAddress,
+  canAdminReviewId,
+  documentReviewStatusLabel,
   formatIdDocumentType,
+  getAddressReviewStatus,
   getIdentityVerification,
+  getIdReviewStatus,
   hasAddressProof,
+  isIdentityVerified,
   isPhoneVerificationComplete,
   verificationStatusLabel,
 } from '../../lib/identityVerification'
@@ -70,8 +76,70 @@ function DetailRow({
   )
 }
 
+function ReviewStatusBadge({ label }: { label: string }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+  return (
+    <View style={styles.reviewStatusBadge}>
+      <Text style={styles.reviewStatusBadgeText}>{label}</Text>
+    </View>
+  )
+}
+
+function DocumentReviewActions({
+  approveLabel,
+  rejectLabel,
+  canReview,
+  phoneVerified,
+  busy,
+  onApprove,
+  onReject,
+}: {
+  approveLabel: string
+  rejectLabel: string
+  canReview: boolean
+  phoneVerified: boolean
+  busy: boolean
+  onApprove: () => void
+  onReject: () => void
+}) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+
+  if (!canReview) return null
+
+  return (
+    <>
+      {!phoneVerified ? (
+        <Text style={styles.emptyText}>
+          {toTitleCase('Phone must be verified via WhatsApp code before you can approve documents.')}
+        </Text>
+      ) : null}
+      <View style={styles.actions}>
+        <SuccessButton
+          title={approveLabel}
+          icon="check"
+          onPress={onApprove}
+          disabled={busy || !phoneVerified}
+        />
+        <GhostButton
+          title={busy ? 'Working…' : rejectLabel}
+          icon="x"
+          onPress={busy ? () => {} : onReject}
+        />
+      </View>
+    </>
+  )
+}
+
 export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserReviewScreenProps) {
-  const { adminApproveUser, adminRejectUser, adminSendVerificationCode } = useAuth()
+  const {
+    adminApproveUserId,
+    adminRejectUserId,
+    adminApproveUserAddress,
+    adminRejectUserAddress,
+    adminSendVerificationCode,
+  } = useAuth()
   const { push } = useNotifications()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -112,12 +180,44 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
 
   const verification = getIdentityVerification(user)
   const phoneVerified = isPhoneVerificationComplete(user)
-  const canReviewId =
-    verification.status === 'pending' &&
-    phoneVerified &&
-    verification.idUploaded &&
-    (user.role !== 'host' || hasAddressProof(verification))
+  const idReviewStatus = getIdReviewStatus(verification)
+  const addressReviewStatus = getAddressReviewStatus(verification)
+  const reviewId = canAdminReviewId(user)
+  const reviewAddress = canAdminReviewAddress(user)
   const canSendCode = codeRequest?.status === 'pending'
+
+  const notifyIfFullyVerified = async (updatedUser: User | null) => {
+    if (!updatedUser || !isIdentityVerified(updatedUser)) return
+    const notifyRole = updatedUser.role === 'host' ? 'host' : 'customer'
+    await push(
+      userId,
+      VERIFICATION_APPROVED_TITLE,
+      buildVerificationApprovedBody(notifyRole),
+      verificationApprovedLink(updatedUser.role),
+    )
+  }
+
+  const runReviewAction = async (
+    action: () => Promise<{ user: User | null; error?: string }>,
+    successMessage: string,
+  ) => {
+    setBusy(true)
+    setActionError(null)
+    setActionMessage(null)
+    const result = await action()
+    if (!result.user) {
+      setActionError(
+        result.error ??
+          'Could not update verification. Run the Supabase admin migration, then try again.',
+      )
+    } else {
+      setActionMessage(successMessage)
+      await notifyIfFullyVerified(result.user)
+    }
+    await reload()
+    onUpdated?.()
+    setBusy(false)
+  }
 
   const handleSendCode = async () => {
     if (!codeRequest) return
@@ -137,45 +237,17 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
     setBusy(false)
   }
 
-  const handleApprove = async () => {
-    setBusy(true)
-    setActionError(null)
-    setActionMessage(null)
-    const result = await adminApproveUser(userId)
-    if (!result.user) {
-      setActionError(
-        result.error ??
-          'Could not approve this user. Run the Supabase admin migration, then try again.',
-      )
-    } else {
-      setActionMessage('User verification approved.')
-      const notifyRole = result.user.role === 'host' ? 'host' : 'customer'
-      await push(
-        userId,
-        VERIFICATION_APPROVED_TITLE,
-        buildVerificationApprovedBody(notifyRole),
-        verificationApprovedLink(result.user.role),
-      )
-    }
-    await reload()
-    onUpdated?.()
-    setBusy(false)
-  }
+  const handleApproveId = () =>
+    void runReviewAction(() => adminApproveUserId(userId), 'Government ID approved.')
 
-  const handleReject = async () => {
-    setBusy(true)
-    setActionError(null)
-    setActionMessage(null)
-    const result = await adminRejectUser(userId)
-    if (!result.user) {
-      setActionError(result.error ?? 'Could not reject this user. Try refreshing the dashboard.')
-    } else {
-      setActionMessage('User verification rejected.')
-    }
-    await reload()
-    onUpdated?.()
-    setBusy(false)
-  }
+  const handleRejectId = () =>
+    void runReviewAction(() => adminRejectUserId(userId), 'Government ID rejected.')
+
+  const handleApproveAddress = () =>
+    void runReviewAction(() => adminApproveUserAddress(userId), 'Address proof approved.')
+
+  const handleRejectAddress = () =>
+    void runReviewAction(() => adminRejectUserAddress(userId), 'Address proof rejected.')
 
   return (
     <Screen>
@@ -250,7 +322,12 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{toTitleCase('ID verification')}</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>{toTitleCase('ID verification')}</Text>
+            {verification.idUploaded ? (
+              <ReviewStatusBadge label={documentReviewStatusLabel(idReviewStatus)} />
+            ) : null}
+          </View>
           <View style={styles.card}>
             <DetailRow
               label="Document type"
@@ -265,12 +342,26 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
             ) : (
               <Text style={styles.emptyText}>{toTitleCase('No ID document uploaded yet.')}</Text>
             )}
+            <DocumentReviewActions
+              approveLabel="Approve ID"
+              rejectLabel="Reject ID"
+              canReview={reviewId}
+              phoneVerified={phoneVerified}
+              busy={busy}
+              onApprove={handleApproveId}
+              onReject={handleRejectId}
+            />
           </View>
         </View>
 
         {user.role === 'host' ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{toTitleCase('Address verification')}</Text>
+            <View style={styles.sectionTitleRow}>
+              <Text style={styles.sectionTitle}>{toTitleCase('Address verification')}</Text>
+              {hasAddressProof(verification) ? (
+                <ReviewStatusBadge label={documentReviewStatusLabel(addressReviewStatus)} />
+              ) : null}
+            </View>
             <View style={styles.card}>
               {verification.address ? <DetailRow label="Listed address" value={verification.address} /> : null}
               {verification.addressProofUri ? (
@@ -284,42 +375,35 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
               ) : (
                 <Text style={styles.emptyText}>{toTitleCase('No address proof uploaded yet.')}</Text>
               )}
+              <DocumentReviewActions
+                approveLabel="Approve address"
+                rejectLabel="Reject address"
+                canReview={reviewAddress}
+                phoneVerified={phoneVerified}
+                busy={busy}
+                onApprove={handleApproveAddress}
+                onReject={handleRejectAddress}
+              />
             </View>
           </View>
         ) : null}
 
-        {canReviewId ? (
+        {verification.status === 'pending' &&
+        (idReviewStatus === 'approved' || addressReviewStatus === 'approved') ? (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{toTitleCase('Review decision')}</Text>
             <View style={styles.card}>
               <Text style={styles.reviewHint}>
                 {toTitleCase(
                   user.role === 'host'
-                    ? 'Review the ID and address proof above, then approve or reject this verification.'
-                    : 'Review the document above, then approve or reject this verification.',
+                    ? 'One document is approved — finish reviewing the remaining item to fully verify this host.'
+                    : 'ID approved — user will be fully verified once you complete review.',
                 )}
               </Text>
-              {!phoneVerified ? (
-                <Text style={styles.emptyText}>
-                  {toTitleCase('Phone must be verified via WhatsApp code before you can approve documents.')}
-                </Text>
-              ) : null}
-              <View style={styles.actions}>
-                <SuccessButton
-                  title="Approve ID"
-                  icon="check"
-                  onPress={() => void handleApprove()}
-                  disabled={busy || !phoneVerified}
-                />
-                <GhostButton
-                  title={busy ? 'Working…' : 'Reject ID'}
-                  icon="x"
-                  onPress={busy ? () => {} : () => void handleReject()}
-                />
-              </View>
             </View>
           </View>
-        ) : verification.status === 'verified' ? (
+        ) : null}
+
+        {verification.status === 'verified' ? (
           <View style={styles.section}>
             <View style={[styles.card, styles.approvedCard]}>
               <AppIcon name="check-circle" size={20} color={colors.green} />
@@ -363,13 +447,27 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     },
     statusBadgeText: { fontSize: 11, fontWeight: '700', color: colors.gray600 },
     section: { marginBottom: spacing.lg },
+    sectionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
     sectionTitle: {
       fontSize: 13,
       fontWeight: '700',
       color: colors.gray600,
       letterSpacing: 0.4,
-      marginBottom: spacing.sm,
+      flex: 1,
     },
+    reviewStatusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: radius.pill,
+      backgroundColor: colors.gray100,
+    },
+    reviewStatusBadgeText: { fontSize: 10, fontWeight: '700', color: colors.gray600 },
     card: {
       borderWidth: 1,
       borderColor: colors.gray100,

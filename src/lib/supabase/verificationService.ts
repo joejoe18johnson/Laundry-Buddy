@@ -27,7 +27,7 @@ export async function adminPatchIdentityVerification(
       return {
         ok: false,
         error:
-          'Your account is not recognized as admin in Supabase. Log in with support@laundrybuddy.app (not training mode) and run the admin migration SQL.',
+          'Your account is not recognized as admin in Supabase. Tap Support admin on the welcome screen, then run the admin migration SQL if needed.',
       }
     }
   }
@@ -39,7 +39,7 @@ export async function adminPatchIdentityVerification(
 
   if (error) {
     const message = error.message.includes('not authorized')
-      ? 'Your account is not recognized as admin in Supabase. Log in with support@laundrybuddy.app and ensure your profile role is admin (run the migration SQL).'
+      ? 'Your account is not recognized as admin in Supabase. Tap Support admin on the welcome screen and run the admin migration SQL if needed.'
       : error.message.includes('Could not find the function')
         ? 'Admin database functions are missing. Run supabase/migrations/20260719000000_admin_profile_updates.sql in Supabase SQL Editor.'
         : error.message

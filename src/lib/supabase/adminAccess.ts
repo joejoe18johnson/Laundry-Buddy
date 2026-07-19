@@ -1,8 +1,9 @@
 import type { User } from '../../types'
+import { TRAINING_PASSWORD } from '../../data/seedData'
 import { getIdentityVerification, normalizeUserIdentity } from '../identityVerification'
 import { isSupabaseConfigured } from './config'
 import { getSupabaseClient } from './client'
-import { supabaseUpdateProfile } from './authService'
+import { fetchProfileById, supabaseSignIn, supabaseSignUp, supabaseUpdateProfile } from './authService'
 
 export const ADMIN_EMAILS = ['support@laundrybuddy.app'] as const
 
@@ -66,18 +67,116 @@ export async function ensureSupabaseAdminProfile(user: User): Promise<User> {
   return supabaseUpdateProfile(updated)
 }
 
+/** Sign the Support admin training account into Supabase (auto-create if missing). */
+export async function ensureTrainingAdminSupabaseSession(
+  localUser?: User | null,
+): Promise<{ ok: boolean; user: User | null; error?: string }> {
+  if (!isSupabaseConfigured()) {
+    return { ok: false, user: localUser ?? null, error: 'Supabase is not configured.' }
+  }
+
+  const status = await getSupabaseAdminStatus()
+  if (status.hasSession && status.isAdmin && status.userId) {
+    const profile = await fetchProfileById(status.userId)
+    if (profile) {
+      const promoted = await ensureSupabaseAdminProfile(
+        normalizeUserIdentity({ ...profile, role: 'admin' }),
+      )
+      return { ok: true, user: promoted }
+    }
+  }
+
+  const email = (localUser?.email ?? ADMIN_EMAILS[0]).trim().toLowerCase()
+  const password = TRAINING_PASSWORD
+  const name = localUser?.name?.trim() || 'Support Admin'
+
+  let signedIn: User | null = null
+  const signInAttempt = await supabaseSignIn('email', email, password)
+  signedIn = signInAttempt.user
+
+  if (!signedIn) {
+    const signUpAttempt = await supabaseSignUp({
+      name,
+      method: 'email',
+      email,
+      password,
+      role: 'admin',
+    })
+
+    if (signUpAttempt.user) {
+      signedIn = signUpAttempt.user
+    } else if (signUpAttempt.needsEmailConfirmation) {
+      const retry = await supabaseSignIn('email', email, password)
+      signedIn = retry.user
+      if (!signedIn) {
+        return {
+          ok: false,
+          user: localUser ?? null,
+          error:
+            'Support admin account needs email confirmation in Supabase. Disable confirm email for dev, or confirm support@laundrybuddy.app once.',
+        }
+      }
+    } else {
+      const retry = await supabaseSignIn('email', email, password)
+      signedIn = retry.user
+      if (!signedIn) {
+        return {
+          ok: false,
+          user: localUser ?? null,
+          error:
+            signUpAttempt.error ??
+            signInAttempt.error ??
+            'Could not link the Support admin training account to Supabase.',
+        }
+      }
+    }
+  }
+
+  let sessionUser = normalizeUserIdentity({ ...signedIn, role: 'admin' })
+  try {
+    sessionUser = await ensureSupabaseAdminProfile(sessionUser)
+  } catch (err) {
+    return {
+      ok: false,
+      user: sessionUser,
+      error: err instanceof Error ? err.message : 'Could not prepare admin profile.',
+    }
+  }
+
+  const nextStatus = await getSupabaseAdminStatus()
+  if (!nextStatus.isAdmin) {
+    return {
+      ok: false,
+      user: sessionUser,
+      error:
+        'Run supabase/migrations/20260719000000_admin_profile_updates.sql in Supabase SQL Editor, then tap Support admin again.',
+    }
+  }
+
+  return { ok: true, user: sessionUser }
+}
+
 export async function prepareSupabaseAdminSession(user: User): Promise<{
   ok: boolean
   user: User
   error?: string
 }> {
-  const status = await getSupabaseAdminStatus()
+  let status = await getSupabaseAdminStatus()
+  if (!status.hasSession && isLikelyAdminUser(user)) {
+    const linked = await ensureTrainingAdminSupabaseSession(user)
+    if (linked.ok && linked.user) {
+      user = linked.user
+      status = await getSupabaseAdminStatus()
+    } else if (!linked.ok) {
+      return { ok: false, user: linked.user ?? user, error: linked.error }
+    }
+  }
+
   if (!status.hasSession) {
     return {
       ok: false,
       user,
-      error:
-        'Sign in with your Supabase support account (support@laundrybuddy.app) — training admin mode cannot send codes to live users.',
+      error: 'Sign in as Support admin to use verification tools.',
     }
   }
 

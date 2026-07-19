@@ -1,10 +1,13 @@
-import type { User, VerificationStatus } from '../types'
+import type { IdentityVerification, User, VerificationStatus } from '../types'
 import { getAllUsers, getUserById, saveUser } from './authStorage'
 import {
   getIdentityVerification,
+  getAddressReviewStatus,
+  getIdReviewStatus,
   hasAddressProof,
   mergeUserProfiles,
   normalizeUserIdentity,
+  recomputeOverallVerification,
 } from './identityVerification'
 import { isSupabaseConfigured } from './supabase'
 import { fetchProfileById } from './supabase/authService'
@@ -126,12 +129,15 @@ export function usersPendingIdReview(users: User[]): User[] {
   return sortUsersNewestFirst(
     users.filter((entry) => {
       const verification = getIdentityVerification(entry)
-      if (verification.status !== 'pending' || !verification.idUploaded) return false
       if (!verification.phoneVerified) return false
-      if (entry.role === 'host') {
-        return hasAddressProof(verification)
-      }
-      return true
+
+      const idNeedsReview = verification.idUploaded && getIdReviewStatus(verification) === 'pending'
+      const addressNeedsReview =
+        entry.role === 'host' &&
+        hasAddressProof(verification) &&
+        getAddressReviewStatus(verification) === 'pending'
+
+      return idNeedsReview || addressNeedsReview
     }),
   )
 }
@@ -171,19 +177,18 @@ export async function markPhoneVerifiedForUser(userId: string, phone?: string): 
   return updated
 }
 
-export async function updateUserVerificationStatus(
+export async function patchUserIdentityVerification(
   userId: string,
-  status: VerificationStatus,
+  patch: Partial<IdentityVerification>,
   actingUser?: User | null,
 ): Promise<AdminUserActionResult> {
   const user = await resolveUserById(userId)
   if (!user) return { user: null, error: 'User not found.' }
 
-  const verification = {
+  const verification = recomputeOverallVerification(user, {
     ...getIdentityVerification(user),
-    status,
-    phoneVerified: status === 'verified' ? true : getIdentityVerification(user).phoneVerified,
-  }
+    ...patch,
+  })
 
   const updated: User = normalizeUserIdentity({
     ...user,
@@ -210,6 +215,33 @@ export async function updateUserVerificationStatus(
   return { user: updated }
 }
 
+export async function updateUserVerificationStatus(
+  userId: string,
+  status: VerificationStatus,
+  actingUser?: User | null,
+): Promise<AdminUserActionResult> {
+  const user = await resolveUserById(userId)
+  if (!user) return { user: null, error: 'User not found.' }
+
+  const current = getIdentityVerification(user)
+  const patch: Partial<typeof current> = {
+    status,
+    phoneVerified: status === 'verified' ? true : current.phoneVerified,
+  }
+
+  if (status === 'verified') {
+    if (current.idUploaded) patch.idReviewStatus = 'approved'
+    if (user.role === 'host' && hasAddressProof(current)) patch.addressReviewStatus = 'approved'
+  }
+
+  if (status === 'rejected') {
+    if (current.idUploaded) patch.idReviewStatus = 'rejected'
+    if (user.role === 'host' && hasAddressProof(current)) patch.addressReviewStatus = 'rejected'
+  }
+
+  return patchUserIdentityVerification(userId, patch, actingUser)
+}
+
 export async function approveUserVerification(
   userId: string,
   actingUser?: User | null,
@@ -222,4 +254,32 @@ export async function rejectUserVerification(
   actingUser?: User | null,
 ): Promise<AdminUserActionResult> {
   return updateUserVerificationStatus(userId, 'rejected', actingUser)
+}
+
+export async function approveUserIdVerification(
+  userId: string,
+  actingUser?: User | null,
+): Promise<AdminUserActionResult> {
+  return patchUserIdentityVerification(userId, { idReviewStatus: 'approved' }, actingUser)
+}
+
+export async function rejectUserIdVerification(
+  userId: string,
+  actingUser?: User | null,
+): Promise<AdminUserActionResult> {
+  return patchUserIdentityVerification(userId, { idReviewStatus: 'rejected' }, actingUser)
+}
+
+export async function approveUserAddressVerification(
+  userId: string,
+  actingUser?: User | null,
+): Promise<AdminUserActionResult> {
+  return patchUserIdentityVerification(userId, { addressReviewStatus: 'approved' }, actingUser)
+}
+
+export async function rejectUserAddressVerification(
+  userId: string,
+  actingUser?: User | null,
+): Promise<AdminUserActionResult> {
+  return patchUserIdentityVerification(userId, { addressReviewStatus: 'rejected' }, actingUser)
 }

@@ -41,15 +41,19 @@ import {
   supabaseSignUp,
   supabaseSubmitIdentityVerification,
 } from '../lib/supabase'
-import { ensureSupabaseAdminProfile, isLikelyAdminUser } from '../lib/supabase/adminAccess'
+import { ensureSupabaseAdminProfile, ensureTrainingAdminSupabaseSession, isLikelyAdminUser } from '../lib/supabase/adminAccess'
 import * as SplashScreen from 'expo-splash-screen'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
 import { emptyIdentityVerification, getIdentityVerification, normalizeUserIdentity, needsIdentityVerification } from '../lib/identityVerification'
 import { isValidEmail } from '../lib/email'
 import {
   approveUserVerification,
+  approveUserAddressVerification,
+  approveUserIdVerification,
   listAllUsers,
   rejectUserVerification,
+  rejectUserAddressVerification,
+  rejectUserIdVerification,
   resolveUserById,
   type AdminUserActionResult,
 } from '../lib/adminUsers'
@@ -112,6 +116,10 @@ interface AuthState {
   adminListUsers: () => Promise<User[]>
   adminApproveUser: (userId: string) => Promise<AdminUserActionResult>
   adminRejectUser: (userId: string) => Promise<AdminUserActionResult>
+  adminApproveUserId: (userId: string) => Promise<AdminUserActionResult>
+  adminRejectUserId: (userId: string) => Promise<AdminUserActionResult>
+  adminApproveUserAddress: (userId: string) => Promise<AdminUserActionResult>
+  adminRejectUserAddress: (userId: string) => Promise<AdminUserActionResult>
   clearAuthError: () => void
 }
 
@@ -167,7 +175,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(merged ?? u)
           } else {
             const local = await getCurrentUser()
-            setUser(local)
+            if (local && isLikelyAdminUser(local)) {
+              const linked = await ensureTrainingAdminSupabaseSession(local)
+              if (linked.ok && linked.user) {
+                await saveUser(linked.user)
+                await setSessionUserId(linked.user.id)
+                setUser(linked.user)
+              } else {
+                setUser(local)
+              }
+            } else {
+              setUser(local)
+            }
           }
         } catch {
           const local = await getCurrentUser()
@@ -319,27 +338,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false
       }
 
-      if (found.role === 'admin' && isSupabaseConfigured() && found.email) {
-        const { user: signedIn, error } = await supabaseSignIn('email', found.email, password)
-        if (signedIn) {
-          let sessionUser = normalizeUserIdentity({ ...signedIn, role: 'admin' })
-          try {
-            sessionUser = await ensureSupabaseAdminProfile(sessionUser)
-          } catch {
-            // Still allow dashboard — verification actions will show a clearer error.
-          }
-          const merged = await resolveUserById(sessionUser.id)
-          const nextUser = merged ? normalizeUserIdentity({ ...merged, role: 'admin' }) : sessionUser
+      if (found.role === 'admin' && isSupabaseConfigured()) {
+        const linked = await ensureTrainingAdminSupabaseSession(found)
+        if (linked.ok && linked.user) {
+          const merged = await resolveUserById(linked.user.id)
+          const nextUser = merged
+            ? normalizeUserIdentity({ ...merged, role: 'admin' })
+            : linked.user
           await saveUser(nextUser)
+          await setSessionUserId(nextUser.id)
           setUser(nextUser)
           setAuthError(null)
           bumpAuthSession()
           return true
         }
-        if (error) {
-          setAuthError(
-            'Support admin is not set up in Supabase yet. Create support@laundrybuddy.app via Sign up, then run the admin migration SQL.',
-          )
+        if (linked.error) {
+          setAuthError(linked.error)
           return false
         }
       }
@@ -521,11 +535,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             idType: data.idType,
             idUploaded: true,
             idPhotoUri: data.idPhotoUri,
+            idReviewStatus: 'pending',
             address: data.address?.trim() ?? '',
             addressUploaded: hostAddressProof ? true : undefined,
             addressProofUri: data.addressProofUri,
             addressProofMimeType: data.addressProofMimeType,
             addressProofName: data.addressProofName,
+            addressReviewStatus: hostAddressProof ? 'pending' : undefined,
             submittedAt: new Date().toISOString(),
           }
           const updated = await supabaseSubmitIdentityVerification(user, verification, normalizedPhone)
@@ -556,11 +572,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         idType: data.idType,
         idUploaded: true,
         idPhotoUri: data.idPhotoUri,
+        idReviewStatus: 'pending',
         address: data.address?.trim() ?? '',
         addressUploaded: hostAddressProof ? true : undefined,
         addressProofUri: data.addressProofUri,
         addressProofMimeType: data.addressProofMimeType,
         addressProofName: data.addressProofName,
+        addressReviewStatus: hostAddressProof ? 'pending' : undefined,
         submittedAt: new Date().toISOString(),
       }
 
@@ -625,6 +643,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshCurrentUser = useCallback(async () => {
     const userId = userIdRef.current
     if (!userId) return
+
+    const local = await getUserById(userId)
+    if (local && isLikelyAdminUser(local) && isSupabaseConfigured()) {
+      const linked = await ensureTrainingAdminSupabaseSession(local)
+      if (linked.ok && linked.user) {
+        await saveUser(linked.user)
+        await setSessionUserId(linked.user.id)
+        setUser(linked.user)
+        return
+      }
+    }
+
     const updated = await resolveUserById(userId)
     if (updated) setUser(updated)
   }, [])
@@ -652,6 +682,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const adminRejectUser = useCallback(
     async (userId: string) => {
       const result = await rejectUserVerification(userId, user)
+      if (result.user && user?.id === userId) setUser(result.user)
+      return result
+    },
+    [user],
+  )
+
+  const adminApproveUserId = useCallback(
+    async (userId: string) => {
+      const result = await approveUserIdVerification(userId, user)
+      if (result.user && user?.id === userId) setUser(result.user)
+      return result
+    },
+    [user],
+  )
+
+  const adminRejectUserId = useCallback(
+    async (userId: string) => {
+      const result = await rejectUserIdVerification(userId, user)
+      if (result.user && user?.id === userId) setUser(result.user)
+      return result
+    },
+    [user],
+  )
+
+  const adminApproveUserAddress = useCallback(
+    async (userId: string) => {
+      const result = await approveUserAddressVerification(userId, user)
+      if (result.user && user?.id === userId) setUser(result.user)
+      return result
+    },
+    [user],
+  )
+
+  const adminRejectUserAddress = useCallback(
+    async (userId: string) => {
+      const result = await rejectUserAddressVerification(userId, user)
       if (result.user && user?.id === userId) setUser(result.user)
       return result
     },
@@ -688,6 +754,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminListUsers,
       adminApproveUser,
       adminRejectUser,
+      adminApproveUserId,
+      adminRejectUserId,
+      adminApproveUserAddress,
+      adminRejectUserAddress,
       clearAuthError,
     }),
     [
@@ -719,6 +789,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       adminListUsers,
       adminApproveUser,
       adminRejectUser,
+      adminApproveUserId,
+      adminRejectUserId,
+      adminApproveUserAddress,
+      adminRejectUserAddress,
       clearAuthError,
     ],
   )

@@ -1,4 +1,4 @@
-import type { AppRole, IdDocumentType, IdentityVerification, User, VerificationStatus } from '../types'
+import type { AppRole, DocumentReviewStatus, IdDocumentType, IdentityVerification, User, VerificationStatus } from '../types'
 import type { VerificationCodeRequest } from './verificationRequestStorage'
 
 export function emptyIdentityVerification(): IdentityVerification {
@@ -84,6 +84,8 @@ export function mergeIdentityVerification(
     codeSentAt: primary.codeSentAt ?? secondary.codeSentAt,
     assignedVerificationCode:
       primary.assignedVerificationCode ?? secondary.assignedVerificationCode,
+    idReviewStatus: primary.idReviewStatus ?? secondary.idReviewStatus,
+    addressReviewStatus: primary.addressReviewStatus ?? secondary.addressReviewStatus,
   }
 }
 
@@ -145,6 +147,71 @@ export function hostNeedsAddressProof(role: AppRole): boolean {
 
 export function hasAddressProof(verification: IdentityVerification): boolean {
   return !!verification.addressProofUri || !!verification.addressUploaded
+}
+
+export function getIdReviewStatus(verification: IdentityVerification): DocumentReviewStatus | 'none' {
+  if (verification.idReviewStatus) return verification.idReviewStatus
+  if (verification.status === 'verified' && verification.idUploaded) return 'approved'
+  if (verification.status === 'rejected' && verification.idUploaded) return 'rejected'
+  if (verification.idUploaded && verification.status === 'pending') return 'pending'
+  return 'none'
+}
+
+export function getAddressReviewStatus(verification: IdentityVerification): DocumentReviewStatus | 'none' {
+  if (verification.addressReviewStatus) return verification.addressReviewStatus
+  if (verification.status === 'verified' && hasAddressProof(verification)) return 'approved'
+  if (verification.status === 'rejected' && hasAddressProof(verification)) return 'rejected'
+  if (hasAddressProof(verification) && verification.status === 'pending') return 'pending'
+  return 'none'
+}
+
+export function documentReviewStatusLabel(status: DocumentReviewStatus | 'none'): string {
+  if (status === 'approved') return 'Approved'
+  if (status === 'rejected') return 'Rejected'
+  if (status === 'pending') return 'Pending review'
+  return 'Not submitted'
+}
+
+export function canAdminReviewId(user: User): boolean {
+  const verification = getIdentityVerification(user)
+  return (
+    isPhoneVerificationComplete(user) &&
+    verification.idUploaded &&
+    getIdReviewStatus(verification) === 'pending'
+  )
+}
+
+export function canAdminReviewAddress(user: User): boolean {
+  if (user.role !== 'host') return false
+  const verification = getIdentityVerification(user)
+  return (
+    isPhoneVerificationComplete(user) &&
+    hasAddressProof(verification) &&
+    getAddressReviewStatus(verification) === 'pending'
+  )
+}
+
+/** Derive overall verification status from phone, ID, and address review states. */
+export function recomputeOverallVerification(user: User, verification: IdentityVerification): IdentityVerification {
+  const idStatus = getIdReviewStatus(verification)
+  const addressStatus = getAddressReviewStatus(verification)
+
+  if (idStatus === 'rejected' || addressStatus === 'rejected') {
+    return { ...verification, status: 'rejected' }
+  }
+
+  const idOk = idStatus === 'approved'
+  const addressOk = user.role !== 'host' || addressStatus === 'approved'
+
+  if (verification.phoneVerified && idOk && addressOk) {
+    return { ...verification, status: 'verified', phoneVerified: true }
+  }
+
+  if (verification.idUploaded || hasAddressProof(verification)) {
+    return { ...verification, status: 'pending' }
+  }
+
+  return { ...verification, status: verification.status === 'rejected' ? 'rejected' : 'none' }
 }
 
 export function formatIdDocumentType(type?: IdDocumentType): string {
