@@ -1,6 +1,7 @@
 import { ALL_DROP_OFF_HOURS } from '../lib/dropOffAvailability'
 import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, IdentityVerification, User } from '../types'
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
+import { getRuntimeDynamicHosts } from '../lib/dynamicHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
 export const SEED_DATA_VERSION = '26'
@@ -324,29 +325,37 @@ export function getAvailableHosts(): Host[] {
     (h) => h.hostUserId && verifiedUserIds.has(h.hostUserId) && h.slotsLeft > 0,
   )
   const generated = GENERATED_SEED_HOSTS.filter((h) => h.slotsLeft > 0)
-  return [...handPicked, ...generated]
+  const dynamic = getRuntimeDynamicHosts().filter((h) => h.slotsLeft > 0)
+  const seedUserIds = new Set(handPicked.map((h) => h.hostUserId).filter(Boolean))
+  const mergedDynamic = dynamic.filter((h) => !h.hostUserId || !seedUserIds.has(h.hostUserId))
+  return [...handPicked, ...generated, ...mergedDynamic]
 }
 
 export function getHostByUserId(userId: string): Host | undefined {
   return (
     SEED_HOSTS.find((h) => h.hostUserId === userId) ??
-    GENERATED_SEED_HOSTS.find((h) => h.hostUserId === userId)
+    GENERATED_SEED_HOSTS.find((h) => h.hostUserId === userId) ??
+    getRuntimeDynamicHosts().find((h) => h.hostUserId === userId)
   )
 }
 
 export function getHostById(hostId: string): Host | undefined {
-  return SEED_HOSTS.find((h) => h.id === hostId) ?? GENERATED_SEED_HOSTS.find((h) => h.id === hostId)
+  return (
+    SEED_HOSTS.find((h) => h.id === hostId) ??
+    GENERATED_SEED_HOSTS.find((h) => h.id === hostId) ??
+    getRuntimeDynamicHosts().find((h) => h.id === hostId)
+  )
 }
 
 export function getHostProfileDetails(hostId: string): HostProfileDetails {
-  if (hostId.startsWith('gen-')) {
+  if (hostId.startsWith('gen-') || hostId.startsWith('host-')) {
     const host = getHostById(hostId)
     return {
       bio: host
-        ? `Community dryer host in ${host.location}, ${host.district ?? 'Belize'}.`
+        ? `Community dryer host in ${host.location}${host.district ? `, ${host.district}` : ''}.`
         : 'Community host on Laundry Buddy.',
       memberSince: '2025',
-      loadsHosted: 12 + (hostId.length * 3) % 80,
+      loadsHosted: hostId.startsWith('gen-') ? 12 + (hostId.length * 3) % 80 : 0,
       responseTime: 'Under 2 hrs',
       reviews: [],
     }

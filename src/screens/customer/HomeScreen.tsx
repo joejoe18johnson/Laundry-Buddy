@@ -29,6 +29,7 @@ import { ACTIVE_REGION_LABEL, getAvailableHosts, WEATHER } from '../../data/mock
 import {
   countActiveFilters,
   DEFAULT_HOST_FILTERS,
+  excludeViewerHostListing,
   filterAndSortHosts,
   getFilterAreas,
   getSearchSuggestions,
@@ -94,6 +95,15 @@ export function HomeScreen() {
   const { user } = useAuth()
   const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm, focusSearchOnArea, navigate } = useApp()
   const totalHosts = getAvailableHosts().length
+  const isHostViewer = user?.role === 'host'
+  const visibleOnlineHosts = useMemo(
+    () => excludeViewerHostListing(onlineHosts, user?.role, user?.id),
+    [onlineHosts, user?.id, user?.role],
+  )
+  const visibleAllOnlineHosts = useMemo(
+    () => excludeViewerHostListing(allOnlineHosts, user?.role, user?.id),
+    [allOnlineHosts, user?.id, user?.role],
+  )
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
   const [sort, setSort] = useState<HostSort>('nearest')
   const [searchQuery, setSearchQuery] = useState('')
@@ -113,13 +123,13 @@ export function HomeScreen() {
   const trimmedSearch = searchQuery.trim()
   const areaSearchActive = trimmedSearch.length > 0 && isBelizeFilterArea(trimmedSearch)
   const hostSource = useMemo(() => {
-    if (filters.topRated === 'each-area') return allOnlineHosts
-    if (areaSearchActive) return onlineHosts
-    if (trimmedSearch) return allOnlineHosts
-    return onlineHosts
-  }, [allOnlineHosts, areaSearchActive, filters.topRated, onlineHosts, trimmedSearch])
+    if (filters.topRated === 'each-area') return visibleAllOnlineHosts
+    if (areaSearchActive) return visibleOnlineHosts
+    if (trimmedSearch) return visibleAllOnlineHosts
+    return visibleOnlineHosts
+  }, [areaSearchActive, filters.topRated, trimmedSearch, visibleAllOnlineHosts, visibleOnlineHosts])
 
-  const nearbyHostIds = useMemo(() => new Set(onlineHosts.map((h) => h.id)), [onlineHosts])
+  const nearbyHostIds = useMemo(() => new Set(visibleOnlineHosts.map((h) => h.id)), [visibleOnlineHosts])
 
   const hosts = useMemo(
     () => filterAndSortHosts(hostSource, filters, sort, searchQuery),
@@ -131,12 +141,21 @@ export function HomeScreen() {
 
   const areaChips = useMemo(() => {
     if (trimmedSearch) {
-      return getSearchSuggestions(allOnlineHosts, searchQuery, 6)
+      return getSearchSuggestions(visibleAllOnlineHosts, searchQuery, 6)
     }
     return popularAreas
-  }, [allOnlineHosts, searchQuery, trimmedSearch, popularAreas])
+  }, [visibleAllOnlineHosts, searchQuery, trimmedSearch, popularAreas])
 
   const resultLabel = useMemo(() => {
+    if (isHostViewer) {
+      if (filters.topRated === 'each-area') {
+        return `${hosts.length} host${hosts.length === 1 ? '' : 's'} across Belize · compare pricing`
+      }
+      if (trimmedSearch) {
+        return `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}” · compare pricing`
+      }
+      return `${hosts.length} within ${searchRadiusKm} km · compare pricing · ${userLocationLabel}`
+    }
     if (filters.topRated === 'my-area') {
       return `${hosts.length} top-rated within ${searchRadiusKm} km · ${userLocationLabel}`
     }
@@ -147,7 +166,7 @@ export function HomeScreen() {
       return `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}”`
     }
     return `${hosts.length} within ${searchRadiusKm} km · ${userLocationLabel}`
-  }, [filters.topRated, hosts.length, searchRadiusKm, trimmedSearch, userLocationLabel])
+  }, [filters.topRated, hosts.length, isHostViewer, searchRadiusKm, trimmedSearch, userLocationLabel])
 
   const animateToSnap = useCallback(
     (point: SnapPoint) => {
@@ -376,20 +395,20 @@ export function HomeScreen() {
       <Text style={styles.emptySub}>
         {trimmedSearch
           ? toTitleCase('Try another area or host name.')
-          : onlineHosts.length === 0 && allOnlineHosts.length > 0
+          : visibleOnlineHosts.length === 0 && visibleAllOnlineHosts.length > 0
             ? toTitleCase(
                 `No hosts within ${searchRadiusKm} km — check the map for hosts outside your radius.`,
               )
-            : onlineHosts.length === 0
+            : visibleOnlineHosts.length === 0
               ? toTitleCase('No hosts are online right now.')
               : toTitleCase('Try different filters or sort.')}
       </Text>
-      {!onlineHosts.length && allOnlineHosts.length > 0 && (
+      {!visibleOnlineHosts.length && visibleAllOnlineHosts.length > 0 && (
         <Text style={styles.emptyHint}>
-          {allOnlineHosts.length} host{allOnlineHosts.length === 1 ? '' : 's'} shown on the map outside your radius
+          {visibleAllOnlineHosts.length} host{visibleAllOnlineHosts.length === 1 ? '' : 's'} shown on the map outside your radius
         </Text>
       )}
-      {!allOnlineHosts.length && totalHosts > 0 && (
+      {!visibleAllOnlineHosts.length && totalHosts > 0 && (
         <Text style={styles.emptyHint}>
           {totalHosts} host{totalHosts === 1 ? '' : 's'} offline across {ACTIVE_REGION_LABEL}
         </Text>
@@ -401,7 +420,7 @@ export function HomeScreen() {
     <View style={styles.container} onLayout={onContainerLayout}>
       <View style={styles.map} pointerEvents="box-none">
         <HostMap
-          hosts={allOnlineHosts}
+          hosts={visibleAllOnlineHosts}
           nearbyHostIds={nearbyHostIds}
           onHostPress={viewHostProfile}
           userLocation={userLocation}

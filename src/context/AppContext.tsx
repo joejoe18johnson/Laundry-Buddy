@@ -22,6 +22,7 @@ import {
 import { calculateBookingTotal, applyHostPricing, getHostPricing, DRYER_SHEETS_PRICE } from '../lib/hostPricing'
 import { formatMoney, getBookingAmount } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
+import { refreshDynamicHostCatalog } from '../lib/hostCatalog'
 import { resolveGuestFacingHostSettings } from '../lib/defaultHostSettings'
 import { scheduleDropOffReminder } from '../lib/pushNotifications'
 import { formatClothesListSummary, hasDelicates } from '../lib/clothesList'
@@ -233,6 +234,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     accepting: hostSeed?.accepting ?? true,
   })
   const [hostSettingsMap, setHostSettingsMap] = useState<Record<string, HostSettings>>({})
+  const [dynamicHostsVersion, setDynamicHostsVersion] = useState(0)
   const [hostSettings, setHostSettings] = useState<HostSettings | null>(null)
   const [showMap, setShowMap] = useState(false)
   const [userLocation, setUserLocation] = useState<Coordinates>(USER_LOCATION)
@@ -298,13 +300,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    getAllHostSettings().then((map) => {
+    void (async () => {
+      const map = await getAllHostSettings()
       setHostSettingsMap(map)
       if (role === 'host') {
         setHostSettings(map[user!.id] ?? { ...DEFAULT_HOST_SETTINGS })
       }
-    })
+      await refreshDynamicHostCatalog(map)
+      setDynamicHostsVersion((version) => version + 1)
+    })()
   }, [role, user!.id])
+
+  useEffect(() => {
+    if (!user || !Object.keys(hostSettingsMap).length) return
+    void refreshDynamicHostCatalog(hostSettingsMap).then(() => {
+      setDynamicHostsVersion((version) => version + 1)
+    })
+  }, [hostSettingsMap, user?.id, user?.identityVerification?.status])
 
   useEffect(() => {
     setScreen(defaultScreen(role))
@@ -358,7 +370,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         applyHostSettings(h, h.hostUserId ? hostSettingsMap[h.hostUserId] : undefined),
       )
     return enrichHostsWithDistance(available, userLocation)
-  }, [hostSettingsMap, userLocation])
+  }, [hostSettingsMap, userLocation, dynamicHostsVersion])
 
   const onlineHosts = useMemo(
     () => filterHostsWithinRadius(allOnlineHosts, userLocation, searchRadiusKm),
@@ -465,6 +477,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       await saveHostSettings(user.id, settings)
       setHostSettings(settings)
       setHostSettingsMap((prev) => ({ ...prev, [user.id]: settings }))
+      await refreshDynamicHostCatalog({ ...hostSettingsMap, [user.id]: settings })
+      setDynamicHostsVersion((version) => version + 1)
       showToast('Settings saved', { icon: 'check' })
 
       if (!wasOnline && settings.isOnline && settings.notifyGuestsWhenOnline) {
@@ -492,6 +506,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (role === 'host' && user) {
       setHostSettings(map[user.id] ?? { ...DEFAULT_HOST_SETTINGS })
     }
+    await refreshDynamicHostCatalog(map)
+    setDynamicHostsVersion((version) => version + 1)
   }, [role, user])
 
   const navigate = useCallback((next: Screen) => setScreen(next), [])
@@ -608,6 +624,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const selectHost = useCallback(
     (host: Host) => {
+      if (role === 'host') {
+        showToast('Hosts can browse listings but cannot book or message other hosts.', { icon: 'info' })
+        return
+      }
       if (!requireMarketplaceAccess()) return
       const resolved = applyHostSettings(
         host,
@@ -616,7 +636,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSelectedHost(resolved)
       setScreen('customer-booking')
     },
-    [hostSettingsMap, requireMarketplaceAccess],
+    [hostSettingsMap, requireMarketplaceAccess, role, showToast],
   )
 
   const notifyHost = useCallback(
@@ -820,6 +840,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadPhotoUri?: string
     }) => {
       if (!selectedHost || !user) return
+      if (role === 'host') {
+        showToast('Hosts can browse listings but cannot book or message other hosts.', { icon: 'info' })
+        return
+      }
       if (!requireMarketplaceAccess()) return
 
       const settings = getSettingsForHost(selectedHost.hostUserId)
@@ -904,7 +928,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       )
       showToast('Request sent to host', { icon: 'send' })
     },
-    [selectedHost, user, notifyHost, notifyCustomer, getSettingsForHost, showToast, requireMarketplaceAccess],
+    [selectedHost, user, role, notifyHost, notifyCustomer, getSettingsForHost, showToast, requireMarketplaceAccess],
   )
 
   const acceptRequest = useCallback(

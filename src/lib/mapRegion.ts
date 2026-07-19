@@ -53,16 +53,10 @@ export function projectCoordinate(
   }
 }
 
-/** Remote sample map (used when bundled asset unavailable). */
-export function buildSampleMapUrl(region: MapRegion, width = 800, height = 800): string {
-  const zoom = region.latitudeDelta > 0.2 ? 10 : region.latitudeDelta > 0.1 ? 11 : 12
-  return (
-    'https://staticmap.openstreetmap.de/staticmap.php' +
-    `?center=${region.latitude},${region.longitude}` +
-    `&zoom=${zoom}&size=${width}x${height}&maptype=mapnik`
-  )
-}
-
+/**
+ * Brand map style: Carto Positron (light gray B&W) everywhere.
+ * Do not use colorful OSM Mapnik or other saturated tile layers in the app UI.
+ */
 /** OpenFreeMap Positron — light gray vector style (MapLibre). */
 export const OPENFREEMAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 

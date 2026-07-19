@@ -320,6 +320,13 @@ function AppShell() {
         matchScreens: ['host-dashboard'],
       },
       {
+        id: 'browse',
+        label: 'Browse',
+        icon: 'search',
+        screen: 'customer-home',
+        matchScreens: ['customer-home'],
+      },
+      {
         id: 'messages',
         label: 'Messages',
         icon: 'message-circle',
@@ -378,11 +385,11 @@ function AppShell() {
         onClose={() => setMenuOpen(false)}
         locationLabel={userLocationLabel}
         radiusKm={searchRadiusKm}
-        onOpenLocationSettings={isCustomer ? () => setLocationSettingsOpen(true) : undefined}
+        onOpenLocationSettings={() => setLocationSettingsOpen(true)}
         hasActiveLoad={hasActiveLoad}
         isHostOnline={hostSettings?.isOnline}
         notificationCount={unreadCount}
-        onExplore={isCustomer ? () => navigate('customer-home') : undefined}
+        onExplore={() => navigate('customer-home')}
         onMyLoad={isCustomer ? () => navigate('customer-tracking') : undefined}
         onPastLoads={() => navigate('history')}
         onDashboard={!isCustomer ? () => navigate('host-dashboard') : undefined}
@@ -392,20 +399,18 @@ function AppShell() {
         onLogout={logout}
       />
 
-      {isCustomer ? (
-        <LocationSettingsSheet
-          visible={locationSettingsOpen}
-          onClose={() => setLocationSettingsOpen(false)}
-          saved={{
-            userLocation,
-            userLocationLabel,
-            searchRadiusKm,
-          }}
-          locating={locationLoading}
-          onFetchGps={fetchGpsLocation}
-          onSave={applyLocationPreferences}
-        />
-      ) : null}
+      <LocationSettingsSheet
+        visible={locationSettingsOpen}
+        onClose={() => setLocationSettingsOpen(false)}
+        saved={{
+          userLocation,
+          userLocationLabel,
+          searchRadiusKm,
+        }}
+        locating={locationLoading}
+        onFetchGps={fetchGpsLocation}
+        onSave={applyLocationPreferences}
+      />
 
       <View style={shellStyles.main}>
         {screen === 'customer-home' && <HomeScreen />}
@@ -423,7 +428,7 @@ function AppShell() {
         {screen === 'chat' && <ChatScreen />}
         {screen === 'identity-verification' && (
           <IdentityVerificationScreen
-            onBrowse={() => navigate(isCustomer ? 'customer-home' : 'host-dashboard')}
+            onBrowse={() => navigate('customer-home')}
           />
         )}
       </View>

@@ -18,9 +18,11 @@ import { ChoiceChip } from './ui'
 import { TopRatedHostBadge } from './TopRatedHostBadge'
 import { isTopRatedHost } from '../lib/hostReputation'
 import { useApp } from '../context/AppContext'
+import { useAuth } from '../context/AuthContext'
 import { BELIZE_FILTER_AREAS, getPlaceSearchSubtitle, isBelizeFilterArea } from '../lib/belizeDistricts'
 import {
   DEFAULT_HOST_FILTERS,
+  excludeViewerHostListing,
   filterAndSortHosts,
   formatHostPrice,
   getSearchSuggestionItems,
@@ -122,24 +124,40 @@ function SuggestionRow({
 export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, onQueryChange }: Props) {
   const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, userLocationLabel, focusSearchOnArea, searchRadiusKm, getReviewsForHost } =
     useApp()
+  const { user } = useAuth()
   const [query, setQuery] = useState(initialQuery)
 
   useEffect(() => {
     if (visible) setQuery(initialQuery)
   }, [visible, initialQuery])
 
+  const visibleOnlineHosts = useMemo(
+    () => excludeViewerHostListing(onlineHosts, user?.role, user?.id),
+    [onlineHosts, user?.id, user?.role],
+  )
+  const visibleAllOnlineHosts = useMemo(
+    () => excludeViewerHostListing(allOnlineHosts, user?.role, user?.id),
+    [allOnlineHosts, user?.id, user?.role],
+  )
+
   const trimmed = query.trim()
   const areaSearchActive = trimmed.length > 0 && isBelizeFilterArea(trimmed)
-  const nearbyIds = useMemo(() => new Set(onlineHosts.map((h) => h.id)), [onlineHosts])
+  const nearbyIds = useMemo(() => new Set(visibleOnlineHosts.map((h) => h.id)), [visibleOnlineHosts])
 
   const results = useMemo(
-    () => filterAndSortHosts(areaSearchActive ? onlineHosts : allOnlineHosts, DEFAULT_HOST_FILTERS, sort, query),
-    [allOnlineHosts, areaSearchActive, onlineHosts, sort, query],
+    () =>
+      filterAndSortHosts(
+        areaSearchActive ? visibleOnlineHosts : visibleAllOnlineHosts,
+        DEFAULT_HOST_FILTERS,
+        sort,
+        query,
+      ),
+    [areaSearchActive, query, sort, visibleAllOnlineHosts, visibleOnlineHosts],
   )
 
   const suggestions = useMemo(
-    () => getSearchSuggestionItems(allOnlineHosts, query, 6),
-    [allOnlineHosts, query],
+    () => getSearchSuggestionItems(visibleAllOnlineHosts, query, 6),
+    [query, visibleAllOnlineHosts],
   )
 
   const handleQueryChange = (value: string) => {

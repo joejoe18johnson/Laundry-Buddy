@@ -1,4 +1,4 @@
-import type { Host } from '../types'
+import type { AppRole, Host } from '../types'
 import { BELIZE_FILTER_AREAS, FILTER_AREA_DISTRICT, hostMatchesFilterArea } from './belizeDistricts'
 import { toTitleCase } from './titleCase'
 import { formatTurnaroundHoursLabel } from './turnaroundTime'
@@ -241,4 +241,14 @@ export function getFilterAreas(): string[] {
 /** @deprecated Use getFilterAreas() */
 export function getHostLocations(_hosts: Host[]): string[] {
   return getFilterAreas()
+}
+
+/** Hosts browsing the market should not see their own listing in comparisons. */
+export function excludeViewerHostListing<T extends Pick<Host, 'hostUserId'>>(
+  hosts: T[],
+  viewerRole: AppRole | undefined,
+  viewerUserId: string | undefined,
+): T[] {
+  if (viewerRole !== 'host' || !viewerUserId) return hosts
+  return hosts.filter((host) => host.hostUserId !== viewerUserId)
 }

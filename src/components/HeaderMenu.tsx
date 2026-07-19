@@ -237,11 +237,11 @@ export function HeaderMenu({
             </View>
 
             <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
-              {isCustomer && onOpenLocationSettings ? (
+              {onOpenLocationSettings ? (
                 <MenuSection title="Location Settings" styles={styles}>
                   <MenuItem
                     icon="map-pin"
-                    label="Search area"
+                    label={isCustomer ? 'Search area' : 'Browse area'}
                     hint={locationHint}
                     onPress={() => go(onOpenLocationSettings)}
                     styles={styles}
@@ -250,8 +250,13 @@ export function HeaderMenu({
               ) : null}
 
               <MenuSection title={isCustomer ? 'Browse' : 'Hosting'} styles={styles}>
-                {isCustomer && onExplore ? (
-                  <MenuItem icon="search" label="Explore dryers" onPress={() => go(onExplore)} styles={styles} />
+                {onExplore ? (
+                  <MenuItem
+                    icon="search"
+                    label={isCustomer ? 'Explore dryers' : 'Browse hosts'}
+                    onPress={() => go(onExplore)}
+                    styles={styles}
+                  />
                 ) : null}
                 {!isCustomer && onDashboard ? (
                   <MenuItem icon="home" label="Dashboard" onPress={() => go(onDashboard)} styles={styles} />

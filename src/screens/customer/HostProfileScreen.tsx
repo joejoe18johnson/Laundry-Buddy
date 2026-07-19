@@ -152,6 +152,12 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
       fontWeight: '600',
       color: colors.gray500,
     },
+    browseOnlyNote: {
+      fontSize: 13,
+      color: colors.gray500,
+      lineHeight: 20,
+      marginTop: 4,
+    },
     footerAction: { flexShrink: 0, alignSelf: 'center' },
   })
 }
@@ -279,6 +285,8 @@ export function HostProfileScreen() {
   const reviews = getReviewsForHost(host.id)
   const ratingSummary = summarizeRatings(reviews)
   const topRated = isTopRatedHost(host, reviews)
+  const isHostViewer = user?.role === 'host'
+  const browseOnly = isHostViewer
   const paymentMethods = [
     settings.acceptCash ? 'Cash' : null,
     settings.acceptBankTransfer && settings.bankDetails.accountNumber.trim()
@@ -293,7 +301,10 @@ export function HostProfileScreen() {
   return (
     <View style={styles.wrapper}>
       <Screen style={styles.scroll}>
-        <BackButton onPress={() => navigate('customer-home')} label="Explore Dryers" />
+        <BackButton
+          onPress={() => navigate('customer-home')}
+          label={isHostViewer ? 'Browse Hosts' : 'Explore Dryers'}
+        />
 
         <LinearGradient colors={gradient} style={styles.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
           <View style={styles.avatar}>
@@ -416,7 +427,11 @@ export function HostProfileScreen() {
             </Text>
           </View>
           {reviews.length === 0 ? (
-            <Text style={styles.emptyReviews}>{toTitleCase('No Reviews Yet — Be The First To Book.')}</Text>
+            <Text style={styles.emptyReviews}>
+              {toTitleCase(
+                browseOnly ? 'No Reviews Yet.' : 'No Reviews Yet — Be The First To Book.',
+              )}
+            </Text>
           ) : (
             reviews.map((review) => <ReviewCard key={review.id} review={review} styles={styles} colors={colors} />)
           )}
@@ -428,7 +443,7 @@ export function HostProfileScreen() {
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
         <View style={styles.footer}>
           <View style={styles.footerInfo}>
-            <Text style={styles.footerSummary} numberOfLines={2}>
+            <Text style={styles.footerSummary} numberOfLines={browseOnly ? 3 : 2}>
               <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
                 {formatHostPrice(host.price)}
               </Text>
@@ -437,23 +452,35 @@ export function HostProfileScreen() {
                 {formatHostFooterMeta(host.slotsLeft, host.turnaroundHours)}
               </Text>
             </Text>
+            {(host.foldingPrice ?? 0) > 0 ? (
+              <Text style={styles.browseOnlyNote}>
+                {toTitleCase('Folding')} — {formatHostPrice(host.foldingPrice!)}
+              </Text>
+            ) : null}
+            {browseOnly ? (
+              <Text style={styles.browseOnlyNote}>
+                {toTitleCase('Browse only — hosts can compare prices but cannot book or message each other.')}
+              </Text>
+            ) : null}
           </View>
-          <View style={styles.footerAction}>
-            <PrimaryButton
-              title={
-                !verified
-                  ? 'Verify to book'
-                  : !settings.isOnline
-                    ? 'Host Offline'
-                    : activeLoadCount > 0
-                      ? 'Book Another Load'
-                      : 'Book Slot'
-              }
-              icon="calendar"
-              disabled={!settings.isOnline && verified}
-              onPress={() => selectHost(host)}
-            />
-          </View>
+          {!browseOnly ? (
+            <View style={styles.footerAction}>
+              <PrimaryButton
+                title={
+                  !verified
+                    ? 'Verify to book'
+                    : !settings.isOnline
+                      ? 'Host Offline'
+                      : activeLoadCount > 0
+                        ? 'Book Another Load'
+                        : 'Book Slot'
+                }
+                icon="calendar"
+                disabled={!settings.isOnline && verified}
+                onPress={() => selectHost(host)}
+              />
+            </View>
+          ) : null}
         </View>
       </View>
     </View>
