@@ -9,7 +9,13 @@ import {
 import { isSupabaseConfigured } from './supabase'
 import { fetchProfileById } from './supabase/authService'
 import { getSupabaseClient } from './supabase/client'
+import { adminPatchIdentityVerification, fetchProfileVerificationAfterPatch } from './supabase/verificationService'
 import { identityVerificationToJson, profileRowToUser } from './supabase/mappers'
+
+export type AdminUserActionResult = {
+  user: User | null
+  error?: string
+}
 
 function verificationChanged(before: User, after: User): boolean {
   return (
@@ -93,6 +99,7 @@ export function usersPendingIdReview(users: User[]): User[] {
   return users.filter((entry) => {
     const verification = getIdentityVerification(entry)
     if (verification.status !== 'pending' || !verification.idUploaded) return false
+    if (!verification.phoneVerified) return false
     if (entry.role === 'host') {
       return hasAddressProof(verification)
     }
@@ -138,9 +145,9 @@ export async function markPhoneVerifiedForUser(userId: string, phone?: string): 
 export async function updateUserVerificationStatus(
   userId: string,
   status: VerificationStatus,
-): Promise<User | null> {
+): Promise<AdminUserActionResult> {
   const user = await resolveUserById(userId)
-  if (!user) return null
+  if (!user) return { user: null, error: 'User not found.' }
 
   const verification = {
     ...getIdentityVerification(user),
@@ -154,30 +161,29 @@ export async function updateUserVerificationStatus(
   })
 
   if (isSupabaseConfigured()) {
-    const supabase = getSupabaseClient()
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ identity_verification: identityVerificationToJson(verification) })
-        .eq('id', userId)
-        .select('*')
-        .maybeSingle()
-      if (error) return null
-      if (!data) return null
-      const serverUser = profileRowToUser(data)
-      await saveUser(serverUser)
-      return serverUser
+    const patchResult = await adminPatchIdentityVerification(userId, verification)
+    if (!patchResult.ok) {
+      return { user: null, error: patchResult.error }
     }
+
+    const serverUser = await fetchProfileVerificationAfterPatch(userId)
+    if (serverUser) {
+      await saveUser(serverUser)
+      return { user: serverUser }
+    }
+
+    await saveUser(updated)
+    return { user: updated }
   }
 
   await saveUser(updated)
-  return updated
+  return { user: updated }
 }
 
-export async function approveUserVerification(userId: string): Promise<User | null> {
+export async function approveUserVerification(userId: string): Promise<AdminUserActionResult> {
   return updateUserVerificationStatus(userId, 'verified')
 }
 
-export async function rejectUserVerification(userId: string): Promise<User | null> {
+export async function rejectUserVerification(userId: string): Promise<AdminUserActionResult> {
   return updateUserVerificationStatus(userId, 'rejected')
 }

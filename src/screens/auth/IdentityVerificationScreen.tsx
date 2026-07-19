@@ -22,13 +22,11 @@ import {
   getIdentityVerification,
   ID_DOCUMENT_OPTIONS,
   isIdentityVerified,
+  isPhoneVerificationComplete,
 } from '../../lib/identityVerification'
 import { adminDashboardLink } from '../../lib/notificationLinks'
 import { normalizePhone } from '../../lib/phone'
-import {
-  getVerificationCodeRequestForUser,
-  type VerificationCodeRequest,
-} from '../../lib/verificationRequestStorage'
+import { getOpenVerificationCodeRequest } from '../../lib/verificationCodeService'
 import {
   buildAdminVerificationRequestBody,
   VERIFICATION_CODE_REQUEST_TITLE,
@@ -40,6 +38,7 @@ import {
 import { radius, spacing } from '../../theme'
 import { toTitleCase } from '../../lib/titleCase'
 import type { IdDocumentType } from '../../types'
+import type { VerificationCodeRequest } from '../../lib/verificationRequestStorage'
 
 type WizardStep = 'phone' | 'id' | 'address'
 
@@ -94,15 +93,22 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
 
   useEffect(() => {
     if (!user) return
-    void getVerificationCodeRequestForUser(user.id).then(setCodeRequest)
+    void getOpenVerificationCodeRequest(user.id).then(setCodeRequest)
   }, [user])
+
+  useEffect(() => {
+    if (!user) return
+    if (isPhoneVerificationComplete(user) && step === 'phone') {
+      setStep('id')
+    }
+  }, [step, user])
 
   useEffect(() => {
     if (!user) return
     void refreshCurrentUser()
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
-        void getVerificationCodeRequestForUser(user.id).then(setCodeRequest)
+        void getOpenVerificationCodeRequest(user.id).then(setCodeRequest)
         void refreshCurrentUser()
       }
     })
@@ -119,7 +125,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
   const canEnterCode = codeRequest?.status === 'code_sent'
 
   const refreshCodeRequest = async () => {
-    const next = await getVerificationCodeRequestForUser(user.id)
+    const next = await getOpenVerificationCodeRequest(user.id)
     setCodeRequest(next)
   }
 
@@ -153,7 +159,9 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     const ok = await submitVerificationCode(codeInput.trim())
     if (ok) {
       setCodeInput('')
-      setCodeRequest(null)
+      await refreshCurrentUser()
+      await refreshCodeRequest()
+      setStep('id')
       Alert.alert(
         toTitleCase('Code accepted'),
         toTitleCase(
@@ -166,10 +174,6 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     setVerifyingCode(false)
   }
 
-  const handleContinueFromPhone = () => {
-    if (!phoneReady) return
-    setStep('id')
-  }
 
   const handleContinueFromId = () => {
     if (!idReady) return
@@ -203,7 +207,12 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
   }
 
   const showVerificationCodePanel =
-    verification.status === 'none' || verification.status === 'rejected'
+    !isPhoneVerificationComplete(user) &&
+    (verification.status === 'none' || verification.status === 'rejected')
+
+  const showDocumentWizard =
+    isPhoneVerificationComplete(user) &&
+    (verification.status === 'none' || verification.status === 'rejected')
 
   const verificationCodePanel = showVerificationCodePanel ? (
     <View style={styles.stepBlock}>
@@ -213,7 +222,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
       </View>
       <Text style={styles.sectionSub}>
         {toTitleCase(
-          'Request a code — support will send it on WhatsApp. Enter the 6-digit code here once you receive it.',
+          'Step 1: request a code. Support sends it on WhatsApp. Step 2: enter the 6-digit code here.',
         )}
       </Text>
       <View style={styles.phoneRow}>
@@ -308,47 +317,8 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     </View>
   )
 
-  const wizardContent =
-    verification.status === 'none' || verification.status === 'rejected' ? (
+  const wizardContent = showDocumentWizard ? (
       <>
-        {step === 'phone' && (
-          <View style={styles.stepBlock}>
-            <View style={styles.sectionHeader}>
-              <AppIcon name="phone" size={18} />
-              <Text style={styles.sectionTitle}>{toTitleCase('Step 1 · Phone number')}</Text>
-            </View>
-            <Text style={styles.sectionSub}>
-              {toTitleCase(
-                'Enter your phone number. Support will send your verification code via WhatsApp.',
-              )}
-            </Text>
-            <View style={styles.phoneRow}>
-              <Text style={styles.prefix}>+501</Text>
-              <AppTextInput
-                style={styles.phoneInput}
-                placeholder="600 1234"
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-              />
-            </View>
-            {phoneReady ? (
-              <Text style={styles.phonePreview}>
-                {formatWhatsAppNumberDisplay(normalizePhone(phone))}
-              </Text>
-            ) : null}
-            <View style={styles.actionStack}>
-              <PrimaryButton
-                title="Continue to ID upload"
-                icon="arrow-right"
-                full
-                disabled={!phoneReady}
-                onPress={handleContinueFromPhone}
-              />
-            </View>
-          </View>
-        )}
-
         {step === 'id' && (
           <View style={styles.stepBlock}>
             <View style={styles.sectionHeader}>
@@ -391,7 +361,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
                 disabled={!idReady || submitting}
                 onPress={handleContinueFromId}
               />
-              <GhostButton title="Back to phone number" icon="arrow-left" full onPress={() => setStep('phone')} />
+              <GhostButton title="Back to phone verification" icon="arrow-left" full onPress={() => setStep('phone')} />
             </View>
           </View>
         )}
@@ -445,7 +415,15 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
       <VerificationCenter
         user={user}
         status={verification.status}
-        wizardStep={verification.status === 'none' || verification.status === 'rejected' ? step : undefined}
+        wizardStep={
+          showDocumentWizard
+            ? step === 'address'
+              ? 'address'
+              : 'id'
+            : showVerificationCodePanel
+              ? 'phone'
+              : undefined
+        }
         footer={actionFooter}
       >
         {verificationCodePanel}

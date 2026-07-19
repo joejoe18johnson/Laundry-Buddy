@@ -298,7 +298,19 @@ export interface Database {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      admin_patch_identity_verification: {
+        Args: {
+          target_user_id: string
+          patch: Json
+        }
+        Returns: Json
+      }
+      is_admin: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+    }
     Enums: {
       app_role: AppRole
       verification_status: VerificationStatus

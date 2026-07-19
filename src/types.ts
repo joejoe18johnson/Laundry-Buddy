@@ -22,6 +22,11 @@ export interface IdentityVerification {
   addressProofMimeType?: string
   addressProofName?: string
   submittedAt?: string
+  /** WhatsApp code flow — synced to Supabase for admin review across devices. */
+  codeRequestStatus?: 'pending' | 'code_sent' | 'completed'
+  codeRequestedAt?: string
+  codeSentAt?: string
+  assignedVerificationCode?: string
 }
 
 /** @deprecated Use IdentityVerification on user.identityVerification */

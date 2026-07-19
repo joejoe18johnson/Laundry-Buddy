@@ -7,7 +7,8 @@ import {
   getAllVerificationCodes,
   type VerificationCodeRecord,
 } from '../lib/verificationCodeStorage'
-import { getPendingVerificationCodeRequests, type VerificationCodeRequest } from '../lib/verificationRequestStorage'
+import { listOpenVerificationCodeRequests } from '../lib/verificationCodeService'
+import type { VerificationCodeRequest } from '../lib/verificationRequestStorage'
 import type { User } from '../types'
 
 export function useAdminDashboardData(refreshKey = 0) {
@@ -22,7 +23,7 @@ export function useAdminDashboardData(refreshKey = 0) {
     setLoading(true)
     const [nextUsers, nextRequests, nextCodes, counts] = await Promise.all([
       adminListUsers(),
-      getPendingVerificationCodeRequests(),
+      listOpenVerificationCodeRequests(),
       getAllVerificationCodes(),
       countCodesByStatus(),
     ])

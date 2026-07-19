@@ -43,13 +43,14 @@ import {
 } from '../lib/supabase'
 import * as SplashScreen from 'expo-splash-screen'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
-import { emptyIdentityVerification, needsIdentityVerification } from '../lib/identityVerification'
+import { emptyIdentityVerification, getIdentityVerification, needsIdentityVerification } from '../lib/identityVerification'
 import { isValidEmail } from '../lib/email'
 import {
   approveUserVerification,
   listAllUsers,
   rejectUserVerification,
   resolveUserById,
+  type AdminUserActionResult,
 } from '../lib/adminUsers'
 import {
   adminSendVerificationCodeToUser,
@@ -108,8 +109,8 @@ interface AuthState {
   syncUserAfterVerification: (userId: string) => Promise<void>
   refreshCurrentUser: () => Promise<void>
   adminListUsers: () => Promise<User[]>
-  adminApproveUser: (userId: string) => Promise<User | null>
-  adminRejectUser: (userId: string) => Promise<User | null>
+  adminApproveUser: (userId: string) => Promise<AdminUserActionResult>
+  adminRejectUser: (userId: string) => Promise<AdminUserActionResult>
   clearAuthError: () => void
 }
 
@@ -481,7 +482,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const verification: IdentityVerification = {
             status: 'pending',
-            phoneVerified: false,
+            phoneVerified: getIdentityVerification(user).phoneVerified,
             verifiedPhone: normalizedPhone,
             idType: data.idType,
             idUploaded: true,
@@ -516,7 +517,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const verification: IdentityVerification = {
         status: 'pending',
-        phoneVerified: false,
+        phoneVerified: getIdentityVerification(user).phoneVerified,
         verifiedPhone: normalizedPhone,
         idType: data.idType,
         idUploaded: true,
@@ -604,18 +605,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const adminApproveUser = useCallback(
     async (userId: string) => {
-      const updated = await approveUserVerification(userId)
-      if (updated && user?.id === userId) setUser(updated)
-      return updated
+      const result = await approveUserVerification(userId)
+      if (result.user && user?.id === userId) setUser(result.user)
+      return result
     },
     [user],
   )
 
   const adminRejectUser = useCallback(
     async (userId: string) => {
-      const updated = await rejectUserVerification(userId)
-      if (updated && user?.id === userId) setUser(updated)
-      return updated
+      const result = await rejectUserVerification(userId)
+      if (result.user && user?.id === userId) setUser(result.user)
+      return result
     },
     [user],
   )

@@ -1,4 +1,5 @@
 import type { AppRole, IdDocumentType, IdentityVerification, User, VerificationStatus } from '../types'
+import type { VerificationCodeRequest } from './verificationRequestStorage'
 
 export function emptyIdentityVerification(): IdentityVerification {
   return {
@@ -78,6 +79,11 @@ export function mergeIdentityVerification(
     address: primary.address ?? secondary.address,
     idType: primary.idType ?? secondary.idType,
     submittedAt: primary.submittedAt ?? secondary.submittedAt,
+    codeRequestStatus: primary.codeRequestStatus ?? secondary.codeRequestStatus,
+    codeRequestedAt: primary.codeRequestedAt ?? secondary.codeRequestedAt,
+    codeSentAt: primary.codeSentAt ?? secondary.codeSentAt,
+    assignedVerificationCode:
+      primary.assignedVerificationCode ?? secondary.assignedVerificationCode,
   }
 }
 
@@ -98,6 +104,28 @@ export function mergeUserProfiles(supabaseUser: User, localUser: User): User {
 
 export function canBookOrHost(user: User): boolean {
   return isIdentityVerified(user)
+}
+
+export function verificationCodeRequestFromUser(user: User): VerificationCodeRequest | null {
+  const verification = getIdentityVerification(user)
+  if (!verification.codeRequestStatus || verification.codeRequestStatus === 'completed') {
+    return null
+  }
+
+  return {
+    id: `vreq-${user.id}`,
+    userId: user.id,
+    userName: user.name,
+    phone: verification.verifiedPhone ?? user.phone ?? '',
+    requestedAt: verification.codeRequestedAt ?? verification.submittedAt ?? new Date().toISOString(),
+    status: verification.codeRequestStatus,
+    assignedCode: verification.assignedVerificationCode,
+    codeSentAt: verification.codeSentAt,
+  }
+}
+
+export function isPhoneVerificationComplete(user: User): boolean {
+  return getIdentityVerification(user).phoneVerified
 }
 
 export function marketplaceLockMessage(role: AppRole, status: VerificationStatus = 'none'): string {

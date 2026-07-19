@@ -19,13 +19,14 @@ import {
   formatIdDocumentType,
   getIdentityVerification,
   hasAddressProof,
+  isPhoneVerificationComplete,
   verificationStatusLabel,
 } from '../../lib/identityVerification'
 import { buildWhatsAppVerificationCodeMessage, buildVerificationApprovedBody, VERIFICATION_APPROVED_TITLE } from '../../lib/verificationCodes'
 import { verificationApprovedLink } from '../../lib/notificationLinks'
 import { getAssignedCodeForUser } from '../../lib/verificationCodeStorage'
+import { getOpenVerificationCodeRequest } from '../../lib/verificationCodeService'
 import {
-  getVerificationCodeRequestForUser,
   type VerificationCodeRequest,
 } from '../../lib/verificationRequestStorage'
 import { formatWhatsAppDisplay, openWhatsAppVerificationCode } from '../../lib/whatsapp'
@@ -87,7 +88,7 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
     setLoading(true)
     const [nextUser, request, codeRecord] = await Promise.all([
       getAdminUserById(userId),
-      getVerificationCodeRequestForUser(userId),
+      getOpenVerificationCodeRequest(userId),
       getAssignedCodeForUser(userId),
     ])
     setUser(nextUser)
@@ -110,8 +111,10 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
   }
 
   const verification = getIdentityVerification(user)
+  const phoneVerified = isPhoneVerificationComplete(user)
   const canReviewId =
     verification.status === 'pending' &&
+    phoneVerified &&
     verification.idUploaded &&
     (user.role !== 'host' || hasAddressProof(verification))
   const canSendCode = codeRequest?.status === 'pending'
@@ -138,17 +141,20 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
     setBusy(true)
     setActionError(null)
     setActionMessage(null)
-    const updated = await adminApproveUser(userId)
-    if (!updated) {
-      setActionError('Could not approve this user. Try refreshing the dashboard.')
+    const result = await adminApproveUser(userId)
+    if (!result.user) {
+      setActionError(
+        result.error ??
+          'Could not approve this user. Run the Supabase admin migration, then try again.',
+      )
     } else {
       setActionMessage('User verification approved.')
-      const notifyRole = updated.role === 'host' ? 'host' : 'customer'
+      const notifyRole = result.user.role === 'host' ? 'host' : 'customer'
       await push(
         userId,
         VERIFICATION_APPROVED_TITLE,
         buildVerificationApprovedBody(notifyRole),
-        verificationApprovedLink(updated.role),
+        verificationApprovedLink(result.user.role),
       )
     }
     await reload()
@@ -160,9 +166,9 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
     setBusy(true)
     setActionError(null)
     setActionMessage(null)
-    const updated = await adminRejectUser(userId)
-    if (!updated) {
-      setActionError('Could not reject this user. Try refreshing the dashboard.')
+    const result = await adminRejectUser(userId)
+    if (!result.user) {
+      setActionError(result.error ?? 'Could not reject this user. Try refreshing the dashboard.')
     } else {
       setActionMessage('User verification rejected.')
     }
@@ -211,6 +217,10 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{toTitleCase('Phone verification')}</Text>
           <View style={styles.card}>
+            <DetailRow
+              label="Phone verified"
+              value={phoneVerified ? 'Yes — code entered in app' : 'Waiting for WhatsApp code'}
+            />
             {codeRequest ? (
               <>
                 <DetailRow
@@ -221,12 +231,16 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
                 {assignedCode ? <DetailRow label="Assigned code" value={assignedCode} mono /> : null}
                 {canSendCode ? (
                   <PrimaryButton
-                    title={busy ? 'Opening WhatsApp…' : 'Send via WhatsApp'}
+                    title={busy ? 'Opening WhatsApp…' : 'Send code via WhatsApp'}
                     icon="message-circle"
                     full
                     disabled={busy}
                     onPress={() => void handleSendCode()}
                   />
+                ) : codeRequest.status === 'code_sent' ? (
+                  <Text style={styles.reviewHint}>
+                    {toTitleCase('Code sent — waiting for the host to enter it in the app.')}
+                  </Text>
                 ) : null}
               </>
             ) : (
@@ -285,12 +299,17 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
                     : 'Review the document above, then approve or reject this verification.',
                 )}
               </Text>
+              {!phoneVerified ? (
+                <Text style={styles.emptyText}>
+                  {toTitleCase('Phone must be verified via WhatsApp code before you can approve documents.')}
+                </Text>
+              ) : null}
               <View style={styles.actions}>
                 <SuccessButton
                   title="Approve ID"
                   icon="check"
                   onPress={() => void handleApprove()}
-                  disabled={busy}
+                  disabled={busy || !phoneVerified}
                 />
                 <GhostButton
                   title={busy ? 'Working…' : 'Reject ID'}
