@@ -23,7 +23,7 @@ import {
   resolveBookingChatRecipient,
   supportThreadId,
 } from '../lib/chatThreads'
-import { DEMO_ANA_MARIA_BOOKING_ID } from '../data/seedData'
+import { DEMO_ANA_MARIA_BOOKING_IDS } from '../data/seedData'
 import { chatLink } from '../lib/notificationLinks'
 import type { AppRole, Booking, ChatMessage } from '../types'
 
@@ -107,7 +107,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         new Set([
           supportId,
           ...storedIds,
-          ...(user.id === 'user-ana' || user.id === 'user-maria' ? [DEMO_ANA_MARIA_BOOKING_ID] : []),
+          ...(user.id === 'user-ana' || user.id === 'user-maria' ? [...DEMO_ANA_MARIA_BOOKING_IDS] : []),
         ]),
       )
       await refreshThreads(threadIds)

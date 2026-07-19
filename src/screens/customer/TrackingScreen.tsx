@@ -11,7 +11,7 @@ import { buildPaymentProofChatNotice } from '../../lib/chatThreads'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
-import { getGuestProgressStep } from '../../lib/loadProgress'
+import { getGuestProgressStep, getGuestStepDescription } from '../../lib/loadProgress'
 import {
   canGuestCancelPendingRequest,
   formatCancelCountdown,
@@ -29,6 +29,15 @@ function getLoadStatusLabel(load: Booking): string {
   if (load.requestStatus === 'declined') return 'Declined'
   if (load.stage === 'ready') return 'Ready'
   if (load.stage === 'drying') return 'Drying'
+  if (
+    load.paymentMethod === 'bank_transfer' &&
+    load.paymentStatus === 'pending' &&
+    (load.totalAmount ?? 0) > 0
+  ) {
+    if (!load.paymentRequestedAt) return 'Awaiting payment'
+    if (!load.paymentProofSentAt) return 'Pay now'
+    return 'Proof sent'
+  }
   return 'In progress'
 }
 
@@ -89,10 +98,19 @@ export function TrackingScreen() {
   const isAccepted = booking.requestStatus !== 'pending' && booking.requestStatus !== 'declined'
   const isPending = booking.requestStatus === 'pending'
   const isDeclined = booking.requestStatus === 'declined'
-  const transferPending = isAccepted && isBankTransfer && booking.paymentStatus === 'pending' && amount > 0
+  const transferPending =
+    isAccepted && isBankTransfer && booking.paymentStatus === 'pending' && amount > 0 && !!booking.paymentRequestedAt
+  const needsPayNow = transferPending && !booking.paymentProofSentAt
+  const proofWaitingConfirm =
+    isAccepted &&
+    isBankTransfer &&
+    booking.paymentStatus === 'pending' &&
+    !!booking.paymentProofSentAt &&
+    amount > 0
   const bank = hostSettings.bankDetails
 
   const isReadyForPickup = isAccepted && booking.stage === 'ready'
+  const isDropOffPhase = isAccepted && !isReadyForPickup
   const canCancelPending = isPending && canGuestCancelPendingRequest(booking)
   const msUntilCancel = isPending ? getMsUntilGuestCanCancel(booking) : 0
   void cancelTick
@@ -113,9 +131,11 @@ export function TrackingScreen() {
         ? { label: 'Ready', variant: 'ready' as const }
         : booking.stage === 'drying'
           ? { label: 'Drying', variant: 'drying' as const }
-          : transferPending
-            ? { label: 'Pay now', variant: 'pending' as const }
-            : { label: 'Accepted', variant: 'accepted' as const }
+          : proofWaitingConfirm
+            ? { label: 'Awaiting confirm', variant: 'awaiting' as const }
+            : needsPayNow
+              ? { label: 'Pay now', variant: 'pending' as const }
+              : { label: 'Accepted', variant: 'accepted' as const }
 
   const handleDirections = () => {
     if (!isAccepted) return
@@ -187,6 +207,61 @@ export function TrackingScreen() {
         </View>
       )}
 
+      {needsPayNow && (
+        <View style={styles.urgentPayCard}>
+          <View style={styles.urgentPayHeader}>
+            <View style={styles.urgentPayBadge}>
+              <AppIcon name="alert-circle" size={16} color={colors.white} />
+              <Text style={styles.urgentPayBadgeText}>{toTitleCase('Pay now')}</Text>
+            </View>
+            <Text style={styles.urgentPayAmount}>{formatMoney(amount)}</Text>
+          </View>
+          <Text style={styles.urgentPayTitle}>
+            {titleCaseWithName(`${booking.hostName} needs your bank transfer`, booking.hostName)}
+          </Text>
+          <Text style={styles.urgentPaySub}>
+            {toTitleCase('Transfer the amount below, attach your receipt, and submit proof so drying can start.')}
+          </Text>
+          {bank?.accountNumber?.trim() ? (
+            <View style={styles.bankBlock}>
+              <Text style={styles.bankLine}>{bank.bankName}</Text>
+              <Text style={styles.bankLine}>{bank.accountName}</Text>
+              <Text style={styles.bankAccount}>{bank.accountNumber}</Text>
+            </View>
+          ) : null}
+          <TransferProofCapture photoUri={transferProofUri} onPhotoChange={setTransferProofUri} />
+          {booking.paymentProofUri && !transferProofUri ? (
+            <Text style={styles.paymentHint}>
+              {toTitleCase('Proof already submitted. Your host can view it from this load or in chat.')}
+            </Text>
+          ) : null}
+          <PrimaryButton
+            title={transferProofUri ? 'Submit transfer proof' : 'Add screenshot first'}
+            icon="check-circle"
+            full
+            disabled={!transferProofUri}
+            onPress={() => void sendTransferProof()}
+          />
+          <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
+        </View>
+      )}
+
+      {proofWaitingConfirm && (
+        <View style={styles.proofWaitingCard}>
+          <AppIcon name="clock" size={18} color={colors.gray600} />
+          <View style={styles.proofWaitingCopy}>
+            <Text style={styles.proofWaitingTitle}>{toTitleCase('Proof sent')}</Text>
+            <Text style={styles.proofWaitingSub}>
+              {titleCaseWithName(
+                `${booking.hostName} is confirming your transfer — drying starts once payment is verified.`,
+                booking.hostName,
+              )}
+            </Text>
+          </View>
+          <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
+        </View>
+      )}
+
       {booking.isNew && !isDeclined && bannerVisible && (
         <Pressable onPress={() => setBannerVisible(false)} style={styles.success}>
           <View style={styles.successIcon}>
@@ -194,7 +269,7 @@ export function TrackingScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.successTitle}>
-              {isPending ? toTitleCase('Request sent') : toTitleCase('Booking confirmed')}
+              {isPending ? toTitleCase('Request sent') : toTitleCase('Request accepted')}
             </Text>
             <Text style={styles.successSub}>
               {isPending
@@ -202,7 +277,10 @@ export function TrackingScreen() {
                     `Waiting for ${booking.hostName} to accept your load`,
                     booking.hostName,
                   )
-                : titleCaseWithName(`Drop off at ${booking.address}`, booking.address)}
+                : titleCaseWithName(
+                    `Next: drop off at ${booking.address}. Bank transfer? Use the Pay now section when ready.`,
+                    booking.address,
+                  )}
             </Text>
           </View>
           <AppIcon name="x" size={16} color={colors.gray500} />
@@ -222,42 +300,6 @@ export function TrackingScreen() {
             </Text>
           </View>
           <PrimaryButton title="Find another host" icon="search" onPress={() => { clearBooking(); navigate('customer-home') }} full />
-        </View>
-      )}
-
-      {transferPending && (
-        <View style={styles.paymentCard}>
-          <View style={styles.paymentHeader}>
-            <AppIcon name="credit-card" size={18} />
-            <Text style={styles.paymentTitle}>{toTitleCase('Bank transfer')} — {formatMoney(amount)}</Text>
-          </View>
-          {bank?.accountNumber?.trim() ? (
-            <View style={styles.bankBlock}>
-              <Text style={styles.bankLine}>{bank.bankName}</Text>
-              <Text style={styles.bankLine}>{bank.accountName}</Text>
-              <Text style={styles.bankAccount}>{bank.accountNumber}</Text>
-            </View>
-          ) : null}
-          <Text style={styles.paymentSub}>
-            {titleCaseWithName(
-              `Transfer the amount above, then attach your receipt here. Proof is saved on this load — not mixed into regular chat photos.`,
-              booking.hostName,
-            )}
-          </Text>
-          <TransferProofCapture photoUri={transferProofUri} onPhotoChange={setTransferProofUri} />
-          {booking.paymentProofUri && !transferProofUri ? (
-            <Text style={styles.paymentHint}>
-              {toTitleCase('Proof already submitted. Your host can view it from this load or in chat.')}
-            </Text>
-          ) : null}
-          <PrimaryButton
-            title={transferProofUri ? 'Submit transfer proof' : 'Add screenshot first'}
-            icon="check-circle"
-            full
-            disabled={!transferProofUri}
-            onPress={() => void sendTransferProof()}
-          />
-          <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
         </View>
       )}
 
@@ -322,20 +364,20 @@ export function TrackingScreen() {
         </View>
       )}
 
-      {!isDeclined && !isPending && !isReadyForPickup && !transferPending && (
+      {!isDeclined && !isPending && !isReadyForPickup && !needsPayNow && !proofWaitingConfirm && (
       <View style={styles.infoCard}>
         <AppIcon name="message-circle" size={18} color={colors.gray600} />
         <Text style={styles.infoText}>
-          {toTitleCase(`Step ${progressStep.number} of 6 — ${progressStep.description}`)}
+          {toTitleCase(`Step ${progressStep.number} of 6 — ${getGuestStepDescription(booking, progressStep)}`)}
         </Text>
       </View>
       )}
 
-      {isAccepted && (
+      {isDropOffPhase && (
       <View style={styles.pickupCard}>
         <View style={styles.pickupTitleRow}>
           <AppIcon name="map-pin" size={18} />
-          <Text style={styles.pickupTitle}>{toTitleCase('Pickup details')}</Text>
+          <Text style={styles.pickupTitle}>{toTitleCase('Drop-off details')}</Text>
         </View>
         <View style={styles.pickupField}>
           <AppIcon name="home" size={14} color={colors.gray500} />
@@ -377,7 +419,7 @@ export function TrackingScreen() {
         <View style={styles.pickupCard}>
           <View style={styles.pickupTitleRow}>
             <AppIcon name="map-pin" size={18} color={colors.gray400} />
-            <Text style={[styles.pickupTitle, styles.pickupTitleMuted]}>{toTitleCase('Pickup details')}</Text>
+            <Text style={[styles.pickupTitle, styles.pickupTitleMuted]}>{toTitleCase('Drop-off details')}</Text>
           </View>
           <Text style={styles.pendingDirectionsHint}>
             {titleCaseWithName(
@@ -475,6 +517,34 @@ function createTrackingStyles(colors: ReturnType<typeof useTheme>['colors']) {
     marginBottom: spacing.lg,
     backgroundColor: colors.gray50,
   },
+  urgentPayCard: {
+    borderWidth: 2,
+    borderColor: colors.black,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.white,
+  },
+  urgentPayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  urgentPayBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.black,
+    borderRadius: radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  urgentPayBadgeText: { fontSize: 13, fontWeight: '700', color: colors.white },
+  urgentPayAmount: { fontSize: 28, fontWeight: '800', color: colors.black, letterSpacing: -0.5 },
+  urgentPayTitle: { fontSize: 17, fontWeight: '700', color: colors.black, lineHeight: 24 },
+  urgentPaySub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
   paymentHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   paymentTitle: { fontSize: 16, fontWeight: '700' },
   paymentSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
@@ -490,6 +560,18 @@ function createTrackingStyles(colors: ReturnType<typeof useTheme>['colors']) {
     marginBottom: spacing.lg,
   },
   paidText: { fontSize: 14, fontWeight: '600', color: colors.green },
+  proofWaitingCard: {
+    backgroundColor: colors.gray50,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  proofWaitingCopy: { gap: 4 },
+  proofWaitingTitle: { fontSize: 16, fontWeight: '700', color: colors.black },
+  proofWaitingSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
   statusHeader: {
     flexDirection: 'row',
     alignItems: 'center',

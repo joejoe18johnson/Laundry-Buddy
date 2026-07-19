@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -15,6 +16,7 @@ import {
   updateBadgeCount,
 } from '../lib/pushNotifications'
 import { linkToPushData } from '../lib/notificationLinks'
+import { PAYMENT_REQUEST_NOTIFICATION_TITLE } from '../lib/paymentRequestDelivery'
 
 const NOTIFICATIONS_KEY = 'laundry-buddy-notifications'
 
@@ -54,11 +56,31 @@ export function NotificationProvider({
   activeUserId?: string
 }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([])
+  const deliveredPhoneAlertsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     readAll().then(setNotifications)
     void initPushNotifications()
   }, [])
+
+  useEffect(() => {
+    if (!activeUserId) return
+    const urgent = notifications.find(
+      (item) =>
+        item.userId === activeUserId &&
+        !item.read &&
+        !deliveredPhoneAlertsRef.current.has(item.id) &&
+        (item.title === PAYMENT_REQUEST_NOTIFICATION_TITLE ||
+          /pay now|payment request/i.test(item.title)),
+    )
+    if (!urgent) return
+    deliveredPhoneAlertsRef.current.add(urgent.id)
+    void showLocalNotification(
+      urgent.title,
+      urgent.body,
+      urgent.link ? linkToPushData(urgent.link) : undefined,
+    )
+  }, [activeUserId, notifications])
 
   const push = useCallback(
     async (userId: string, title: string, body: string, link?: NotificationLink) => {

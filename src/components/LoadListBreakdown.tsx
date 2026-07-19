@@ -34,16 +34,18 @@ export function LoadListBreakdown({
         accessibilityRole="button"
         accessibilityLabel={expanded ? 'Hide load list breakdown' : 'Show load list breakdown'}
       >
-        <View style={styles.headerLeft}>
-          <AppIcon name="list" size={16} color={colors.black} />
-          <Text style={styles.title}>{toTitleCase(title)}</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <Text style={styles.count}>
-            {uniqueTypes} type{uniqueTypes === 1 ? '' : 's'} · {total} item{total === 1 ? '' : 's'}
-          </Text>
+        <View style={styles.headerTop}>
+          <View style={styles.headerLeft}>
+            <AppIcon name="list" size={16} color={colors.black} />
+            <Text style={styles.title} numberOfLines={2}>
+              {toTitleCase(title)}
+            </Text>
+          </View>
           <AppIcon name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.gray500} />
         </View>
+        <Text style={styles.count}>
+          {uniqueTypes} type{uniqueTypes === 1 ? '' : 's'} · {total} item{total === 1 ? '' : 's'}
+        </Text>
       </Pressable>
 
       {expanded ? (
@@ -72,9 +74,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -82,10 +81,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.gray100,
   },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  title: { fontSize: 14, fontWeight: '700', color: colors.black },
-  count: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    flex: 1,
+    minWidth: 0,
+  },
+  title: { flex: 1, fontSize: 14, fontWeight: '700', color: colors.black, lineHeight: 19 },
+  count: { fontSize: 12, fontWeight: '600', color: colors.gray500, lineHeight: 17 },
   body: { padding: spacing.sm },
   previewBody: { padding: spacing.md, gap: spacing.sm },
   previewHint: { fontSize: 12, color: colors.gray500, fontStyle: 'italic' },

@@ -8,6 +8,7 @@ export {
   getHostProfileDetails,
   getHostDashboardSeed,
   getCustomerSeedBooking,
+  getCustomerSeedBookings,
   getCustomerHistory,
   getHostHistory,
   TRAINING_ACCOUNTS,

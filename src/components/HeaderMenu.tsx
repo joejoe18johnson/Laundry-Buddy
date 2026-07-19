@@ -259,7 +259,7 @@ export function HeaderMenu({
                 {isCustomer && onMyLoad ? (
                   <MenuItem
                     icon="package"
-                    label="My load"
+                    label="My loads"
                     onPress={() => go(onMyLoad)}
                     badge={hasActiveLoad ? 'Active' : undefined}
                     styles={styles}

@@ -12,7 +12,7 @@ import { useAuth } from './AuthContext'
 import { useNotifications } from './NotificationContext'
 import { useToast } from './ToastContext'
 import {
-  getCustomerSeedBooking,
+  getCustomerSeedBookings,
   getHostByUserId,
   getHostById,
   getHostDashboardSeed,
@@ -20,7 +20,7 @@ import {
   SEED_USERS,
 } from '../data/mockData'
 import { calculateBookingTotal, applyHostPricing, getHostPricing, DRYER_SHEETS_PRICE } from '../lib/hostPricing'
-import { formatMoney } from '../lib/bookingPayments'
+import { formatMoney, getBookingAmount } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
 import { resolveGuestFacingHostSettings } from '../lib/defaultHostSettings'
 import { scheduleDropOffReminder } from '../lib/pushNotifications'
@@ -87,6 +87,7 @@ import { FILTER_AREA_RADIUS_KM, getFilterAreaCenter } from '../lib/belizeDistric
 import * as Location from 'expo-location'
 import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
 import { canGuestCancelPendingRequest } from '../lib/pendingRequestCancel'
+import { deliverPaymentRequest, needsPaymentRequest, withPaymentRequestedAt } from '../lib/paymentRequestDelivery'
 import { supportThreadId } from '../lib/chatThreads'
 import { syncTrainingDemoIfNeeded } from '../lib/trainingSeedStorage'
 import {
@@ -168,6 +169,7 @@ interface AppState {
   markDry: (loadId: string, dryPhotoUri?: string) => void
   confirmPickup: (loadId: string) => void
   confirmTransferPayment: (loadId: string) => void
+  sendPaymentRequest: (loadId: string) => void
   markPaymentProofSent: (loadId: string, proofUri?: string) => void
   chatThreadId: string | null
   chatBooking: Booking | null
@@ -182,8 +184,8 @@ interface AppState {
 const AppContext = createContext<AppState | null>(null)
 
 const STAGE_LABELS: Record<BookingStage, string> = {
-  'got-bag': 'Payment confirmed',
-  waiting: 'Payment confirmed',
+  'got-bag': 'Bag received',
+  waiting: 'Bag received',
   drying: 'Drying started',
   ready: 'Ready for pickup',
   'picked-up': 'Picked up',
@@ -209,11 +211,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const hostSeed = role === 'host' ? getHostDashboardSeed(user!.id) : null
   const customerSeedBookings =
-    role === 'customer'
-      ? filterActiveGuestBookings(
-          [getCustomerSeedBooking(user!.id)].filter((entry): entry is Booking => !!entry),
-        )
-      : []
+    role === 'customer' ? filterActiveGuestBookings(getCustomerSeedBookings(user!.id)) : []
 
   const [screen, setScreen] = useState<Screen>(() => defaultScreen(role))
   const [selectedHost, setSelectedHost] = useState<Host | null>(null)
@@ -328,9 +326,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })
       } else {
         void loadActiveBookings(user!.id).then((stored) => {
-          const seed = filterActiveGuestBookings(
-            [getCustomerSeedBooking(user!.id)].filter((entry): entry is Booking => !!entry),
-          )
+          const seed = filterActiveGuestBookings(getCustomerSeedBookings(user!.id))
           const merged = mergeGuestBookings(seed, stored)
           setGuestBookings(merged)
           setSelectedBookingId((current) =>
@@ -700,8 +696,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const fromHistory = history.find((entry) => entry.id === bookingId)
         if (fromHistory) return fromHistory
 
-        const seed = getCustomerSeedBooking(user.id)
-        if (seed?.id === bookingId) return seed
+        const seed = getCustomerSeedBookings(user.id).find((entry) => entry.id === bookingId)
+        if (seed) return seed
 
         return null
       }
@@ -902,7 +898,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? getHostPricing(hostProfile, settings)
         : { dryPrice: 0, foldingPrice: 0, sheetsPrice: DRYER_SHEETS_PRICE }
 
-      const load: Booking = {
+      const needsTransfer =
+        request.paymentMethod === 'bank_transfer' && (request.totalAmount ?? 0) > 0
+      const acceptedAt = nowTime()
+      const paymentTimestamp = new Date().toISOString()
+
+      let load: Booking = {
         id: request.id,
         hostId: hostProfile?.id ?? 'unknown',
         hostName: hostProfile?.name ?? user.name,
@@ -924,11 +925,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sheetsPrice: pricing.sheetsPrice,
         paymentStatus:
           (request.totalAmount ?? 0) <= 0 || request.paymentMethod === 'cash' ? 'paid' : 'pending',
+        paymentRequestedAt: needsTransfer ? paymentTimestamp : undefined,
         requestStatus: 'accepted',
         stage: 'got-bag',
         address: hostProfile?.address ?? '',
         gateCode: hostProfile?.gateCode ?? '',
-        acceptedAt: nowTime(),
+        acceptedAt,
         stageTimes: {},
       }
 
@@ -950,15 +952,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (request.customerId) {
         const hostName = hostProfile?.name ?? user.name
-        const bank = settings.bankDetails
-        const needsTransfer =
-          request.paymentMethod === 'bank_transfer' && (request.totalAmount ?? 0) > 0
-        const body = needsTransfer
-          ? `${hostName} accepted your load! Transfer ${formatMoney(request.totalAmount ?? 0)} to ${bank.bankName} · ${bank.accountNumber}, then send proof on WhatsApp. Open the app for drop-off directions.`
-          : `${hostName} accepted your load! Open the app for drop-off directions and gate details.`
-        notifyCustomer(request.customerId, 'Load accepted', body, bookingTrackingLink(load.id))
-        void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
-        showToast('Guest notified', { icon: 'check-circle' })
+        if (needsTransfer) {
+          void deliverPaymentRequest({
+            load,
+            hostUserId: user.id,
+            hostName,
+            bankDetails: settings.bankDetails,
+            notifyCustomer,
+            timestamp: paymentTimestamp,
+          })
+          void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
+          showToast('Load accepted — guest notified to pay', { icon: 'credit-card' })
+        } else {
+          notifyCustomer(
+            request.customerId,
+            'Load accepted',
+            `${hostName} accepted your load! Open the app for drop-off directions and gate details.`,
+            bookingTrackingLink(load.id),
+          )
+          void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
+          showToast('Guest notified', { icon: 'check-circle' })
+        }
       }
     },
     [hostRequests, activeLoads, user, notifyCustomer, getSettingsForHost, showToast],
@@ -1205,6 +1219,63 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [advanceStage, showToast],
   )
 
+  const sendPaymentRequest = useCallback(
+    (loadId: string) => {
+      if (!user || role !== 'host') return
+
+      const settings = getSettingsForHost(user.id)
+      const timestamp = new Date().toISOString()
+      let target: Booking | undefined
+      let alreadySent = false
+
+      const patch = (load: Booking): Booking => {
+        if (load.id !== loadId) return load
+        if (load.paymentRequestedAt) {
+          target = load
+          alreadySent = true
+          return load
+        }
+        if (!needsPaymentRequest(load)) {
+          target = load
+          return load
+        }
+        const next = withPaymentRequestedAt(load, timestamp)
+        target = next
+        return next
+      }
+
+      setActiveLoads((prev) => {
+        const next = prev.map(patch)
+        if (role === 'host') {
+          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+        }
+        return next
+      })
+
+      setGuestBookings((prev) => patchGuestBooking(prev, loadId, patch))
+
+      if (!target) return
+      if (alreadySent) {
+        showToast('Payment request already sent', { icon: 'credit-card' })
+        return
+      }
+      if (target.paymentRequestedAt !== timestamp) return
+
+      const hostProfile = getHostByUserId(user.id)
+      void deliverPaymentRequest({
+        load: target,
+        hostUserId: user.id,
+        hostName: hostProfile?.name ?? user.name,
+        bankDetails: settings.bankDetails,
+        notifyCustomer,
+        timestamp,
+      })
+
+      showToast('Payment request sent to guest', { icon: 'credit-card' })
+    },
+    [getSettingsForHost, hostRequests, notifyCustomer, role, showToast, user],
+  )
+
   const markPaymentProofSent = useCallback(
     (loadId: string, proofUri?: string) => {
       const timestamp = new Date().toISOString()
@@ -1315,6 +1386,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDry,
       confirmPickup,
       confirmTransferPayment,
+      sendPaymentRequest,
       markPaymentProofSent,
       chatThreadId,
       chatBooking,
@@ -1374,6 +1446,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markDry,
       confirmPickup,
       confirmTransferPayment,
+      sendPaymentRequest,
       markPaymentProofSent,
       chatThreadId,
       chatBooking,

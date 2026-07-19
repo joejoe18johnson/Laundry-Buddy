@@ -5,6 +5,8 @@ import { useTheme } from '../context/ThemeContext'
 import {
   GUEST_LOAD_STEPS,
   getGuestProgressIndex,
+  getGuestStepDescription,
+  getGuestStepLabel,
   getProgressPercent,
   getStepTimestamp,
   type GuestProgressStep,
@@ -143,11 +145,13 @@ function createLoadProgressStyles(colors: ReturnType<typeof useTheme>['colors'])
 
 function StepNode({
   step,
+  booking,
   state,
   pulse,
   styles,
 }: {
   step: GuestProgressStep
+  booking: Booking
   state: 'done' | 'active' | 'upcoming'
   pulse: Animated.Value
   styles: ReturnType<typeof createLoadProgressStyles>
@@ -176,7 +180,7 @@ function StepNode({
         style={[styles.nodeLabel, isDone && styles.nodeLabelDone, isActive && styles.nodeLabelActive]}
         numberOfLines={2}
       >
-        {toTitleCase(step.label)}
+        {toTitleCase(getGuestStepLabel(booking, step))}
       </Text>
     </View>
   )
@@ -200,12 +204,12 @@ export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps
               : toTitleCase(`Step ${currentStep.number} of ${GUEST_LOAD_STEPS.length}`)}
           </Text>
           <Text style={styles.summaryTitle}>
-            {isComplete ? toTitleCase('Picked up') : toTitleCase(currentStep.label)}
+            {isComplete ? toTitleCase('Picked up') : toTitleCase(getGuestStepLabel(booking, currentStep))}
           </Text>
           <Text style={styles.summarySub}>
             {isComplete
               ? toTitleCase('Thanks for using Laundry Buddy')
-              : toTitleCase(currentStep.description)}
+              : toTitleCase(getGuestStepDescription(booking, currentStep))}
           </Text>
         </View>
         <View style={styles.percentBadge}>
@@ -225,7 +229,7 @@ export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps
               : index === activeIndex
                 ? 'active'
                 : 'upcoming'
-          return <StepNode key={step.key} step={step} state={state} pulse={pulse} styles={styles} />
+          return <StepNode key={step.key} step={step} booking={booking} state={state} pulse={pulse} styles={styles} />
         })}
       </View>
 
@@ -270,7 +274,7 @@ export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps
                     color={state === 'upcoming' ? colors.gray400 : colors.black}
                   />
                   <Text style={[styles.detailLabel, state !== 'upcoming' && styles.detailLabelActive]}>
-                    {toTitleCase(step.label)}
+                    {toTitleCase(getGuestStepLabel(booking, step))}
                   </Text>
                   {state === 'active' && !isComplete && (
                     <View style={styles.nowBadge}>
@@ -278,7 +282,7 @@ export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps
                     </View>
                   )}
                 </View>
-                <Text style={styles.detailDesc}>{toTitleCase(step.description)}</Text>
+                <Text style={styles.detailDesc}>{toTitleCase(getGuestStepDescription(booking, step))}</Text>
                 {time ? <Text style={styles.detailTime}>{time}</Text> : null}
               </View>
             </View>

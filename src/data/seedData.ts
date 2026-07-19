@@ -3,11 +3,14 @@ import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, Iden
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes for training. */
-export const SEED_DATA_VERSION = '20'
+export const SEED_DATA_VERSION = '22'
 
-/** Shared Ana (guest) ↔ Maria (host) demo load — same id on both accounts. */
+/** Shared Ana (guest) ↔ Maria (host) demo loads — same ids on both accounts. */
 export const DEMO_ANA_MARIA_BOOKING_ID = 'demo-ana-maria-1'
+export const DEMO_ANA_MARIA_PAY_BOOKING_ID = 'demo-ana-maria-2'
+export const DEMO_ANA_MARIA_BOOKING_IDS = [DEMO_ANA_MARIA_BOOKING_ID, DEMO_ANA_MARIA_PAY_BOOKING_ID] as const
 
+/** Load 1 — Maria sends the payment request (accepted, transfer pending). */
 export const DEMO_ANA_MARIA_BOOKING: Booking = {
   id: DEMO_ANA_MARIA_BOOKING_ID,
   hostId: 'maria',
@@ -27,17 +30,49 @@ export const DEMO_ANA_MARIA_BOOKING: Booking = {
   sheetsPrice: 1,
   totalAmount: 3,
   paymentStatus: 'pending',
+  paymentRequestedAt: '2026-07-18T12:40:00.000Z',
   requestStatus: 'accepted',
   stage: 'got-bag',
   address: '22 Coconut St.',
   gateCode: '4421',
   stageTimes: {},
   acceptedAt: '8:05 AM',
-  createdAt: '2026-07-14T12:30:00.000Z',
+  createdAt: '2026-07-18T12:30:00.000Z',
   clothesList: [
     { id: 'demo-ana-towels', label: 'Towels', quantity: 4 },
     { id: 'demo-ana-delicates', label: 'Delicates', quantity: 2 },
   ],
+}
+
+/** Load 2 — Payment request already sent; Ana submits transfer proof here. */
+export const DEMO_ANA_MARIA_PAY_BOOKING: Booking = {
+  id: DEMO_ANA_MARIA_PAY_BOOKING_ID,
+  hostId: 'maria',
+  hostName: 'Maria',
+  customerId: 'user-ana',
+  customerName: 'Ana',
+  location: 'Las Flores',
+  loads: 1,
+  dropOffTime: 14,
+  sheetsOption: 'none',
+  notes: 'Work shirts — hang dry if possible.',
+  paymentMethod: 'bank_transfer',
+  foldingService: true,
+  pricePerLoad: 3,
+  dryPrice: 3,
+  foldingPrice: 3,
+  sheetsPrice: 1,
+  totalAmount: 6,
+  paymentStatus: 'pending',
+  paymentRequestedAt: '2026-07-18T15:00:00.000Z',
+  requestStatus: 'accepted',
+  stage: 'got-bag',
+  address: '22 Coconut St.',
+  gateCode: '4421',
+  stageTimes: {},
+  acceptedAt: '1:40 PM',
+  createdAt: '2026-07-18T14:20:00.000Z',
+  clothesList: [{ id: 'demo-ana-shirts', label: 'Work shirts', quantity: 5 }],
 }
 
 const VERIFIED_GUEST: IdentityVerification = {
@@ -168,13 +203,13 @@ export const SEED_HOST_DASHBOARDS: Record<string, HostDashboardSeed> = {
     maxLoads: 4,
     accepting: true,
     pendingRequests: [],
-    activeLoads: [{ ...DEMO_ANA_MARIA_BOOKING }],
+    activeLoads: [{ ...DEMO_ANA_MARIA_BOOKING }, { ...DEMO_ANA_MARIA_PAY_BOOKING }],
   },
 }
 
-/** Pre-loaded booking when a customer logs in (training shortcut). */
-export const SEED_CUSTOMER_BOOKINGS: Record<string, Booking> = {
-  'user-ana': { ...DEMO_ANA_MARIA_BOOKING },
+/** Pre-loaded bookings when a customer logs in (training shortcut). */
+export const SEED_CUSTOMER_BOOKINGS: Record<string, Booking[]> = {
+  'user-ana': [{ ...DEMO_ANA_MARIA_BOOKING }, { ...DEMO_ANA_MARIA_PAY_BOOKING }],
 }
 
 export const SEED_CUSTOMER_HISTORY: Record<string, Booking[]> = {
@@ -235,9 +270,9 @@ export const TRAINING_ACCOUNTS = [
 ] as const
 
 export const TRAINING_DEMO_STEPS = [
-  'Sign in as Ana → My loads → chat & send transfer proof',
-  'Log out → sign in as Maria → Dashboard → reply & confirm payment',
-  'Keep switching accounts to walk through bag → dry → pickup',
+  'Maria → Accept a bank-transfer order (payment request sends automatically)',
+  'Ana → My loads → Load 2 → Pay now → submit transfer proof',
+  'Maria → Confirm payment → start drying → mark ready → confirm pickup',
 ]
 
 export function getAvailableHosts(): Host[] {
@@ -299,8 +334,12 @@ export function getHostDashboardSeed(userId: string): HostDashboardSeed {
   )
 }
 
+export function getCustomerSeedBookings(userId: string): Booking[] {
+  return SEED_CUSTOMER_BOOKINGS[userId] ?? []
+}
+
 export function getCustomerSeedBooking(userId: string): Booking | null {
-  return SEED_CUSTOMER_BOOKINGS[userId] ?? null
+  return getCustomerSeedBookings(userId)[0] ?? null
 }
 
 export function getCustomerHistory(userId: string): Booking[] {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { ImageLightbox } from '../../components/ImageLightbox'
@@ -16,6 +16,7 @@ import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
 import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge, SuccessButton } from '../../components/ui'
+import { HostLoadProgress } from '../../components/HostLoadProgress'
 import { TrainingDemoHint, isDemoAnaMariaBooking } from '../../components/TrainingDemoHint'
 import { useTheme } from '../../context/ThemeContext'
 import { radius, spacing } from '../../theme'
@@ -34,18 +35,36 @@ function stageBadge(stage: BookingStage) {
   }
 }
 
-function DropOffBadge({
-  dropOffTime,
+function GuestCardHeader({
+  name,
+  metaParts,
+  statusBadge,
   styles,
 }: {
-  dropOffTime: DropOffHour
+  name: string
+  metaParts: string[]
+  statusBadge?: ReactNode
   styles: ReturnType<typeof createDashboardStyles>
 }) {
   const { colors } = useTheme()
   return (
-    <View style={styles.dropOffBadge}>
-      <AppIcon name="clock" size={12} color={colors.white} />
-      <Text style={styles.dropOffBadgeText}>{formatDropOffHour(dropOffTime)}</Text>
+    <View style={styles.guestHeader}>
+      <View style={styles.avatar}>
+        <AppIcon name="user" size={18} color={colors.gray600} />
+      </View>
+      <View style={styles.guestHeaderBody}>
+        <View style={styles.guestTitleRow}>
+          <Text style={styles.cardTitle}>{name}</Text>
+          {statusBadge}
+        </View>
+        <View style={styles.metaRow}>
+          {metaParts.map((part) => (
+            <View key={part} style={styles.metaPill}>
+              <Text style={styles.metaPillText}>{part}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
     </View>
   )
 }
@@ -232,18 +251,16 @@ export function DashboardScreen() {
       {hostRequests.map((request) => (
         <View key={request.id} style={styles.section}>
           <View style={styles.card}>
-            <View style={styles.row}>
-              <View style={styles.avatar}>
-                <AppIcon name="user" size={18} color={colors.gray600} />
-              </View>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{request.customerName}</Text>
-                <Text style={styles.cardMeta}>
-                  {request.location} · {request.loads} load{request.loads > 1 ? 's' : ''}
-                </Text>
-              </View>
-              <DropOffBadge dropOffTime={request.dropOffTime} styles={styles} />
-            </View>
+            <GuestCardHeader
+              name={request.customerName}
+              metaParts={[
+                request.location,
+                `${request.loads} load${request.loads > 1 ? 's' : ''}`,
+                formatDropOffHour(request.dropOffTime),
+                request.paymentMethod === 'cash' ? 'Cash' : 'Transfer',
+              ]}
+              styles={styles}
+            />
             {request.clothesList && request.clothesList.length > 0 ? (
               <LoadListBreakdown items={request.clothesList} title="Guest's load list" />
             ) : null}
@@ -284,22 +301,26 @@ export function DashboardScreen() {
             <Text style={styles.sectionLabel}>{toTitleCase('Active load')}</Text>
           </View>
           <View style={styles.card}>
-            <View style={styles.row}>
-              <View style={styles.avatar}>
-                <AppIcon name="user" size={18} color={colors.gray600} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle}>{load.customerName}</Text>
-                <Text style={styles.cardMeta}>
-                  {load.loads} load · {load.paymentMethod === 'cash' ? 'Cash' : 'Transfer'}
-                  {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending'
-                    ? ' · Awaiting proof'
-                    : ''}
-                </Text>
-              </View>
-              <StatusBadge {...stageBadge(load.stage)} />
-              <DropOffBadge dropOffTime={load.dropOffTime} styles={styles} />
-            </View>
+            <GuestCardHeader
+              name={load.customerName}
+              metaParts={[
+                `${load.loads} load${load.loads === 1 ? '' : 's'}`,
+                formatDropOffHour(load.dropOffTime),
+                load.paymentMethod === 'cash' ? 'Cash' : 'Transfer',
+                load.paymentMethod === 'bank_transfer' &&
+                load.paymentStatus === 'pending' &&
+                load.paymentRequestedAt &&
+                !load.paymentProofSentAt
+                  ? 'Awaiting payment'
+                  : load.paymentProofSentAt
+                    ? 'Proof sent'
+                    : '',
+              ].filter(Boolean)}
+              statusBadge={<StatusBadge {...stageBadge(load.stage)} />}
+              styles={styles}
+            />
+            <View style={{ height: spacing.md }} />
+            <HostLoadProgress load={load} />
             {load.clothesList && load.clothesList.length > 0 ? (
               <LoadListBreakdown items={load.clothesList} title="Guest's load list" />
             ) : null}
@@ -320,16 +341,20 @@ export function DashboardScreen() {
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
               <>
                 <Text style={styles.transferHint}>
-                  {load.paymentProofUri
+                  {load.paymentProofUri || load.paymentProofSentAt
                     ? toTitleCase('Review the transfer proof below, then confirm once verified.')
-                    : toTitleCase('Guest submits proof from their load screen. You will see it here and in chat.')}
+                    : load.paymentRequestedAt
+                      ? toTitleCase('Waiting for guest to transfer and submit proof from My loads.')
+                      : toTitleCase('Payment request will send automatically when you accept bank-transfer loads.')}
                 </Text>
-                <GhostButton
-                  title={`Confirm ${formatMoney(getBookingAmount(load))} received`}
-                  icon="check-circle"
-                  full
-                  onPress={() => confirmTransferPayment(load.id)}
-                />
+                {(load.paymentProofUri || load.paymentProofSentAt) && (
+                  <GhostButton
+                    title={`Confirm ${formatMoney(getBookingAmount(load))} received`}
+                    icon="check-circle"
+                    full
+                    onPress={() => confirmTransferPayment(load.id)}
+                  />
+                )}
               </>
             )}
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'paid' && (
@@ -496,6 +521,24 @@ function createDashboardStyles(colors: ReturnType<typeof useTheme>['colors']) {
     gap: spacing.md,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  guestHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
+  guestHeaderBody: { flex: 1, minWidth: 0, gap: spacing.sm },
+  guestTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  metaPill: {
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    backgroundColor: colors.gray50,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  metaPillText: { fontSize: 12, fontWeight: '600', color: colors.gray600, lineHeight: 16 },
   avatar: {
     width: 44,
     height: 44,

@@ -42,7 +42,9 @@ export function ClothesListDisplay({ items, compact, embedded }: Props) {
     <View style={[styles.box, embedded && styles.boxEmbedded]}>
       <View style={styles.header}>
         <AppIcon name="list" size={14} color={colors.gray600} />
-        <Text style={styles.label}>{toTitleCase('Item breakdown')}</Text>
+        <Text style={styles.label} numberOfLines={1}>
+          {toTitleCase('Item breakdown')}
+        </Text>
         <Text style={styles.count}>
           {total} item{total === 1 ? '' : 's'}
         </Text>

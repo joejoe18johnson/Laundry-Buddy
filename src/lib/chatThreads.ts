@@ -22,6 +22,28 @@ export function buildVerificationCodeRequestMessage(name: string, phone: string)
   ].join('\n')
 }
 
+export function buildPaymentRequestMessage({
+  hostName,
+  amount,
+  bankName,
+  accountName,
+  accountNumber,
+}: {
+  hostName: string
+  amount: number
+  bankName: string
+  accountName: string
+  accountNumber: string
+}): string {
+  return [
+    `Payment request · ${formatMoney(amount)}`,
+    '',
+    `Transfer to ${bankName} · ${accountName} · ${accountNumber}`,
+    '',
+    'Submit your transfer screenshot from My loads when done.',
+  ].join('\n')
+}
+
 export function buildPaymentProofChatNotice(amount: number): string {
   return `Transfer proof submitted · ${formatMoney(amount)}. Tap to view receipt.`
 }

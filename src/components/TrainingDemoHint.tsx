@@ -1,12 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
-import { DEMO_ANA_MARIA_BOOKING_ID } from '../data/seedData'
+import { DEMO_ANA_MARIA_BOOKING_IDS } from '../data/seedData'
 import { toTitleCase } from '../lib/titleCase'
 import { useTheme } from '../context/ThemeContext'
 import { radius, spacing } from '../theme'
 
 export function isDemoAnaMariaBooking(bookingId?: string | null) {
-  return bookingId === DEMO_ANA_MARIA_BOOKING_ID
+  return !!bookingId && DEMO_ANA_MARIA_BOOKING_IDS.includes(bookingId as (typeof DEMO_ANA_MARIA_BOOKING_IDS)[number])
 }
 
 export function TrainingDemoHint({ role }: { role: 'customer' | 'host' }) {
@@ -30,10 +30,10 @@ export function TrainingDemoHint({ role }: { role: 'customer' | 'host' }) {
         <Text style={[styles.body, { color: colors.gray600 }]}>
           {role === 'customer'
             ? toTitleCase(
-                'This load is linked to Maria’s host account. Chat here, then log out and sign in as Maria (maria@example.com) to accept updates and reply.',
+                'Load 2 is ready to pay — open My loads, use the Pay now banner, transfer, and submit your receipt.',
               )
             : toTitleCase(
-                'This load is linked to Ana’s guest account. Reply in chat, then log out and sign in as Ana (6001111) to see her side.',
+                'Load 2: confirm payment after Ana submits proof, then start drying and mark ready.',
               )}
         </Text>
       </View>

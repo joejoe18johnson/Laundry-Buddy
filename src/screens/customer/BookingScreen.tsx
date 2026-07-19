@@ -191,7 +191,7 @@ export function BookingScreen() {
             {paymentMethod === 'bank_transfer' && (
               <Text style={styles.paymentNote}>
                 {titleCaseWithName(
-                  `After ${selectedHost.name} accepts, you'll get bank details on My Load. Pay by transfer, then send your receipt screenshot on WhatsApp using the host's number.`,
+                  `After ${selectedHost.name} accepts, open My loads for bank details. Transfer in the app and submit your receipt screenshot — no WhatsApp needed.`,
                   selectedHost.name,
                 )}
               </Text>
@@ -269,8 +269,8 @@ export function BookingScreen() {
           </View>
           <View style={styles.footerAction}>
             <PrimaryButton
-              title="Confirm Booking"
-              icon="check"
+              title="Send request"
+              icon="send"
               disabled={!canConfirm}
               onPress={() =>
                 confirmBooking({

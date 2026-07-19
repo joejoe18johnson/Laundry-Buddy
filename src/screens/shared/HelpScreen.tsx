@@ -173,7 +173,7 @@ export function HelpScreen() {
           <>
             <FaqItem
               question="Is payment handled in the app?"
-              answer="Hosts set their price per load. Send bank transfer proof in the load chat, or pay cash at pickup."
+              answer="Hosts set their price per load. After your host accepts, open My loads for bank details — transfer and submit your receipt there. Cash loads are paid at drop-off or pickup."
               styles={styles}
             />
             <FaqItem
