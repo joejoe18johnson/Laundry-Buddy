@@ -14,10 +14,12 @@ import { formatHostPrice } from '../../lib/hostFilters'
 import { formatDryerSheetsRate } from '../../lib/hostPricing'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
+import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge, SuccessButton } from '../../components/ui'
 import { HostLoadProgress } from '../../components/HostLoadProgress'
 import { TrainingDemoHint, isDemoAnaMariaBooking } from '../../components/TrainingDemoHint'
+import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useTheme } from '../../context/ThemeContext'
 import { radius, spacing } from '../../theme'
 import type { BookingStage } from '../../types'
@@ -153,6 +155,8 @@ export function DashboardScreen() {
     ? applyHostSettings(rawHost, hostSettings)
     : rawHost
   const isOnline = hostSettings?.isOnline ?? false
+  const verification = user ? getIdentityVerification(user) : null
+  const showVerificationBanner = !!user && !canBookOrHost(user)
   const { colors } = useTheme()
   const styles = useMemo(() => createDashboardStyles(colors), [colors])
 
@@ -173,6 +177,14 @@ export function DashboardScreen() {
           <Text style={styles.hubLinkText}>{toTitleCase('Host settings')}</Text>
         </Pressable>
       </View>
+
+      {showVerificationBanner && verification ? (
+        <VerificationPromptBanner
+          role="host"
+          status={verification.status}
+          onPress={() => navigate('identity-verification')}
+        />
+      ) : null}
 
       <View style={[styles.onlineBar, isOnline ? styles.onlineBarLive : styles.onlineBarOff]}>
         <View style={styles.onlineLeft}>

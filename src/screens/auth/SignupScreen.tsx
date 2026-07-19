@@ -157,8 +157,8 @@ export function SignupScreen() {
                 ? 'After sign-up, verify your ID in the app. WhatsApp can be added later for host contact — not required to create an account.'
                 : 'After sign-up, verify your ID in the app. Email keeps account creation free — no SMS fees.'
               : role === 'host'
-                ? 'Next: add your WhatsApp number, passport or social security card, and host address.'
-                : 'Next: add your WhatsApp number and passport or social security card.',
+              ? 'Next: add your WhatsApp number, passport, driver\'s license, or social security card, and host address.'
+              : 'Next: add your WhatsApp number, passport, driver\'s license, or social security card.',
           )}
         </Text>
       </View>

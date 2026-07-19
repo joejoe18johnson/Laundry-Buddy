@@ -20,6 +20,7 @@ export function createUiStyles(colors: ThemeColors, formStyles: FormStyles) {
     },
     backText: { fontSize: 15, fontWeight: '500', color: colors.black },
     btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+    btnContentFull: { width: '100%' },
     btnPrimary: {
       backgroundColor: colors.black,
       paddingVertical: 16,

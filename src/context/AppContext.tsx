@@ -25,6 +25,7 @@ import { applyHostSettings } from '../lib/hostListing'
 import { resolveGuestFacingHostSettings } from '../lib/defaultHostSettings'
 import { scheduleDropOffReminder } from '../lib/pushNotifications'
 import { formatClothesListSummary, hasDelicates } from '../lib/clothesList'
+import { getIdentityVerification, isIdentityVerified, marketplaceLockMessage } from '../lib/identityVerification'
 import {
   saveCompletedCustomerPayment,
   saveCompletedHostPayment,
@@ -454,6 +455,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateHostSettings = useCallback(
     async (settings: HostSettings) => {
       if (role !== 'host' || !user) return
+      if (settings.isOnline && !isIdentityVerified(user)) {
+        showToast(marketplaceLockMessage('host', getIdentityVerification(user).status), { icon: 'shield' })
+        setScreen('identity-verification')
+        return
+      }
       const wasOnline = hostSettingsMap[user.id]?.isOnline ?? false
       await saveHostSettings(user.id, settings)
       setHostSettings(settings)
@@ -488,6 +494,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [role, user])
 
   const navigate = useCallback((next: Screen) => setScreen(next), [])
+
+  const requireMarketplaceAccess = useCallback(() => {
+    if (!user || isIdentityVerified(user)) return true
+    showToast(marketplaceLockMessage(user.role, getIdentityVerification(user).status), { icon: 'shield' })
+    setScreen('identity-verification')
+    return false
+  }, [user, showToast])
 
   const findBookingForChat = useCallback(
     (bookingId: string): Booking | null => {
@@ -594,6 +607,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const selectHost = useCallback(
     (host: Host) => {
+      if (!requireMarketplaceAccess()) return
       const resolved = applyHostSettings(
         host,
         host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined,
@@ -601,7 +615,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSelectedHost(resolved)
       setScreen('customer-booking')
     },
-    [hostSettingsMap],
+    [hostSettingsMap, requireMarketplaceAccess],
   )
 
   const notifyHost = useCallback(
@@ -800,6 +814,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loadPhotoUri?: string
     }) => {
       if (!selectedHost || !user) return
+      if (!requireMarketplaceAccess()) return
 
       const settings = getSettingsForHost(selectedHost.hostUserId)
       const pricing = getHostPricing(selectedHost, settings)
@@ -883,11 +898,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       )
       showToast('Request sent to host', { icon: 'send' })
     },
-    [selectedHost, user, notifyHost, notifyCustomer, getSettingsForHost, showToast],
+    [selectedHost, user, notifyHost, notifyCustomer, getSettingsForHost, showToast, requireMarketplaceAccess],
   )
 
   const acceptRequest = useCallback(
     (requestId: string) => {
+      if (!requireMarketplaceAccess()) return
       const request = hostRequests.find((r) => r.id === requestId)
       if (!request || !user) return
 
@@ -975,7 +991,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [hostRequests, activeLoads, user, notifyCustomer, getSettingsForHost, showToast],
+    [hostRequests, activeLoads, user, notifyCustomer, getSettingsForHost, showToast, requireMarketplaceAccess],
   )
 
   const declineRequest = useCallback(

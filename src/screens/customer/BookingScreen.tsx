@@ -6,7 +6,9 @@ import { ClothesListEditor } from '../../components/ClothesListEditor'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
 import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
+import { canBookOrHost } from '../../lib/identityVerification'
 import { BackButton, AppTextInput, ChoiceChip, OptionRow, PrimaryButton, Screen, StepIndicator } from '../../components/ui'
 import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import {
@@ -27,6 +29,7 @@ import type { ClothesListItem, PaymentMethod, SheetsOption } from '../../types'
 
 export function BookingScreen() {
   const { selectedHost, navigate, confirmBooking, getSettingsForHost } = useApp()
+  const { user } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createBookingStyles(colors), [colors])
   const insets = useSafeAreaInsets()
@@ -62,6 +65,11 @@ export function BookingScreen() {
       setDropOffTime(availableTimes[0])
     }
   }, [availableTimes, dropOffTime])
+
+  useEffect(() => {
+    if (!user || canBookOrHost(user)) return
+    navigate('identity-verification')
+  }, [navigate, user])
 
   if (!selectedHost) return null
 

@@ -2,12 +2,14 @@ import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { BackButton, BrandSwitch, Screen } from '../../components/ui'
+import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useToast } from '../../context/ToastContext'
 import { getHostByUserId } from '../../data/mockData'
 import {
+  canBookOrHost,
   formatIdDocumentType,
   getIdentityVerification,
   verificationStatusLabel,
@@ -69,6 +71,13 @@ function createAccountStyles(colors: ReturnType<typeof useTheme>['colors']) {
       borderColor: colors.gray100,
     },
     roleText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.gray500,
+      letterSpacing: 0.4,
+      marginBottom: spacing.sm,
+    },
     securityCard: {
       borderWidth: 1,
       borderColor: colors.gray100,
@@ -148,6 +157,17 @@ export function AccountScreen() {
       <View style={styles.roleBadge}>
         <Text style={styles.roleText}>{toTitleCase(isCustomer ? 'Guest' : 'Host')}</Text>
       </View>
+
+      {!canBookOrHost(user) ? (
+        <>
+          <Text style={styles.sectionLabel}>{toTitleCase('Verification center')}</Text>
+          <VerificationPromptBanner
+            role={user.role}
+            status={verification.status}
+            onPress={() => navigate('identity-verification')}
+          />
+        </>
+      ) : null}
 
       <View style={styles.card}>
         <DetailRow icon="user" label="Name" value={user.name} styles={styles} />

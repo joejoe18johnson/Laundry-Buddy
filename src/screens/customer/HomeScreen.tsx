@@ -21,7 +21,9 @@ import { CloseToMeButton } from '../../components/CloseToMeButton'
 import { HostSearchBar } from '../../components/HostSearchBar'
 import { HostSearchOverlay } from '../../components/HostSearchOverlay'
 import { ChoiceChip } from '../../components/ui'
+import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { ACTIVE_REGION_LABEL, getAvailableHosts, WEATHER } from '../../data/mockData'
 import {
@@ -34,6 +36,7 @@ import {
   type HostSort,
 } from '../../lib/hostFilters'
 import { isBelizeFilterArea } from '../../lib/belizeDistricts'
+import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import type { Host } from '../../types'
 import { useTheme } from '../../context/ThemeContext'
@@ -88,7 +91,8 @@ export function HomeScreen() {
   const { colors } = useTheme()
   const styles = useMemo(() => createHomeStyles(colors), [colors])
   const { showToast } = useToast()
-  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm, focusSearchOnArea } = useApp()
+  const { user } = useAuth()
+  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm, focusSearchOnArea, navigate } = useApp()
   const totalHosts = getAvailableHosts().length
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
   const [sort, setSort] = useState<HostSort>('nearest')
@@ -269,9 +273,18 @@ export function HomeScreen() {
   )
 
   const showFullControls = snap !== 'map'
+  const verification = user ? getIdentityVerification(user) : null
+  const showVerificationBanner = !!user && !canBookOrHost(user)
 
   const listHeader = showFullControls ? (
     <View style={styles.listHeader}>
+      {showVerificationBanner && verification ? (
+        <VerificationPromptBanner
+          role={user!.role}
+          status={verification.status}
+          onPress={() => navigate('identity-verification')}
+        />
+      ) : null}
       <Text style={styles.sheetSub}>{resultLabel}</Text>
 
       {areaChips.length > 0 && (

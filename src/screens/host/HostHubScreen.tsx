@@ -8,6 +8,7 @@ import {
 } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { BackButton, BrandSwitch, PrimaryButton, Screen, StickySaveBar, ChoiceChip } from '../../components/ui'
+import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
@@ -20,7 +21,7 @@ import { parseListingInt } from '../../lib/hostListing'
 import { parsePriceInput } from '../../lib/hostPricing'
 import { formatTurnaroundHours, TURNAROUND_HOUR_OPTIONS } from '../../lib/turnaroundTime'
 import { formatDropOffAvailability, formatDropOffHoursWindow } from '../../lib/dropOffAvailability'
-import { getIdentityVerification } from '../../lib/identityVerification'
+import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
 import type { DropOffHour, HostListing, HostSettings } from '../../types'
@@ -300,6 +301,14 @@ export function HostHubScreen() {
       <Text style={styles.subtitle}>
         {toTitleCase('Edit your listing — guests see this when they browse and book')}
       </Text>
+
+      {!canBookOrHost(user) ? (
+        <VerificationPromptBanner
+          role="host"
+          status={verification.status}
+          onPress={() => navigate('identity-verification')}
+        />
+      ) : null}
 
       <View style={[styles.onlineCard, draft.isOnline ? styles.onlineCardLive : styles.onlineCardOff]}>
         <View style={styles.onlineHeader}>

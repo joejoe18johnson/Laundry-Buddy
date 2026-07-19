@@ -46,7 +46,7 @@ export function IdDocumentCapture({ photoUri, onPhotoChange, label }: IdDocument
   const showOptions = () => {
     Alert.alert(
       toTitleCase('ID photo'),
-      toTitleCase('Upload a clear photo of your passport or social security card.'),
+      toTitleCase('Upload a clear photo of your passport, driver\'s license, or social security card.'),
       [
         { text: toTitleCase('Take photo'), onPress: () => pickPhoto(true) },
         { text: toTitleCase('Choose from library'), onPress: () => pickPhoto(false) },

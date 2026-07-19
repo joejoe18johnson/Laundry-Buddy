@@ -3,13 +3,15 @@ import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { IdDocumentCapture } from '../../components/IdDocumentCapture'
 import { AppIcon } from '../../components/AppIcon'
+import { VerificationCenter } from '../../components/VerificationCenter'
 import {
   AppTextInput,
+  BackButton,
   ChoiceChip,
   GhostButton,
+  OutlineButton,
   PrimaryButton,
   Screen,
-  StepIndicator,
 } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -17,7 +19,8 @@ import { useMessages } from '../../context/MessageContext'
 import {
   formatIdDocumentType,
   getIdentityVerification,
-  identityVerificationSteps,
+  ID_DOCUMENT_OPTIONS,
+  isIdentityVerified,
 } from '../../lib/identityVerification'
 import { normalizePhone } from '../../lib/phone'
 import {
@@ -35,7 +38,7 @@ import type { IdDocumentType } from '../../types'
 
 type WizardStep = 'phone' | 'id' | 'address'
 
-export function IdentityVerificationScreen() {
+export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void }) {
   const { user, submitIdentityVerification, logout, authError, clearAuthError } = useAuth()
   const [step, setStep] = useState<WizardStep>('phone')
   const [phone, setPhone] = useState('')
@@ -49,8 +52,6 @@ export function IdentityVerificationScreen() {
 
   const verification = user ? getIdentityVerification(user) : null
   const isHost = user?.role === 'host'
-  const steps = useMemo(() => identityVerificationSteps(user?.role ?? 'customer'), [user?.role])
-  const stepIndex = step === 'phone' ? 0 : step === 'id' ? 1 : 2
   const { colors } = useTheme()
   const styles = useMemo(() => createIdentityVerificationStyles(colors), [colors])
 
@@ -60,56 +61,6 @@ export function IdentityVerificationScreen() {
   }, [user?.phone])
 
   if (!user || !verification) return null
-
-  if (verification.status === 'pending') {
-    return (
-      <Screen>
-        <View style={styles.pillPending}>
-          <AppIcon name="clock" size={12} color={colors.gray600} />
-          <Text style={styles.pillPendingText}>{toTitleCase('Under review')}</Text>
-        </View>
-        <Text style={styles.title}>{toTitleCase('Verification submitted')}</Text>
-        <Text style={styles.subtitle}>
-          {toTitleCase(
-            'We sent a verification code to your WhatsApp. Reply in the app support chat with that code so we can approve your account.',
-          )}
-        </Text>
-        <View style={styles.whatsAppHint}>
-          <AppIcon name="message-circle" size={18} color={colors.gray600} />
-          <Text style={styles.whatsAppHintText}>
-            {toTitleCase('Waiting for your code reply in support chat before we unlock the app.')}
-          </Text>
-        </View>
-        <View style={styles.checklist}>
-          <ChecklistItem
-            title="WhatsApp number"
-            sub={formatWhatsAppNumberDisplay(verification.verifiedPhone ?? user.phone ?? '')}
-            styles={styles}
-          />
-          <ChecklistItem
-            title={formatIdDocumentType(verification.idType)}
-            sub={verification.idUploaded ? toTitleCase('Uploaded') : toTitleCase('Missing')}
-            styles={styles}
-          />
-          {isHost && verification.address ? (
-            <ChecklistItem title="Host address" sub={verification.address} styles={styles} />
-          ) : null}
-        </View>
-        <PrimaryButton
-          title="Open support chat"
-          icon="message-circle"
-          full
-          onPress={() => setSupportChatOpen(true)}
-        />
-        <GhostButton title="Log out" icon="log-out" onPress={logout} full />
-        <SupportChatModal
-          visible={supportChatOpen}
-          userId={user.id}
-          onClose={() => setSupportChatOpen(false)}
-        />
-      </Screen>
-    )
-  }
 
   const phoneReady = isValidWhatsAppNumber(phone)
   const idReady = !!idType && !!idPhotoUri
@@ -159,152 +110,150 @@ export function IdentityVerificationScreen() {
     }
   }
 
-  const isRejected = verification.status === 'rejected'
-
-  return (
-    <Screen>
-      <View style={styles.pill}>
-        <AppIcon name="shield" size={12} color={colors.gray600} />
-        <Text style={styles.pillText}>
-          {toTitleCase(isHost ? 'Host verification' : 'Guest verification')}
-        </Text>
-      </View>
-      <Text style={styles.title}>{toTitleCase('Verify your identity')}</Text>
-      <Text style={styles.subtitle}>
-        {isRejected
-          ? toTitleCase('Your previous submission was declined. Please resubmit clear documents.')
-          : toTitleCase(
-              'Add your WhatsApp number and government ID. We send a code on WhatsApp — reply in the app support chat with it to finish verification.',
-            )}
-      </Text>
-
-      <StepIndicator steps={steps} current={stepIndex} />
-
-      {step === 'phone' && (
-        <View style={styles.stepBlock}>
-          <View style={styles.sectionHeader}>
-            <AppIcon name="message-circle" size={18} />
-            <Text style={styles.sectionTitle}>{toTitleCase('WhatsApp number')}</Text>
-          </View>
-          <Text style={styles.sectionSub}>
-            {toTitleCase(
-              'Use the WhatsApp number where we can reach you. We send your verification code there — reply in support chat with that code.',
-            )}
+  const actionFooter = (
+    <View style={styles.actionStack}>
+      {verification.status === 'pending' ? (
+        <PrimaryButton
+          title="Open support chat"
+          icon="message-circle"
+          full
+          onPress={() => setSupportChatOpen(true)}
+        />
+      ) : null}
+      {isIdentityVerified(user) ? (
+        <View style={styles.verifiedNote}>
+          <AppIcon name="check-circle" size={18} color={colors.green} />
+          <Text style={styles.verifiedNoteText}>
+            {toTitleCase('You are verified — booking and hosting are unlocked.')}
           </Text>
-          <View style={styles.phoneRow}>
-            <Text style={styles.prefix}>+501</Text>
-            <AppTextInput
-              style={styles.phoneInput}
-              placeholder="600 1234"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
-          </View>
-          {phoneReady ? (
-            <Text style={styles.phonePreview}>
-              {toTitleCase('WhatsApp')}: {formatWhatsAppNumberDisplay(normalizePhone(phone))}
-            </Text>
-          ) : null}
-          <PrimaryButton
-            title="Request code in support chat"
-            icon="message-circle"
-            full
-            disabled={!phoneReady}
-            onPress={() => void handleRequestCodeInApp()}
-          />
-          <Text style={styles.sectionSub}>
-            {toTitleCase(
-              'This opens the in-app support chat. After we send your code, reply there with the code.',
-            )}
-          </Text>
-          <PrimaryButton
-            title="Continue"
-            icon="arrow-right"
-            full
-            disabled={!phoneReady}
-            onPress={handleContinueFromPhone}
-          />
         </View>
-      )}
+      ) : null}
+      {onBrowse ? (
+        <OutlineButton title="Browse app" icon="home" full onPress={onBrowse} />
+      ) : null}
+      <GhostButton title="Log out" icon="log-out" full onPress={logout} />
+    </View>
+  )
 
-      {step === 'id' && (
-        <View style={styles.stepBlock}>
-          <View style={styles.sectionHeader}>
-            <AppIcon name="credit-card" size={18} />
-            <Text style={styles.sectionTitle}>{toTitleCase('Government ID')}</Text>
-          </View>
-          <Text style={styles.sectionSub}>
-            {toTitleCase('Choose one document type and upload a clear photo.')}
-          </Text>
-          <View style={styles.idTypeRow}>
-            <ChoiceChip
-              label="Passport"
-              selected={idType === 'passport'}
-              onPress={() => setIdType('passport')}
-            />
-            <ChoiceChip
-              label="Social Security"
-              selected={idType === 'social_security'}
-              onPress={() => setIdType('social_security')}
-            />
-          </View>
-          <IdDocumentCapture
-            photoUri={idPhotoUri}
-            onPhotoChange={setIdPhotoUri}
-            label={
-              idType
-                ? toTitleCase(`Upload ${formatIdDocumentType(idType)} photo`)
-                : toTitleCase('Select document type first')
-            }
-          />
-          <View style={styles.stepActions}>
-            <GhostButton title="Back" icon="arrow-left" onPress={() => setStep('phone')} />
-            <View style={{ flex: 1 }}>
+  const wizardContent =
+    verification.status === 'none' || verification.status === 'rejected' ? (
+      <>
+        {step === 'phone' && (
+          <View style={styles.stepBlock}>
+            <View style={styles.sectionHeader}>
+              <AppIcon name="message-circle" size={18} />
+              <Text style={styles.sectionTitle}>{toTitleCase('Step 1 · WhatsApp number')}</Text>
+            </View>
+            <Text style={styles.sectionSub}>
+              {toTitleCase(
+                'Use the WhatsApp number where we can reach you. Request your code in support chat, then reply with it.',
+              )}
+            </Text>
+            <View style={styles.phoneRow}>
+              <Text style={styles.prefix}>+501</Text>
+              <AppTextInput
+                style={styles.phoneInput}
+                placeholder="600 1234"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+              />
+            </View>
+            {phoneReady ? (
+              <Text style={styles.phonePreview}>
+                {toTitleCase('WhatsApp')}: {formatWhatsAppNumberDisplay(normalizePhone(phone))}
+              </Text>
+            ) : null}
+            <View style={styles.actionStack}>
+              <OutlineButton
+                title="Request code in support chat"
+                icon="message-circle"
+                full
+                disabled={!phoneReady}
+                onPress={() => void handleRequestCodeInApp()}
+              />
               <PrimaryButton
-                title={isHost ? 'Continue' : 'Submit verification'}
+                title="Continue to ID upload"
+                icon="arrow-right"
+                full
+                disabled={!phoneReady}
+                onPress={handleContinueFromPhone}
+              />
+            </View>
+          </View>
+        )}
+
+        {step === 'id' && (
+          <View style={styles.stepBlock}>
+            <View style={styles.sectionHeader}>
+              <AppIcon name="credit-card" size={18} />
+              <Text style={styles.sectionTitle}>{toTitleCase('Step 2 · Government ID')}</Text>
+            </View>
+            <Text style={styles.sectionSub}>
+              {toTitleCase("Choose passport, driver's license, or social security card — then upload a clear photo.")}
+            </Text>
+            <View style={styles.idTypeRow}>
+              {ID_DOCUMENT_OPTIONS.map((option) => (
+                <ChoiceChip
+                  key={option.value}
+                  label={option.label}
+                  selected={idType === option.value}
+                  onPress={() => setIdType(option.value)}
+                />
+              ))}
+            </View>
+            <IdDocumentCapture
+              photoUri={idPhotoUri}
+              onPhotoChange={setIdPhotoUri}
+              label={
+                idType
+                  ? toTitleCase(`Upload ${formatIdDocumentType(idType)} photo`)
+                  : toTitleCase('Select document type first')
+              }
+            />
+            <View style={styles.actionStack}>
+              <PrimaryButton
+                title={isHost ? 'Continue to address' : 'Submit verification'}
                 icon={isHost ? 'arrow-right' : 'check-circle'}
                 full
                 disabled={!idReady || submitting}
                 onPress={handleContinueFromId}
               />
+              <GhostButton title="Back to WhatsApp" icon="arrow-left" full onPress={() => setStep('phone')} />
             </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {step === 'address' && isHost && (
-        <View style={styles.stepBlock}>
-          <View style={styles.sectionHeader}>
-            <AppIcon name="home" size={18} />
-            <Text style={styles.sectionTitle}>{toTitleCase('Host address')}</Text>
-          </View>
-          <Text style={styles.sectionSub}>
-            {toTitleCase('Where guests drop off laundry, plus proof that you live there.')}
-          </Text>
-          <AppTextInput
-            style={styles.addressInput}
-            placeholder="22 Coconut St., Las Flores"
-            value={address}
-            onChangeText={setAddress}
-          />
-          <Text style={styles.sectionSub}>{toTitleCase('Utility bill or lease in your name')}</Text>
-          <Pressable
-            onPress={() => setAddressUploaded(true)}
-            style={[styles.upload, addressUploaded && styles.uploadDone]}
-          >
-            <AppIcon
-              name={addressUploaded ? 'check-circle' : 'upload'}
-              size={24}
-              color={addressUploaded ? colors.green : colors.gray500}
-            />
-            <Text style={[styles.uploadText, addressUploaded && styles.uploadTextDone]}>
-              {addressUploaded ? toTitleCase('Address proof uploaded') : toTitleCase('Upload address proof')}
+        {step === 'address' && isHost && (
+          <View style={styles.stepBlock}>
+            <View style={styles.sectionHeader}>
+              <AppIcon name="home" size={18} />
+              <Text style={styles.sectionTitle}>{toTitleCase('Step 3 · Host address')}</Text>
+            </View>
+            <Text style={styles.sectionSub}>
+              {toTitleCase('Where guests drop off laundry, plus proof that you live there.')}
             </Text>
-          </Pressable>
-          <View style={styles.stepActions}>
-            <GhostButton title="Back" icon="arrow-left" onPress={() => setStep('id')} />
-            <View style={{ flex: 1 }}>
+            <AppTextInput
+              style={styles.addressInput}
+              placeholder="22 Coconut St., Las Flores"
+              value={address}
+              onChangeText={setAddress}
+            />
+            <Text style={styles.sectionSub}>{toTitleCase('Utility bill or lease in your name')}</Text>
+            <Pressable
+              onPress={() => setAddressUploaded(true)}
+              style={[styles.upload, addressUploaded && styles.uploadDone]}
+            >
+              <AppIcon
+                name={addressUploaded ? 'check-circle' : 'upload'}
+                size={24}
+                color={addressUploaded ? colors.green : colors.gray500}
+              />
+              <Text style={[styles.uploadText, addressUploaded && styles.uploadTextDone]}>
+                {addressUploaded ? toTitleCase('Address proof uploaded') : toTitleCase('Upload address proof')}
+              </Text>
+            </Pressable>
+            <View style={styles.actionStack}>
               <PrimaryButton
                 title="Submit verification"
                 icon="check-circle"
@@ -312,14 +261,27 @@ export function IdentityVerificationScreen() {
                 disabled={!addressReady || submitting}
                 onPress={() => void handleSubmit()}
               />
+              <GhostButton title="Back to ID upload" icon="arrow-left" full onPress={() => setStep('id')} />
             </View>
           </View>
-        </View>
-      )}
+        )}
 
-      {authError ? <Text style={styles.error}>{authError}</Text> : null}
+        {authError ? <Text style={styles.error}>{authError}</Text> : null}
+      </>
+    ) : null
 
-      <GhostButton title="Log out" icon="log-out" onPress={logout} full />
+  return (
+    <Screen style={styles.screen}>
+      {onBrowse ? <BackButton onPress={onBrowse} label="Browse app" /> : null}
+
+      <VerificationCenter
+        user={user}
+        status={verification.status}
+        wizardStep={verification.status === 'none' || verification.status === 'rejected' ? step : undefined}
+        footer={actionFooter}
+      >
+        {wizardContent}
+      </VerificationCenter>
 
       <SupportChatModal
         visible={supportChatOpen}
@@ -349,134 +311,72 @@ function SupportChatModal({
   )
 }
 
-function ChecklistItem({
-  title,
-  sub,
-  styles,
-}: {
-  title: string
-  sub: string
-  styles: ReturnType<typeof createIdentityVerificationStyles>
-}) {
-  const { colors } = useTheme()
-  return (
-    <View style={styles.checkItem}>
-      <View style={styles.checkIcon}>
-        <AppIcon name="check" size={14} color={colors.white} />
-      </View>
-      <View>
-        <Text style={styles.checkTitle}>{toTitleCase(title)}</Text>
-        <Text style={styles.checkSub}>{sub}</Text>
-      </View>
-    </View>
-  )
-}
-
 function createIdentityVerificationStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', marginBottom: spacing.sm, lineHeight: 34, color: colors.black },
-  subtitle: { fontSize: 15, color: colors.gray500, lineHeight: 24, marginBottom: spacing.lg },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.gray50,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    marginBottom: spacing.md,
-  },
-  pillText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
-  pillPending: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    backgroundColor: colors.gray50,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    marginBottom: spacing.md,
-  },
-  pillPendingText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
-  stepBlock: { gap: spacing.md, marginTop: spacing.lg, marginBottom: spacing.lg },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.black },
-  sectionSub: { fontSize: 13, color: colors.gray500, lineHeight: 20 },
-  phoneRow: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: colors.gray200,
-    borderRadius: radius.sm,
-    overflow: 'hidden',
-    backgroundColor: colors.white,
-  },
-  prefix: {
-    padding: 16,
-    backgroundColor: colors.gray50,
-    borderRightWidth: 1,
-    borderRightColor: colors.gray200,
-    fontSize: 16,
-    color: colors.gray600,
-  },
-  phoneInput: { flex: 1, borderWidth: 0, padding: 16, backgroundColor: colors.white },
-  phonePreview: { fontSize: 14, fontWeight: '600', color: colors.black },
-  whatsAppHint: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    backgroundColor: colors.gray50,
-    padding: spacing.md,
-    borderRadius: radius.md,
-    marginBottom: spacing.lg,
-  },
-  whatsAppHintText: { flex: 1, fontSize: 14, color: colors.gray600, lineHeight: 20 },
-  idTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  stepActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  addressInput: { marginBottom: spacing.sm },
-  upload: {
-    minHeight: 120,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: colors.gray200,
-    borderRadius: radius.md,
-    backgroundColor: colors.gray50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.md,
-    gap: spacing.sm,
-  },
-  uploadDone: { borderStyle: 'solid', borderColor: colors.green, backgroundColor: colors.greenBg },
-  uploadText: { fontSize: 15, fontWeight: '500', color: colors.gray500 },
-  uploadTextDone: { color: colors.green },
-  checklist: { gap: spacing.md, marginVertical: spacing.lg },
-  checkItem: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.gray100,
-    borderRadius: radius.md,
-  },
-  checkIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.green,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkTitle: { fontSize: 15, fontWeight: '600', lineHeight: 20, color: colors.black },
-  checkSub: { fontSize: 13, color: colors.gray500, marginTop: spacing.sm, lineHeight: 18 },
-  error: {
-    color: colors.danger,
-    backgroundColor: colors.gray50,
-    padding: spacing.md,
-    borderRadius: radius.sm,
-    marginBottom: spacing.md,
-    fontSize: 14,
-    lineHeight: 20,
-  },
+    screen: { paddingBottom: spacing.xl },
+    stepBlock: {
+      gap: spacing.md,
+      padding: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      borderRadius: radius.lg,
+      backgroundColor: colors.white,
+    },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: colors.black },
+    sectionSub: { fontSize: 13, color: colors.gray600, lineHeight: 20 },
+    phoneRow: {
+      flexDirection: 'row',
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      borderRadius: radius.sm,
+      overflow: 'hidden',
+      backgroundColor: colors.white,
+    },
+    prefix: {
+      padding: 16,
+      backgroundColor: colors.gray50,
+      borderRightWidth: 1,
+      borderRightColor: colors.gray200,
+      fontSize: 16,
+      color: colors.gray600,
+    },
+    phoneInput: { flex: 1, borderWidth: 0, padding: 16, backgroundColor: colors.white },
+    phonePreview: { fontSize: 14, fontWeight: '600', color: colors.black },
+    idTypeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    addressInput: { marginBottom: spacing.sm },
+    upload: {
+      minHeight: 120,
+      borderWidth: 2,
+      borderStyle: 'dashed',
+      borderColor: colors.gray200,
+      borderRadius: radius.md,
+      backgroundColor: colors.gray50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: spacing.md,
+      gap: spacing.sm,
+    },
+    uploadDone: { borderStyle: 'solid', borderColor: colors.green, backgroundColor: colors.greenBg },
+    uploadText: { fontSize: 15, fontWeight: '500', color: colors.gray500 },
+    uploadTextDone: { color: colors.green },
+    actionStack: { gap: spacing.sm, width: '100%' },
+    verifiedNote: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      padding: spacing.md,
+      borderRadius: radius.md,
+      backgroundColor: colors.greenBg,
+    },
+    verifiedNoteText: { flex: 1, fontSize: 14, color: colors.green, lineHeight: 20, fontWeight: '600' },
+    error: {
+      color: colors.danger,
+      backgroundColor: colors.gray50,
+      padding: spacing.md,
+      borderRadius: radius.sm,
+      fontSize: 14,
+      lineHeight: 20,
+    },
   })
 }

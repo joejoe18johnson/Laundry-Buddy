@@ -7,6 +7,7 @@ import { AppIcon } from '../../components/AppIcon'
 import { TopRatedHostBadge } from '../../components/TopRatedHostBadge'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
+import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { getHostProfileDetails } from '../../data/mockData'
 import { summarizeRatings } from '../../lib/reviewStorage'
@@ -16,6 +17,7 @@ import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { formatDryerSheetsRate, formatServicePrice } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
+import { canBookOrHost } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import { coverColors, radius, spacing } from '../../theme'
 import type { HostReview } from '../../types'
@@ -258,6 +260,7 @@ function InfoSection({
 export function HostProfileScreen() {
   const { selectedHost, navigate, selectHost, getSettingsForHost, getReviewsForHost, refreshHostReviews, activeGuestBookings } =
     useApp()
+  const { user } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createHostProfileStyles(colors), [colors])
   const insets = useSafeAreaInsets()
@@ -283,7 +286,8 @@ export function HostProfileScreen() {
       : null,
   ].filter(Boolean)
   const gradient = coverColors[host.id] ?? ['#667eea', '#764ba2']
-  const canBook = settings.isOnline
+  const verified = user ? canBookOrHost(user) : false
+  const canBook = settings.isOnline && verified
   const activeLoadCount = activeGuestBookings.length
 
   return (
@@ -437,14 +441,16 @@ export function HostProfileScreen() {
           <View style={styles.footerAction}>
             <PrimaryButton
               title={
-                !settings.isOnline
-                  ? 'Host Offline'
-                  : activeLoadCount > 0
-                    ? 'Book Another Load'
-                    : 'Book Slot'
+                !verified
+                  ? 'Verify to book'
+                  : !settings.isOnline
+                    ? 'Host Offline'
+                    : activeLoadCount > 0
+                      ? 'Book Another Load'
+                      : 'Book Slot'
               }
               icon="calendar"
-              disabled={!canBook}
+              disabled={!settings.isOnline && verified}
               onPress={() => selectHost(host)}
             />
           </View>

@@ -160,7 +160,7 @@ export function PrimaryButton({
         pressed && !disabled && styles.btnPressed,
       ]}
     >
-      <View style={styles.btnContent}>
+      <View style={[styles.btnContent, full && styles.btnContentFull]}>
         {icon && <AppIcon name={icon} size={18} color={colors.white} />}
         <Text style={styles.btnPrimaryText}>{toTitleCase(title)}</Text>
       </View>
@@ -226,7 +226,7 @@ export function OutlineButton({
         pressed && !disabled && styles.btnPressed,
       ]}
     >
-      <View style={styles.btnContent}>
+      <View style={[styles.btnContent, full && styles.btnContentFull]}>
         {icon && (
           <AppIcon name={icon} size={18} color={disabled ? colors.gray400 : colors.black} />
         )}
@@ -309,7 +309,7 @@ export function GhostButton({
   const { uiStyles: styles, colors } = useTheme()
   return (
     <Pressable onPress={onPress} style={[styles.btnGhost, full && styles.btnFull]}>
-      <View style={styles.btnContent}>
+      <View style={[styles.btnContent, full && styles.btnContentFull]}>
         {icon && <AppIcon name={icon} size={18} color={colors.gray600} />}
         <Text style={styles.btnGhostText}>{toTitleCase(title)}</Text>
       </View>

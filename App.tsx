@@ -7,7 +7,7 @@ import { AppIcon } from './src/components/AppIcon'
 import { BiometricSetupPrompt } from './src/components/BiometricSetupPrompt'
 import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
-import { AuthProvider, needsIdentityVerification, useAuth } from './src/context/AuthContext'
+import { AuthProvider, useAuth } from './src/context/AuthContext'
 import { NotificationProvider, useUserNotifications } from './src/context/NotificationContext'
 import { MessageProvider, useMessages } from './src/context/MessageContext'
 import { HomeScreen } from './src/screens/customer/HomeScreen'
@@ -59,6 +59,7 @@ const HIDE_BOTTOM_NAV: Screen[] = [
   'notifications',
   'help',
   'chat',
+  'identity-verification',
 ]
 
 function AppShell() {
@@ -299,6 +300,11 @@ function AppShell() {
         {screen === 'help' && <HelpScreen />}
         {screen === 'notifications' && <NotificationsScreen />}
         {screen === 'chat' && <ChatScreen />}
+        {screen === 'identity-verification' && (
+          <IdentityVerificationScreen
+            onBrowse={() => navigate(isCustomer ? 'customer-home' : 'host-dashboard')}
+          />
+        )}
       </View>
 
       {showBottomNav && (
@@ -456,23 +462,6 @@ function AuthenticatedApp() {
         {authScreen === 'login' && <LoginScreen />}
         {authScreen === 'signup' && <SignupScreen />}
       </SafeAreaView>
-    )
-  }
-
-  if (needsIdentityVerification(user)) {
-    return (
-      <>
-        <NotificationProvider activeUserId={user!.id}>
-          <MessageProvider>
-            <SafeAreaView style={authStyles.app} edges={['top', 'bottom']}>
-              <StatusBar style="dark" />
-              <IdentityVerificationScreen />
-            </SafeAreaView>
-          </MessageProvider>
-        </NotificationProvider>
-        <BiometricOverlays />
-        <PushNotificationPromptGate />
-      </>
     )
   }
 

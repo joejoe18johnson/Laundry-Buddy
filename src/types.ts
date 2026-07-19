@@ -7,7 +7,7 @@ export type AppRole = 'customer' | 'host'
 export type LoginMethod = 'phone' | 'email'
 export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected'
 
-export type IdDocumentType = 'passport' | 'social_security'
+export type IdDocumentType = 'passport' | 'drivers_license' | 'social_security'
 
 export interface IdentityVerification {
   status: VerificationStatus
@@ -40,6 +40,7 @@ export type Screen =
   | 'help'
   | 'notifications'
   | 'chat'
+  | 'identity-verification'
 
 export type PaymentMethod = 'cash' | 'bank_transfer'
 
