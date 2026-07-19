@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
-import { AppTextInput, BackButton, BrandSwitch, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
+import { AppTextInput, BackButton, BrandSwitch, PasswordInput, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
+import { isValidEmail } from '../../lib/email'
+import { isSupabaseConfigured } from '../../lib/supabase'
 import { radius, spacing } from '../../theme'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
-import type { AppRole, LoginMethod } from '../../types'
+import type { AppRole } from '../../types'
 
 function createSignupStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
@@ -53,28 +55,6 @@ function createSignupStyles(colors: ReturnType<typeof useTheme>['colors']) {
     quickAccessSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
     field: { marginBottom: spacing.md },
     label: { fontSize: 13, fontWeight: '600', color: colors.gray600, marginBottom: spacing.sm },
-    phoneRow: {
-      flexDirection: 'row',
-      borderWidth: 1,
-      borderColor: colors.gray200,
-      borderRadius: radius.sm,
-      overflow: 'hidden',
-      backgroundColor: colors.white,
-    },
-    prefix: {
-      padding: 16,
-      backgroundColor: colors.gray50,
-      borderRightWidth: 1,
-      borderRightColor: colors.gray200,
-      fontSize: 16,
-      color: colors.gray600,
-    },
-    phoneInput: {
-      flex: 1,
-      borderWidth: 0,
-      padding: 16,
-      backgroundColor: colors.white,
-    },
     error: {
       color: colors.danger,
       backgroundColor: colors.gray50,
@@ -94,32 +74,61 @@ export function SignupScreen() {
   const { signup, navigateAuth, authError, clearAuthError, biometricSupport } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createSignupStyles(colors), [colors])
-  const [method, setMethod] = useState<LoginMethod>('phone')
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState<AppRole>('customer')
   const [enableQuickAccess, setEnableQuickAccess] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
+
+  const usingSupabase = isSupabaseConfigured()
 
   const handleSignup = async () => {
     clearAuthError()
+    setLocalError(null)
+
+    if (!name.trim()) {
+      setLocalError('Full name is required.')
+      return
+    }
+    if (!email.trim()) {
+      setLocalError('Email is required.')
+      return
+    }
+    if (!isValidEmail(email)) {
+      setLocalError('Enter a valid email address.')
+      return
+    }
+    if (password.length < 6) {
+      setLocalError('Password must be at least 6 characters.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setLocalError('Passwords do not match.')
+      return
+    }
+
     await signup({
       name,
-      method,
-      phone: method === 'phone' ? phone : undefined,
-      email: method === 'email' ? email : undefined,
+      method: 'email',
+      email,
       password,
+      confirmPassword,
       role,
       enableQuickAccess,
     })
   }
 
+  const displayError = localError ?? authError
+
   return (
     <Screen>
       <BackButton onPress={() => navigateAuth('welcome')} />
       <Text style={styles.title}>{toTitleCase('Create account')}</Text>
-      <Text style={styles.subtitle}>{toTitleCase('Join as a guest or host your dryer')}</Text>
+      <Text style={styles.subtitle}>
+        {toTitleCase(usingSupabase ? 'Sign up with your email — free to get started' : 'Join as a guest or host your dryer')}
+      </Text>
 
       <View style={styles.roleRow}>
         {(['customer', 'host'] as const).map((r) => (
@@ -143,64 +152,48 @@ export function SignupScreen() {
         <AppIcon name="shield" size={16} color={colors.gray600} />
         <Text style={styles.noticeText}>
           {toTitleCase(
-            role === 'host'
-              ? 'Next: add your WhatsApp number, passport or social security card, and host address.'
-              : 'Next: add your WhatsApp number and passport or social security card.',
+            usingSupabase
+              ? role === 'host'
+                ? 'After sign-up, verify your ID in the app. WhatsApp can be added later for host contact — not required to create an account.'
+                : 'After sign-up, verify your ID in the app. Email keeps account creation free — no SMS fees.'
+              : role === 'host'
+                ? 'Next: add your WhatsApp number, passport or social security card, and host address.'
+                : 'Next: add your WhatsApp number and passport or social security card.',
           )}
         </Text>
       </View>
-
-      <MethodTabs
-        value={method}
-        options={[
-          { value: 'phone', label: 'Phone', icon: 'smartphone' },
-          { value: 'email', label: 'Email', icon: 'mail' },
-        ]}
-        onChange={(m) => {
-          setMethod(m)
-          clearAuthError()
-        }}
-      />
 
       <View style={styles.field}>
         <Text style={styles.label}>{toTitleCase('Full name')}</Text>
         <AppTextInput placeholder="Your name" value={name} onChangeText={setName} />
       </View>
 
-      {method === 'phone' ? (
-        <View style={styles.field}>
-          <Text style={styles.label}>{toTitleCase('Phone number')}</Text>
-          <View style={styles.phoneRow}>
-            <Text style={styles.prefix}>+501</Text>
-            <AppTextInput
-              style={styles.phoneInput}
-              placeholder="600 1234"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.field}>
-          <Text style={styles.label}>{toTitleCase('Email')}</Text>
-          <AppTextInput
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
-          />
-        </View>
-      )}
+      <View style={styles.field}>
+        <Text style={styles.label}>{toTitleCase('Email')}</Text>
+        <AppTextInput
+          placeholder="you@example.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+        />
+      </View>
 
       <View style={styles.field}>
         <Text style={styles.label}>{toTitleCase('Password')}</Text>
-        <AppTextInput
+        <PasswordInput
           placeholder="At least 6 characters"
-          secureTextEntry
           value={password}
           onChangeText={setPassword}
+        />
+      </View>
+
+      <View style={styles.field}>
+        <Text style={styles.label}>{toTitleCase('Confirm password')}</Text>
+        <PasswordInput
+          placeholder="Re-enter your password"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
         />
       </View>
 
@@ -224,13 +217,9 @@ export function SignupScreen() {
         </View>
       ) : null}
 
-      {authError && <Text style={styles.error}>{authError}</Text>}
+      {displayError && <Text style={styles.error}>{displayError}</Text>}
 
-      <PrimaryButton
-        title="Continue to verification"
-        onPress={handleSignup}
-        full
-      />
+      <PrimaryButton title="Create account" onPress={handleSignup} full />
 
       <Pressable onPress={() => navigateAuth('login')} style={styles.switch}>
         <Text style={styles.switchText}>

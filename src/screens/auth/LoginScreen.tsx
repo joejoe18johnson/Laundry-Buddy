@@ -3,10 +3,11 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
-import { AppTextInput, BackButton, MethodTabs, PrimaryButton, Screen } from '../../components/ui'
+import { AppTextInput, BackButton, MethodTabs, PasswordInput, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { radius, spacing } from '../../theme'
 import { toTitleCase } from '../../lib/titleCase'
+import { isSupabaseConfigured } from '../../lib/supabase'
 import type { LoginMethod } from '../../types'
 
 function createLoginStyles(colors: ReturnType<typeof useTheme>['colors']) {
@@ -65,7 +66,8 @@ export function LoginScreen() {
   } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createLoginStyles(colors), [colors])
-  const [method, setMethod] = useState<LoginMethod>('phone')
+  const usingSupabase = isSupabaseConfigured()
+  const [method, setMethod] = useState<LoginMethod>(usingSupabase ? 'email' : 'phone')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -75,7 +77,8 @@ export function LoginScreen() {
 
   const handleLogin = async () => {
     clearAuthError()
-    await login(method, method === 'phone' ? phone : email, password)
+    const loginMethod = usingSupabase ? 'email' : method
+    await login(loginMethod, loginMethod === 'phone' ? phone : email, password)
   }
 
   const handleBiometricLogin = async () => {
@@ -89,7 +92,9 @@ export function LoginScreen() {
     <Screen>
       <BackButton onPress={() => navigateAuth('welcome')} />
       <Text style={styles.title}>{toTitleCase('Welcome back')}</Text>
-      <Text style={styles.subtitle}>{toTitleCase('Log in with your phone or email')}</Text>
+      <Text style={styles.subtitle}>
+        {toTitleCase(usingSupabase ? 'Log in with your email and password' : 'Log in with your phone or email')}
+      </Text>
 
       {showBiometric ? (
         <>
@@ -103,19 +108,21 @@ export function LoginScreen() {
         </>
       ) : null}
 
-      <MethodTabs
-        value={method}
-        options={[
-          { value: 'phone', label: 'Phone', icon: 'smartphone' },
-          { value: 'email', label: 'Email', icon: 'mail' },
-        ]}
-        onChange={(m) => {
-          setMethod(m)
-          clearAuthError()
-        }}
-      />
+      {!usingSupabase ? (
+        <MethodTabs
+          value={method}
+          options={[
+            { value: 'phone', label: 'Phone', icon: 'smartphone' },
+            { value: 'email', label: 'Email', icon: 'mail' },
+          ]}
+          onChange={(m) => {
+            setMethod(m)
+            clearAuthError()
+          }}
+        />
+      ) : null}
 
-      {method === 'phone' ? (
+      {!usingSupabase && method === 'phone' ? (
         <View style={styles.field}>
           <View style={styles.labelRow}>
             <AppIcon name="smartphone" size={16} color={colors.gray600} />
@@ -153,9 +160,8 @@ export function LoginScreen() {
           <AppIcon name="lock" size={16} color={colors.gray600} />
           <Text style={styles.label}>{toTitleCase('Password')}</Text>
         </View>
-        <AppTextInput
+        <PasswordInput
           placeholder="Your password"
-          secureTextEntry
           value={password}
           onChangeText={setPassword}
         />

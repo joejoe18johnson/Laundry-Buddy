@@ -44,6 +44,36 @@ export function AppTextInput({ style, multiline, placeholderTextColor, placehold
   )
 }
 
+export function PasswordInput({
+  style,
+  placeholder = 'Your password',
+  ...props
+}: Omit<TextInputProps, 'secureTextEntry'>) {
+  const { uiStyles: styles, formStyles, colors } = useTheme()
+  const [visible, setVisible] = useState(false)
+  const resolvedPlaceholder = typeof placeholder === 'string' ? toTitleCase(placeholder) : placeholder
+
+  return (
+    <View style={[styles.passwordRow, style]}>
+      <TextInput
+        {...props}
+        placeholder={resolvedPlaceholder}
+        placeholderTextColor={formStyles.placeholderColor}
+        secureTextEntry={!visible}
+        style={styles.passwordInput}
+      />
+      <Pressable
+        onPress={() => setVisible((show) => !show)}
+        style={styles.passwordToggle}
+        accessibilityRole="button"
+        accessibilityLabel={visible ? 'Hide password' : 'Show password'}
+      >
+        <AppIcon name={visible ? 'eye-off' : 'eye'} size={18} color={colors.gray600} />
+      </Pressable>
+    </View>
+  )
+}
+
 export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const insets = useSafeAreaInsets()
   const { uiStyles: styles } = useTheme()

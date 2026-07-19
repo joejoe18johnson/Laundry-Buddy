@@ -29,9 +29,21 @@ import {
   type BiometricSupport,
 } from '../lib/biometricAuth'
 import { isFullFlowTesting } from '../lib/testingFlow'
+import {
+  fetchCurrentSupabaseUser,
+  fetchProfileById,
+  isSupabaseConfigured,
+  supabaseEmailInUse,
+  supabasePhoneInUse,
+  supabaseSignIn,
+  supabaseSignOut,
+  supabaseSignUp,
+  supabaseSubmitIdentityVerification,
+} from '../lib/supabase'
 import * as SplashScreen from 'expo-splash-screen'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
 import { emptyIdentityVerification, needsIdentityVerification } from '../lib/identityVerification'
+import { isValidEmail } from '../lib/email'
 
 interface SignupInput {
   name: string
@@ -39,6 +51,7 @@ interface SignupInput {
   phone?: string
   email?: string
   password: string
+  confirmPassword: string
   role: AppRole
   enableQuickAccess?: boolean
 }
@@ -106,11 +119,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function init() {
       if (isFullFlowTesting()) {
-        await setSessionUserId(null)
+        if (!isSupabaseConfigured()) {
+          await setSessionUserId(null)
+        } else {
+          await supabaseSignOut()
+        }
         setUser(null)
         setReady(true)
         return
       }
+
+      if (isSupabaseConfigured()) {
+        try {
+          const u = await fetchCurrentSupabaseUser()
+          setUser(u)
+        } catch {
+          setUser(null)
+        }
+        setReady(true)
+        return
+      }
+
       const u = await getCurrentUser()
       setUser(u)
       setReady(true)
@@ -143,6 +172,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const restoreUserSession = useCallback(async (userId: string) => {
+    if (isSupabaseConfigured()) {
+      try {
+        const found = await fetchProfileById(userId)
+        if (!found) {
+          await disableBiometricLogin()
+          await refreshBiometricState()
+          setAuthError('Saved account not found. Log in with your password.')
+          return false
+        }
+        const current = await fetchCurrentSupabaseUser()
+        if (!current || current.id !== userId) {
+          setAuthError('Session expired. Log in with your password.')
+          return false
+        }
+        setUser(found)
+        setAuthError(null)
+        bumpAuthSession()
+        return true
+      } catch {
+        setAuthError('Could not restore your session. Log in with your password.')
+        return false
+      }
+    }
+
     const found = await getUserById(userId)
     if (!found) {
       await disableBiometricLogin()
@@ -178,6 +231,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearAuthError, restoreUserSession])
 
   const login = useCallback(async (method: LoginMethod, identifier: string, password: string) => {
+    if (isSupabaseConfigured()) {
+      const { user: signedIn, error } = await supabaseSignIn(method, identifier, password)
+      if (!signedIn || error) {
+        setAuthError(error ?? 'Invalid credentials. Check your details and try again.')
+        return false
+      }
+      setUser(signedIn)
+      setAuthError(null)
+      bumpAuthSession()
+      void maybeOfferBiometricSetup()
+      return true
+    }
+
     const found =
       method === 'phone' ? await findUserByPhone(identifier) : await findUserByEmail(identifier)
 
@@ -195,12 +261,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [bumpAuthSession, maybeOfferBiometricSetup])
 
   const signup = useCallback(async (input: SignupInput) => {
+    if (!input.name.trim()) {
+      setAuthError('Full name is required.')
+      return false
+    }
+
+    if (input.password.length < 6) {
+      setAuthError('Password must be at least 6 characters.')
+      return false
+    }
+
+    if (input.password !== input.confirmPassword) {
+      setAuthError('Passwords do not match.')
+      return false
+    }
+
     if (input.method === 'phone') {
       if (!input.phone?.trim()) {
         setAuthError('Phone number is required.')
         return false
       }
-      if (await phoneInUse(input.phone)) {
+      const phoneTaken = isSupabaseConfigured()
+        ? await supabasePhoneInUse(input.phone)
+        : await phoneInUse(input.phone)
+      if (phoneTaken) {
         setAuthError('This phone number is already registered.')
         return false
       }
@@ -209,15 +293,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthError('Email is required.')
         return false
       }
-      if (await emailInUse(input.email)) {
+      if (!isValidEmail(input.email)) {
+        setAuthError('Enter a valid email address.')
+        return false
+      }
+      const emailTaken = isSupabaseConfigured()
+        ? await supabaseEmailInUse(input.email)
+        : await emailInUse(input.email)
+      if (emailTaken) {
         setAuthError('This email is already registered.')
         return false
       }
     }
 
-    if (input.password.length < 6) {
-      setAuthError('Password must be at least 6 characters.')
-      return false
+    if (isSupabaseConfigured()) {
+      const { user: created, error, needsEmailConfirmation } = await supabaseSignUp(input)
+      if (needsEmailConfirmation) {
+        setAuthError('Check your email and tap the confirmation link, then log in.')
+        navigateAuth('login')
+        return false
+      }
+      if (!created || error) {
+        setAuthError(error ?? 'Sign up failed. Try again.')
+        return false
+      }
+      setUser(created)
+      setAuthError(null)
+      bumpAuthSession()
+
+      if (input.enableQuickAccess) {
+        const support = await getBiometricSupport()
+        if (support.available) {
+          await enableBiometricLogin(created.id)
+          await refreshBiometricState()
+        }
+      }
+      return true
     }
 
     const newUser: User = {
@@ -245,7 +356,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return true
-  }, [bumpAuthSession, refreshBiometricState])
+  }, [bumpAuthSession, navigateAuth, refreshBiometricState])
 
   const enableBiometricLoginForUser = useCallback(async () => {
     if (!user) return false
@@ -277,7 +388,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
-    await setSessionUserId(null)
+    if (isSupabaseConfigured()) {
+      await supabaseSignOut()
+    } else {
+      await setSessionUserId(null)
+    }
     setUser(null)
     setAuthScreen('welcome')
     setAuthError(null)
@@ -295,6 +410,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user) return false
 
       const normalizedPhone = normalizePhone(data.phone)
+
+      if (isSupabaseConfigured()) {
+        try {
+          const verification: IdentityVerification = {
+            status: 'pending',
+            phoneVerified: false,
+            verifiedPhone: normalizedPhone,
+            idType: data.idType,
+            idUploaded: true,
+            idPhotoUri: data.idPhotoUri,
+            address: data.address?.trim() ?? '',
+            addressUploaded: user.role === 'host' ? !!data.addressUploaded : undefined,
+            submittedAt: new Date().toISOString(),
+          }
+          const updated = await supabaseSubmitIdentityVerification(user, verification, normalizedPhone)
+          setUser(updated)
+          setAuthError(null)
+          return true
+        } catch (err) {
+          if (err instanceof Error && err.message === 'PHONE_IN_USE') {
+            setAuthError('This phone number is already registered to another account.')
+            return false
+          }
+          setAuthError('Could not submit verification. Try again.')
+          return false
+        }
+      }
+
       const existing = await findUserByPhone(normalizedPhone)
       if (existing && existing.id !== user.id) {
         setAuthError('This phone number is already registered to another account.')

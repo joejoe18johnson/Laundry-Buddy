@@ -238,5 +238,27 @@ export function createUiStyles(colors: ThemeColors, formStyles: FormStyles) {
     stepLineDone: { backgroundColor: colors.black },
     appInput: { ...formStyles.input },
     appInputMultiline: { ...formStyles.inputMultiline },
+    passwordRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.gray200,
+      borderRadius: radius.sm,
+      backgroundColor: colors.white,
+      overflow: 'hidden',
+    },
+    passwordInput: {
+      flex: 1,
+      padding: 16,
+      fontSize: 16,
+      color: colors.black,
+      backgroundColor: colors.white,
+    },
+    passwordToggle: {
+      paddingHorizontal: 14,
+      paddingVertical: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
   })
 }
