@@ -173,12 +173,17 @@ export function HelpScreen() {
           <>
             <FaqItem
               question="Is payment handled in the app?"
-              answer="Hosts set their price per load. After your host accepts, open My loads for bank details — transfer and submit your receipt there. Cash loads are paid at drop-off or pickup."
+              answer="Hosts set their price per load. After your host accepts, open My loads for bank details — transfer and submit your receipt there. Cash loads are paid at drop-off when you bring your laundry."
               styles={styles}
             />
             <FaqItem
               question="What if it rains?"
               answer="Use covered drop-off spots when possible. Check the weather banner on Explore."
+              styles={styles}
+            />
+            <FaqItem
+              question="Can I message a host before booking?"
+              answer="Yes — open a host profile and tap Message host to plan drop-off timing, gate access, or ask about availability before you book a slot."
               styles={styles}
             />
             <FaqItem

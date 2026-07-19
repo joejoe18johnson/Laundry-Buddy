@@ -23,6 +23,7 @@ import { useTheme } from '../../context/ThemeContext'
 import {
   getChatThreadSubtitle,
   getChatThreadTitle,
+  isInquiryThread,
   isSupportThread,
 } from '../../lib/chatThreads'
 import { toTitleCase } from '../../lib/titleCase'
@@ -393,9 +394,11 @@ export function ChatScreen() {
   }
 
   const liveBooking =
-    chatThreadId && !isSupportThread(chatThreadId)
+    chatThreadId && !isSupportThread(chatThreadId) && !isInquiryThread(chatThreadId)
       ? findBookingForChat(chatThreadId) ?? chatBooking
-      : chatBooking
+      : isInquiryThread(chatThreadId ?? '')
+        ? null
+        : chatBooking
 
   return (
     <ChatThreadPanel

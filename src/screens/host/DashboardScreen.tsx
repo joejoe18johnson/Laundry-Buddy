@@ -13,7 +13,7 @@ import { applyHostSettings } from '../../lib/hostListing'
 import { formatHostPrice } from '../../lib/hostFilters'
 import { formatDryerSheetsRate } from '../../lib/hostPricing'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
-import { formatMoney, getBookingAmount } from '../../lib/bookingPayments'
+import { formatMoney, getBookingAmount, cashPaymentHostHint } from '../../lib/bookingPayments'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge, SuccessButton } from '../../components/ui'
@@ -123,7 +123,7 @@ function OrderDetails({
       )}
       {paymentMethod && (
         <Text style={styles.paymentMeta}>
-          {paymentMethod === 'cash' ? toTitleCase('Cash on pickup') : toTitleCase('Bank transfer after acceptance')}
+          {paymentMethod === 'cash' ? toTitleCase('Pay at drop-off') : toTitleCase('Bank transfer after acceptance')}
           {totalAmount != null && totalAmount > 0 ? ` · ${formatMoney(totalAmount)}` : ''}
         </Text>
       )}
@@ -285,7 +285,7 @@ export function DashboardScreen() {
                 request.location,
                 `${request.loads} load${request.loads > 1 ? 's' : ''}`,
                 formatDropOffHour(request.dropOffTime),
-                request.paymentMethod === 'cash' ? 'Cash' : 'Transfer',
+                request.paymentMethod === 'cash' ? 'Cash · Drop-off' : 'Transfer',
               ]}
               styles={styles}
             />
@@ -334,7 +334,7 @@ export function DashboardScreen() {
               metaParts={[
                 `${load.loads} load${load.loads === 1 ? '' : 's'}`,
                 formatDropOffHour(load.dropOffTime),
-                load.paymentMethod === 'cash' ? 'Cash' : 'Transfer',
+                load.paymentMethod === 'cash' ? 'Cash · Drop-off' : 'Transfer',
                 load.paymentMethod === 'bank_transfer' &&
                 load.paymentStatus === 'pending' &&
                 load.paymentRequestedAt &&
@@ -385,10 +385,24 @@ export function DashboardScreen() {
                 )}
               </>
             )}
+            {load.paymentMethod === 'cash' && load.paymentStatus === 'pending' && (load.totalAmount ?? 0) > 0 && (
+              <>
+                <Text style={styles.transferHint}>{toTitleCase(cashPaymentHostHint())}</Text>
+                <GhostButton
+                  title={`Confirm ${formatMoney(getBookingAmount(load))} cash at drop-off`}
+                  icon="check-circle"
+                  full
+                  onPress={() => confirmTransferPayment(load.id)}
+                />
+              </>
+            )}
             {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'paid' && (
               <SuccessButton title="Payment confirmed" icon="check-circle" full disabled />
             )}
-            {(load.paymentStatus === 'paid' || load.paymentMethod === 'cash') &&
+            {load.paymentMethod === 'cash' && load.paymentStatus === 'paid' && (
+              <SuccessButton title="Cash confirmed at drop-off" icon="check-circle" full disabled />
+            )}
+            {load.paymentStatus === 'paid' &&
               load.stage !== 'drying' &&
               load.stage !== 'ready' && (
                 <PrimaryButton

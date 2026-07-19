@@ -6,7 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useMessages } from '../../context/MessageContext'
 import { getHostById } from '../../data/mockData'
-import { getBookingAmount, formatMoney } from '../../lib/bookingPayments'
+import { getBookingAmount, formatMoney, cashPaymentGuestHint } from '../../lib/bookingPayments'
 import { buildPaymentProofChatNotice } from '../../lib/chatThreads'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
@@ -37,6 +37,13 @@ function getLoadStatusLabel(load: Booking): string {
     if (!load.paymentRequestedAt) return 'Awaiting payment'
     if (!load.paymentProofSentAt) return 'Pay now'
     return 'Proof sent'
+  }
+  if (
+    load.paymentMethod === 'cash' &&
+    load.paymentStatus === 'pending' &&
+    (load.totalAmount ?? 0) > 0
+  ) {
+    return 'Pay at drop-off'
   }
   return 'In progress'
 }
@@ -95,6 +102,7 @@ export function TrackingScreen() {
   const hostSettings = getSettingsForHost(host?.hostUserId)
   const amount = getBookingAmount(booking)
   const isBankTransfer = booking.paymentMethod === 'bank_transfer'
+  const isCash = booking.paymentMethod === 'cash'
   const isAccepted = booking.requestStatus !== 'pending' && booking.requestStatus !== 'declined'
   const isPending = booking.requestStatus === 'pending'
   const isDeclined = booking.requestStatus === 'declined'
@@ -107,6 +115,8 @@ export function TrackingScreen() {
     booking.paymentStatus === 'pending' &&
     !!booking.paymentProofSentAt &&
     amount > 0
+  const cashPayAtDropOff =
+    isAccepted && isCash && booking.paymentStatus === 'pending' && amount > 0
   const bank = hostSettings.bankDetails
 
   const isReadyForPickup = isAccepted && booking.stage === 'ready'
@@ -135,7 +145,9 @@ export function TrackingScreen() {
             ? { label: 'Awaiting confirm', variant: 'awaiting' as const }
             : needsPayNow
               ? { label: 'Pay now', variant: 'pending' as const }
-              : { label: 'Accepted', variant: 'accepted' as const }
+              : cashPayAtDropOff
+                ? { label: 'Pay at drop-off', variant: 'pending' as const }
+                : { label: 'Accepted', variant: 'accepted' as const }
 
   const handleDirections = () => {
     if (!isAccepted) return
@@ -246,6 +258,25 @@ export function TrackingScreen() {
         </View>
       )}
 
+      {cashPayAtDropOff && (
+        <View style={styles.urgentPayCard}>
+          <View style={styles.urgentPayHeader}>
+            <View style={styles.urgentPayBadge}>
+              <AppIcon name="dollar-sign" size={16} color={colors.white} />
+              <Text style={styles.urgentPayBadgeText}>{toTitleCase('Pay at drop-off')}</Text>
+            </View>
+            <Text style={styles.urgentPayAmount}>{formatMoney(amount)}</Text>
+          </View>
+          <Text style={styles.urgentPayTitle}>
+            {titleCaseWithName(cashPaymentGuestHint(booking.hostName), booking.hostName)}
+          </Text>
+          <Text style={styles.urgentPaySub}>
+            {toTitleCase('Your host confirms cash in the app before drying starts.')}
+          </Text>
+          <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
+        </View>
+      )}
+
       {proofWaitingConfirm && (
         <View style={styles.proofWaitingCard}>
           <AppIcon name="clock" size={18} color={colors.gray600} />
@@ -277,10 +308,20 @@ export function TrackingScreen() {
                     `Waiting for ${booking.hostName} to accept your load`,
                     booking.hostName,
                   )
-                : titleCaseWithName(
-                    `Next: drop off at ${booking.address}. Bank transfer? Use the Pay now section when ready.`,
-                    booking.address,
-                  )}
+                : isBankTransfer && amount > 0
+                  ? titleCaseWithName(
+                      `Next: drop off at ${booking.address}. Use the Pay now section when ready.`,
+                      booking.address,
+                    )
+                  : isCash && amount > 0
+                    ? titleCaseWithName(
+                        `Next: drop off at ${booking.address} and pay ${formatMoney(amount)} in cash.`,
+                        booking.address,
+                      )
+                    : titleCaseWithName(
+                        `Next: drop off at ${booking.address}.`,
+                        booking.address,
+                      )}
             </Text>
           </View>
           <AppIcon name="x" size={16} color={colors.gray500} />
@@ -300,6 +341,13 @@ export function TrackingScreen() {
             </Text>
           </View>
           <PrimaryButton title="Find another host" icon="search" onPress={() => { clearBooking(); navigate('customer-home') }} full />
+        </View>
+      )}
+
+      {isCash && booking.paymentStatus === 'paid' && isAccepted && (
+        <View style={styles.paidCard}>
+          <AppIcon name="check-circle" size={18} color={colors.green} />
+          <Text style={styles.paidText}>{toTitleCase('Cash confirmed at drop-off')} · {formatMoney(amount)}</Text>
         </View>
       )}
 
@@ -364,7 +412,7 @@ export function TrackingScreen() {
         </View>
       )}
 
-      {!isDeclined && !isPending && !isReadyForPickup && !needsPayNow && !proofWaitingConfirm && (
+      {!isDeclined && !isPending && !isReadyForPickup && !needsPayNow && !proofWaitingConfirm && !cashPayAtDropOff && (
       <View style={styles.infoCard}>
         <AppIcon name="message-circle" size={18} color={colors.gray600} />
         <Text style={styles.infoText}>

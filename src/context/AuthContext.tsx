@@ -161,7 +161,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const u = await fetchCurrentSupabaseUser()
           if (u) {
-            setUser(u)
+            const merged = await resolveUserById(u.id)
+            setUser(merged ?? u)
           } else {
             const local = await getCurrentUser()
             setUser(local)
@@ -208,7 +209,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const restoreUserSession = useCallback(async (userId: string) => {
     if (isSupabaseConfigured()) {
       try {
-        const found = await fetchProfileById(userId)
+        const found = await resolveUserById(userId)
         if (!found) {
           await disableBiometricLogin()
           await refreshBiometricState()
@@ -271,8 +272,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthError(error ?? 'Invalid credentials. Check your details and try again.')
         return false
       }
-      await saveUser(signedIn)
-      setUser(signedIn)
+      const merged = await resolveUserById(signedIn.id)
+      const sessionUser = merged ?? signedIn
+      await saveUser(sessionUser)
+      setUser(sessionUser)
       setAuthError(null)
       bumpAuthSession()
       void maybeOfferBiometricSetup()

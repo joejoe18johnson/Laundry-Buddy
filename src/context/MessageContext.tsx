@@ -19,8 +19,10 @@ import {
 } from '../lib/messageStorage'
 import {
   defaultMessageKind,
+  isInquiryThread,
   isSupportThread,
   resolveBookingChatRecipient,
+  resolveInquiryChatRecipient,
   supportThreadId,
 } from '../lib/chatThreads'
 import { DEMO_ANA_MARIA_BOOKING_IDS } from '../data/seedData'
@@ -198,6 +200,20 @@ export function MessageProvider({ children }: { children: ReactNode }) {
           supportReply.text ?? 'New message from Laundry Buddy Support',
           chatLink(threadId),
         )
+        return message
+      }
+
+      if (isInquiryThread(threadId)) {
+        const recipient = await resolveInquiryChatRecipient(threadId, user.id)
+        if (recipient) {
+          const preview =
+            message.imageUri
+              ? `${user.name} sent a photo`
+              : trimmed && trimmed.length > 80
+                ? `${trimmed.slice(0, 77).trim()}…`
+                : trimmed || 'New message'
+          void push(recipient.userId, `Message from ${user.name}`, preview, chatLink(threadId))
+        }
         return message
       }
 

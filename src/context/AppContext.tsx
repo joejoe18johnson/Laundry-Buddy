@@ -92,7 +92,7 @@ import * as Location from 'expo-location'
 import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
 import { canGuestCancelPendingRequest } from '../lib/pendingRequestCancel'
 import { deliverPaymentRequest, needsPaymentRequest, withPaymentRequestedAt } from '../lib/paymentRequestDelivery'
-import { supportThreadId } from '../lib/chatThreads'
+import { inquiryThreadId, supportThreadId } from '../lib/chatThreads'
 import { syncTrainingDemoIfNeeded } from '../lib/trainingSeedStorage'
 import {
   type Booking,
@@ -150,6 +150,7 @@ interface AppState {
   reviewHostId: string | null
   reviewBookingId: string | null
   selectHost: (host: Host) => void
+  openHostInquiryChat: (host: Host) => void
   setShowMap: (show: boolean) => void
   getSettingsForHost: (hostUserId?: string) => HostSettings
   updateHostSettings: (settings: HostSettings) => Promise<void>
@@ -652,6 +653,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [hostSettingsMap, requireMarketplaceAccess, role, showToast],
   )
 
+  const openHostInquiryChat = useCallback(
+    (host: Host) => {
+      if (!user) return
+      if (role === 'host') {
+        showToast('Hosts can browse listings but cannot book or message other hosts.', { icon: 'info' })
+        return
+      }
+      if (!host.hostUserId) {
+        showToast('This host is not available for messaging right now.', { icon: 'info' })
+        return
+      }
+      openChat(inquiryThreadId(user.id, host.hostUserId))
+    },
+    [openChat, role, showToast, user],
+  )
+
   const notifyHost = useCallback(
     async (
       hostUserId: string | undefined,
@@ -966,6 +983,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const needsTransfer =
         request.paymentMethod === 'bank_transfer' && (request.totalAmount ?? 0) > 0
+      const needsCash = request.paymentMethod === 'cash' && (request.totalAmount ?? 0) > 0
       const acceptedAt = nowTime()
       const paymentTimestamp = new Date().toISOString()
 
@@ -989,8 +1007,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dryPrice: pricing.dryPrice,
         foldingPrice: pricing.foldingPrice,
         sheetsPrice: pricing.sheetsPrice,
-        paymentStatus:
-          (request.totalAmount ?? 0) <= 0 || request.paymentMethod === 'cash' ? 'paid' : 'pending',
+        paymentStatus: (request.totalAmount ?? 0) <= 0 ? 'paid' : 'pending',
         paymentRequestedAt: needsTransfer ? paymentTimestamp : undefined,
         requestStatus: 'accepted',
         stage: 'got-bag',
@@ -1029,6 +1046,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           })
           void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
           showToast('Load accepted — guest notified to pay', { icon: 'credit-card' })
+        } else if (needsCash) {
+          notifyCustomer(
+            request.customerId,
+            'Load accepted',
+            `${hostName} accepted your load! Pay ${formatMoney(request.totalAmount ?? 0)} in cash at drop-off — directions and gate code are in the app.`,
+            bookingTrackingLink(load.id),
+          )
+          void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
+          showToast('Load accepted — guest pays at drop-off', { icon: 'dollar-sign' })
         } else {
           notifyCustomer(
             request.customerId,
@@ -1389,13 +1415,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
 
       if (target?.customerId) {
+        const amount = formatMoney(target.totalAmount ?? 0)
+        const isCash = target.paymentMethod === 'cash'
         notifyCustomer(
           target.customerId,
-          'Payment verified',
-          `${target.hostName} confirmed your bank transfer of ${formatMoney(target.totalAmount ?? 0)}.`,
+          isCash ? 'Cash confirmed' : 'Payment verified',
+          isCash
+            ? `${target.hostName} confirmed your ${amount} cash payment at drop-off.`
+            : `${target.hostName} confirmed your bank transfer of ${amount}.`,
           bookingTrackingLink(target.id),
         )
-        showToast('Payment marked received', { icon: 'check-circle' })
+        showToast(isCash ? 'Cash payment confirmed' : 'Payment marked received', { icon: 'check-circle' })
       }
     },
     [notifyCustomer, role, user, hostRequests, showToast],
@@ -1438,6 +1468,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       reviewHostId,
       reviewBookingId,
       selectHost,
+      openHostInquiryChat,
       setShowMap,
       getSettingsForHost,
       updateHostSettings,
@@ -1500,6 +1531,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       reviewHostId,
       reviewBookingId,
       selectHost,
+      openHostInquiryChat,
       getSettingsForHost,
       updateHostSettings,
       confirmBooking,

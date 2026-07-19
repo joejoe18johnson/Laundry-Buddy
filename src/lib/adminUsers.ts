@@ -156,11 +156,17 @@ export async function updateUserVerificationStatus(
   if (isSupabaseConfigured()) {
     const supabase = getSupabaseClient()
     if (supabase) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .update({ identity_verification: identityVerificationToJson(verification) })
         .eq('id', userId)
-      if (error) throw error
+        .select('*')
+        .maybeSingle()
+      if (error) return null
+      if (!data) return null
+      const serverUser = profileRowToUser(data)
+      await saveUser(serverUser)
+      return serverUser
     }
   }
 

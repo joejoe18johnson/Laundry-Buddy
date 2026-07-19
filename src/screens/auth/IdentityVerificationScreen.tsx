@@ -202,7 +202,10 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     }
   }
 
-  const verificationCodePanel = !isIdentityVerified(user) ? (
+  const showVerificationCodePanel =
+    verification.status === 'none' || verification.status === 'rejected'
+
+  const verificationCodePanel = showVerificationCodePanel ? (
     <View style={styles.stepBlock}>
       <View style={styles.sectionHeader}>
         <AppIcon name="key" size={18} />
@@ -295,7 +298,11 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
         </View>
       ) : null}
       {onBrowse ? (
-        <OutlineButton title="Browse app" icon="home" full onPress={onBrowse} />
+        isIdentityVerified(user) ? (
+          <PrimaryButton title="Continue to app" icon="check-circle" full onPress={onBrowse} />
+        ) : (
+          <OutlineButton title="Browse app" icon="home" full onPress={onBrowse} />
+        )
       ) : null}
       <GhostButton title="Log out" icon="log-out" full onPress={logout} />
     </View>

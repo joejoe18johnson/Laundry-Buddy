@@ -101,7 +101,7 @@ function PaymentStatusBadge({
   paymentMethod?: Booking['paymentMethod']
   styles: ReturnType<typeof createHistoryStyles>
 }) {
-  const paid = status === 'paid' || (status == null && paymentMethod === 'cash')
+  const paid = status === 'paid'
   return (
     <View style={[styles.statusBadge, paid ? styles.statusPaid : styles.statusPending]}>
       <Text style={[styles.statusText, paid ? styles.statusTextPaid : styles.statusTextPending]}>

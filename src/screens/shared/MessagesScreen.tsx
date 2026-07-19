@@ -9,10 +9,14 @@ import { useTheme } from '../../context/ThemeContext'
 import {
   getChatThreadSubtitle,
   getChatThreadTitle,
+  inquiryThreadIdsForUser,
+  isInquiryThread,
   isSupportThread,
   messagePreview,
+  parseInquiryThread,
   supportThreadId,
 } from '../../lib/chatThreads'
+import { getUserById } from '../../lib/authStorage'
 import { countUnreadInThread, loadAllThreadIds, loadThreadMessages } from '../../lib/messageStorage'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
@@ -85,6 +89,7 @@ function createMessagesStyles(colors: ReturnType<typeof useTheme>['colors']) {
 
 function isActiveThread(threadId: string, booking: Booking | null | undefined): boolean {
   if (isSupportThread(threadId)) return true
+  if (isInquiryThread(threadId)) return true
   if (!booking) return false
   if (booking.requestStatus === 'declined') return false
   return booking.stage !== 'picked-up'
@@ -126,10 +131,12 @@ export function MessagesScreen() {
     const supportId = supportThreadId(user.id)
     const bookingIds = buildBookingThreadIds(isCustomer, activeGuestBookings, hostRequests, activeLoads)
     const storedIds = await loadAllThreadIds()
+    const inquiryIds = inquiryThreadIdsForUser(user.id, user.role, storedIds)
     const threadIds = Array.from(
       new Set([
         supportId,
         ...bookingIds,
+        ...inquiryIds,
         ...storedIds.filter((id) => !isSupportThread(id) || id === supportId),
       ]),
     )
@@ -138,17 +145,26 @@ export function MessagesScreen() {
       threadIds.map(async (threadId) => {
         const messages = await loadThreadMessages(threadId)
         const last = messages[messages.length - 1]
-        const booking = isSupportThread(threadId) ? null : findBookingForChat(threadId)
+        const booking = isSupportThread(threadId) || isInquiryThread(threadId) ? null : findBookingForChat(threadId)
         const unread = await countUnreadInThread(user.id, threadId, messages)
+
+        let title = getChatThreadTitle(threadId, user, booking)
+        if (isInquiryThread(threadId)) {
+          const parsed = parseInquiryThread(threadId)
+          if (parsed && user.role === 'host') {
+            const guest = await getUserById(parsed.guestUserId)
+            if (guest?.name) title = guest.name
+          }
+        }
 
         return {
           threadId,
-          title: getChatThreadTitle(threadId, user, booking),
+          title,
           subtitle: getChatThreadSubtitle(threadId, booking),
           preview: last ? messagePreview(last) : toTitleCase('No messages yet'),
           time: last ? formatChatTime(last.createdAt) : undefined,
           unread,
-          bookingId: isSupportThread(threadId) ? undefined : threadId,
+          bookingId: isSupportThread(threadId) || isInquiryThread(threadId) ? undefined : threadId,
           lastCreatedAt: last?.createdAt,
         }
       }),
@@ -159,6 +175,7 @@ export function MessagesScreen() {
     const visible = rows.filter(
       (row) =>
         isSupportThread(row.threadId) ||
+        isInquiryThread(row.threadId) ||
         bookingIds.includes(row.threadId) ||
         row.lastCreatedAt,
     )
@@ -191,11 +208,11 @@ export function MessagesScreen() {
   }, [screen, user, reload])
 
   const openThread = (row: ThreadRow) => {
-    if (row.bookingId) {
-      openChat(row.threadId, row.bookingId)
+    if (isSupportThread(row.threadId)) {
+      openSupportChat()
       return
     }
-    openSupportChat()
+    openChat(row.threadId, row.bookingId)
   }
 
   const { activeThreads, pastThreads } = useMemo(() => {
@@ -217,7 +234,7 @@ export function MessagesScreen() {
     >
       <View style={styles.avatar}>
         <AppIcon
-          name={isSupportThread(row.threadId) ? 'life-buoy' : isCustomer ? 'user' : 'package'}
+          name={isSupportThread(row.threadId) ? 'life-buoy' : isInquiryThread(row.threadId) ? 'message-circle' : isCustomer ? 'user' : 'package'}
           size={20}
           color={colors.black}
         />
@@ -249,7 +266,7 @@ export function MessagesScreen() {
         <Text style={styles.title}>{toTitleCase('Messages')}</Text>
       </View>
       <Text style={styles.subtitle}>
-        {toTitleCase('Active load chats stay on top. Older loads move to past conversations.')}
+        {toTitleCase('Active load chats stay on top. Message hosts before booking to plan drop-off.')}
       </Text>
 
       {threads.length === 0 ? (
@@ -259,8 +276,8 @@ export function MessagesScreen() {
           <Text style={styles.emptySub}>
             {toTitleCase(
               isCustomer
-                ? 'Book a load or message support — your chats will appear here.'
-                : 'When guests message you or send payment proof, threads show up here.',
+                ? 'Book a load, message a host from their profile, or contact support — your chats will appear here.'
+                : 'When guests message you about drop-off or send payment proof, threads show up here.',
             )}
           </Text>
           <PrimaryButton title="Message support" icon="message-circle" onPress={openSupportChat} />

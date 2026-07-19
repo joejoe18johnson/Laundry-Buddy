@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { TopRatedHostBadge } from '../../components/TopRatedHostBadge'
-import { BackButton, PrimaryButton, Screen } from '../../components/ui'
+import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -17,6 +17,7 @@ import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { formatDryerSheetsRate, formatServicePrice } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
+import { PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import { canBookOrHost } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import { coverColors, radius, spacing } from '../../theme'
@@ -158,7 +159,7 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
       lineHeight: 20,
       marginTop: 4,
     },
-    footerAction: { flexShrink: 0, alignSelf: 'center' },
+    footerAction: { flexShrink: 0, alignSelf: 'stretch', gap: spacing.sm },
   })
 }
 
@@ -264,7 +265,7 @@ function InfoSection({
 }
 
 export function HostProfileScreen() {
-  const { selectedHost, navigate, selectHost, getSettingsForHost, getReviewsForHost, refreshHostReviews, activeGuestBookings } =
+  const { selectedHost, navigate, selectHost, openHostInquiryChat, getSettingsForHost, getReviewsForHost, refreshHostReviews, activeGuestBookings } =
     useApp()
   const { user } = useAuth()
   const { colors } = useTheme()
@@ -288,7 +289,7 @@ export function HostProfileScreen() {
   const isHostViewer = user?.role === 'host'
   const browseOnly = isHostViewer
   const paymentMethods = [
-    settings.acceptCash ? 'Cash' : null,
+    settings.acceptCash ? PAYMENT_METHOD_LABELS.cash : null,
     settings.acceptBankTransfer && settings.bankDetails.accountNumber.trim()
       ? 'Bank transfer'
       : null,
@@ -465,6 +466,12 @@ export function HostProfileScreen() {
           </View>
           {!browseOnly ? (
             <View style={styles.footerAction}>
+              <OutlineButton
+                title="Message host"
+                icon="message-circle"
+                full
+                onPress={() => openHostInquiryChat(host)}
+              />
               <PrimaryButton
                 title={
                   !verified

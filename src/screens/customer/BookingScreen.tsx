@@ -20,7 +20,7 @@ import {
   offersFoldingService,
   bookingTotalLabel,
 } from '../../lib/hostPricing'
-import { formatMoney } from '../../lib/bookingPayments'
+import { formatMoney, cashPaymentGuestHint } from '../../lib/bookingPayments'
 import { formatDropOffHoursWindow, sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
@@ -206,10 +206,7 @@ export function BookingScreen() {
             )}
             {paymentMethod === 'cash' && (
               <Text style={styles.paymentNote}>
-                {titleCaseWithName(
-                  `Bring cash to pay ${selectedHost.name} at drop off or pick up.`,
-                  selectedHost.name,
-                )}
+                {titleCaseWithName(cashPaymentGuestHint(selectedHost.name), selectedHost.name)}
               </Text>
             )}
           </>

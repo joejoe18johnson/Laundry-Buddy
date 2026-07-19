@@ -120,6 +120,6 @@ export function getHostPaymentMethods(settings: HostSettings): PaymentMethod[] {
 }
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  cash: 'Cash',
+  cash: 'Cash · Pay at drop-off',
   bank_transfer: 'Bank Transfer',
 }

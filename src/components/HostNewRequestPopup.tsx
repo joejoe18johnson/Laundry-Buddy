@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { GhostButton, PrimaryButton } from './ui'
 import { formatDropOffHour } from '../lib/dropOffAvailability'
-import { formatMoney } from '../lib/bookingPayments'
+import { formatMoney, CASH_PAY_AT_DROP_OFF } from '../lib/bookingPayments'
 import { toTitleCase } from '../lib/titleCase'
 import { useTheme } from '../context/ThemeContext'
 import { radius, spacing } from '../theme'
@@ -33,7 +33,7 @@ export function HostNewRequestPopup({
 
   if (!request) return null
 
-  const paymentLabel = request.paymentMethod === 'cash' ? 'Cash' : 'Bank transfer'
+  const paymentLabel = request.paymentMethod === 'cash' ? CASH_PAY_AT_DROP_OFF : 'Bank transfer'
   const totalLabel =
     request.totalAmount != null && request.totalAmount > 0
       ? formatMoney(request.totalAmount)

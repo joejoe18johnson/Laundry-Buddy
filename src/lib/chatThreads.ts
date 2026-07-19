@@ -1,16 +1,43 @@
-import { getHostById } from '../data/mockData'
+import { getHostById, getHostByUserId } from '../data/mockData'
+import { getUserById } from './authStorage'
 import { formatMoney } from './bookingPayments'
 import { formatWhatsAppDisplay } from './whatsapp'
 import type { Booking, ChatMessageKind, User } from '../types'
 
 export const SUPPORT_THREAD_PREFIX = 'support:'
+export const INQUIRY_THREAD_PREFIX = 'inquiry:'
 
 export function supportThreadId(userId: string): string {
   return `${SUPPORT_THREAD_PREFIX}${userId}`
 }
 
+export function inquiryThreadId(guestUserId: string, hostUserId: string): string {
+  return `${INQUIRY_THREAD_PREFIX}${guestUserId}:${hostUserId}`
+}
+
 export function isSupportThread(threadId: string): boolean {
   return threadId.startsWith(SUPPORT_THREAD_PREFIX)
+}
+
+export function isInquiryThread(threadId: string): boolean {
+  return threadId.startsWith(INQUIRY_THREAD_PREFIX)
+}
+
+export function parseInquiryThread(threadId: string): { guestUserId: string; hostUserId: string } | null {
+  if (!isInquiryThread(threadId)) return null
+  const parts = threadId.slice(INQUIRY_THREAD_PREFIX.length).split(':')
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null
+  return { guestUserId: parts[0], hostUserId: parts[1] }
+}
+
+export function inquiryThreadIdsForUser(userId: string, role: User['role'], storedThreadIds: string[]): string[] {
+  return storedThreadIds.filter((threadId) => {
+    const parsed = parseInquiryThread(threadId)
+    if (!parsed) return false
+    if (role === 'host') return parsed.hostUserId === userId
+    if (role === 'customer') return parsed.guestUserId === userId
+    return false
+  })
 }
 
 export function buildVerificationCodeRequestMessage(name: string, phone: string): string {
@@ -104,8 +131,37 @@ export function resolveBookingChatRecipient(
   return null
 }
 
+export async function resolveInquiryChatRecipient(
+  threadId: string,
+  senderId: string,
+): Promise<{ userId: string; name: string } | null> {
+  const parsed = parseInquiryThread(threadId)
+  if (!parsed) return null
+
+  if (senderId === parsed.guestUserId) {
+    const host = getHostByUserId(parsed.hostUserId)
+    if (!host?.hostUserId) return null
+    return { userId: host.hostUserId, name: host.name }
+  }
+
+  if (senderId === parsed.hostUserId) {
+    const guest = await getUserById(parsed.guestUserId)
+    return { userId: parsed.guestUserId, name: guest?.name ?? 'Guest' }
+  }
+
+  return null
+}
+
 export function getChatThreadTitle(threadId: string, user: User, booking?: Booking | null): string {
   if (isSupportThread(threadId)) return 'Laundry Buddy Support'
+
+  if (isInquiryThread(threadId)) {
+    const parsed = parseInquiryThread(threadId)
+    if (!parsed) return 'Messages'
+    if (user.role === 'host') return 'Guest inquiry'
+    const host = getHostByUserId(parsed.hostUserId)
+    return host?.name ?? 'Host'
+  }
 
   if (booking) {
     return user.role === 'customer' ? booking.hostName : booking.customerName
@@ -116,6 +172,7 @@ export function getChatThreadTitle(threadId: string, user: User, booking?: Booki
 
 export function getChatThreadSubtitle(threadId: string, booking?: Booking | null): string | undefined {
   if (isSupportThread(threadId)) return 'Help, verification, and account support'
+  if (isInquiryThread(threadId)) return 'Planning drop-off · not booked yet'
   if (booking) {
     return `${booking.loads} load${booking.loads === 1 ? '' : 's'} · ${booking.location}`
   }

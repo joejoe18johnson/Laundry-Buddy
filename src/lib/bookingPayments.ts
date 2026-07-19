@@ -21,9 +21,19 @@ export function getBookingAmount(booking: Booking): number {
   return calculateBookingTotal(getBookingPriceInput(booking))
 }
 
+export const CASH_PAY_AT_DROP_OFF = 'Pay at drop-off'
+
 export function formatPaymentMethod(method?: Booking['paymentMethod']): string {
   if (!method) return '—'
-  return method === 'cash' ? 'Cash' : 'Bank Transfer'
+  return method === 'cash' ? `Cash · ${CASH_PAY_AT_DROP_OFF}` : 'Bank Transfer'
+}
+
+export function cashPaymentGuestHint(hostName: string): string {
+  return `Pay ${hostName} in cash when you drop off your laundry.`
+}
+
+export function cashPaymentHostHint(): string {
+  return 'Collect cash when the guest drops off, then confirm payment before drying.'
 }
 
 export function sumBookingAmounts(bookings: Booking[]): number {

@@ -1,4 +1,5 @@
 import type { IconName } from '../components/AppIcon'
+import { CASH_PAY_AT_DROP_OFF, cashPaymentGuestHint, cashPaymentHostHint } from './bookingPayments'
 import type { Booking, BookingStage } from '../types'
 
 export type GuestProgressStep = {
@@ -131,8 +132,7 @@ export function getGuestProgressIndex(booking: Booking): number {
 
   if (booking.stage === 'ready') return 4
   if (booking.stage === 'drying') return 3
-  if (needsBankPayment(booking) && paid) return 2
-  if (isCashPayment(booking)) return 1
+  if ((needsBankPayment(booking) || isCashPayment(booking)) && paid) return 2
 
   return 1
 }
@@ -141,7 +141,8 @@ export function getHostProgressIndex(load: Booking): number {
   if (load.requestStatus !== 'accepted') return 0
 
   const needsBank = needsBankPayment(load)
-  if (needsBank && load.paymentStatus !== 'paid') return 1
+  const needsCash = isCashPayment(load)
+  if ((needsBank || needsCash) && load.paymentStatus !== 'paid') return 1
 
   if (load.stage === 'ready') return 4
   if (load.stage === 'drying') return 3
@@ -203,7 +204,9 @@ export function getGuestStepLabel(booking: Booking, step: GuestProgressStep): st
   }
 
   if (step.key === 'payment-sent') {
-    if (isCashPayment(booking)) return 'Pay at pickup'
+    if (isCashPayment(booking)) {
+      return booking.paymentStatus === 'paid' ? 'Paid at drop-off' : CASH_PAY_AT_DROP_OFF
+    }
     if (!booking.paymentRequestedAt) return 'Waiting for payment details'
     if (!booking.paymentProofSentAt) return 'Pay now'
     return 'Proof sent'
@@ -213,7 +216,7 @@ export function getGuestStepLabel(booking: Booking, step: GuestProgressStep): st
     if (needsBankPayment(booking) && booking.paymentProofSentAt && booking.paymentStatus !== 'paid') {
       return 'Waiting for confirmation'
     }
-    if (isCashPayment(booking) && booking.paymentStatus === 'paid') return 'Pay cash at pickup'
+    if (isCashPayment(booking) && booking.paymentStatus === 'paid') return 'Cash confirmed'
     return step.label
   }
 
@@ -230,7 +233,10 @@ export function getGuestStepDescription(booking: Booking, step: GuestProgressSte
 
   if (step.key === 'payment-sent') {
     if (isCashPayment(booking)) {
-      return `Bring ${booking.hostName} cash when you drop off or pick up.`
+      if (booking.paymentStatus === 'paid') {
+        return `${booking.hostName} confirmed your cash payment at drop-off.`
+      }
+      return cashPaymentGuestHint(booking.hostName)
     }
     if (!booking.paymentRequestedAt) {
       return `${booking.hostName} will send bank details automatically after accepting.`
@@ -255,11 +261,16 @@ export function getHostStepLabel(load: Booking, step: HostProgressStep): string 
     if (!load.paymentProofSentAt) return 'Waiting for guest payment'
     if (load.paymentStatus !== 'paid') return 'Confirm payment'
   }
-  if (step.key === 'payment' && isCashPayment(load)) return 'Cash at pickup'
+  if (step.key === 'payment' && isCashPayment(load)) {
+    return load.paymentStatus === 'paid' ? 'Cash confirmed' : CASH_PAY_AT_DROP_OFF
+  }
   return step.label
 }
 
 export function getHostStepDescription(load: Booking, step: HostProgressStep): string {
+  if (step.key === 'accept' && isCashPayment(load)) {
+    return 'Guest can drop off — collect cash at drop-off before drying.'
+  }
   if (step.key === 'payment' && needsBankPayment(load)) {
     if (!load.paymentProofSentAt) {
       return 'Guest pays on My loads — you will see proof here when they submit it.'
@@ -269,7 +280,10 @@ export function getHostStepDescription(load: Booking, step: HostProgressStep): s
     }
   }
   if (step.key === 'payment' && isCashPayment(load)) {
-    return 'No transfer needed — collect cash when the guest picks up.'
+    if (load.paymentStatus === 'paid') {
+      return 'Cash received at drop-off — you can start drying.'
+    }
+    return cashPaymentHostHint()
   }
   return step.description
 }

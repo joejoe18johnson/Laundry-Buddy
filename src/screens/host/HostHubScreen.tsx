@@ -558,7 +558,7 @@ export function HostHubScreen() {
         <Text style={styles.sectionHint}>{toTitleCase('Choose how guests can pay you.')}</Text>
         <ToggleRow
           label="Accept cash"
-          sub="Guest pays in person at drop-off or pickup"
+          sub="Guest pays in cash at drop-off"
           value={draft.acceptCash}
           onChange={(v) => patch({ acceptCash: v })}
         />
