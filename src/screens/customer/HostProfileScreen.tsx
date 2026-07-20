@@ -322,7 +322,6 @@ export function HostProfileScreen() {
   const activeLoadCount = activeGuestBookings.length
   const foldingPrice = host.foldingPrice ?? 0
   const footerMetaParts = [
-    `${host.slotsLeft} slot${host.slotsLeft === 1 ? '' : 's'}`,
     `${formatTurnaroundHours(host.turnaroundHours)} dry`,
     foldingPrice > 0 ? `${formatHostPrice(foldingPrice)} folding` : null,
   ].filter(Boolean)
@@ -506,7 +505,7 @@ export function HostProfileScreen() {
                       ? 'Host Offline'
                       : activeLoadCount > 0
                         ? 'Book Another Load'
-                        : 'Book Slot'
+                        : 'Book now'
                 }
                 icon="calendar"
                 disabled={!settings.isOnline && verified}

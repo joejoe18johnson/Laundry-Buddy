@@ -191,7 +191,7 @@ export function AccountScreen() {
           <DetailRow
             icon="wind"
             label="Dryer Setup"
-            value={`${formatTurnaroundHours(hostProfile.turnaroundHours)} Turnaround · ${hostProfile.slotsLeft} Slots`}
+            value={`${formatTurnaroundHours(hostProfile.turnaroundHours)} turnaround`}
             styles={styles}
           />
         ) : null}

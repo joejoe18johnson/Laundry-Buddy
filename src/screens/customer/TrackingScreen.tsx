@@ -21,7 +21,6 @@ import {
 } from '../../lib/pendingRequestCancel'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
-import { TrainingDemoHint, isDemoAnaMariaBooking } from '../../components/TrainingDemoHint'
 import { useTheme } from '../../context/ThemeContext'
 import { radius, spacing } from '../../theme'
 import type { Booking } from '../../types'
@@ -187,8 +186,6 @@ export function TrackingScreen() {
     <Screen>
       <BackButton onPress={() => navigate('customer-home')} label="Home" />
       <NotificationBellReminder compact onPressBell={() => navigate('notifications')} />
-
-      {isDemoAnaMariaBooking(booking.id) ? <TrainingDemoHint role="customer" /> : null}
 
       {activeGuestBookings.length > 1 && (
         <View style={styles.loadSwitcher}>

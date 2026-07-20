@@ -18,7 +18,6 @@ import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerifi
 import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge, SuccessButton } from '../../components/ui'
 import { HostLoadProgress } from '../../components/HostLoadProgress'
-import { TrainingDemoHint, isDemoAnaMariaBooking } from '../../components/TrainingDemoHint'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useTheme } from '../../context/ThemeContext'
 import { radius, spacing } from '../../theme'
@@ -243,13 +242,9 @@ export function DashboardScreen() {
             ? ` · Folding ${formatHostPrice(hostProfile.foldingPrice!)}`
             : ''}
           {' · Sheets '}{formatDryerSheetsRate()}
-          {' · '}{hostProfile.slotsLeft} slots · {formatTurnaroundHours(hostProfile.turnaroundHours)}
+          {' · '}{formatTurnaroundHours(hostProfile.turnaroundHours)} dry
         </Text>
       )}
-
-      {activeLoads.some((load) => isDemoAnaMariaBooking(load.id)) ? (
-        <TrainingDemoHint role="host" />
-      ) : null}
 
       {hostRequests.length > 0 && (
         <View style={styles.newOrdersBanner}>

@@ -89,7 +89,6 @@ interface AuthState {
   authSessionKey: number
   navigateAuth: (screen: AuthScreen) => void
   login: (method: LoginMethod, identifier: string, password: string) => Promise<boolean>
-  loginTrainingAccount: (method: LoginMethod, identifier: string, password: string) => Promise<boolean>
   loginWithBiometrics: () => Promise<boolean>
   signup: (input: SignupInput) => Promise<boolean>
   logout: () => Promise<void>
@@ -335,50 +334,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void maybeOfferBiometricSetup()
     return true
   }, [bumpAuthSession, maybeOfferBiometricSetup])
-
-  const loginTrainingAccount = useCallback(
-    async (method: LoginMethod, identifier: string, password: string) => {
-      clearAuthError()
-      const found =
-        method === 'phone' ? await findUserByPhone(identifier) : await findUserByEmail(identifier)
-
-      if (!found || found.password !== password) {
-        setAuthError('Training account not found. Reload the app to refresh demo data.')
-        return false
-      }
-
-      if (found.role === 'admin' && isSupabaseConfigured()) {
-        const linked = await ensureTrainingAdminSupabaseSession(found)
-        if (linked.ok && linked.user) {
-          const merged = await resolveUserById(linked.user.id)
-          const nextUser = merged
-            ? normalizeUserIdentity({ ...merged, role: 'admin' })
-            : linked.user
-          await saveUser(nextUser)
-          await setSessionUserId(nextUser.id)
-          setUser(nextUser)
-          setAuthError(null)
-          bumpAuthSession()
-          return true
-        }
-        if (linked.error) {
-          setAuthError(linked.error)
-          return false
-        }
-      }
-
-      if (isSupabaseConfigured()) {
-        await supabaseSignOut()
-      }
-
-      await setSessionUserId(found.id)
-      setUser(found)
-      setAuthError(null)
-      bumpAuthSession()
-      return true
-    },
-    [bumpAuthSession, clearAuthError],
-  )
 
   const signup = useCallback(async (input: SignupInput) => {
     if (!input.name.trim()) {
@@ -784,7 +739,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authSessionKey,
       navigateAuth,
       login,
-      loginTrainingAccount,
       loginWithBiometrics,
       signup,
       logout,
@@ -823,7 +777,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authSessionKey,
       navigateAuth,
       login,
-      loginTrainingAccount,
       loginWithBiometrics,
       signup,
       logout,

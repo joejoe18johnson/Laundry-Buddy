@@ -1,6 +1,5 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Dimensions,
   FlatList,
   Modal,
   NativeScrollEvent,
@@ -9,6 +8,7 @@ import {
   StyleSheet,
   Text,
   View,
+  type LayoutChangeEvent,
   type ListRenderItem,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -17,10 +17,6 @@ import { GhostButton, OutlineButton, PrimaryButton } from './ui'
 import { useTheme } from '../context/ThemeContext'
 import { brand, radius, spacing } from '../theme'
 import { toTitleCase } from '../lib/titleCase'
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window')
-const CARD_SIDE_INSET = spacing.screen * 2 + spacing.lg * 2
-const SLIDE_WIDTH = SCREEN_WIDTH - CARD_SIDE_INSET
 
 type TourRole = 'customer' | 'host'
 
@@ -89,7 +85,7 @@ const HOST_STEPS: TourStep[] = [
     id: 'promote',
     icon: 'users',
     title: 'Get discovered',
-    body: 'Respond quickly to requests, keep slots open, and ask happy guests for reviews — top hosts show up first.',
+    body: 'Respond quickly to requests, stay online when you can take loads, and ask happy guests for reviews — top hosts show up first.',
     tips: ['Accept cash or bank transfer in settings', 'Message guests before drop-off if anything changes'],
   },
 ]
@@ -104,13 +100,33 @@ type Props = {
 export function VerificationCelebrationTour({ visible, role, onComplete, onDismiss }: Props) {
   const steps = role === 'host' ? HOST_STEPS : GUEST_STEPS
   const [index, setIndex] = useState(0)
+  const [slideWidth, setSlideWidth] = useState(0)
   const listRef = useRef<FlatList<TourStep>>(null)
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
 
+  useEffect(() => {
+    if (!visible) return
+    setIndex(0)
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: false })
+    })
+  }, [visible, role])
+
+  const onListLayout = (event: LayoutChangeEvent) => {
+    const width = Math.round(event.nativeEvent.layout.width)
+    if (width > 0 && width !== slideWidth) setSlideWidth(width)
+  }
+
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const next = Math.round(event.nativeEvent.contentOffset.x / SLIDE_WIDTH)
-    if (next !== index) setIndex(next)
+    if (slideWidth <= 0) return
+    const next = Math.round(event.nativeEvent.contentOffset.x / slideWidth)
+    if (next !== index && next >= 0 && next < steps.length) setIndex(next)
+  }
+
+  const scrollToStep = (stepIndex: number) => {
+    if (slideWidth <= 0) return
+    listRef.current?.scrollToOffset({ offset: slideWidth * stepIndex, animated: true })
   }
 
   const goNext = () => {
@@ -118,11 +134,11 @@ export function VerificationCelebrationTour({ visible, role, onComplete, onDismi
       onComplete()
       return
     }
-    listRef.current?.scrollToIndex({ index: index + 1, animated: true })
+    scrollToStep(index + 1)
   }
 
   const renderStep: ListRenderItem<TourStep> = ({ item }) => (
-    <View style={[styles.slide, { width: SLIDE_WIDTH }]}>
+    <View style={[styles.slide, slideWidth > 0 && { width: slideWidth }]}>
       <View style={styles.iconWrap}>
         <AppIcon name={item.icon} size={28} color={colors.white} />
       </View>
@@ -154,19 +170,23 @@ export function VerificationCelebrationTour({ visible, role, onComplete, onDismi
               </Pressable>
             </View>
 
-            <FlatList
-              ref={listRef}
-              data={steps}
-              keyExtractor={(item) => item.id}
-              renderItem={renderStep}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onScroll={onScroll}
-              scrollEventThrottle={16}
-              style={styles.list}
-              getItemLayout={(_, i) => ({ length: SLIDE_WIDTH, offset: SLIDE_WIDTH * i, index: i })}
-            />
+            <View style={styles.listWrap} onLayout={onListLayout}>
+              {slideWidth > 0 ? (
+                <FlatList
+                  ref={listRef}
+                  data={steps}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderStep}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScroll={onScroll}
+                  scrollEventThrottle={16}
+                  style={styles.list}
+                  getItemLayout={(_, i) => ({ length: slideWidth, offset: slideWidth * i, index: i })}
+                />
+              ) : null}
+            </View>
 
             <View style={styles.dots}>
               {steps.map((step, i) => (
@@ -182,10 +202,7 @@ export function VerificationCelebrationTour({ visible, role, onComplete, onDismi
               )}
               {!isLast ? <OutlineButton title="Skip tour" full onPress={onDismiss} /> : null}
               {index > 0 && !isLast ? (
-                <GhostButton
-                  title="Back"
-                  onPress={() => listRef.current?.scrollToIndex({ index: index - 1, animated: true })}
-                />
+                <GhostButton title="Back" onPress={() => scrollToStep(index - 1)} />
               ) : null}
             </View>
           </View>
@@ -228,7 +245,8 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       textTransform: 'uppercase',
     },
     skip: { fontSize: 14, fontWeight: '600', color: colors.gray500 },
-    list: { flexGrow: 0 },
+    listWrap: { width: '100%', overflow: 'hidden' },
+    list: { width: '100%' },
     slide: {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,

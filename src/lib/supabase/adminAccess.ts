@@ -1,5 +1,5 @@
 import type { User } from '../../types'
-import { TRAINING_PASSWORD } from '../../data/seedData'
+import { ADMIN_SEED_PASSWORD } from '../../data/seedData'
 import { getIdentityVerification, normalizeUserIdentity } from '../identityVerification'
 import { isSupabaseConfigured } from './config'
 import { getSupabaseClient } from './client'
@@ -87,7 +87,7 @@ export async function ensureTrainingAdminSupabaseSession(
   }
 
   const email = (localUser?.email ?? ADMIN_EMAILS[0]).trim().toLowerCase()
-  const password = TRAINING_PASSWORD
+  const password = ADMIN_SEED_PASSWORD
   const name = localUser?.name?.trim() || 'Support Admin'
 
   let signedIn: User | null = null

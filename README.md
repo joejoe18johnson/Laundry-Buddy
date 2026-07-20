@@ -39,6 +39,56 @@ npm run build:preview:ios-simulator  # Mac Simulator only — free, no Apple Dev
 
 Install the build from the link EAS prints when the build finishes, or open the build page on [expo.dev](https://expo.dev).
 
+## Local Android build (APK / AAB)
+
+Use this to produce install files on your Mac **without EAS cloud** — ideal for sharing a test APK with hosts over WhatsApp or Google Drive.
+
+### Prerequisites
+
+1. **Node.js** 20+ and `npm install`
+2. **JDK** 17 or 21 (`java -version`)
+3. **Android SDK** — install [Android Studio](https://developer.android.com/studio) once, open it, and install the SDK. Default path: `~/Library/Android/sdk`
+4. Accept SDK licenses (one time):
+
+```bash
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+```
+
+If `cmdline-tools/latest` is missing, install **Android SDK Command-line Tools** from Android Studio → SDK Manager.
+
+### Build commands
+
+```bash
+# APK for host testing (recommended — sideload on any Android phone)
+npm run build:android:apk:local
+
+# AAB for Google Play Console upload
+npm run build:android:aab:local
+
+# Both
+npm run build:android:local
+```
+
+Output lands in **`dist/`**:
+
+| File | Use |
+|------|-----|
+| `dist/laundry-buddy-preview.apk` | Send to hosts — they enable “Install unknown apps” and open the file |
+| `dist/laundry-buddy-release.aab` | Upload to Play Store internal testing |
+
+The script runs `expo prebuild --platform android` first so native plugins (camera, maps, notifications) stay in sync with `app.config.ts`, then `./gradlew assembleRelease` or `bundleRelease`.
+
+### Install on a test phone
+
+```bash
+adb install -r dist/laundry-buddy-preview.apk
+```
+
+Or share the APK file directly.
+
+**Signing:** local release builds use the debug keystore (already configured in `android/app/build.gradle`). That is fine for host testing; use a production keystore before a public Play Store release.
+
 ### Sync native projects after config changes
 
 If you change plugins or permissions in `app.config.ts`, regenerate native folders locally:
@@ -57,16 +107,13 @@ Source artwork: `assets/icon-source.png` (your laundry basket PNG). The build sc
 npm run generate-assets
 ```
 
-## Training accounts
+## Admin login
 
-All passwords: `demo1234`
+Use the normal **Log in** screen (not shown on the welcome screen for security).
 
-| Account | Login |
-|---------|-------|
-| Ana (guest) | `6001111` |
-| Carlos (active load) | `carlos@gmail.com` |
-| Maria (host) | `maria@example.com` |
-| Mr. Lopez (host) | `lopez@example.com` |
-| Sandra (pending verify) | `6003456` |
+| Field | Value |
+|-------|-------|
+| Email | `support@laundrybuddy.app` |
+| Password | `demo1234` |
 
-See the welcome screen in-app for the full list.
+If Supabase is connected, run the admin migration in `supabase/migrations/20260719000000_admin_profile_updates.sql` so this account has admin role in the database.

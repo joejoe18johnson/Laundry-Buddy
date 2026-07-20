@@ -37,10 +37,8 @@ export function hostPriceLabel(price: number): string {
   return 'Per Load'
 }
 
-export function formatHostFooterMeta(slotsLeft: number, turnaroundHours: number): string {
-  return toTitleCase(
-    `Per load · ${slotsLeft} slot${slotsLeft === 1 ? '' : 's'} · ${formatTurnaroundHoursLabel(turnaroundHours)}`,
-  )
+export function formatHostFooterMeta(turnaroundHours: number): string {
+  return toTitleCase(`${formatTurnaroundHoursLabel(turnaroundHours)} dry`)
 }
 
 export function countActiveFilters(filters: HostFilters): number {

@@ -477,14 +477,6 @@ export function HostHubScreen() {
             />
           ))}
         </View>
-        <Field
-          label="Open slots"
-          value={String(listing.slotsLeft)}
-          onChangeText={(v) =>
-            patchListing({ slotsLeft: parseListingInt(v, listing.slotsLeft) })
-          }
-          keyboardType="number-pad"
-        />
         <ToggleRow
           label="Generator backup"
           sub="Show guests you can run during power outages"

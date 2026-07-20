@@ -152,7 +152,7 @@ export function HelpScreen() {
       {isCustomer ? (
         <>
           <Step n={1} title="Find a host" body={`Search by district, town, price, or reviews anywhere in ${ACTIVE_REGION_LABEL}.`} styles={styles} />
-          <Step n={2} title="Book a slot" body="Pick drop-off time, load count, and any notes for the host." styles={styles} />
+          <Step n={2} title="Send a request" body="Pick drop-off time, load count, and any notes for the host." styles={styles} />
           <Step n={3} title="Track your load" body="Follow each stage from bag received to ready for pickup." styles={styles} />
           <Step n={4} title="Pick up dry laundry" body="Message your host in the app if you need directions or timing." styles={styles} />
         </>
@@ -183,7 +183,7 @@ export function HelpScreen() {
             />
             <FaqItem
               question="Can I message a host before booking?"
-              answer="Yes — open a host profile and tap Message host to plan drop-off timing, gate access, or ask about availability before you book a slot."
+              answer="Yes — open a host profile and tap Message host to plan drop-off timing, gate access, or ask about availability before you book."
               styles={styles}
             />
             <FaqItem

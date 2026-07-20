@@ -25,7 +25,6 @@ import {
   resolveInquiryChatRecipient,
   supportThreadId,
 } from '../lib/chatThreads'
-import { DEMO_ANA_MARIA_BOOKING_IDS } from '../data/seedData'
 import { listAllUsers } from '../lib/adminUsers'
 import { chatLink } from '../lib/notificationLinks'
 import type { AppRole, Booking, ChatMessage } from '../types'
@@ -117,13 +116,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
           ]),
         )
       } else {
-        threadIds = Array.from(
-          new Set([
-            supportId,
-            ...storedIds,
-            ...(user.id === 'user-ana' || user.id === 'user-maria' ? [...DEMO_ANA_MARIA_BOOKING_IDS] : []),
-          ]),
-        )
+        threadIds = Array.from(new Set([supportId, ...storedIds]))
       }
       await refreshThreads(threadIds)
     }

@@ -17,8 +17,8 @@ import {
   getHostById,
   getHostDashboardSeed,
   getAvailableHosts,
-  SEED_USERS,
 } from '../data/mockData'
+import { getAllUsers } from '../lib/authStorage'
 import { calculateBookingTotal, applyHostPricing, getHostPricing, DRYER_SHEETS_PRICE } from '../lib/hostPricing'
 import { formatMoney, getBookingAmount } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
@@ -489,13 +489,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!wasOnline && settings.isOnline && settings.notifyGuestsWhenOnline) {
         const hostProfile = getHostByUserId(user.id)
         if (hostProfile) {
-          const customers = SEED_USERS.filter((u) => u.role === 'customer')
+          const customers = (await getAllUsers()).filter((u) => u.role === 'customer')
           await Promise.all(
             customers.map((c) =>
               push(
                 c.id,
                 `${formatHostDisplayName(hostProfile.name)} is online`,
-                `${formatHostDisplayName(hostProfile.name)} is accepting loads in ${hostProfile.location}. Book now while slots last.`,
+                `${formatHostDisplayName(hostProfile.name)} is accepting loads in ${hostProfile.location}. Book now while they are online.`,
               ),
             ),
           )
