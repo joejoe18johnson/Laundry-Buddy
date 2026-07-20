@@ -1,6 +1,11 @@
 export { getSupabaseClient, resetSupabaseClientForTests } from './client'
 export { authEmailFromPhone, getSupabaseAnonKey, getSupabaseUrl, isSupabaseConfigured } from './config'
 export {
+  createSessionFromAuthRedirectUrl,
+  getSupabaseAuthRedirectUrl,
+  isSupabaseAuthCallbackUrl,
+} from './authRedirect'
+export {
   fetchCurrentSupabaseUser,
   fetchProfileById,
   supabaseEmailInUse,

@@ -31,8 +31,10 @@ import {
 } from '../lib/biometricAuth'
 import { isFullFlowTesting } from '../lib/testingFlow'
 import {
+  createSessionFromAuthRedirectUrl,
   fetchCurrentSupabaseUser,
   fetchProfileById,
+  isSupabaseAuthCallbackUrl,
   isSupabaseConfigured,
   supabaseEmailInUse,
   supabasePhoneInUse,
@@ -43,6 +45,7 @@ import {
 } from '../lib/supabase'
 import { ensureSupabaseAdminProfile, ensureTrainingAdminSupabaseSession, isLikelyAdminUser } from '../lib/supabase/adminAccess'
 import * as SplashScreen from 'expo-splash-screen'
+import * as Linking from 'expo-linking'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
 import { emptyIdentityVerification, getIdentityVerification, normalizeUserIdentity, needsIdentityVerification } from '../lib/identityVerification'
 import { isValidEmail } from '../lib/email'
@@ -211,6 +214,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refreshBiometricState()
   }, [refreshBiometricState])
 
+  const handleAuthRedirect = useCallback(
+    async (url: string | null) => {
+      if (!url || !isSupabaseAuthCallbackUrl(url)) return
+
+      const result = await createSessionFromAuthRedirectUrl(url)
+      if (result.error) {
+        setAuthError(result.error)
+        setAuthScreen('login')
+        return
+      }
+
+      if (result.user) {
+        await saveUser(result.user)
+        setUser(result.user)
+        setAuthError(null)
+        setAuthNotice('Email confirmed! Welcome to Laundry Buddy.')
+        bumpAuthSession()
+        return
+      }
+
+      if (result.confirmed) {
+        setAuthNotice('Email confirmed! Log in with your phone number and password.')
+        setAuthScreen('login')
+      }
+    },
+    [bumpAuthSession],
+  )
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return
+
+    void Linking.getInitialURL().then((url) => handleAuthRedirect(url))
+
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      void handleAuthRedirect(url)
+    })
+
+    return () => subscription.remove()
+  }, [handleAuthRedirect])
+
   useEffect(() => {
     if (ready) {
       SplashScreen.hideAsync().catch(() => {})
@@ -372,6 +415,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAuthError('Enter a valid email address.')
         return false
       }
+      if (!input.phone?.trim()) {
+        setAuthError('Phone number is required.')
+        return false
+      }
+      const phoneTaken = isSupabaseConfigured()
+        ? await supabasePhoneInUse(input.phone)
+        : await phoneInUse(input.phone)
+      if (phoneTaken) {
+        setAuthError('This phone number is already registered.')
+        return false
+      }
       const emailTaken = isSupabaseConfigured()
         ? await supabaseEmailInUse(input.email)
         : await emailInUse(input.email)
@@ -386,7 +440,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (needsEmailConfirmation) {
         const confirmedEmail = input.email?.trim().toLowerCase() ?? 'your email'
         setAuthNotice(
-          `We sent a confirmation link to ${confirmedEmail}. Open your email, tap the link to confirm your account, then log in here.`,
+          `We sent a confirmation link to ${confirmedEmail}. Tap the link on this phone — it should open Laundry Buddy. Then log in with your phone number and password.`,
         )
         setAuthError(null)
         navigateAuth('login')
@@ -414,7 +468,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: input.name.trim(),
-      phone: input.phone ? normalizePhone(input.phone) : undefined,
+      phone: normalizePhone(input.phone!),
       email: input.email?.trim().toLowerCase(),
       password: input.password,
       role: input.role,

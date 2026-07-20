@@ -2,7 +2,7 @@ import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, User
 import { getRuntimeDynamicHosts } from '../lib/dynamicHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes. */
-export const SEED_DATA_VERSION = '28'
+export const SEED_DATA_VERSION = '29'
 
 /** Bootstrap password for the local admin account (also used for Supabase auto-provisioning). */
 export const ADMIN_SEED_PASSWORD = 'demo1234'
@@ -23,6 +23,7 @@ export const SEED_USERS: User[] = [
     id: 'user-support-admin',
     name: 'Support Admin',
     email: 'support@laundrybuddy.app',
+    phone: '5016220000',
     password: ADMIN_SEED_PASSWORD,
     role: 'admin',
     identityVerification: {

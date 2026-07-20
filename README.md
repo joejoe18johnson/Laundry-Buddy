@@ -109,11 +109,11 @@ npm run generate-assets
 
 ## Admin login
 
-Use the normal **Log in** screen (not shown on the welcome screen for security).
+Use the normal **Log in** screen with your phone number and password.
 
 | Field | Value |
 |-------|-------|
-| Email | `support@laundrybuddy.app` |
+| Phone | `622 0000` (country code +501) |
 | Password | `demo1234` |
 
 If Supabase is connected, run the admin migration in `supabase/migrations/20260719000000_admin_profile_updates.sql` so this account has admin role in the database.

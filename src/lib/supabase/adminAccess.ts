@@ -6,6 +6,7 @@ import { getSupabaseClient } from './client'
 import { fetchProfileById, supabaseSignIn, supabaseSignUp, supabaseUpdateProfile } from './authService'
 
 export const ADMIN_EMAILS = ['support@laundrybuddy.app'] as const
+export const ADMIN_PHONE = '5016220000'
 
 export function isLikelyAdminUser(user: Pick<User, 'role' | 'email'>): boolean {
   if (user.role === 'admin') return true
@@ -56,6 +57,7 @@ export async function ensureSupabaseAdminProfile(user: User): Promise<User> {
     ...user,
     role: 'admin',
     email: user.email ?? ADMIN_EMAILS[0],
+    phone: user.phone ?? ADMIN_PHONE,
     identityVerification: {
       ...verification,
       status: verification.status === 'none' ? 'verified' : verification.status,
@@ -99,6 +101,7 @@ export async function ensureTrainingAdminSupabaseSession(
       name,
       method: 'email',
       email,
+      phone: localUser?.phone ?? ADMIN_PHONE,
       password,
       role: 'admin',
     })

@@ -85,6 +85,7 @@ import { USER_LOCATION } from '../lib/mapRegion'
 import {
   loadLocationPreferences,
   saveLocationPreferences,
+  DEFAULT_SEARCH_RADIUS_KM,
   type LocationPreferences,
   type RadiusOptionKm,
 } from '../lib/locationPreferences'
@@ -245,7 +246,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userLocation, setUserLocation] = useState<Coordinates>(USER_LOCATION)
   const [userLocationLabel, setUserLocationLabel] = useState('San Ignacio')
   const [locationLoading, setLocationLoading] = useState(false)
-  const [searchRadiusKm, setSearchRadiusKmState] = useState(10)
+  const [searchRadiusKm, setSearchRadiusKmState] = useState<number>(DEFAULT_SEARCH_RADIUS_KM)
   const [reviewHostId, setReviewHostId] = useState<string | null>(null)
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null)
   const [hostReviewsMap, setHostReviewsMap] = useState<Record<string, HostReview[]>>({})

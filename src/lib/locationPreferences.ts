@@ -7,6 +7,12 @@ const PREFS_KEY = 'laundry-buddy-location-prefs'
 export const RADIUS_OPTIONS_KM = [1, 3, 5, 10, 15, 20, 30] as const
 export type RadiusOptionKm = (typeof RADIUS_OPTIONS_KM)[number]
 
+/** Default host search radius for all users. */
+export const DEFAULT_SEARCH_RADIUS_KM: RadiusOptionKm = 3
+
+const RADIUS_DEFAULT_VERSION = '3km-v1'
+const RADIUS_VERSION_KEY = 'laundry-buddy-radius-default-version'
+
 export interface LocationPreset {
   label: string
   latitude: number
@@ -44,19 +50,35 @@ export function locationPreferencesEqual(a: LocationPreferences, b: LocationPref
 export const DEFAULT_LOCATION_PREFS: LocationPreferences = {
   userLocation: USER_LOCATION,
   userLocationLabel: 'Belmopan',
-  searchRadiusKm: 10,
+  searchRadiusKm: DEFAULT_SEARCH_RADIUS_KM,
 }
 
 export async function loadLocationPreferences(): Promise<LocationPreferences> {
   const raw = await AsyncStorage.getItem(PREFS_KEY)
-  if (!raw) return DEFAULT_LOCATION_PREFS
+  const radiusVersion = await AsyncStorage.getItem(RADIUS_VERSION_KEY)
+
+  if (!raw) {
+    if (radiusVersion !== RADIUS_DEFAULT_VERSION) {
+      await AsyncStorage.setItem(RADIUS_VERSION_KEY, RADIUS_DEFAULT_VERSION)
+    }
+    return DEFAULT_LOCATION_PREFS
+  }
+
   try {
     const parsed = JSON.parse(raw) as LocationPreferences
-    return {
+    let prefs: LocationPreferences = {
       userLocation: parsed.userLocation ?? DEFAULT_LOCATION_PREFS.userLocation,
       userLocationLabel: parsed.userLocationLabel ?? DEFAULT_LOCATION_PREFS.userLocationLabel,
       searchRadiusKm: parsed.searchRadiusKm ?? DEFAULT_LOCATION_PREFS.searchRadiusKm,
     }
+
+    if (radiusVersion !== RADIUS_DEFAULT_VERSION) {
+      prefs = { ...prefs, searchRadiusKm: DEFAULT_SEARCH_RADIUS_KM }
+      await saveLocationPreferences(prefs)
+      await AsyncStorage.setItem(RADIUS_VERSION_KEY, RADIUS_DEFAULT_VERSION)
+    }
+
+    return prefs
   } catch {
     return DEFAULT_LOCATION_PREFS
   }

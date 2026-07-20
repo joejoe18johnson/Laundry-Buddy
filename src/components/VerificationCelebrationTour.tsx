@@ -198,7 +198,7 @@ export function VerificationCelebrationTour({ visible, role, onComplete, onDismi
               {isLast ? (
                 <PrimaryButton title={completeLabel} icon={role === 'host' ? 'settings' : 'search'} full onPress={onComplete} />
               ) : (
-                <PrimaryButton title="Next" icon="chevron-right" full onPress={goNext} />
+                <PrimaryButton title="Next" full onPress={goNext} />
               )}
               {!isLast ? <OutlineButton title="Skip tour" full onPress={onDismiss} /> : null}
               {index > 0 && !isLast ? (

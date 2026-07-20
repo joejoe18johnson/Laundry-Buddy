@@ -3,12 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
-import { AppTextInput, BackButton, MethodTabs, PasswordInput, PrimaryButton, Screen } from '../../components/ui'
+import { AppTextInput, BackButton, PasswordInput, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { radius, spacing } from '../../theme'
 import { toTitleCase } from '../../lib/titleCase'
-import { isSupabaseConfigured } from '../../lib/supabase'
-import type { LoginMethod } from '../../types'
 
 function createLoginStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
@@ -80,10 +78,7 @@ export function LoginScreen() {
   } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createLoginStyles(colors), [colors])
-  const usingSupabase = isSupabaseConfigured()
-  const [method, setMethod] = useState<LoginMethod>(usingSupabase ? 'email' : 'phone')
   const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [biometricLoading, setBiometricLoading] = useState(false)
 
@@ -92,8 +87,7 @@ export function LoginScreen() {
   const handleLogin = async () => {
     clearAuthError()
     clearAuthNotice()
-    const loginMethod = usingSupabase ? 'email' : method
-    await login(loginMethod, loginMethod === 'phone' ? phone : email, password)
+    await login('phone', phone, password)
   }
 
   const handleBiometricLogin = async () => {
@@ -107,9 +101,7 @@ export function LoginScreen() {
     <Screen>
       <BackButton onPress={() => navigateAuth('welcome')} />
       <Text style={styles.title}>{toTitleCase('Welcome back')}</Text>
-      <Text style={styles.subtitle}>
-        {toTitleCase(usingSupabase ? 'Log in with your email and password' : 'Log in with your phone or email')}
-      </Text>
+      <Text style={styles.subtitle}>{toTitleCase('Log in with your phone number and password')}</Text>
 
       {showBiometric ? (
         <>
@@ -123,68 +115,34 @@ export function LoginScreen() {
         </>
       ) : null}
 
-      {!usingSupabase ? (
-        <MethodTabs
-          value={method}
-          options={[
-            { value: 'phone', label: 'Phone', icon: 'smartphone' },
-            { value: 'email', label: 'Email', icon: 'mail' },
-          ]}
-          onChange={(m) => {
-            setMethod(m)
-            clearAuthError()
-          }}
-        />
-      ) : null}
-
-      {!usingSupabase && method === 'phone' ? (
-        <View style={styles.field}>
-          <View style={styles.labelRow}>
-            <AppIcon name="smartphone" size={16} color={colors.gray600} />
-            <Text style={styles.label}>{toTitleCase('Phone number')}</Text>
-          </View>
-          <View style={styles.phoneRow}>
-            <Text style={styles.prefix}>+501</Text>
-            <AppTextInput
-              style={styles.phoneInput}
-              placeholder="600 1234"
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
-          </View>
+      <View style={styles.field}>
+        <View style={styles.labelRow}>
+          <AppIcon name="smartphone" size={16} color={colors.gray600} />
+          <Text style={styles.label}>{toTitleCase('Phone number')}</Text>
         </View>
-      ) : (
-        <View style={styles.field}>
-          <View style={styles.labelRow}>
-            <AppIcon name="mail" size={16} color={colors.gray600} />
-            <Text style={styles.label}>{toTitleCase('Email')}</Text>
-          </View>
+        <View style={styles.phoneRow}>
+          <Text style={styles.prefix}>+501</Text>
           <AppTextInput
-            placeholder="you@example.com"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            value={email}
-            onChangeText={setEmail}
+            style={styles.phoneInput}
+            placeholder="600 1234"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={setPhone}
           />
         </View>
-      )}
+      </View>
 
       <View style={styles.field}>
         <View style={styles.labelRow}>
           <AppIcon name="lock" size={16} color={colors.gray600} />
           <Text style={styles.label}>{toTitleCase('Password')}</Text>
         </View>
-        <PasswordInput
-          placeholder="Your password"
-          value={password}
-          onChangeText={setPassword}
-        />
+        <PasswordInput placeholder="Your password" value={password} onChangeText={setPassword} />
       </View>
 
       {authNotice ? (
         <View style={styles.info}>
-          <AppIcon name="mail" size={18} color={colors.green} />
+          <AppIcon name="smartphone" size={18} color={colors.green} />
           <Text style={styles.infoText}>{toTitleCase(authNotice)}</Text>
         </View>
       ) : null}

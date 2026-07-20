@@ -45,12 +45,21 @@ supabase db push
 
 ## 4. Auth settings (Supabase dashboard)
 
+Under **Authentication → URL Configuration**:
+
+| Setting | Value |
+|---------|-------|
+| **Site URL** | `laundrybuddy://auth/callback` |
+| **Redirect URLs** | Add `laundrybuddy://**` (and `exp+laundry-buddy://**` if testing in Expo Go) |
+
+The default Supabase Site URL is `http://localhost:3000`. If you leave that in place, email confirmation links open a browser error on phones (`localhost refused to connect`). The app sends `emailRedirectTo: laundrybuddy://auth/callback` on sign-up, but Supabase only allows redirects listed above.
+
 Under **Authentication → Providers → Email**:
 
 - Enable email provider.
-- For development, you can disable “Confirm email” so sign-up works immediately.
+- For quick local testing only, you can disable **Confirm email** so sign-up works immediately without a link.
 
-Phone logins use a synthetic email (`5012345678@phone.laundrybuddy.app`) so existing phone + password UX stays the same.
+Phone logins look up the user’s profile by phone, then sign in with their signup email behind the scenes.
 
 ## 5. Storage buckets (optional, for photos)
 
