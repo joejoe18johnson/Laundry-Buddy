@@ -15,9 +15,8 @@ import {
   showLocalNotification,
   updateBadgeCount,
 } from '../lib/pushNotifications'
+import { shouldDeliverPhoneAlert } from '../lib/notificationAlerts'
 import { linkToPushData } from '../lib/notificationLinks'
-import { isNewBookingNotification } from '../lib/hostNotifications'
-import { PAYMENT_REQUEST_NOTIFICATION_TITLE } from '../lib/paymentRequestDelivery'
 
 const NOTIFICATIONS_KEY = 'laundry-buddy-notifications'
 
@@ -71,9 +70,7 @@ export function NotificationProvider({
         item.userId === activeUserId &&
         !item.read &&
         !deliveredPhoneAlertsRef.current.has(item.id) &&
-        (item.title === PAYMENT_REQUEST_NOTIFICATION_TITLE ||
-          isNewBookingNotification(item.title) ||
-          /pay now|payment request/i.test(item.title)),
+        shouldDeliverPhoneAlert(item.title, item.body),
     )
     if (!urgent) return
     deliveredPhoneAlertsRef.current.add(urgent.id)
@@ -101,7 +98,7 @@ export function NotificationProvider({
         return next
       })
 
-      if (userId === activeUserId) {
+      if (userId === activeUserId && shouldDeliverPhoneAlert(title, body)) {
         await showLocalNotification(title, body, link ? linkToPushData(link) : undefined)
       }
     },

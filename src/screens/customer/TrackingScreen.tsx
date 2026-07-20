@@ -11,6 +11,7 @@ import { getBookingAmount, formatMoney, cashPaymentGuestHint } from '../../lib/b
 import { buildPaymentProofChatNotice } from '../../lib/chatThreads'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
+import { NotificationBellReminder } from '../../components/NotificationBellReminder'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { getGuestProgressStep, getGuestStepDescription } from '../../lib/loadProgress'
 import {
@@ -185,6 +186,7 @@ export function TrackingScreen() {
   return (
     <Screen>
       <BackButton onPress={() => navigate('customer-home')} label="Home" />
+      <NotificationBellReminder compact onPressBell={() => navigate('notifications')} />
 
       {isDemoAnaMariaBooking(booking.id) ? <TrainingDemoHint role="customer" /> : null}
 

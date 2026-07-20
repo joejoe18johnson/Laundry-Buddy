@@ -32,14 +32,15 @@ import {
   isPhoneVerificationComplete,
   verificationStatusLabel,
 } from '../../lib/identityVerification'
-import { buildWhatsAppVerificationCodeMessage, buildVerificationApprovedBody, VERIFICATION_APPROVED_TITLE } from '../../lib/verificationCodes'
+import { deliverVerificationCodeViaWhatsApp } from '../../lib/adminVerificationDelivery'
+import { buildVerificationApprovedBody, VERIFICATION_APPROVED_TITLE } from '../../lib/verificationCodes'
 import { verificationApprovedLink } from '../../lib/notificationLinks'
 import { getAssignedCodeForUser } from '../../lib/verificationCodeStorage'
 import { getOpenVerificationCodeRequest } from '../../lib/verificationCodeService'
 import {
   type VerificationCodeRequest,
 } from '../../lib/verificationRequestStorage'
-import { formatWhatsAppDisplay, openWhatsAppVerificationCode } from '../../lib/whatsapp'
+import { formatWhatsAppDisplay } from '../../lib/whatsapp'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import type { User } from '../../types'
@@ -239,11 +240,13 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
     setBusy(true)
     setActionError(null)
     setActionMessage(null)
-    const result = await adminSendVerificationCode(userId)
-    if (result.ok && result.code) {
-      const message = buildWhatsAppVerificationCodeMessage(user.name, result.code)
-      openWhatsAppVerificationCode(codeRequest.phone, message)
-      setActionMessage('Verification code sent. WhatsApp should open with the message ready.')
+    const result = await deliverVerificationCodeViaWhatsApp({
+      request: codeRequest,
+      adminSendVerificationCode,
+      push,
+    })
+    if (result.ok) {
+      setActionMessage(result.instruction ?? 'Verification code sent.')
     } else {
       setActionError(result.error ?? 'Could not send verification code.')
     }

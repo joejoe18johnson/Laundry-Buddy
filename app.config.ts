@@ -5,7 +5,7 @@ const LOCATION_PERMISSION =
 const BIOMETRIC_PERMISSION =
   'Allow Laundry Buddy to use Face ID or fingerprint so you can sign in quickly.'
 const CAMERA_PERMISSION =
-  'Allow Laundry Buddy to use your camera to photograph your load for the host.'
+  'Allow Laundry Buddy to use your camera for load photos and verification selfies.'
 const PHOTOS_PERMISSION =
   'Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.'
 
@@ -79,6 +79,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-image-picker',
       {
         photosPermission: PHOTOS_PERMISSION,
+        cameraPermission: CAMERA_PERMISSION,
+      },
+    ],
+    [
+      'expo-camera',
+      {
         cameraPermission: CAMERA_PERMISSION,
       },
     ],

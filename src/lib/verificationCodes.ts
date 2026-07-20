@@ -57,9 +57,8 @@ export function buildWhatsAppVerificationCodeMessage(userName: string, code: str
   ].join('\n')
 }
 
-/** @deprecated Codes are delivered via WhatsApp, not in-app notification. */
-export function buildUserVerificationCodeBody(code: string): string {
-  return `Your Laundry Buddy verification code is ${code}. Enter it in Verification Center to unlock your account.`
+export function buildUserVerificationCodeSentBody(phone: string): string {
+  return `We sent your 6-digit code on WhatsApp to ${phone}. Open Verification Center and enter it to continue.`
 }
 
 export function buildCodeAcceptedMessage(): string {

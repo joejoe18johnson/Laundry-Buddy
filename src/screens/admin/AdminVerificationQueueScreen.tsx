@@ -4,11 +4,11 @@ import { AppIcon } from '../../components/AppIcon'
 import { BrandAlert } from '../../components/BrandDialog'
 import { OutlineButton, PrimaryButton, Screen } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
+import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useAdminDashboardData } from '../../hooks/useAdminDashboardData'
+import { deliverVerificationCodeViaWhatsApp } from '../../lib/adminVerificationDelivery'
 import { formatIdDocumentType, getIdentityVerification } from '../../lib/identityVerification'
-import { buildWhatsAppVerificationCodeMessage } from '../../lib/verificationCodes'
-import { openWhatsAppVerificationCode } from '../../lib/whatsapp'
 import { toTitleCase } from '../../lib/titleCase'
 import type { VerificationCodeRequest } from '../../lib/verificationRequestStorage'
 import { createAdminStyles } from './adminStyles'
@@ -21,6 +21,7 @@ type Props = {
 
 export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onReviewUser }: Props) {
   const { adminSendVerificationCode } = useAuth()
+  const { push } = useNotifications()
   const { colors } = useTheme()
   const styles = useMemo(() => createAdminStyles(colors), [colors])
   const { loading, codeRequests, idReviewUsers, queueCount, reload } = useAdminDashboardData(refreshKey)
@@ -28,13 +29,18 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
   const [actionError, setActionError] = useState<string | null>(null)
   const [errorAlert, setErrorAlert] = useState<string | null>(null)
 
+  const [successAlert, setSuccessAlert] = useState<string | null>(null)
+
   const handleSendCode = async (request: VerificationCodeRequest) => {
     setBusyUserId(request.userId)
     setActionError(null)
-    const result = await adminSendVerificationCode(request.userId)
-    if (result.ok && result.code) {
-      const message = buildWhatsAppVerificationCodeMessage(request.userName, result.code)
-      openWhatsAppVerificationCode(request.phone, message)
+    const result = await deliverVerificationCodeViaWhatsApp({
+      request,
+      adminSendVerificationCode,
+      push,
+    })
+    if (result.ok) {
+      setSuccessAlert(result.instruction ?? 'Code sent.')
     } else {
       const message = result.error ?? 'Could not send verification code.'
       setActionError(message)
@@ -119,6 +125,14 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
           </>
         )}
       </ScrollView>
+
+      <BrandAlert
+        visible={!!successAlert}
+        title="WhatsApp ready"
+        message={successAlert ?? undefined}
+        icon="message-circle"
+        onClose={() => setSuccessAlert(null)}
+      />
 
       <BrandAlert
         visible={!!errorAlert}

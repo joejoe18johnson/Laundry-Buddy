@@ -28,11 +28,12 @@ export function NotificationPermissionPrompt({ visible, permission, onEnable, on
             <Text style={styles.body}>
               {toTitleCase(
                 denied
-                  ? 'Notifications are off on this phone. Turn them on so you never miss when a load is accepted, drying, or ready for pickup.'
-                  : 'Laundry Buddy works best with alerts on. Allow notifications for host responses, ready-for-pickup updates, and drop-off reminders.',
+                  ? 'Notifications are off on this phone. Turn them on so you never miss when a host accepts, declines, or marks your load ready.'
+                  : 'Laundry Buddy works best with the bell on. Allow notifications for host responses, ready-for-pickup updates, and drop-off reminders.',
               )}
             </Text>
             <View style={styles.list}>
+              <Text style={styles.listItem}>• {toTitleCase('Tap the bell in the top bar for your notification inbox')}</Text>
               <Text style={styles.listItem}>• {toTitleCase('Host accepts or declines your request')}</Text>
               <Text style={styles.listItem}>• {toTitleCase('Load is drying or ready for pickup')}</Text>
               <Text style={styles.listItem}>• {toTitleCase('Reminders before drop-off time')}</Text>

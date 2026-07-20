@@ -147,7 +147,7 @@ export function NotificationsScreen() {
             <Text style={styles.permissionTitle}>{toTitleCase('Phone alerts are off')}</Text>
             <Text style={styles.permissionSub}>
               {toTitleCase(
-                'Enable notifications for host responses, ready-for-pickup alerts, and drop-off reminders.',
+                'Tap the bell in the top bar for updates. Enable phone alerts for host responses, ready-for-pickup alerts, and drop-off reminders.',
               )}
             </Text>
           </View>

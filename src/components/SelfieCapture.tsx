@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
 import { AppIcon } from './AppIcon'
-import { BrandActionSheet, BrandAlert, type BrandDialogAction } from './BrandDialog'
+import { BrandActionSheet, type BrandDialogAction } from './BrandDialog'
+import { SelfieCameraModal } from './SelfieCameraModal'
+import { SelfieFrameGuide } from './SelfieFrameGuide'
 import { useTheme } from '../context/ThemeContext'
 import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
@@ -17,28 +18,11 @@ interface SelfieCaptureProps {
 export function SelfieCapture({ photoUri, onPhotoChange, label, disabled }: SelfieCaptureProps) {
   const styles = useMemo(() => createStyles(), [])
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [alert, setAlert] = useState<{ title: string; message: string } | null>(null)
+  const [cameraOpen, setCameraOpen] = useState(false)
 
-  const takeSelfie = async () => {
-    const permission = await ImagePicker.requestCameraPermissionsAsync()
-    if (!permission.granted) {
-      setAlert({
-        title: 'Permission needed',
-        message: 'Allow camera access to take a verification selfie.',
-      })
-      return
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-      allowsEditing: false,
-      cameraType: ImagePicker.CameraType.front,
-    })
-
-    if (!result.canceled && result.assets[0]?.uri) {
-      onPhotoChange(result.assets[0].uri)
-    }
+  const openCamera = () => {
+    setSheetOpen(false)
+    setCameraOpen(true)
   }
 
   const sheetActions: BrandDialogAction[] = [
@@ -46,10 +30,7 @@ export function SelfieCapture({ photoUri, onPhotoChange, label, disabled }: Self
       label: 'Take selfie',
       icon: 'camera',
       variant: 'primary',
-      onPress: () => {
-        setSheetOpen(false)
-        void takeSelfie()
-      },
+      onPress: openCamera,
     },
     ...(photoUri
       ? [
@@ -57,10 +38,7 @@ export function SelfieCapture({ photoUri, onPhotoChange, label, disabled }: Self
             label: 'Retake selfie',
             icon: 'refresh-cw' as const,
             variant: 'outline' as const,
-            onPress: () => {
-              setSheetOpen(false)
-              void takeSelfie()
-            },
+            onPress: openCamera,
           },
           {
             label: 'Remove photo',
@@ -88,31 +66,37 @@ export function SelfieCapture({ photoUri, onPhotoChange, label, disabled }: Self
         style={[styles.upload, photoUri && styles.uploadDone, disabled && styles.uploadDisabled]}
       >
         {photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
+          <View style={styles.previewWrap}>
+            <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
+            <SelfieFrameGuide />
+          </View>
         ) : (
-          <>
-            <AppIcon name="user" size={24} color={colors.gray500} />
-            <Text style={styles.uploadText}>{label ?? toTitleCase('Take verification selfie')}</Text>
-            <Text style={styles.uploadHint}>{toTitleCase('Front camera only — face clearly visible')}</Text>
-          </>
+          <View style={styles.placeholder}>
+            <SelfieFrameGuide label="Center your face in the oval" />
+            <View style={styles.placeholderContent}>
+              <AppIcon name="user" size={24} color={colors.gray500} />
+              <Text style={styles.uploadText}>{label ?? toTitleCase('Take verification selfie')}</Text>
+              <Text style={styles.uploadHint}>
+                {toTitleCase('Front camera · face clearly visible · good lighting')}
+              </Text>
+            </View>
+          </View>
         )}
       </Pressable>
 
       <BrandActionSheet
         visible={sheetOpen}
         title="Verification selfie"
-        message="Take a clear selfie in good lighting. We use this to confirm your face matches the photo on your ID."
+        message="Use the face guide to center yourself. We compare this selfie to the photo on your ID."
         icon="user"
         actions={sheetActions}
         onClose={() => setSheetOpen(false)}
       />
 
-      <BrandAlert
-        visible={!!alert}
-        title={alert?.title ?? ''}
-        message={alert?.message}
-        icon="alert-circle"
-        onClose={() => setAlert(null)}
+      <SelfieCameraModal
+        visible={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCapture={onPhotoChange}
       />
     </View>
   )
@@ -121,16 +105,12 @@ export function SelfieCapture({ photoUri, onPhotoChange, label, disabled }: Self
 function createStyles() {
   return StyleSheet.create({
     upload: {
-      minHeight: 160,
+      minHeight: 220,
       borderWidth: 2,
       borderStyle: 'dashed',
       borderColor: colors.gray200,
       borderRadius: radius.md,
       backgroundColor: colors.gray50,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: spacing.md,
-      gap: spacing.sm,
       overflow: 'hidden',
     },
     uploadDone: {
@@ -142,8 +122,21 @@ function createStyles() {
       opacity: 0.55,
       backgroundColor: colors.gray75,
     },
+    placeholder: {
+      minHeight: 220,
+      justifyContent: 'center',
+    },
+    placeholderContent: {
+      alignItems: 'center',
+      gap: spacing.sm,
+      padding: spacing.md,
+    },
     uploadText: { fontSize: 15, fontWeight: '600', color: colors.gray600, textAlign: 'center' },
     uploadHint: { fontSize: 12, color: colors.gray500, textAlign: 'center' },
-    preview: { width: '100%', height: 220, borderRadius: radius.sm },
+    previewWrap: {
+      minHeight: 220,
+      position: 'relative',
+    },
+    preview: { width: '100%', height: 260 },
   })
 }
