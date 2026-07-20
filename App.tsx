@@ -649,8 +649,8 @@ function AuthenticatedApp() {
               <AdminAppShell />
             ) : (
               <>
-                <VerificationStatusSync />
                 <AppProvider>
+                  <VerificationStatusSync />
                   <HostRequestAlertSync />
                   <AppShell />
                 </AppProvider>

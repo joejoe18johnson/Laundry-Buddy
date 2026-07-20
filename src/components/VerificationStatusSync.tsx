@@ -1,25 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import { BrandAlert } from './BrandDialog'
+import { VerificationCelebrationTour } from './VerificationCelebrationTour'
+import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useUserNotifications } from '../context/NotificationContext'
 import { getIdentityVerification } from '../lib/identityVerification'
 import { VERIFICATION_APPROVED_TITLE } from '../lib/verificationCodes'
+import { hasSeenVerificationTour, markVerificationTourSeen } from '../lib/verificationTourStorage'
 
-function verificationApprovedAlertMessage(role: 'customer' | 'host'): string {
-  if (role === 'host') {
-    return 'Your ID, selfie, and address are approved. You are fully verified — hosting is unlocked and you will not need to complete verification again.'
-  }
-  return 'Your ID and selfie are approved. You are fully verified — booking is unlocked and you will not need to complete verification again.'
-}
-
-/** Keeps the signed-in user in sync after admin approval and shows a verified popup once. */
+/** Keeps the signed-in user in sync after admin approval and shows a verified tour once. */
 export function VerificationStatusSync() {
   const { user, refreshCurrentUser } = useAuth()
+  const { navigate } = useApp()
   const { notifications, markRead } = useUserNotifications(user?.id)
   const previousStatusRef = useRef<string | null>(null)
-  const alertedUserIdRef = useRef<string | null>(null)
-  const [verifiedAlert, setVerifiedAlert] = useState<{ role: 'customer' | 'host' } | null>(null)
+  const checkingTourRef = useRef(false)
+  const [tour, setTour] = useState<{ role: 'customer' | 'host' } | null>(null)
 
   useEffect(() => {
     if (!user || user.role === 'admin') return
@@ -48,43 +44,56 @@ export function VerificationStatusSync() {
   }, [refreshCurrentUser, user?.id, user?.role, user?.identityVerification?.status])
 
   useEffect(() => {
-    if (!user || user.role === 'admin') return
+    if (!user || user.role === 'admin' || checkingTourRef.current) return
 
-    const unreadApproved = notifications.find(
-      (entry) => !entry.read && entry.title === VERIFICATION_APPROVED_TITLE,
-    )
-    if (unreadApproved) {
-      void refreshCurrentUser().then(() => markRead(unreadApproved.id))
+    const showTourIfNeeded = async () => {
+      checkingTourRef.current = true
+      try {
+        const status = getIdentityVerification(user).status
+        const previous = previousStatusRef.current
+        previousStatusRef.current = status
+
+        if (status !== 'verified') return
+        if (await hasSeenVerificationTour(user.id)) return
+
+        const unreadApproved = notifications.find(
+          (entry) => !entry.read && entry.title === VERIFICATION_APPROVED_TITLE,
+        )
+
+        const justVerified = previous !== null && previous !== 'verified'
+        if (!justVerified && !unreadApproved) return
+
+        if (unreadApproved) {
+          await markRead(unreadApproved.id)
+        }
+
+        setTour({ role: user.role === 'host' ? 'host' : 'customer' })
+      } finally {
+        checkingTourRef.current = false
+      }
     }
-  }, [markRead, notifications, refreshCurrentUser, user?.id, user?.role])
 
-  useEffect(() => {
-    if (!user || user.role === 'admin') return
+    void showTourIfNeeded()
+  }, [markRead, notifications, user])
 
-    const status = getIdentityVerification(user).status
-    const previous = previousStatusRef.current
-    previousStatusRef.current = status
+  const finishTour = async (navigateAfter: boolean) => {
+    if (!user || !tour) return
+    const role = tour.role
+    await markVerificationTourSeen(user.id)
+    setTour(null)
+    if (navigateAfter) {
+      navigate(role === 'host' ? 'account' : 'customer-home')
+    }
+  }
 
-    if (status !== 'verified') return
-
-    const role = user.role === 'host' ? 'host' : 'customer'
-    const justVerified = previous !== null && previous !== 'verified'
-    const alreadyAlertedForUser = alertedUserIdRef.current === user.id
-
-    if (!justVerified || alreadyAlertedForUser) return
-
-    alertedUserIdRef.current = user.id
-    setVerifiedAlert({ role })
-  }, [user])
+  if (!tour) return null
 
   return (
-    <BrandAlert
-      visible={!!verifiedAlert}
-      title="You're verified!"
-      message={verifiedAlert ? verificationApprovedAlertMessage(verifiedAlert.role) : undefined}
-      icon="check-circle"
-      confirmLabel="Great"
-      onClose={() => setVerifiedAlert(null)}
+    <VerificationCelebrationTour
+      visible
+      role={tour.role}
+      onComplete={() => void finishTour(true)}
+      onDismiss={() => void finishTour(false)}
     />
   )
 }
