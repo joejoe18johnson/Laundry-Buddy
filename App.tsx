@@ -397,7 +397,7 @@ function AppShell() {
     homeRefreshKey,
     hostSettings,
     userLocationLabel,
-    searchRadiusKm,
+    searchRadiusMiles,
     userLocation,
     locationLoading,
     fetchGpsLocation,
@@ -538,7 +538,7 @@ function AppShell() {
         user={user!}
         onClose={() => setMenuOpen(false)}
         locationLabel={userLocationLabel}
-        radiusKm={searchRadiusKm}
+        radiusMiles={searchRadiusMiles}
         onOpenLocationSettings={() => setLocationSettingsOpen(true)}
         hasActiveLoad={hasActiveLoad}
         isHostOnline={hostSettings?.isOnline}
@@ -559,7 +559,7 @@ function AppShell() {
         saved={{
           userLocation,
           userLocationLabel,
-          searchRadiusKm,
+          searchRadiusMiles,
         }}
         locating={locationLoading}
         onFetchGps={fetchGpsLocation}

@@ -86,17 +86,18 @@ import {
 import {
   enrichHostsWithDistance,
   filterHostsWithinRadius,
+  milesToKm,
   type Coordinates,
 } from '../lib/geo'
 import { USER_LOCATION } from '../lib/mapRegion'
 import {
   loadLocationPreferences,
   saveLocationPreferences,
-  DEFAULT_SEARCH_RADIUS_KM,
+  DEFAULT_SEARCH_RADIUS_MILES,
   type LocationPreferences,
-  type RadiusOptionKm,
+  type RadiusOptionMiles,
 } from '../lib/locationPreferences'
-import { FILTER_AREA_RADIUS_KM, getFilterAreaCenter } from '../lib/belizeDistricts'
+import { FILTER_AREA_RADIUS_MILES, getFilterAreaCenter } from '../lib/belizeDistricts'
 import * as Location from 'expo-location'
 import Constants from 'expo-constants'
 import * as Linking from 'expo-linking'
@@ -143,13 +144,13 @@ interface AppState {
   userLocation: Coordinates
   userLocationLabel: string
   locationLoading: boolean
-  searchRadiusKm: number
+  searchRadiusMiles: RadiusOptionMiles
   requestUserLocation: () => Promise<void>
   fetchGpsLocation: () => Promise<Coordinates | null>
   applyLocationPreferences: (prefs: LocationPreferences) => void
   setLocationPreset: (label: string, latitude: number, longitude: number) => void
   focusSearchOnArea: (area: string) => void
-  setSearchRadiusKm: (km: RadiusOptionKm) => void
+  setSearchRadiusMiles: (miles: RadiusOptionMiles) => void
   showMap: boolean
   refreshHostData: () => Promise<void>
   refreshHostOrders: () => Promise<void>
@@ -271,7 +272,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userLocation, setUserLocation] = useState<Coordinates>(USER_LOCATION)
   const [userLocationLabel, setUserLocationLabel] = useState('San Ignacio')
   const [locationLoading, setLocationLoading] = useState(false)
-  const [searchRadiusKm, setSearchRadiusKmState] = useState<number>(DEFAULT_SEARCH_RADIUS_KM)
+  const [searchRadiusMiles, setSearchRadiusMilesState] = useState<RadiusOptionMiles>(DEFAULT_SEARCH_RADIUS_MILES)
   const [reviewHostId, setReviewHostId] = useState<string | null>(null)
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null)
   const [hostReviewsMap, setHostReviewsMap] = useState<Record<string, HostReview[]>>({})
@@ -323,7 +324,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const prefs = await loadLocationPreferences()
       setUserLocation(prefs.userLocation)
       setUserLocationLabel(prefs.userLocationLabel)
-      setSearchRadiusKmState(prefs.searchRadiusKm)
+      setSearchRadiusMilesState(prefs.searchRadiusMiles)
 
       // Standalone APK uses MapLibre; refresh GPS when permission is already granted.
       if (Constants.appOwnership === 'expo') return
@@ -349,7 +350,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await saveLocationPreferences({
           userLocation: coords,
           userLocationLabel: 'Your location',
-          searchRadiusKm: prefs.searchRadiusKm,
+          searchRadiusMiles: prefs.searchRadiusMiles,
         })
       } catch {
         // Keep saved prefs when GPS is temporarily unavailable.
@@ -358,8 +359,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const persistLocationPrefs = useCallback(
-    (location: Coordinates, label: string, radiusKm: number) => {
-      void saveLocationPreferences({ userLocation: location, userLocationLabel: label, searchRadiusKm: radiusKm })
+    (location: Coordinates, label: string, radiusMiles: RadiusOptionMiles) => {
+      void saveLocationPreferences({
+        userLocation: location,
+        userLocationLabel: label,
+        searchRadiusMiles: radiusMiles,
+      })
     },
     [],
   )
@@ -434,8 +439,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [hostSettingsMap, userLocation, dynamicHostsVersion])
 
   const onlineHosts = useMemo(
-    () => filterHostsWithinRadius(allOnlineHosts, userLocation, searchRadiusKm),
-    [allOnlineHosts, userLocation, searchRadiusKm],
+    () => filterHostsWithinRadius(allOnlineHosts, userLocation, milesToKm(searchRadiusMiles)),
+    [allOnlineHosts, userLocation, searchRadiusMiles],
   )
 
   const setLocationPreset = useCallback(
@@ -443,19 +448,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const coords = { latitude, longitude }
       setUserLocation(coords)
       setUserLocationLabel(label)
-      persistLocationPrefs(coords, label, searchRadiusKm)
+      persistLocationPrefs(coords, label, searchRadiusMiles)
       showToast('Search area saved', { icon: 'check' })
     },
-    [persistLocationPrefs, searchRadiusKm, showToast],
+    [persistLocationPrefs, searchRadiusMiles, showToast],
   )
 
   const applyLocationPreferences = useCallback(
     (prefs: LocationPreferences) => {
-      const km = prefs.searchRadiusKm as RadiusOptionKm
+      const miles = prefs.searchRadiusMiles
       setUserLocation(prefs.userLocation)
       setUserLocationLabel(prefs.userLocationLabel)
-      setSearchRadiusKmState(km)
-      persistLocationPrefs(prefs.userLocation, prefs.userLocationLabel, km)
+      setSearchRadiusMilesState(miles)
+      persistLocationPrefs(prefs.userLocation, prefs.userLocationLabel, miles)
       showToast('Search area saved', { icon: 'check' })
     },
     [persistLocationPrefs, showToast],
@@ -468,18 +473,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       applyLocationPreferences({
         userLocation: { latitude: center.latitude, longitude: center.longitude },
         userLocationLabel: center.label,
-        searchRadiusKm: FILTER_AREA_RADIUS_KM as RadiusOptionKm,
+        searchRadiusMiles: FILTER_AREA_RADIUS_MILES,
       })
     },
     [applyLocationPreferences],
   )
 
-  const setSearchRadiusKm = useCallback(
-    (km: RadiusOptionKm) => {
+  const setSearchRadiusMiles = useCallback(
+    (miles: RadiusOptionMiles) => {
       applyLocationPreferences({
         userLocation,
         userLocationLabel,
-        searchRadiusKm: km,
+        searchRadiusMiles: miles,
       })
     },
     [applyLocationPreferences, userLocation, userLocationLabel],
@@ -514,9 +519,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     applyLocationPreferences({
       userLocation: coords,
       userLocationLabel: 'Your location',
-      searchRadiusKm,
+      searchRadiusMiles,
     })
-  }, [applyLocationPreferences, fetchGpsLocation, searchRadiusKm])
+  }, [applyLocationPreferences, fetchGpsLocation, searchRadiusMiles])
 
   const getSettingsForHost = useCallback(
     (hostUserId?: string) => {
@@ -1681,13 +1686,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userLocation,
       userLocationLabel,
       locationLoading,
-      searchRadiusKm,
+      searchRadiusMiles,
       requestUserLocation,
       fetchGpsLocation,
       applyLocationPreferences,
       setLocationPreset,
       focusSearchOnArea,
-      setSearchRadiusKm,
+      setSearchRadiusMiles,
       showMap,
       refreshHostData,
       refreshHostOrders,
@@ -1750,13 +1755,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       userLocation,
       userLocationLabel,
       locationLoading,
-      searchRadiusKm,
+      searchRadiusMiles,
       requestUserLocation,
       fetchGpsLocation,
       applyLocationPreferences,
       setLocationPreset,
       focusSearchOnArea,
-      setSearchRadiusKm,
+      setSearchRadiusMiles,
       showMap,
       refreshHostData,
       refreshHostOrders,

@@ -1,24 +1,28 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
 import { BELIZE_FILTER_AREAS } from '../lib/belizeDistricts'
-import { RADIUS_OPTIONS_KM, type RadiusOptionKm } from '../lib/locationPreferences'
+import {
+  formatRadiusMilesLabel,
+  RADIUS_OPTIONS_MILES,
+  type RadiusOptionMiles,
+} from '../lib/locationPreferences'
 import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
 type Props = {
   locationLabel: string
-  radiusKm: number
+  radiusMiles: number
   locating: boolean
   dirty?: boolean
   onUseGps: () => void
   onSelectArea: (area: string) => void
-  onSelectRadius: (km: RadiusOptionKm) => void
+  onSelectRadius: (miles: RadiusOptionMiles) => void
   variant?: 'screen' | 'embedded'
 }
 
 export function LocationPreferencesCard({
   locationLabel,
-  radiusKm,
+  radiusMiles,
   locating,
   dirty = false,
   onUseGps,
@@ -46,7 +50,7 @@ export function LocationPreferencesCard({
         <Text style={styles.currentLabel} numberOfLines={1}>
           {locationLabel}
         </Text>
-        <Text style={styles.radiusMeta}>{radiusKm} km</Text>
+        <Text style={styles.radiusMeta}>{formatRadiusMilesLabel(radiusMiles)}</Text>
       </View>
 
       <Pressable
@@ -80,16 +84,16 @@ export function LocationPreferencesCard({
 
       <Text style={styles.sectionLabel}>{toTitleCase('Radius')}</Text>
       <View style={styles.radiusRow}>
-        {RADIUS_OPTIONS_KM.map((km) => {
-          const selected = radiusKm === km
+        {RADIUS_OPTIONS_MILES.map((miles) => {
+          const selected = radiusMiles === miles
           return (
             <Pressable
-              key={km}
-              onPress={() => onSelectRadius(km)}
+              key={miles}
+              onPress={() => onSelectRadius(miles)}
               style={[styles.radiusChip, selected && styles.radiusChipSelected]}
             >
               <Text style={[styles.radiusChipText, selected && styles.radiusChipTextSelected]}>
-                {km} km
+                {formatRadiusMilesLabel(miles)}
               </Text>
             </Pressable>
           )
@@ -167,7 +171,7 @@ const styles = StyleSheet.create({
   radiusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 4 },
   radiusChip: {
     flex: 1,
-    minWidth: 52,
+    minWidth: 72,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.gray200,

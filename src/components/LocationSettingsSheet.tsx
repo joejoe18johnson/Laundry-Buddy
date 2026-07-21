@@ -4,12 +4,12 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { LocationPreferencesCard } from './LocationPreferencesCard'
 import { SaveFooter } from './ui'
-import { FILTER_AREA_RADIUS_KM, getFilterAreaCenter } from '../lib/belizeDistricts'
+import { FILTER_AREA_RADIUS_MILES, getFilterAreaCenter } from '../lib/belizeDistricts'
 import type { Coordinates } from '../lib/geo'
 import {
   locationPreferencesEqual,
   type LocationPreferences,
-  type RadiusOptionKm,
+  type RadiusOptionMiles,
 } from '../lib/locationPreferences'
 import { toTitleCase } from '../lib/titleCase'
 import { colors, spacing } from '../theme'
@@ -45,12 +45,12 @@ export function LocationSettingsSheet({
     setDraft({
       userLocation: { latitude: center.latitude, longitude: center.longitude },
       userLocationLabel: center.label,
-      searchRadiusKm: FILTER_AREA_RADIUS_KM as RadiusOptionKm,
+      searchRadiusMiles: FILTER_AREA_RADIUS_MILES,
     })
   }
 
-  const selectRadius = (km: RadiusOptionKm) => {
-    setDraft((prev) => ({ ...prev, searchRadiusKm: km }))
+  const selectRadius = (miles: RadiusOptionMiles) => {
+    setDraft((prev) => ({ ...prev, searchRadiusMiles: miles }))
   }
 
   const useGps = async () => {
@@ -67,7 +67,7 @@ export function LocationSettingsSheet({
     onSave({
       userLocation: draft.userLocation,
       userLocationLabel: draft.userLocationLabel,
-      searchRadiusKm: draft.searchRadiusKm as RadiusOptionKm,
+      searchRadiusMiles: draft.searchRadiusMiles,
     })
     onClose()
   }
@@ -92,7 +92,7 @@ export function LocationSettingsSheet({
           <LocationPreferencesCard
             variant="screen"
             locationLabel={draft.userLocationLabel}
-            radiusKm={draft.searchRadiusKm}
+            radiusMiles={draft.searchRadiusMiles}
             locating={locating}
             dirty={dirty}
             onUseGps={() => void useGps()}

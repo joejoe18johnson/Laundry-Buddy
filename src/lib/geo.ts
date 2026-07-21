@@ -5,7 +5,14 @@ export interface Coordinates {
   longitude: number
 }
 
-export const SEARCH_RADIUS_KM = 5
+export const KM_PER_MILE = 1.609344
+
+export function milesToKm(miles: number): number {
+  return miles * KM_PER_MILE
+}
+
+/** Default map/search fallback — 1 mile. */
+export const SEARCH_RADIUS_KM = milesToKm(1)
 
 const EARTH_RADIUS_KM = 6371
 

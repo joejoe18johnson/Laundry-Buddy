@@ -21,6 +21,7 @@ import { isTopRatedHost } from '../lib/hostReputation'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { BELIZE_FILTER_AREAS, getPlaceSearchSubtitle, isBelizeFilterArea } from '../lib/belizeDistricts'
+import { formatRadiusMilesLabel } from '../lib/locationPreferences'
 import {
   DEFAULT_HOST_FILTERS,
   excludeViewerHostListing,
@@ -124,7 +125,7 @@ function SuggestionRow({
 }
 
 export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, onQueryChange }: Props) {
-  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, userLocationLabel, focusSearchOnArea, searchRadiusKm, getReviewsForHost } =
+  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, userLocationLabel, focusSearchOnArea, searchRadiusMiles, getReviewsForHost } =
     useApp()
   const { user } = useAuth()
   const [query, setQuery] = useState(initialQuery)
@@ -255,7 +256,7 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
         <Text style={styles.resultsSub}>
           {trimmed
             ? areaSearchActive
-              ? `Hosts within ${searchRadiusKm} km of ${trimmed}`
+              ? `Hosts within ${formatRadiusMilesLabel(searchRadiusMiles)} of ${trimmed}`
               : 'Searching all online hosts — includes towns outside your radius'
             : 'Pick an area or search by host name and town'}
         </Text>

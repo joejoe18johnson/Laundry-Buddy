@@ -1,17 +1,35 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { Coordinates } from './geo'
+import { KM_PER_MILE } from './geo'
 import { USER_LOCATION } from './mapRegion'
 
 const PREFS_KEY = 'laundry-buddy-location-prefs'
 
-export const RADIUS_OPTIONS_KM = [1, 3, 5, 10, 15, 20, 30] as const
-export type RadiusOptionKm = (typeof RADIUS_OPTIONS_KM)[number]
+export const RADIUS_OPTIONS_MILES = [1, 2, 3, 5] as const
+export type RadiusOptionMiles = (typeof RADIUS_OPTIONS_MILES)[number]
 
 /** Default host search radius for all users. */
-export const DEFAULT_SEARCH_RADIUS_KM: RadiusOptionKm = 3
+export const DEFAULT_SEARCH_RADIUS_MILES: RadiusOptionMiles = 1
 
-const RADIUS_DEFAULT_VERSION = '3km-v1'
+const RADIUS_DEFAULT_VERSION = '1mi-v2'
 const RADIUS_VERSION_KEY = 'laundry-buddy-radius-default-version'
+
+export function formatRadiusMilesLabel(miles: number): string {
+  return `${miles} mile${miles === 1 ? '' : 's'}`
+}
+
+export function snapToRadiusOptionMiles(value: number): RadiusOptionMiles {
+  let best: RadiusOptionMiles = RADIUS_OPTIONS_MILES[0]
+  let bestDiff = Math.abs(value - best)
+  for (const miles of RADIUS_OPTIONS_MILES) {
+    const diff = Math.abs(value - miles)
+    if (diff < bestDiff) {
+      best = miles
+      bestDiff = diff
+    }
+  }
+  return best
+}
 
 export interface LocationPreset {
   label: string
@@ -35,13 +53,33 @@ export const LOCATION_PRESETS: LocationPreset[] = [
 export interface LocationPreferences {
   userLocation: Coordinates
   userLocationLabel: string
-  searchRadiusKm: number
+  searchRadiusMiles: RadiusOptionMiles
+}
+
+type StoredLocationPreferences = Partial<LocationPreferences> & {
+  /** @deprecated Migrated to searchRadiusMiles */
+  searchRadiusKm?: number
+}
+
+function normalizeSearchRadiusMiles(parsed: StoredLocationPreferences): RadiusOptionMiles {
+  if (
+    parsed.searchRadiusMiles != null &&
+    RADIUS_OPTIONS_MILES.includes(parsed.searchRadiusMiles as RadiusOptionMiles)
+  ) {
+    return parsed.searchRadiusMiles as RadiusOptionMiles
+  }
+
+  if (parsed.searchRadiusKm != null) {
+    return snapToRadiusOptionMiles(parsed.searchRadiusKm / KM_PER_MILE)
+  }
+
+  return DEFAULT_SEARCH_RADIUS_MILES
 }
 
 export function locationPreferencesEqual(a: LocationPreferences, b: LocationPreferences): boolean {
   return (
     a.userLocationLabel === b.userLocationLabel &&
-    a.searchRadiusKm === b.searchRadiusKm &&
+    a.searchRadiusMiles === b.searchRadiusMiles &&
     a.userLocation.latitude === b.userLocation.latitude &&
     a.userLocation.longitude === b.userLocation.longitude
   )
@@ -50,7 +88,7 @@ export function locationPreferencesEqual(a: LocationPreferences, b: LocationPref
 export const DEFAULT_LOCATION_PREFS: LocationPreferences = {
   userLocation: USER_LOCATION,
   userLocationLabel: 'Belmopan',
-  searchRadiusKm: DEFAULT_SEARCH_RADIUS_KM,
+  searchRadiusMiles: DEFAULT_SEARCH_RADIUS_MILES,
 }
 
 export async function loadLocationPreferences(): Promise<LocationPreferences> {
@@ -65,15 +103,15 @@ export async function loadLocationPreferences(): Promise<LocationPreferences> {
   }
 
   try {
-    const parsed = JSON.parse(raw) as LocationPreferences
+    const parsed = JSON.parse(raw) as StoredLocationPreferences
     let prefs: LocationPreferences = {
       userLocation: parsed.userLocation ?? DEFAULT_LOCATION_PREFS.userLocation,
       userLocationLabel: parsed.userLocationLabel ?? DEFAULT_LOCATION_PREFS.userLocationLabel,
-      searchRadiusKm: parsed.searchRadiusKm ?? DEFAULT_LOCATION_PREFS.searchRadiusKm,
+      searchRadiusMiles: normalizeSearchRadiusMiles(parsed),
     }
 
     if (radiusVersion !== RADIUS_DEFAULT_VERSION) {
-      prefs = { ...prefs, searchRadiusKm: DEFAULT_SEARCH_RADIUS_KM }
+      prefs = { ...prefs, searchRadiusMiles: DEFAULT_SEARCH_RADIUS_MILES }
       await saveLocationPreferences(prefs)
       await AsyncStorage.setItem(RADIUS_VERSION_KEY, RADIUS_DEFAULT_VERSION)
     }

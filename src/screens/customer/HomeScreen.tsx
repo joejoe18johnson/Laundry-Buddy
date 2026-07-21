@@ -38,6 +38,8 @@ import {
   type HostSort,
 } from '../../lib/hostFilters'
 import { isBelizeFilterArea } from '../../lib/belizeDistricts'
+import { milesToKm } from '../../lib/geo'
+import { formatRadiusMilesLabel } from '../../lib/locationPreferences'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import type { Host } from '../../types'
@@ -94,7 +96,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   const styles = useMemo(() => createHomeStyles(colors), [colors])
   const { showToast } = useToast()
   const { user } = useAuth()
-  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusKm, focusSearchOnArea, navigate } = useApp()
+  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusMiles, focusSearchOnArea, navigate } = useApp()
   const totalHosts = getAvailableHosts().length
   const isHostViewer = user?.role === 'host'
   const visibleOnlineHosts = useMemo(
@@ -155,10 +157,10 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
       if (trimmedSearch) {
         return `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}” · compare pricing`
       }
-      return `${hosts.length} within ${searchRadiusKm} km · compare pricing · ${userLocationLabel}`
+      return `${hosts.length} within ${formatRadiusMilesLabel(searchRadiusMiles)} · compare pricing · ${userLocationLabel}`
     }
     if (filters.topRated === 'my-area') {
-      return `${hosts.length} top-rated within ${searchRadiusKm} km · ${userLocationLabel}`
+      return `${hosts.length} top-rated within ${formatRadiusMilesLabel(searchRadiusMiles)} · ${userLocationLabel}`
     }
     if (filters.topRated === 'each-area') {
       return `${hosts.length} top-rated host${hosts.length === 1 ? '' : 's'} across Belize`
@@ -166,8 +168,8 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
     if (trimmedSearch) {
       return `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}”`
     }
-    return `${hosts.length} within ${searchRadiusKm} km · ${userLocationLabel}`
-  }, [filters.topRated, hosts.length, isHostViewer, searchRadiusKm, trimmedSearch, userLocationLabel])
+    return `${hosts.length} within ${formatRadiusMilesLabel(searchRadiusMiles)} · ${userLocationLabel}`
+  }, [filters.topRated, hosts.length, isHostViewer, searchRadiusMiles, trimmedSearch, userLocationLabel])
 
   const animateToSnap = useCallback(
     (point: SnapPoint) => {
@@ -403,7 +405,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   ) : (
     <View style={styles.peekHeader}>
       <Text style={styles.peekText}>
-        {hosts.length} host{hosts.length === 1 ? '' : 's'} within {searchRadiusKm} km · swipe up
+        {hosts.length} host{hosts.length === 1 ? '' : 's'} within {formatRadiusMilesLabel(searchRadiusMiles)} · swipe up
       </Text>
     </View>
   )
@@ -417,7 +419,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
           ? toTitleCase('Try another area or host name.')
           : visibleOnlineHosts.length === 0 && visibleAllOnlineHosts.length > 0
             ? toTitleCase(
-                `No hosts within ${searchRadiusKm} km — check the map for hosts outside your radius.`,
+                `No hosts within ${formatRadiusMilesLabel(searchRadiusMiles)} — check the map for hosts outside your radius.`,
               )
             : visibleOnlineHosts.length === 0
               ? toTitleCase('No hosts are online right now.')
@@ -444,7 +446,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
           nearbyHostIds={nearbyHostIds}
           onHostPress={viewHostProfile}
           userLocation={userLocation}
-          radiusKm={searchRadiusKm}
+          radiusKm={milesToKm(searchRadiusMiles)}
           fitToResults={!!trimmedSearch && !isBelizeFilterArea(trimmedSearch)}
           fitToHosts={trimmedSearch && !isBelizeFilterArea(trimmedSearch) ? hosts : undefined}
         />
@@ -453,7 +455,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
             <Pressable style={styles.mapBadge} onPress={() => animateToSnap('half')}>
               <AppIcon name="map-pin" size={14} color={colors.white} />
               <Text style={styles.mapBadgeText}>
-                {hosts.length} within {searchRadiusKm} km
+                {hosts.length} within {formatRadiusMilesLabel(searchRadiusMiles)}
               </Text>
             </Pressable>
           </View>

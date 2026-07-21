@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
 import { useTheme } from '../context/ThemeContext'
 import { bottomSafePadding } from '../lib/safeAreaInsets'
+import { formatRadiusMilesLabel } from '../lib/locationPreferences'
 import { toTitleCase } from '../lib/titleCase'
 import { radius, spacing } from '../theme'
 import type { User } from '../types'
@@ -23,7 +24,7 @@ type Props = {
   onClose: () => void
   onLogout: () => void
   locationLabel?: string
-  radiusKm?: number
+  radiusMiles?: number
   onOpenLocationSettings?: () => void
   hasActiveLoad?: boolean
   onExplore?: () => void
@@ -204,7 +205,7 @@ export function HeaderMenu({
   onClose,
   onLogout,
   locationLabel,
-  radiusKm,
+  radiusMiles,
   onOpenLocationSettings,
   hasActiveLoad,
   onExplore,
@@ -223,7 +224,9 @@ export function HeaderMenu({
   const isCustomer = user.role === 'customer'
   const contact = user.email ?? user.phone
   const locationHint =
-    locationLabel && radiusKm != null ? `${locationLabel} · ${radiusKm} km` : undefined
+    locationLabel && radiusMiles != null
+      ? `${locationLabel} · ${formatRadiusMilesLabel(radiusMiles)}`
+      : undefined
 
   const go = (action?: () => void) => {
     onClose()
