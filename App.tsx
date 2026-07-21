@@ -52,6 +52,7 @@ import { NotificationPermissionPrompt } from './src/components/NotificationPermi
 import { AdminVerificationRequestSync } from './src/components/AdminVerificationRequestSync'
 import { GuestBookingSync } from './src/components/GuestBookingSync'
 import { HostRequestAlertSync } from './src/components/HostRequestAlertSync'
+import { BookingStepAlertSync } from './src/components/BookingStepAlertSync'
 import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
 import {
@@ -754,6 +755,7 @@ function AuthenticatedApp() {
                 <AppProvider>
                   <VerificationStatusSync />
                   <HostRequestAlertSync />
+                  <BookingStepAlertSync />
                   <GuestBookingSync />
                   <AppShell />
                 </AppProvider>
