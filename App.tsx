@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState, useEffect } from 'react'
 import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
-import { BiometricSetupPrompt } from './src/components/BiometricSetupPrompt'
 import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, useAuth } from './src/context/AuthContext'
@@ -40,8 +39,10 @@ import { AdminUserReviewScreen } from './src/screens/admin/AdminUserReviewScreen
 import { AdminUsersScreen } from './src/screens/admin/AdminUsersScreen'
 import { AdminVerificationCodesScreen } from './src/screens/admin/AdminVerificationCodesScreen'
 import { AdminVerificationQueueScreen } from './src/screens/admin/AdminVerificationQueueScreen'
+import { AdminSupportMessagesScreen } from './src/screens/admin/AdminSupportMessagesScreen'
 import { useAdminDashboardData } from './src/hooks/useAdminDashboardData'
-import { ChatScreen } from './src/screens/shared/ChatScreen'
+import { useAdminSupportMessages } from './src/hooks/useAdminSupportMessages'
+import { ChatScreen, ChatThreadPanel } from './src/screens/shared/ChatScreen'
 import { colors, spacing } from './src/theme'
 import { ThemeProvider, useTheme } from './src/context/ThemeContext'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
@@ -53,7 +54,6 @@ import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
 import {
   addNotificationResponseListener,
-  ensurePushNotificationsEnabled,
   getPushPermissionStatus,
   openNotificationSettings,
   requestPushPermissions,
@@ -79,13 +79,16 @@ function AdminAppShell() {
   const { user, logout, refreshCurrentUser } = useAuth()
   const { colors } = useTheme()
   const { unreadCount } = useUserNotifications(user!.id)
-  const [screen, setScreen] = useState<'overview' | 'queue' | 'users' | 'codes' | 'notifications' | 'user-review'>(
-    'overview',
-  )
+  const [screen, setScreen] = useState<
+    'overview' | 'queue' | 'users' | 'codes' | 'support' | 'support-chat' | 'notifications' | 'user-review'
+  >('overview')
   const [highlightUserId, setHighlightUserId] = useState<string | undefined>()
   const [reviewUserId, setReviewUserId] = useState<string | null>(null)
+  const [supportThreadId, setSupportThreadId] = useState<string | null>(null)
+  const [supportThreadTitle, setSupportThreadTitle] = useState('')
   const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const { queueCount } = useAdminDashboardData(dashboardRefreshKey)
+  const { totalUnread: supportUnreadCount } = useAdminSupportMessages(dashboardRefreshKey)
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return
@@ -106,6 +109,12 @@ function AdminAppShell() {
       ? screen
       : 'overview'
 
+  const openSupportThread = (threadId: string, title: string) => {
+    setSupportThreadId(threadId)
+    setSupportThreadTitle(title)
+    setScreen('support-chat')
+  }
+
   const headerTitle =
     screen === 'overview'
       ? 'Overview'
@@ -115,9 +124,13 @@ function AdminAppShell() {
           ? 'All users'
           : screen === 'codes'
             ? 'Verification codes'
-            : screen === 'notifications'
-              ? 'Notifications'
-              : 'Support admin'
+            : screen === 'support'
+              ? 'Support messages'
+              : screen === 'support-chat'
+                ? supportThreadTitle || 'Support chat'
+                : screen === 'notifications'
+                  ? 'Notifications'
+                  : 'Support admin'
 
   const adminTabs = useMemo(
     () => [
@@ -129,7 +142,8 @@ function AdminAppShell() {
     [queueCount],
   )
 
-  const showAdminNav = screen !== 'user-review' && screen !== 'notifications'
+  const showAdminNav =
+    screen !== 'user-review' && screen !== 'notifications' && screen !== 'support-chat'
 
   const shellStyles = useMemo(
     () =>
@@ -166,7 +180,7 @@ function AdminAppShell() {
   return (
     <SafeAreaView style={shellStyles.app} edges={['top']}>
       <StatusBar style="dark" />
-      {screen !== 'user-review' ? (
+      {screen !== 'user-review' && screen !== 'support-chat' ? (
         <View style={shellStyles.header}>
           <Text style={shellStyles.title}>{headerTitle}</Text>
           <View style={shellStyles.headerRight}>
@@ -192,7 +206,14 @@ function AdminAppShell() {
         {screen === 'overview' ? (
           <AdminOverviewScreen
             refreshKey={dashboardRefreshKey}
-            onNavigate={(tab) => setScreen(tab)}
+            supportUnreadCount={supportUnreadCount}
+            onNavigate={(section) => {
+              if (section === 'support') {
+                setScreen('support')
+                return
+              }
+              setScreen(section)
+            }}
           />
         ) : screen === 'queue' ? (
           <AdminVerificationQueueScreen
@@ -208,6 +229,18 @@ function AdminAppShell() {
           />
         ) : screen === 'codes' ? (
           <AdminVerificationCodesScreen refreshKey={dashboardRefreshKey} />
+        ) : screen === 'support' ? (
+          <AdminSupportMessagesScreen
+            refreshKey={dashboardRefreshKey}
+            onOpenThread={openSupportThread}
+          />
+        ) : screen === 'support-chat' && supportThreadId ? (
+          <ChatThreadPanel
+            threadId={supportThreadId}
+            titleOverride={supportThreadTitle}
+            subtitleOverride="In-app support"
+            onBack={() => setScreen('support')}
+          />
         ) : screen === 'notifications' ? (
           <AdminNotificationsScreen
             onBack={() => setScreen(adminTab)}
@@ -439,10 +472,9 @@ function AppShell() {
         hasActiveLoad={hasActiveLoad}
         isHostOnline={hostSettings?.isOnline}
         notificationCount={unreadCount}
-        onExplore={() => navigate('customer-home')}
+        onExplore={isCustomer ? () => navigate('customer-home') : undefined}
         onMyLoad={isCustomer ? () => navigate('customer-tracking') : undefined}
-        onPastLoads={() => navigate('history')}
-        onDashboard={!isCustomer ? () => navigate('host-dashboard') : undefined}
+        onPastLoads={isCustomer ? () => navigate('history') : undefined}
         onAccount={() => navigate('account')}
         onContactSupport={openSupportChat}
         onHelp={() => navigate('help')}
@@ -495,24 +527,38 @@ function AppShell() {
 }
 
 function PushNotificationPromptGate() {
-  const { user, authSessionKey, showBiometricSetupPrompt } = useAuth()
+  const { user, authSessionKey } = useAuth()
   const [visible, setVisible] = useState(false)
   const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
+  const [dismissedForSession, setDismissedForSession] = useState(false)
+
+  useEffect(() => {
+    setDismissedForSession(false)
+    setVisible(false)
+  }, [authSessionKey])
 
   const syncPermissionPrompt = useCallback(async () => {
-    if (!user || showBiometricSetupPrompt) {
+    if (!user) {
       setVisible(false)
       return
     }
 
-    const status = await ensurePushNotificationsEnabled()
+    if (dismissedForSession) return
+
+    const status = await getPushPermissionStatus()
     setPermission(status)
-    setVisible(status !== 'granted' && status !== 'unsupported')
-  }, [showBiometricSetupPrompt, user])
+
+    if (status === 'granted' || status === 'unsupported') {
+      setVisible(false)
+      return
+    }
+
+    setVisible(true)
+  }, [dismissedForSession, user])
 
   useEffect(() => {
     void syncPermissionPrompt()
-  }, [user, authSessionKey, showBiometricSetupPrompt, syncPermissionPrompt])
+  }, [authSessionKey, syncPermissionPrompt])
 
   useEffect(() => {
     if (!user) return
@@ -540,33 +586,15 @@ function PushNotificationPromptGate() {
           await requestPushPermissions()
           const status = await getPushPermissionStatus()
           setPermission(status)
-          setVisible(status !== 'granted' && status !== 'unsupported')
+          if (status === 'granted' || status === 'unsupported') {
+            setVisible(false)
+          }
         })()
       }}
-      onDismiss={() => setVisible(false)}
-    />
-  )
-}
-
-function BiometricOverlays() {
-  const {
-    user,
-    showBiometricSetupPrompt,
-    biometricSupport,
-    biometricSetupLoading,
-    acceptBiometricSetup,
-    dismissBiometricSetup,
-  } = useAuth()
-
-  if (!user) return null
-
-  return (
-    <BiometricSetupPrompt
-      visible={showBiometricSetupPrompt}
-      support={biometricSupport}
-      loading={biometricSetupLoading}
-      onEnable={() => void acceptBiometricSetup()}
-      onSkip={dismissBiometricSetup}
+      onDismiss={() => {
+        setDismissedForSession(true)
+        setVisible(false)
+      }}
     />
   )
 }
@@ -663,7 +691,6 @@ function AuthenticatedApp() {
           </ToastProvider>
         </MessageProvider>
       </NotificationProvider>
-      <BiometricOverlays />
       {user!.role !== 'admin' ? <PushNotificationPromptGate /> : null}
     </>
   )

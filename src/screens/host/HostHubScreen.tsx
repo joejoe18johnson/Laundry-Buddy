@@ -160,13 +160,7 @@ function ToggleRow({
 }
 
 export function HostHubScreen() {
-  const {
-    user,
-    biometricSupport,
-    biometricEnabled,
-    enableBiometricLogin,
-    disableBiometricLogin,
-  } = useAuth()
+  const { user } = useAuth()
   const { showToast } = useToast()
   const {
     navigate,
@@ -609,17 +603,6 @@ export function HostHubScreen() {
       </Section>
 
       <Section title="Account">
-        {biometricSupport.available ? (
-          <ToggleRow
-            label={`${biometricSupport.label} sign-in`}
-            sub="Unlock quickly without typing your password"
-            value={biometricEnabled}
-            onChange={(next) => {
-              if (next) void enableBiometricLogin()
-              else void disableBiometricLogin()
-            }}
-          />
-        ) : null}
         <Row icon="phone" label="Phone" value={user.phone ?? '—'} />
         <Row icon="mail" label="Email" value={user.email ?? '—'} />
         {verification?.address ? (

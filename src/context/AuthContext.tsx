@@ -79,7 +79,6 @@ interface SignupInput {
   password: string
   confirmPassword: string
   role: AppRole
-  enableQuickAccess?: boolean
 }
 
 interface AuthState {
@@ -428,7 +427,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(sessionUser)
       setAuthError(null)
       bumpAuthSession()
-      void maybeOfferBiometricSetup()
       return true
     }
 
@@ -444,9 +442,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(found)
     setAuthError(null)
     bumpAuthSession()
-    void maybeOfferBiometricSetup()
     return true
-  }, [bumpAuthSession, maybeOfferBiometricSetup])
+  }, [bumpAuthSession])
 
   const signup = useCallback(async (input: SignupInput) => {
     if (!input.name.trim()) {
@@ -518,13 +515,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthError(null)
       bumpAuthSession()
 
-      if (input.enableQuickAccess) {
-        const support = await getBiometricSupport()
-        if (support.available) {
-          await enableBiometricLogin(created.id)
-          await refreshBiometricState()
-        }
-      }
       return true
     }
 
@@ -543,14 +533,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(newUser)
     setAuthError(null)
     bumpAuthSession()
-
-    if (input.enableQuickAccess) {
-      const support = await getBiometricSupport()
-      if (support.available) {
-        await enableBiometricLogin(newUser.id)
-        await refreshBiometricState()
-      }
-    }
 
     return true
   }, [bumpAuthSession, navigateAuth, refreshBiometricState])

@@ -4,23 +4,42 @@ import { AppIcon } from '../../components/AppIcon'
 import { Screen } from '../../components/ui'
 import { useTheme } from '../../context/ThemeContext'
 import { useAdminDashboardData } from '../../hooks/useAdminDashboardData'
+import { useAdminSupportMessages } from '../../hooks/useAdminSupportMessages'
 import { toTitleCase } from '../../lib/titleCase'
 import { UnreadCountBadge } from '../../components/UnreadCountBadge'
 import type { AdminTabId } from '../../components/AdminBottomNav'
 import { createAdminStyles } from './adminStyles'
 
+export type AdminSectionId = AdminTabId | 'support'
+
 type Props = {
   refreshKey?: number
-  onNavigate: (tab: AdminTabId) => void
+  onNavigate: (section: AdminSectionId) => void
+  supportUnreadCount?: number
 }
 
-export function AdminOverviewScreen({ refreshKey, onNavigate }: Props) {
+export function AdminOverviewScreen({ refreshKey, onNavigate, supportUnreadCount = 0 }: Props) {
   const { colors } = useTheme()
   const styles = useMemo(() => createAdminStyles(colors), [colors])
   const { loading, queueCount, pendingUsers, verifiedCount, users, codeCounts } =
     useAdminDashboardData(refreshKey)
+  const { threads: supportThreads } = useAdminSupportMessages(refreshKey)
+
+  const supportSubtitle =
+    supportUnreadCount > 0
+      ? `${supportUnreadCount} unread · in-app help from users`
+      : supportThreads.length > 0
+        ? `${supportThreads.length} conversation${supportThreads.length === 1 ? '' : 's'} · in-app help`
+        : 'In-app help from guests and hosts'
 
   const navItems = [
+    {
+      tab: 'support' as const,
+      icon: 'message-circle' as const,
+      title: 'Support messages',
+      subtitle: supportSubtitle,
+      count: supportUnreadCount,
+    },
     {
       tab: 'queue' as const,
       icon: 'inbox' as const,

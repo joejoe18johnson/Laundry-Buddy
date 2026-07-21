@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
-import { AppTextInput, BackButton, BrandSwitch, PasswordInput, PrimaryButton, Screen } from '../../components/ui'
+import { AppTextInput, BackButton, PasswordInput, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { radius, spacing } from '../../theme'
-import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
+import { toTitleCase } from '../../lib/titleCase'
 import type { AppRole } from '../../types'
 
 function createSignupStyles(colors: ReturnType<typeof useTheme>['colors']) {
@@ -35,22 +35,6 @@ function createSignupStyles(colors: ReturnType<typeof useTheme>['colors']) {
       marginBottom: spacing.md,
     },
     noticeText: { fontSize: 13, color: colors.gray600, lineHeight: 20 },
-    quickAccessCard: {
-      borderWidth: 1,
-      borderColor: colors.gray100,
-      borderRadius: radius.lg,
-      padding: spacing.md,
-      marginBottom: spacing.lg,
-      backgroundColor: colors.gray50,
-    },
-    quickAccessHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-    },
-    quickAccessText: { flex: 1, gap: 4 },
-    quickAccessTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
-    quickAccessSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
     field: { marginBottom: spacing.md },
     labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
     label: { fontSize: 13, fontWeight: '600', color: colors.gray600, marginBottom: spacing.sm },
@@ -92,7 +76,7 @@ function createSignupStyles(colors: ReturnType<typeof useTheme>['colors']) {
 }
 
 export function SignupScreen() {
-  const { signup, navigateAuth, authError, clearAuthError, biometricSupport } = useAuth()
+  const { signup, navigateAuth, authError, clearAuthError } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createSignupStyles(colors), [colors])
   const [name, setName] = useState('')
@@ -101,7 +85,6 @@ export function SignupScreen() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState<AppRole>('customer')
-  const [enableQuickAccess, setEnableQuickAccess] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -140,7 +123,6 @@ export function SignupScreen() {
         password,
         confirmPassword,
         role,
-        enableQuickAccess,
       })
     } finally {
       setSubmitting(false)
@@ -238,26 +220,6 @@ export function SignupScreen() {
           onChangeText={setConfirmPassword}
         />
       </View>
-
-      {biometricSupport.available ? (
-        <View style={styles.quickAccessCard}>
-          <View style={styles.quickAccessHeader}>
-            <AppIcon name={biometricSupport.icon} size={18} color={colors.black} />
-            <View style={styles.quickAccessText}>
-              <Text style={styles.quickAccessTitle}>
-                {titleCaseWithName(`Quick access with ${biometricSupport.label}`, biometricSupport.label)}
-              </Text>
-              <Text style={styles.quickAccessSub}>
-                {titleCaseWithName(
-                  `Skip your password next time — sign in with ${biometricSupport.label} after you log out.`,
-                  biometricSupport.label,
-                )}
-              </Text>
-            </View>
-            <BrandSwitch value={enableQuickAccess} onValueChange={setEnableQuickAccess} />
-          </View>
-        </View>
-      ) : null}
 
       {displayError && <Text style={styles.error}>{displayError}</Text>}
 

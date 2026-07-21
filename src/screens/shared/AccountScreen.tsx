@@ -1,12 +1,11 @@
 import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { BackButton, BrandSwitch, Screen } from '../../components/ui'
+import { BackButton, Screen } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
-import { useToast } from '../../context/ToastContext'
 import { getHostByUserId } from '../../data/mockData'
 import {
   canBookOrHost,
@@ -78,22 +77,6 @@ function createAccountStyles(colors: ReturnType<typeof useTheme>['colors']) {
       letterSpacing: 0.4,
       marginBottom: spacing.sm,
     },
-    securityCard: {
-      borderWidth: 1,
-      borderColor: colors.gray100,
-      borderRadius: radius.lg,
-      padding: spacing.md,
-      marginBottom: spacing.lg,
-      backgroundColor: colors.gray50,
-    },
-    securityHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-    },
-    securityText: { flex: 1, gap: 4 },
-    securityTitle: { fontSize: 15, fontWeight: '700', color: colors.black },
-    securitySub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
     card: {
       borderWidth: 1,
       borderColor: colors.gray100,
@@ -120,14 +103,7 @@ function createAccountStyles(colors: ReturnType<typeof useTheme>['colors']) {
 }
 
 export function AccountScreen() {
-  const {
-    user,
-    biometricSupport,
-    biometricEnabled,
-    enableBiometricLogin,
-    disableBiometricLogin,
-  } = useAuth()
-  const { showToast } = useToast()
+  const { user } = useAuth()
   const { navigate } = useApp()
   const { colors } = useTheme()
   const styles = useMemo(() => createAccountStyles(colors), [colors])
@@ -196,34 +172,6 @@ export function AccountScreen() {
           />
         ) : null}
       </View>
-
-      {biometricSupport.available ? (
-        <View style={styles.securityCard}>
-          <View style={styles.securityHeader}>
-            <AppIcon name={biometricSupport.icon} size={18} color={colors.black} />
-            <View style={styles.securityText}>
-              <Text style={styles.securityTitle}>{biometricSupport.label} Sign-In</Text>
-              <Text style={styles.securitySub}>
-                Sign In With {biometricSupport.label} When You Log Back In — Not While Using The App
-              </Text>
-            </View>
-            <BrandSwitch
-              value={biometricEnabled}
-              onValueChange={(next) => {
-                if (next) {
-                  void enableBiometricLogin().then((ok) => {
-                    if (ok) showToast('Biometric sign-in saved', { icon: 'check' })
-                  })
-                } else {
-                  void disableBiometricLogin().then(() => {
-                    showToast('Biometric sign-in turned off', { icon: 'check' })
-                  })
-                }
-              }}
-            />
-          </View>
-        </View>
-      ) : null}
 
       <Text style={styles.note}>
         {isCustomer

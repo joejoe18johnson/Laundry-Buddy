@@ -20,6 +20,13 @@ export function isSupportThread(threadId: string): boolean {
   return threadId.startsWith(SUPPORT_THREAD_PREFIX)
 }
 
+export function parseSupportThread(threadId: string): { userId: string } | null {
+  if (!isSupportThread(threadId)) return null
+  const userId = threadId.slice(SUPPORT_THREAD_PREFIX.length)
+  if (!userId) return null
+  return { userId }
+}
+
 export function isInquiryThread(threadId: string): boolean {
   return threadId.startsWith(INQUIRY_THREAD_PREFIX)
 }

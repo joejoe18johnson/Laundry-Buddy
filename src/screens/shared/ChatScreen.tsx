@@ -3,7 +3,6 @@ import {
   FlatList,
   Image,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -28,6 +27,7 @@ import {
   isInquiryThread,
   isSupportThread,
 } from '../../lib/chatThreads'
+import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import type { Booking, ChatMessage } from '../../types'
@@ -167,7 +167,7 @@ export function ChatThreadPanel({
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null)
   const [lightboxUri, setLightboxUri] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
-  const [keyboardVisible, setKeyboardVisible] = useState(false)
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
   const [attachSheetOpen, setAttachSheetOpen] = useState(false)
   const [permissionAlert, setPermissionAlert] = useState<{ title: string; message: string } | null>(null)
   const listRef = useRef<FlatList<ChatMessage>>(null)
@@ -193,14 +193,14 @@ export function ChatThreadPanel({
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
-    const show = Keyboard.addListener(showEvent, () => {
-      setKeyboardVisible(true)
+    const show = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height)
       setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true })
-      }, 100)
+      }, Platform.OS === 'ios' ? 250 : 100)
     })
     const hide = Keyboard.addListener(hideEvent, () => {
-      setKeyboardVisible(false)
+      setKeyboardHeight(0)
     })
     return () => {
       show.remove()
@@ -318,12 +318,11 @@ export function ChatThreadPanel({
     )
   }
 
+  const composerBottomInset =
+    keyboardHeight > 0 ? keyboardHeight + spacing.sm : bottomSafePadding(insets.bottom, spacing.sm)
+
   return (
-    <KeyboardAvoidingView
-      style={styles.wrap}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
+    <View style={styles.wrap}>
         <View style={styles.header}>
         {showBackButton && onBack ? <BackButton onPress={onBack} label="Back" /> : null}
         <View style={styles.headerCopy}>
@@ -376,7 +375,9 @@ export function ChatThreadPanel({
             <Text style={styles.emptyThreadTitle}>{toTitleCase('Start the conversation')}</Text>
             <Text style={styles.emptyThreadSub}>
               {isSupport
-                ? toTitleCase('Ask for help with your account here.')
+                ? user.role === 'admin'
+                  ? toTitleCase('Reply to this user here. They will get a notification in the app.')
+                  : toTitleCase('Ask for help with your account here.')
                 : toTitleCase('Send messages and payment screenshots without leaving the app.')}
             </Text>
           </View>
@@ -392,12 +393,7 @@ export function ChatThreadPanel({
         </View>
       ) : null}
 
-      <View
-        style={[
-          styles.composer,
-          { paddingBottom: keyboardVisible ? spacing.sm : Math.max(insets.bottom, spacing.sm) },
-        ]}
-      >
+      <View style={[styles.composer, { paddingBottom: composerBottomInset }]}>
         <View style={styles.composerRow}>
           <Pressable onPress={showAttachOptions} style={styles.attachBtn} hitSlop={8}>
             <AppIcon name="image" size={22} color={colors.black} />
@@ -447,7 +443,7 @@ export function ChatThreadPanel({
         icon="alert-circle"
         onClose={() => setPermissionAlert(null)}
       />
-    </KeyboardAvoidingView>
+    </View>
   )
 }
 

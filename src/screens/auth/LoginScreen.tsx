@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
-import { BiometricDivider, BiometricLoginButton } from '../../components/BiometricLoginButton'
 import { AppTextInput, BackButton, PasswordInput, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
 import { radius, spacing } from '../../theme'
@@ -45,24 +44,11 @@ function createLoginStyles(colors: ReturnType<typeof useTheme>['colors']) {
 }
 
 export function LoginScreen() {
-  const {
-    login,
-    loginWithBiometrics,
-    navigateAuth,
-    authError,
-    authNotice,
-    clearAuthError,
-    clearAuthNotice,
-    biometricSupport,
-    biometricEnabled,
-  } = useAuth()
+  const { login, navigateAuth, authError, authNotice, clearAuthError, clearAuthNotice } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createLoginStyles(colors), [colors])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [biometricLoading, setBiometricLoading] = useState(false)
-
-  const showBiometric = biometricSupport.available && biometricEnabled
 
   const handleLogin = async () => {
     clearAuthError()
@@ -70,30 +56,11 @@ export function LoginScreen() {
     await login('email', email, password)
   }
 
-  const handleBiometricLogin = async () => {
-    clearAuthError()
-    setBiometricLoading(true)
-    await loginWithBiometrics()
-    setBiometricLoading(false)
-  }
-
   return (
     <Screen>
       <BackButton onPress={() => navigateAuth('welcome')} />
       <Text style={styles.title}>{toTitleCase('Welcome back')}</Text>
       <Text style={styles.subtitle}>{toTitleCase('Log in with the email and password from sign-up')}</Text>
-
-      {showBiometric ? (
-        <>
-          <BiometricLoginButton
-            support={biometricSupport}
-            onPress={handleBiometricLogin}
-            loading={biometricLoading}
-            variant="primary"
-          />
-          <BiometricDivider />
-        </>
-      ) : null}
 
       <View style={styles.field}>
         <View style={styles.labelRow}>

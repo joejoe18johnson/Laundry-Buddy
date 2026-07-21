@@ -21,6 +21,7 @@ import {
   defaultMessageKind,
   isInquiryThread,
   isSupportThread,
+  parseSupportThread,
   resolveBookingChatRecipient,
   resolveInquiryChatRecipient,
   supportThreadId,
@@ -175,6 +176,20 @@ export function MessageProvider({ children }: { children: ReactNode }) {
       setUnreadByThread((prev) => ({ ...prev, [threadId]: 0 }))
 
       if (isSupportThread(threadId)) {
+        if (user.role === 'admin') {
+          const parsed = parseSupportThread(threadId)
+          if (parsed) {
+            const preview =
+              message.imageUri
+                ? `${user.name} sent a photo`
+                : trimmed && trimmed.length > 80
+                  ? `${trimmed.slice(0, 77).trim()}…`
+                  : trimmed || 'New message from support'
+            void push(parsed.userId, 'Support replied', preview, chatLink(threadId))
+          }
+          return message
+        }
+
         const supportReply: ChatMessage = {
           id: `msg-${Date.now()}-support`,
           threadId,

@@ -29,7 +29,6 @@ type Props = {
   onExplore?: () => void
   onMyLoad?: () => void
   onPastLoads?: () => void
-  onDashboard?: () => void
   onAccount?: () => void
   onHelp?: () => void
   onContactSupport?: () => void
@@ -211,7 +210,6 @@ export function HeaderMenu({
   onExplore,
   onMyLoad,
   onPastLoads,
-  onDashboard,
   onAccount,
   onHelp,
   onContactSupport,
@@ -269,36 +267,35 @@ export function HeaderMenu({
                 </MenuSection>
               ) : null}
 
-              <MenuSection title={isCustomer ? 'Browse' : 'Hosting'} styles={styles}>
-                {onExplore ? (
-                  <MenuItem
-                    icon="search"
-                    label={isCustomer ? 'Explore dryers' : 'Browse hosts'}
-                    onPress={() => go(onExplore)}
-                    styles={styles}
-                  />
-                ) : null}
-                {!isCustomer && onDashboard ? (
-                  <MenuItem icon="home" label="Dashboard" onPress={() => go(onDashboard)} styles={styles} />
-                ) : null}
-                {isCustomer && onMyLoad ? (
-                  <MenuItem
-                    icon="package"
-                    label="My loads"
-                    onPress={() => go(onMyLoad)}
-                    badge={hasActiveLoad ? 'Active' : undefined}
-                    styles={styles}
-                  />
-                ) : null}
-                {onPastLoads ? (
-                  <MenuItem
-                    icon="clock"
-                    label={isCustomer ? 'Past loads & payments' : 'Load history'}
-                    onPress={() => go(onPastLoads)}
-                    styles={styles}
-                  />
-                ) : null}
-              </MenuSection>
+              {isCustomer ? (
+                <MenuSection title="Browse" styles={styles}>
+                  {onExplore ? (
+                    <MenuItem
+                      icon="search"
+                      label="Explore dryers"
+                      onPress={() => go(onExplore)}
+                      styles={styles}
+                    />
+                  ) : null}
+                  {onMyLoad ? (
+                    <MenuItem
+                      icon="package"
+                      label="My loads"
+                      onPress={() => go(onMyLoad)}
+                      badge={hasActiveLoad ? 'Active' : undefined}
+                      styles={styles}
+                    />
+                  ) : null}
+                  {onPastLoads ? (
+                    <MenuItem
+                      icon="clock"
+                      label="Past loads & payments"
+                      onPress={() => go(onPastLoads)}
+                      styles={styles}
+                    />
+                  ) : null}
+                </MenuSection>
+              ) : null}
 
               <MenuSection title="Account" styles={styles}>
                 {onAccount ? (

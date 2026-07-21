@@ -17,7 +17,13 @@ export function NotificationPermissionPrompt({ visible, permission, onEnable, on
   const denied = permission === 'denied'
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      presentationStyle="overFullScreen"
+      onRequestClose={() => {}}
+    >
       <View style={styles.overlay}>
         <SafeAreaView style={styles.sheetWrap} edges={['bottom']}>
           <View style={styles.sheet}>
