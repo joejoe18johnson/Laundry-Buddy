@@ -106,13 +106,13 @@ export function IntroOnboardingScreen({ onComplete }: Props) {
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
       <View style={styles.topBar}>
-        <View style={styles.brandRow}>
-        <AppLogoMark size={56} />
-        </View>
-        {!isLast && (
+        <AppLogoMark size={52} style={styles.headerLogo} />
+        {!isLast ? (
           <Pressable onPress={onComplete} hitSlop={12}>
             <Text style={styles.skip}>{toTitleCase('Skip')}</Text>
           </Pressable>
+        ) : (
+          <View style={styles.skipSpacer} />
         )}
       </View>
 
@@ -157,11 +157,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.screen,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray100,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerLogo: { alignSelf: 'flex-start' },
+  skipSpacer: { width: 48 },
   skip: { fontSize: 15, fontWeight: '600', color: colors.gray500 },
   list: { flex: 1 },
   slide: { flex: 1 },
@@ -209,8 +209,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     paddingTop: spacing.sm,
     gap: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
   },
   dots: {
     flexDirection: 'row',

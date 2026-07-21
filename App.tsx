@@ -52,6 +52,7 @@ import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
 import { AdminVerificationRequestSync } from './src/components/AdminVerificationRequestSync'
 import { GuestBookingSync } from './src/components/GuestBookingSync'
+import { HostBookingSync } from './src/components/HostBookingSync'
 import { HostRequestAlertSync } from './src/components/HostRequestAlertSync'
 import { BookingStepAlertSync } from './src/components/BookingStepAlertSync'
 import { VerificationStatusSync } from './src/components/VerificationStatusSync'
@@ -771,6 +772,7 @@ function AuthenticatedApp() {
                   <HostRequestAlertSync />
                   <BookingStepAlertSync />
                   <GuestBookingSync />
+                  <HostBookingSync />
                   <AppShell />
                 </AppProvider>
               </>

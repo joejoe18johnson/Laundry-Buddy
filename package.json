@@ -22,7 +22,8 @@
     "build:android:apk:local": "bash scripts/build-android-local.sh apk",
     "build:android:aab:local": "bash scripts/build-android-local.sh aab",
     "build:android:local": "bash scripts/build-android-local.sh both",
-    "upload:app-public": "node scripts/upload-app-public.mjs"
+    "upload:app-public": "node scripts/upload-app-public.mjs",
+    "deploy:host-profile": "node scripts/deploy-host-profile-function.mjs"
   },
   "dependencies": {
     "@maplibre/maplibre-react-native": "10.2.0",

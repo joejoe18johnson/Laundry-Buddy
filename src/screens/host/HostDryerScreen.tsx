@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { HostLoadProgress } from '../../components/HostLoadProgress'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
+import { HostPreDryerLoadCard } from '../../components/host/HostPreDryerLoadCard'
 import { useApp } from '../../context/AppContext'
 import { splitHostActiveLoads } from '../../lib/hostLoads'
+import {
+  canHostConfirmPickup,
+  isAwaitingGuestPickupConfirmation,
+  isAwaitingHostPickupConfirmation,
+} from '../../lib/pickupConfirmation'
 import { toTitleCase } from '../../lib/titleCase'
 import { GhostButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { useTheme } from '../../context/ThemeContext'
@@ -15,6 +21,8 @@ import type { Booking } from '../../types'
 function DryingLoadCard({
   load,
   expanded,
+  photoUri,
+  onPhotoChange,
   onToggleExpand,
   onMarkDry,
   onMessageGuest,
@@ -22,17 +30,13 @@ function DryingLoadCard({
 }: {
   load: Booking
   expanded: boolean
+  photoUri: string | null
+  onPhotoChange: (uri: string | null) => void
   onToggleExpand: () => void
   onMarkDry: (photoUri?: string) => void
   onMessageGuest: () => void
   styles: ReturnType<typeof createStyles>
 }) {
-  const [photoUri, setPhotoUri] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!expanded) setPhotoUri(null)
-  }, [expanded])
-
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -65,7 +69,7 @@ function DryingLoadCard({
           <Text style={styles.markDrySub}>
             {toTitleCase('Mark dry when the cycle finishes — add a photo if you can so the guest knows it is ready.')}
           </Text>
-          <LoadPhotoCapture photoUri={photoUri} onPhotoChange={setPhotoUri} />
+          <LoadPhotoCapture photoUri={photoUri} onPhotoChange={onPhotoChange} />
           <PrimaryButton
             title="Mark as dry"
             icon="wind"
@@ -90,11 +94,13 @@ function ReadyLoadCard({
   onConfirmPickup,
   onMessageGuest,
   styles,
+  colors,
 }: {
   load: Booking
   onConfirmPickup: () => void
   onMessageGuest: () => void
   styles: ReturnType<typeof createStyles>
+  colors: ReturnType<typeof useTheme>['colors']
 }) {
   return (
     <View style={[styles.card, styles.readyCard]}>
@@ -121,37 +127,74 @@ function ReadyLoadCard({
       ) : null}
 
       <Text style={styles.pickupHint}>
-        {toTitleCase('Confirm once the guest has collected their laundry.')}
+        {isAwaitingGuestPickupConfirmation(load)
+          ? toTitleCase('You confirmed pickup — waiting for the guest to confirm on their phone.')
+          : isAwaitingHostPickupConfirmation(load)
+            ? toTitleCase('Guest confirmed pickup — confirm below once they have collected their laundry.')
+            : toTitleCase('Confirm once the guest has collected their laundry. Both of you must confirm pickup.')}
       </Text>
-      <PrimaryButton title="Guest picked up" icon="check-circle" full onPress={onConfirmPickup} />
+      {canHostConfirmPickup(load) ? (
+        <PrimaryButton title="Guest picked up" icon="check-circle" full onPress={onConfirmPickup} />
+      ) : isAwaitingHostPickupConfirmation(load) ? (
+        <PrimaryButton title="Confirm guest picked up" icon="check-circle" full onPress={onConfirmPickup} />
+      ) : (
+        <View style={styles.waitingPickupBadge}>
+          <AppIcon name="clock" size={14} color={colors.gray600} />
+          <Text style={styles.waitingPickupText}>{toTitleCase('Waiting for guest confirmation')}</Text>
+        </View>
+      )}
       <GhostButton title="Message guest" icon="message-circle" full onPress={onMessageGuest} />
     </View>
   )
 }
 
 export function HostDryerScreen() {
-  const { activeLoads, markDry, markDryLoadId, confirmPickup, openChat, navigate, clearMarkDryFocus } = useApp()
+  const {
+    activeLoads,
+    markDry,
+    markDryExpandedLoadId,
+    setMarkDryExpandedLoadId,
+    markDryPhotoDrafts,
+    setMarkDryPhotoDraft,
+    confirmPickup,
+    confirmTransferPayment,
+    advanceStage,
+    openChat,
+    navigate,
+    registerHardwareBackHandler,
+  } = useApp()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const [expandedLoadId, setExpandedLoadId] = useState<string | null>(null)
 
-  const { dryingLoads, readyLoads, dryerLoads } = useMemo(
+  const { preDryerLoads, dryingLoads, readyLoads, dryerLoads } = useMemo(
     () => splitHostActiveLoads(activeLoads),
     [activeLoads],
   )
 
   useEffect(() => {
-    if (!markDryLoadId) return
-    setExpandedLoadId(markDryLoadId)
-    clearMarkDryFocus()
-  }, [clearMarkDryFocus, markDryLoadId])
+    if (!markDryExpandedLoadId) {
+      registerHardwareBackHandler(null)
+      return
+    }
+
+    registerHardwareBackHandler(() => {
+      setMarkDryExpandedLoadId(null)
+      return true
+    })
+
+    return () => registerHardwareBackHandler(null)
+  }, [markDryExpandedLoadId, registerHardwareBackHandler, setMarkDryExpandedLoadId])
 
   const summary =
-    dryingLoads.length > 0 && readyLoads.length > 0
-      ? `${dryingLoads.length} drying · ${readyLoads.length} ready`
-      : dryingLoads.length > 0
-        ? `${dryingLoads.length} in the dryer`
-        : `${readyLoads.length} ready for pickup`
+    preDryerLoads.length > 0 && dryingLoads.length === 0 && readyLoads.length === 0
+      ? `${preDryerLoads.length} awaiting drop-off or payment`
+      : dryingLoads.length > 0 && readyLoads.length > 0
+        ? `${dryingLoads.length} drying · ${readyLoads.length} ready`
+        : dryingLoads.length > 0
+          ? `${dryingLoads.length} in the dryer`
+          : readyLoads.length > 0
+            ? `${readyLoads.length} ready for pickup`
+            : `${preDryerLoads.length} active load${preDryerLoads.length === 1 ? '' : 's'}`
 
   return (
     <Screen>
@@ -168,12 +211,35 @@ export function HostDryerScreen() {
           <AppIcon name="wind" size={36} color={colors.gray400} />
           <Text style={styles.emptyTitle}>{toTitleCase('Dryer is empty')}</Text>
           <Text style={styles.emptySub}>
-            {toTitleCase('Loads appear here after you start drying. Manage new requests on the dashboard.')}
+            {toTitleCase('Accepted loads appear here for payment, drying, and pickup. New requests stay on the dashboard.')}
           </Text>
           <PrimaryButton title="Go to dashboard" icon="home" onPress={() => navigate('host-dashboard')} />
         </View>
       ) : (
         <>
+          {preDryerLoads.length > 0 ? (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <AppIcon name="package" size={14} />
+                <Text style={styles.sectionTitle}>
+                  {toTitleCase(`Drop-off & payment (${preDryerLoads.length})`)}
+                </Text>
+              </View>
+              {preDryerLoads.map((load) => (
+                <HostPreDryerLoadCard
+                  key={load.id}
+                  load={load}
+                  onConfirmPayment={confirmTransferPayment}
+                  onStartDrying={(loadId) => {
+                    advanceStage(loadId, 'drying')
+                    setMarkDryExpandedLoadId(loadId)
+                  }}
+                  onMessageGuest={(loadId) => openChat(loadId, loadId)}
+                />
+              ))}
+            </View>
+          ) : null}
+
           {dryingLoads.length > 0 ? (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
@@ -186,13 +252,14 @@ export function HostDryerScreen() {
                 <DryingLoadCard
                   key={load.id}
                   load={load}
-                  expanded={expandedLoadId === load.id}
+                  expanded={markDryExpandedLoadId === load.id}
+                  photoUri={markDryPhotoDrafts[load.id] ?? null}
+                  onPhotoChange={(uri) => setMarkDryPhotoDraft(load.id, uri)}
                   onToggleExpand={() =>
-                    setExpandedLoadId((current) => (current === load.id ? null : load.id))
+                    setMarkDryExpandedLoadId(markDryExpandedLoadId === load.id ? null : load.id)
                   }
                   onMarkDry={(photoUri) => {
                     markDry(load.id, photoUri)
-                    setExpandedLoadId(null)
                   }}
                   onMessageGuest={() => openChat(load.id, load.id)}
                   styles={styles}
@@ -216,6 +283,7 @@ export function HostDryerScreen() {
                   onConfirmPickup={() => confirmPickup(load.id)}
                   onMessageGuest={() => openChat(load.id, load.id)}
                   styles={styles}
+                  colors={colors}
                 />
               ))}
             </View>
@@ -225,7 +293,7 @@ export function HostDryerScreen() {
 
       {dryerLoads.length > 0 ? (
         <Pressable style={styles.dashboardLink} onPress={() => navigate('host-dashboard')}>
-          <Text style={styles.dashboardLinkText}>{toTitleCase('New requests & payments → Dashboard')}</Text>
+          <Text style={styles.dashboardLinkText}>{toTitleCase('New booking requests → Dashboard')}</Text>
           <AppIcon name="chevron-right" size={16} color={colors.gray500} />
         </Pressable>
       ) : null}
@@ -282,6 +350,18 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     markDrySub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
     markDryHint: { fontSize: 12, color: colors.gray500, lineHeight: 18, textAlign: 'center' },
     pickupHint: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+    waitingPickupBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+      borderRadius: radius.md,
+      backgroundColor: colors.gray50,
+      borderWidth: 1,
+      borderColor: colors.gray200,
+    },
+    waitingPickupText: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
     readyPhotoHint: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     readyPhotoHintText: { fontSize: 13, color: colors.gray600, fontWeight: '600' },
     empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },

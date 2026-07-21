@@ -20,6 +20,9 @@ fi
 
 export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
 
+# Keep the JS bundle baked into the APK; don't replace it with an older EAS update at launch.
+export EXPO_PUBLIC_DISABLE_OTA_UPDATES=true
+
 echo "→ Syncing android/ from app.config.ts (expo prebuild)..."
 npx expo prebuild --platform android --no-install
 
@@ -36,6 +39,9 @@ fi
 echo "→ Building release ($BUILD_TARGET)..."
 cd android
 chmod +x gradlew
+
+# Force Metro to rebundle JS/assets so logo and UI changes are always in the APK.
+rm -rf app/build/generated/assets/createBundleReleaseJsAndAssets
 
 GRADLE_ARGS=(-PreactNativeArchitectures=arm64-v8a,armeabi-v7a)
 # Skip lint on local preview builds — saves memory and time for host testing APKs.

@@ -171,7 +171,9 @@ async function uploadObject({ supabaseUrl, serviceRoleKey, objectPath, filePath 
     console.log(`EXPO_PUBLIC_AUTH_REDIRECT_URL=${authCallback.url}`)
   }
   if (hostProfile) {
-    console.log(`# Host profile backup link base: ${hostProfile.url}?host=HOST_ID&user=USER_ID`)
+    console.log(`# Host profile links use the Edge Function (not storage HTML):`)
+    console.log(`# ${supabaseUrl.replace(/\/$/, '')}/functions/v1/host-profile?host=HOST_ID&user=USER_ID`)
+    console.log(`# Deploy once: npm run deploy:host-profile`)
   }
 
   console.log('\nDone.')

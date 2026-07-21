@@ -231,6 +231,24 @@ export interface Booking {
   clothesList?: ClothesListItem[]
   acceptedAt?: string
   createdAt?: string
+  /** ISO timestamp — host confirmed the guest collected their laundry. */
+  hostPickupConfirmedAt?: string
+  /** ISO timestamp — guest confirmed they collected their laundry. */
+  guestPickupConfirmedAt?: string
+}
+
+/** In-progress booking wizard — survives camera / app resume on the booking screen. */
+export interface BookingDraft {
+  hostId: string
+  wizardStep: number
+  dropOffTime: DropOffHour
+  loads: number
+  sheetsOption: SheetsOption
+  foldingService: boolean
+  notes: string
+  clothesList: ClothesListItem[]
+  loadPhotoUri: string | null
+  paymentMethod: PaymentMethod
 }
 
 export interface HostRequest {

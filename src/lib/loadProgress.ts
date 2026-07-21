@@ -178,7 +178,11 @@ export function getStepTimestamp(booking: Booking, step: GuestProgressStep): str
 
   switch (step.key) {
     case 'request':
-      return booking.acceptedAt ?? (booking.createdAt ? formatShortTime(booking.createdAt) : undefined)
+      return booking.acceptedAt
+        ? formatShortTime(booking.acceptedAt) ?? booking.acceptedAt
+        : booking.createdAt
+          ? formatShortTime(booking.createdAt)
+          : undefined
     case 'payment-sent':
       return booking.paymentProofSentAt
         ? formatShortTime(booking.paymentProofSentAt)
@@ -253,6 +257,15 @@ export function getGuestStepDescription(booking: Booking, step: GuestProgressSte
     }
   }
 
+  if (step.key === 'ready') {
+    if (booking.guestPickupConfirmedAt && !booking.hostPickupConfirmedAt) {
+      return `You confirmed pickup — waiting for ${booking.hostName} to confirm on their end.`
+    }
+    if (booking.hostPickupConfirmedAt && !booking.guestPickupConfirmedAt) {
+      return `${booking.hostName} confirmed pickup — tap I picked up once you have your laundry.`
+    }
+  }
+
   return step.description
 }
 
@@ -284,6 +297,14 @@ export function getHostStepDescription(load: Booking, step: HostProgressStep): s
       return 'Cash received at drop-off — you can start drying.'
     }
     return cashPaymentHostHint()
+  }
+  if (step.key === 'pickup') {
+    if (load.guestPickupConfirmedAt && !load.hostPickupConfirmedAt) {
+      return 'Guest confirmed pickup on their phone — confirm below to complete the load.'
+    }
+    if (load.hostPickupConfirmedAt && !load.guestPickupConfirmedAt) {
+      return 'Waiting for the guest to confirm pickup on My load.'
+    }
   }
   return step.description
 }

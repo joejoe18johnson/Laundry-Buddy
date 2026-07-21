@@ -13,7 +13,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
+import { pickImage } from '../../lib/imagePicker'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { BrandActionSheet, BrandAlert, type BrandDialogAction } from '../../components/BrandDialog'
@@ -256,27 +256,21 @@ export function ChatThreadPanel({
     scrollToLatest()
   }, [messages.length, scrollToLatest])
 
-  const pickImage = async (useCamera: boolean) => {
-    const permission = useCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync()
+  const pickImageAttachment = async (useCamera: boolean) => {
+    const result = await pickImage(useCamera ? 'camera' : 'library', { quality: 0.8 })
 
-    if (!permission.granted) {
+    if (result.ok) {
+      setPendingImageUri(result.uri)
+      return
+    }
+
+    if (result.reason === 'permission_denied') {
       setPermissionAlert({
         title: 'Permission needed',
         message: useCamera
           ? 'Allow camera access to attach a photo.'
           : 'Allow photo library access to attach an image.',
       })
-      return
-    }
-
-    const result = useCamera
-      ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 })
-      : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 })
-
-    if (!result.canceled && result.assets[0]?.uri) {
-      setPendingImageUri(result.assets[0].uri)
     }
   }
 
@@ -287,7 +281,7 @@ export function ChatThreadPanel({
       variant: 'primary',
       onPress: () => {
         setAttachSheetOpen(false)
-        void pickImage(true)
+        void pickImageAttachment(true)
       },
     },
     {
@@ -296,7 +290,7 @@ export function ChatThreadPanel({
       variant: 'outline',
       onPress: () => {
         setAttachSheetOpen(false)
-        void pickImage(false)
+        void pickImageAttachment(false)
       },
     },
     ...(pendingImageUri

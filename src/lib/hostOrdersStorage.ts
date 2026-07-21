@@ -84,6 +84,19 @@ export async function updateHostActiveLoads(
   await saveHostOrders(hostUserId, { ...orders, activeLoads })
 }
 
+export async function patchHostActiveLoad(
+  hostUserId: string,
+  loadId: string,
+  patch: (load: Booking) => Booking,
+): Promise<void> {
+  const orders = await getHostOrders(hostUserId)
+  const index = orders.activeLoads.findIndex((load) => load.id === loadId)
+  if (index === -1) return
+  const next = [...orders.activeLoads]
+  next[index] = patch(next[index])
+  await saveHostOrders(hostUserId, { ...orders, activeLoads: next })
+}
+
 export function mergeActiveLoads(seed: Booking[], stored: Booking[]): Booking[] {
   const byId = new Map<string, Booking>()
   for (const load of [...seed, ...stored]) {

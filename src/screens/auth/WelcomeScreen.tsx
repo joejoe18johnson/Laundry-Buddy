@@ -11,10 +11,30 @@ import { spacing } from '../../theme'
 function createWelcomeStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
     container: { flexGrow: 1 },
-    hero: { flex: 1, justifyContent: 'center', paddingVertical: spacing.xxl, alignItems: 'center' },
-    logo: { marginBottom: spacing.lg },
-    title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5, marginBottom: spacing.md, lineHeight: 40, textAlign: 'center' },
+    logoSection: {
+      alignItems: 'center',
+      paddingTop: spacing.xxl,
+      paddingBottom: spacing.xl,
+    },
+    logo: { alignSelf: 'center' },
+    hero: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: 220,
+      paddingVertical: spacing.lg,
+    },
+    title: {
+      fontSize: 32,
+      fontWeight: '700',
+      letterSpacing: -0.5,
+      marginBottom: spacing.md,
+      lineHeight: 40,
+      textAlign: 'center',
+      color: colors.black,
+    },
     tagline: { fontSize: 16, color: colors.gray500, lineHeight: 26, textAlign: 'center' },
+    actions: { paddingTop: spacing.lg },
     gap: { height: spacing.md },
     error: {
       marginTop: spacing.sm,
@@ -33,19 +53,24 @@ export function WelcomeScreen() {
 
   return (
     <Screen style={styles.container}>
+      <View style={styles.logoSection}>
+        <AppLogoMark size={88} style={styles.logo} />
+      </View>
+
       <View style={styles.hero}>
-        <AppLogoMark size={56} style={styles.logo} />
         <Text style={styles.title}>{toTitleCase('Dry Laundry, Rain or Shine')}</Text>
         <Text style={styles.tagline}>
           {toTitleCase(`Book a neighbor's dryer anywhere in ${ACTIVE_REGION_LABEL} — free for the community.`)}
         </Text>
       </View>
 
-      <PrimaryButton title="Log in" icon="log-in" onPress={() => navigateAuth('login')} full />
-      <View style={styles.gap} />
-      <OutlineButton title="Create account" icon="user-plus" onPress={() => navigateAuth('signup')} full />
+      <View style={styles.actions}>
+        <PrimaryButton title="Log in" icon="log-in" onPress={() => navigateAuth('login')} full />
+        <View style={styles.gap} />
+        <OutlineButton title="Create account" icon="user-plus" onPress={() => navigateAuth('signup')} full />
 
-      {authError ? <Text style={styles.error}>{authError}</Text> : null}
+        {authError ? <Text style={styles.error}>{authError}</Text> : null}
+      </View>
     </Screen>
   )
 }

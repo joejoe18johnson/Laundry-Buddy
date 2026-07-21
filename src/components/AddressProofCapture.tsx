@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as DocumentPicker from 'expo-document-picker'
-import * as ImagePicker from 'expo-image-picker'
 import { AppIcon } from './AppIcon'
 import { BrandActionSheet, BrandAlert, type BrandDialogAction } from './BrandDialog'
 import { useTheme } from '../context/ThemeContext'
+import { beginCameraSession, endCameraSession } from '../lib/cameraSession'
+import { pickImage } from '../lib/imagePicker'
 import {
   formatDocumentFileName,
   inferMimeTypeFromUri,
@@ -32,51 +33,38 @@ export function AddressProofCapture({ file, onFileChange, label }: AddressProofC
   const [sheetOpen, setSheetOpen] = useState(false)
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null)
 
-  const pickImage = async (useCamera: boolean) => {
-    const permission = useCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync()
+  const pickImageFile = async (useCamera: boolean) => {
+    const result = await pickImage(useCamera ? 'camera' : 'library', { quality: 0.7 })
 
-    if (!permission.granted) {
+    if (result.ok) {
+      onFileChange({
+        uri: result.uri,
+        mimeType: result.mimeType ?? inferMimeTypeFromUri(result.uri),
+        name: result.fileName ?? 'Utility bill photo',
+      })
+      return
+    }
+
+    if (result.reason === 'permission_denied') {
       setAlert({
         title: 'Permission needed',
         message: useCamera
           ? 'Allow camera access to photograph your utility bill.'
           : 'Allow photo library access to choose your utility bill photo.',
       })
-      return
-    }
-
-    const result = useCamera
-      ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          allowsEditing: false,
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          allowsEditing: false,
-        })
-
-    if (!result.canceled && result.assets[0]?.uri) {
-      const asset = result.assets[0]
-      onFileChange({
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? inferMimeTypeFromUri(asset.uri),
-        name: asset.fileName ?? 'Utility bill photo',
-      })
     }
   }
 
   const pickDocument = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/*'],
-      copyToCacheDirectory: true,
-      multiple: false,
-    })
+    beginCameraSession()
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'image/*'],
+        copyToCacheDirectory: true,
+        multiple: false,
+      })
 
-    if (result.canceled || !result.assets[0]) return
+      if (result.canceled || !result.assets[0]) return
 
     const asset = result.assets[0]
     onFileChange({
@@ -84,6 +72,9 @@ export function AddressProofCapture({ file, onFileChange, label }: AddressProofC
       mimeType: asset.mimeType ?? inferMimeTypeFromUri(asset.uri),
       name: asset.name ?? 'Utility bill',
     })
+    } finally {
+      endCameraSession()
+    }
   }
 
   const sheetActions: BrandDialogAction[] = [
@@ -93,7 +84,7 @@ export function AddressProofCapture({ file, onFileChange, label }: AddressProofC
       variant: 'primary',
       onPress: () => {
         setSheetOpen(false)
-        void pickImage(true)
+        void pickImageFile(true)
       },
     },
     {
@@ -102,7 +93,7 @@ export function AddressProofCapture({ file, onFileChange, label }: AddressProofC
       variant: 'outline',
       onPress: () => {
         setSheetOpen(false)
-        void pickImage(false)
+        void pickImageFile(false)
       },
     },
     {

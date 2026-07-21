@@ -410,7 +410,7 @@ export function HostHubScreen() {
           <Row
             icon="shield"
             label="Rating"
-            value={`${host.rating > 0 ? host.rating.toFixed(1) : 'New'} · ${profile.loadsHosted} loads hosted`}
+            value={`${host.rating > 0 ? host.rating.toFixed(1) : 'New'} · ${hostStats.loadsHosted} loads hosted`}
           />
         </Section>
       ) : null}

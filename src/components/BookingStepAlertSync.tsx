@@ -85,6 +85,15 @@ export function BookingStepAlertSync() {
       return
     }
 
+    if (user?.role === 'host') {
+      if (event.kind === 'picked-up') {
+        navigate('host-dashboard')
+        return
+      }
+      navigate('host-dryer')
+      return
+    }
+
     navigate('host-dashboard')
   }, [navigate, openLeaveReview, selectGuestBooking, user?.role])
 

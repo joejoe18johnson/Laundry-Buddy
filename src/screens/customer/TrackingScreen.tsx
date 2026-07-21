@@ -19,6 +19,10 @@ import {
   formatCancelCountdown,
   getMsUntilGuestCanCancel,
 } from '../../lib/pendingRequestCancel'
+import {
+  canGuestConfirmPickup,
+  isAwaitingHostPickupConfirmation,
+} from '../../lib/pickupConfirmation'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { useTheme } from '../../context/ThemeContext'
@@ -51,7 +55,7 @@ function getLoadStatusLabel(load: Booking): string {
 
 export function TrackingScreen() {
   const { user } = useAuth()
-  const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking, cancelPendingRequest, openChat, markPaymentProofSent, refreshGuestBookings } = useApp()
+  const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, clearBooking, cancelPendingRequest, openChat, markPaymentProofSent, refreshGuestBookings } = useApp()
   const { sendMessage } = useMessages()
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
@@ -125,17 +129,16 @@ export function TrackingScreen() {
   const bank = hostSettings.bankDetails
 
   const isReadyForPickup = isAccepted && booking.stage === 'ready'
+  const canConfirmGuestPickup = canGuestConfirmPickup(booking)
+  const awaitingHostPickupConfirm = isAwaitingHostPickupConfirmation(booking)
   const isDropOffPhase = isAccepted && !isReadyForPickup
   const canCancelPending = isPending && canGuestCancelPendingRequest(booking)
   const msUntilCancel = isPending ? getMsUntilGuestCanCancel(booking) : 0
   void cancelTick
 
   const handleConfirmPickup = () => {
-    if (!booking) return
-    const bookingId = booking.id
-    const hostId = booking.hostId
-    confirmPickup(bookingId)
-    openLeaveReview(hostId, bookingId)
+    if (!booking || !canGuestConfirmPickup(booking)) return
+    confirmPickup(booking.id)
   }
 
   const statusBadge = isDeclined
@@ -451,7 +454,7 @@ export function TrackingScreen() {
       </View>
       )}
 
-      {isReadyForPickup && (
+      {isReadyForPickup && canConfirmGuestPickup && !booking.hostPickupConfirmedAt && (
         <View style={styles.reviewCard}>
           <View style={styles.reviewHeader}>
             <AppIcon name="star" size={18} color={colors.black} />
@@ -459,7 +462,38 @@ export function TrackingScreen() {
           </View>
           <Text style={styles.reviewSub}>
             {titleCaseWithName(
-              `After you collect your laundry, confirm pickup and leave a review for ${booking.hostName}.`,
+              `After you collect your laundry, confirm pickup so ${booking.hostName} can close out the load. You can leave a review once both of you confirm.`,
+              booking.hostName,
+            )}
+          </Text>
+          <PrimaryButton title="I Picked Up My Load" icon="check-circle" full onPress={handleConfirmPickup} />
+        </View>
+      )}
+
+      {isReadyForPickup && awaitingHostPickupConfirm && (
+        <View style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <AppIcon name="check-circle" size={18} color={colors.green} />
+            <Text style={styles.reviewTitle}>{toTitleCase('Pickup Confirmed')}</Text>
+          </View>
+          <Text style={styles.reviewSub}>
+            {titleCaseWithName(
+              `You confirmed pickup. Waiting for ${booking.hostName} to confirm on their end — then you can leave a review.`,
+              booking.hostName,
+            )}
+          </Text>
+        </View>
+      )}
+
+      {isReadyForPickup && booking.hostPickupConfirmedAt && !booking.guestPickupConfirmedAt && (
+        <View style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <AppIcon name="package" size={18} color={colors.black} />
+            <Text style={styles.reviewTitle}>{toTitleCase('Host Confirmed Pickup')}</Text>
+          </View>
+          <Text style={styles.reviewSub}>
+            {titleCaseWithName(
+              `${booking.hostName} confirmed you collected your laundry. Tap below once you have your load.`,
               booking.hostName,
             )}
           </Text>

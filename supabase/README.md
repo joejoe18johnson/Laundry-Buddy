@@ -104,6 +104,15 @@ node scripts/upload-app-public.mjs --file host-profile.html
 
 The script upserts every file in `supabase/public/` and prints the public URLs. Copy `EXPO_PUBLIC_AUTH_REDIRECT_URL` from the output if you use the hosted auth callback.
 
+**Host profile share links** do not use Storage HTML — Supabase serves `.html` from Storage as `text/plain` (raw source in the browser). Deploy the Edge Function instead:
+
+```bash
+npx supabase login
+npm run deploy:host-profile
+```
+
+Share links then use `https://YOUR_PROJECT.supabase.co/functions/v1/host-profile?host=...&user=...`, which renders correctly and opens the app.
+
 ## 5. Storage buckets (optional, for photos)
 
 Create private buckets in Storage:

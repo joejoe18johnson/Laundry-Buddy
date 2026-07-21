@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
@@ -30,44 +30,30 @@ import { radius, spacing } from '../../theme'
 import type { ClothesListItem, PaymentMethod, SheetsOption } from '../../types'
 
 export function BookingScreen() {
-  const { selectedHost, navigate, confirmBooking, getSettingsForHost, registerHardwareBackHandler } = useApp()
+  const {
+    selectedHost,
+    navigate,
+    confirmBooking,
+    getSettingsForHost,
+    registerHardwareBackHandler,
+    bookingDraft,
+    patchBookingDraft,
+  } = useApp()
   const { user } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createBookingStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const footerBottomPad = bottomSafePadding(insets.bottom)
-  const [dropOffTime, setDropOffTime] = useState<DropOffHour>(14)
-  const [loads, setLoads] = useState(1)
-  const [sheetsOption, setSheetsOption] = useState<SheetsOption>('own')
-  const [foldingService, setFoldingService] = useState(false)
-  const [notes, setNotes] = useState('')
-  const [clothesList, setClothesList] = useState<ClothesListItem[]>([])
-  const [loadPhotoUri, setLoadPhotoUri] = useState<string | null>(null)
-  const [wizardStep, setWizardStep] = useState(0)
 
   const hostSettings = selectedHost ? getSettingsForHost(selectedHost.hostUserId) : null
   const paymentMethods = useMemo(
     () => (hostSettings ? getHostPaymentMethods(hostSettings) : []),
     [hostSettings],
   )
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
-
-  useEffect(() => {
-    if (paymentMethods.length > 0) {
-      setPaymentMethod(paymentMethods[0])
-    }
-  }, [selectedHost?.id, paymentMethods.join(',')])
-
   const availableTimes = useMemo(
     () => sortDropOffHours(hostSettings?.dropOffAvailability ?? []),
     [hostSettings?.dropOffAvailability],
   )
-
-  useEffect(() => {
-    if (availableTimes.length > 0 && !availableTimes.includes(dropOffTime)) {
-      setDropOffTime(availableTimes[0])
-    }
-  }, [availableTimes, dropOffTime])
 
   useEffect(() => {
     if (!user || canBookOrHost(user)) return
@@ -75,17 +61,47 @@ export function BookingScreen() {
   }, [navigate, user])
 
   useEffect(() => {
+    if (!selectedHost || !bookingDraft || bookingDraft.hostId !== selectedHost.id) return
+    if (availableTimes.length > 0 && !availableTimes.includes(bookingDraft.dropOffTime)) {
+      patchBookingDraft({ dropOffTime: availableTimes[0] })
+    }
+  }, [availableTimes, bookingDraft, patchBookingDraft, selectedHost])
+
+  useEffect(() => {
+    if (!bookingDraft || paymentMethods.length === 0) return
+    if (!paymentMethods.includes(bookingDraft.paymentMethod)) {
+      patchBookingDraft({ paymentMethod: paymentMethods[0] })
+    }
+  }, [bookingDraft, patchBookingDraft, paymentMethods])
+
+  useEffect(() => {
     registerHardwareBackHandler(() => {
-      if (wizardStep > 0) {
-        setWizardStep((step) => step - 1)
+      const step = bookingDraft?.wizardStep ?? 0
+      if (step > 0) {
+        patchBookingDraft({ wizardStep: step - 1 })
         return true
       }
-      return false
+      navigate('customer-host-profile')
+      return true
     })
     return () => registerHardwareBackHandler(null)
-  }, [registerHardwareBackHandler, wizardStep])
+  }, [bookingDraft?.wizardStep, navigate, patchBookingDraft, registerHardwareBackHandler])
 
-  if (!selectedHost || !hostSettings) return null
+  if (!selectedHost || !hostSettings || !bookingDraft || bookingDraft.hostId !== selectedHost.id) {
+    return null
+  }
+
+  const {
+    wizardStep,
+    dropOffTime,
+    loads,
+    sheetsOption,
+    foldingService,
+    notes,
+    clothesList,
+    loadPhotoUri,
+    paymentMethod,
+  } = bookingDraft
 
   const displayName = formatHostDisplayName(selectedHost.name)
   const pricing = getHostPricing(selectedHost, hostSettings)
@@ -145,7 +161,13 @@ export function BookingScreen() {
   return (
     <View style={styles.wrapper}>
       <Screen>
-        <BackButton onPress={() => (wizardStep > 0 ? setWizardStep(wizardStep - 1) : navigate('customer-host-profile'))} />
+        <BackButton
+          onPress={() =>
+            wizardStep > 0
+              ? patchBookingDraft({ wizardStep: wizardStep - 1 })
+              : navigate('customer-host-profile')
+          }
+        />
         <NotificationBellReminder compact onPressBell={() => navigate('notifications')} />
         <Text style={styles.eyebrow}>{selectedHost.location}</Text>
         <Text style={styles.title}>
@@ -173,20 +195,20 @@ export function BookingScreen() {
                 mode="select"
                 hours={availableTimes}
                 value={dropOffTime}
-                onChange={setDropOffTime}
+                onChange={(hour) => patchBookingDraft({ dropOffTime: hour })}
               />
             )}
 
             <Text style={styles.section}>{toTitleCase('Loads')}</Text>
             <View style={styles.stepper}>
-              <Pressable onPress={() => setLoads(Math.max(1, loads - 1))} style={styles.stepBtn}>
+              <Pressable onPress={() => patchBookingDraft({ loads: Math.max(1, loads - 1) })} style={styles.stepBtn}>
                 <Text style={styles.stepBtnText}>−</Text>
               </Pressable>
               <View style={styles.stepValue}>
                 <Text style={styles.stepCount}>{loads}</Text>
                 <Text style={styles.stepLabel}>{toTitleCase(`standard basket${loads > 1 ? 's' : ''}`)}</Text>
               </View>
-              <Pressable onPress={() => setLoads(loads + 1)} style={styles.stepBtn}>
+              <Pressable onPress={() => patchBookingDraft({ loads: loads + 1 })} style={styles.stepBtn}>
                 <Text style={styles.stepBtnText}>+</Text>
               </Pressable>
             </View>
@@ -200,7 +222,7 @@ export function BookingScreen() {
                   {paymentMethods.map((method) => (
                     <Pressable
                       key={method}
-                      onPress={() => setPaymentMethod(method)}
+                      onPress={() => patchBookingDraft({ paymentMethod: method })}
                       style={[styles.chip, paymentMethod === method && styles.chipSelected]}
                     >
                       <Text
@@ -246,7 +268,7 @@ export function BookingScreen() {
                 label={s.label}
                 sub={s.sub}
                 selected={sheetsOption === s.value}
-                onPress={() => setSheetsOption(s.value)}
+                onPress={() => patchBookingDraft({ sheetsOption: s.value })}
               />
             ))}
 
@@ -257,17 +279,20 @@ export function BookingScreen() {
                   label={`Add Folding — ${formatServicePrice(foldingPrice)} Per Load`}
                   sub="Host Folds Clothes After Drying"
                   selected={foldingService}
-                  onPress={() => setFoldingService(!foldingService)}
+                  onPress={() => patchBookingDraft({ foldingService: !foldingService })}
                 />
               </>
             )}
 
             <Text style={styles.section}>{toTitleCase("What's In Your Load?")}</Text>
-            <ClothesListEditor items={clothesList} onChange={setClothesList} />
+            <ClothesListEditor items={clothesList} onChange={(items) => patchBookingDraft({ clothesList: items })} />
             {clothesList.length > 0 && <LoadListBreakdown items={clothesList} title="Your Load List" />}
 
             <Text style={styles.section}>{toTitleCase('Photo Of Your Load')}</Text>
-            <LoadPhotoCapture photoUri={loadPhotoUri} onPhotoChange={setLoadPhotoUri} />
+            <LoadPhotoCapture
+              photoUri={loadPhotoUri}
+              onPhotoChange={(uri) => patchBookingDraft({ loadPhotoUri: uri })}
+            />
 
             <Text style={styles.section}>{toTitleCase('Special Notes')}</Text>
             <AppTextInput
@@ -275,7 +300,7 @@ export function BookingScreen() {
               multiline
               numberOfLines={3}
               value={notes}
-              onChangeText={setNotes}
+              onChangeText={(text) => patchBookingDraft({ notes: text })}
               placeholder="Any special instructions..."
             />
           </>
@@ -323,10 +348,10 @@ export function BookingScreen() {
                 title="Continue"
                 icon="chevron-right"
                 disabled={!essentialsReady}
-                onPress={() => setWizardStep(1)}
+                onPress={() => patchBookingDraft({ wizardStep: 1 })}
               />
             ) : wizardStep === 1 ? (
-              <PrimaryButton title="Review" icon="eye" onPress={() => setWizardStep(2)} />
+              <PrimaryButton title="Review" icon="eye" onPress={() => patchBookingDraft({ wizardStep: 2 })} />
             ) : (
               <PrimaryButton title="Send request" icon="send" disabled={!canConfirm} onPress={submitBooking} />
             )}

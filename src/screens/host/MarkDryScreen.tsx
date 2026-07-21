@@ -7,11 +7,11 @@ import { spacing } from '../../theme'
 
 /** Legacy route — forwards to the Dryer tab where mark-dry now lives. */
 export function MarkDryScreen() {
-  const { navigate, markDryLoadId } = useApp()
+  const { navigate, markDryExpandedLoadId } = useApp()
 
   useEffect(() => {
     navigate('host-dryer')
-  }, [markDryLoadId, navigate])
+  }, [markDryExpandedLoadId, navigate])
 
   return (
     <Screen style={styles.empty}>

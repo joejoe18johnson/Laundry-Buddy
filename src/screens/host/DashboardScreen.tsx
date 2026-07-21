@@ -1,8 +1,6 @@
-import { useMemo, useState, useEffect, type ReactNode } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { ImageLightbox } from '../../components/ImageLightbox'
-import { PaymentProofChip } from '../../components/PaymentProofChip'
 import { sheetsOptionLabel } from '../../types'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { formatDropOffAvailability, formatDropOffHour, formatDropOffHoursWindow, type DropOffHour } from '../../lib/dropOffAvailability'
@@ -13,39 +11,23 @@ import { applyHostSettings } from '../../lib/hostListing'
 import { HostPricingSection } from '../../components/host/HostPricingSection'
 import { normalizeHostSettings } from '../../lib/hostSettingsStorage'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
-import { formatMoney, getBookingAmount, cashPaymentHostHint } from '../../lib/bookingPayments'
+import { formatMoney } from '../../lib/bookingPayments'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
-import { splitHostActiveLoads } from '../../lib/hostLoads'
+import { countDryerTabLoads } from '../../lib/hostLoads'
 import { toTitleCase } from '../../lib/titleCase'
-import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge, SuccessButton } from '../../components/ui'
-import { HostLoadProgress } from '../../components/HostLoadProgress'
+import { BrandSwitch, GhostButton, PrimaryButton, Screen } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useTheme } from '../../context/ThemeContext'
 import { radius, spacing } from '../../theme'
-import type { BookingStage, HostPricing } from '../../types'
-
-function stageBadge(stage: BookingStage) {
-  switch (stage) {
-    case 'ready':
-      return { label: 'Ready', variant: 'ready' as const }
-    case 'drying':
-      return { label: 'Drying', variant: 'drying' as const }
-    case 'waiting':
-      return { label: 'Waiting', variant: 'awaiting' as const }
-    default:
-      return { label: 'Received', variant: 'neutral' as const }
-  }
-}
+import type { HostPricing } from '../../types'
 
 function GuestCardHeader({
   name,
   metaParts,
-  statusBadge,
   styles,
 }: {
   name: string
   metaParts: string[]
-  statusBadge?: ReactNode
   styles: ReturnType<typeof createDashboardStyles>
 }) {
   const { colors } = useTheme()
@@ -55,10 +37,7 @@ function GuestCardHeader({
         <AppIcon name="user" size={18} color={colors.gray600} />
       </View>
       <View style={styles.guestHeaderBody}>
-        <View style={styles.guestTitleRow}>
-          <Text style={styles.cardTitle}>{name}</Text>
-          {statusBadge}
-        </View>
+        <Text style={styles.cardTitle}>{name}</Text>
         <View style={styles.metaRow}>
           {metaParts.map((part) => (
             <View key={part} style={styles.metaPill}>
@@ -142,11 +121,8 @@ export function DashboardScreen() {
     navigate,
     acceptRequest,
     declineRequest,
-    advanceStage,
-    confirmTransferPayment,
     openChat,
   } = useApp()
-  const [proofLightboxUri, setProofLightboxUri] = useState<string | null>(null)
 
   const rawHost = user ? getHostByUserId(user.id) : undefined
   const hostProfile = rawHost && hostSettings
@@ -162,10 +138,7 @@ export function DashboardScreen() {
   const { colors } = useTheme()
   const styles = useMemo(() => createDashboardStyles(colors), [colors])
 
-  const { dashboardLoads, dryerLoads } = useMemo(
-    () => splitHostActiveLoads(activeLoads),
-    [activeLoads],
-  )
+  const dryerLoadCount = useMemo(() => countDryerTabLoads(activeLoads), [activeLoads])
 
   useEffect(() => {
     if (!hostSettings) return
@@ -278,7 +251,7 @@ export function DashboardScreen() {
         </Text>
       )}
 
-      {dryerLoads.length > 0 && (
+      {dryerLoadCount > 0 && (
         <Pressable style={styles.dryerBanner} onPress={() => navigate('host-dryer')}>
           <View style={styles.dryerBannerIcon}>
             <AppIcon name="wind" size={18} color={colors.white} />
@@ -286,11 +259,11 @@ export function DashboardScreen() {
           <View style={styles.dryerBannerCopy}>
             <Text style={styles.dryerBannerTitle}>
               {toTitleCase(
-                `${dryerLoads.length} load${dryerLoads.length === 1 ? '' : 's'} in your dryer`,
+                `${dryerLoadCount} active load${dryerLoadCount === 1 ? '' : 's'} on the Dryer tab`,
               )}
             </Text>
             <Text style={styles.dryerBannerSub}>
-              {toTitleCase('Confirm dry and pickup from the Dryer tab')}
+              {toTitleCase('Payment, drying, and pickup — manage everything there')}
             </Text>
           </View>
           <AppIcon name="chevron-right" size={18} color="rgba(255,255,255,0.8)" />
@@ -368,108 +341,7 @@ export function DashboardScreen() {
         </View>
       ))}
 
-      {dashboardLoads.map((load) => (
-        <View key={load.id} style={styles.section}>
-          <View style={styles.sectionLabelRow}>
-            <AppIcon name="package" size={12} color={colors.gray500} />
-            <Text style={styles.sectionLabel}>{toTitleCase('Active load')}</Text>
-          </View>
-          <View style={styles.card}>
-            <GuestCardHeader
-              name={load.customerName}
-              metaParts={[
-                `${load.loads} load${load.loads === 1 ? '' : 's'}`,
-                formatDropOffHour(load.dropOffTime),
-                load.paymentMethod === 'cash' ? 'Cash · Drop-off' : 'Transfer',
-                load.paymentMethod === 'bank_transfer' &&
-                load.paymentStatus === 'pending' &&
-                load.paymentRequestedAt &&
-                !load.paymentProofSentAt
-                  ? 'Awaiting payment'
-                  : load.paymentProofSentAt
-                    ? 'Proof sent'
-                    : '',
-              ].filter(Boolean)}
-              statusBadge={<StatusBadge {...stageBadge(load.stage)} />}
-              styles={styles}
-            />
-            <View style={{ height: spacing.md }} />
-            <HostLoadProgress load={load} />
-            {load.clothesList && load.clothesList.length > 0 ? (
-              <LoadListBreakdown items={load.clothesList} title="Guest's load list" />
-            ) : null}
-            <OrderDetails
-              dropOffTime={load.dropOffTime}
-              notes={load.notes}
-              paymentMethod={load.paymentMethod}
-              totalAmount={load.totalAmount}
-              loadPhotoUri={load.loadPhotoUri}
-              styles={styles}
-            />
-            {load.paymentProofUri ? (
-              <PaymentProofChip
-                confirmed={load.paymentStatus === 'paid'}
-                onPress={() => setProofLightboxUri(load.paymentProofUri!)}
-              />
-            ) : null}
-            {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'pending' && (
-              <>
-                <Text style={styles.transferHint}>
-                  {load.paymentProofUri || load.paymentProofSentAt
-                    ? toTitleCase('Review the transfer proof below, then confirm once verified.')
-                    : load.paymentRequestedAt
-                      ? toTitleCase('Waiting for guest to transfer and submit proof from My loads.')
-                      : toTitleCase('Payment request will send automatically when you accept bank-transfer loads.')}
-                </Text>
-                {(load.paymentProofUri || load.paymentProofSentAt) && (
-                  <GhostButton
-                    title={`Confirm ${formatMoney(getBookingAmount(load))} received`}
-                    icon="check-circle"
-                    full
-                    onPress={() => confirmTransferPayment(load.id)}
-                  />
-                )}
-              </>
-            )}
-            {load.paymentMethod === 'cash' && load.paymentStatus === 'pending' && (load.totalAmount ?? 0) > 0 && (
-              <>
-                <Text style={styles.transferHint}>{toTitleCase(cashPaymentHostHint())}</Text>
-                <PrimaryButton
-                  title={`Confirm ${formatMoney(getBookingAmount(load))} cash at drop-off`}
-                  icon="check-circle"
-                  full
-                  onPress={() => confirmTransferPayment(load.id)}
-                />
-              </>
-            )}
-            {load.paymentMethod === 'bank_transfer' && load.paymentStatus === 'paid' && (
-              <SuccessButton title="Payment confirmed" icon="check-circle" full disabled />
-            )}
-            {load.paymentMethod === 'cash' && load.paymentStatus === 'paid' && (
-              <SuccessButton title="Cash confirmed at drop-off" icon="check-circle" full disabled />
-            )}
-            {load.paymentStatus === 'paid' && (
-              <PrimaryButton
-                title="Start drying"
-                icon="wind"
-                full
-                onPress={() => {
-                  advanceStage(load.id, 'drying')
-                  navigate('host-dryer')
-                }}
-              />
-            )}
-            <GhostButton
-              title="Message guest"
-              icon="message-circle"
-              full
-              onPress={() => openChat(load.id, load.id)}
-            />
-          </View>
-        </View>
-      ))}
-
-      {hostRequests.length === 0 && dashboardLoads.length === 0 && (
+      {hostRequests.length === 0 && dryerLoadCount === 0 && (
         <View style={styles.empty}>
           <AppIcon name="check-circle" size={32} color={colors.gray400} />
           <Text style={styles.emptyTitle}>{toTitleCase('All caught up')}</Text>
@@ -483,11 +355,6 @@ export function DashboardScreen() {
           )}
         </View>
       )}
-      <ImageLightbox
-        visible={!!proofLightboxUri}
-        imageUri={proofLightboxUri}
-        onClose={() => setProofLightboxUri(null)}
-      />
     </Screen>
   )
 }

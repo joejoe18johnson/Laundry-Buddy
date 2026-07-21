@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
 import { AppIcon } from './AppIcon'
 import { BrandActionSheet, BrandAlert, type BrandDialogAction } from './BrandDialog'
 import { useTheme } from '../context/ThemeContext'
+import { pickImage } from '../lib/imagePicker'
 import { toTitleCase } from '../lib/titleCase'
 import { radius, spacing } from '../theme'
 
@@ -21,34 +21,20 @@ export function IdDocumentCapture({ photoUri, onPhotoChange, label, disabled }: 
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null)
 
   const pickPhoto = async (useCamera: boolean) => {
-    const permission = useCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync()
+    const result = await pickImage(useCamera ? 'camera' : 'library', { quality: 0.7 })
 
-    if (!permission.granted) {
+    if (result.ok) {
+      onPhotoChange(result.uri)
+      return
+    }
+
+    if (result.reason === 'permission_denied') {
       setAlert({
         title: 'Permission needed',
         message: useCamera
           ? 'Allow camera access to photograph your ID.'
           : 'Allow photo library access to choose your ID photo.',
       })
-      return
-    }
-
-    const result = useCamera
-      ? await ImagePicker.launchCameraAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          allowsEditing: false,
-        })
-      : await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ['images'],
-          quality: 0.7,
-          allowsEditing: false,
-        })
-
-    if (!result.canceled && result.assets[0]?.uri) {
-      onPhotoChange(result.assets[0].uri)
     }
   }
 

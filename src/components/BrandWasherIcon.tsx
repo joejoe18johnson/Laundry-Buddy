@@ -7,10 +7,11 @@ type Props = {
   variant?: 'light' | 'app'
 }
 
-const logoSource = require('../../assets/lb-logo.png')
+const logoSource = require('../../assets/brand-logo.png')
+const resolvedLogo = Image.resolveAssetSource(logoSource)
 
-/** Native width ÷ height of `assets/lb-logo.png`. */
-export const LB_LOGO_ASPECT = 3836 / 1228
+/** Native width ÷ height of `assets/brand-logo.png`. */
+export const LB_LOGO_ASPECT = resolvedLogo.width / resolvedLogo.height
 
 export function BrandWasherIcon({ size = 40 }: Props) {
   const height = size
@@ -27,5 +28,7 @@ export function BrandWasherIcon({ size = 40 }: Props) {
 }
 
 const styles = StyleSheet.create({
-  image: {},
+  image: {
+    flexShrink: 0,
+  },
 })

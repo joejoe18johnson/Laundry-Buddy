@@ -12,6 +12,9 @@ const iosDir = path.join(root, 'ios', 'LaundryBuddy', 'Images.xcassets')
 const BG_MAX_CHANNEL = 12
 const BRAND_WHITE = { r: 255, g: 255, b: 255, alpha: 1 }
 const BRAND_BLACK = { r: 0, g: 0, b: 0, alpha: 1 }
+/** Android 12+ masks splash icons to a 192dp circle on a 288dp canvas. */
+const ANDROID_SPLASH_CANVAS_DP = 288
+const ANDROID_SPLASH_IMAGE_WIDTH_DP = 168
 
 const DENSITIES = [
   { folder: 'mdpi', scale: 1 },
@@ -95,6 +98,24 @@ async function splashScreen(logoPipeline, width, height) {
   const logoBuffer = await (await renderLogo(logoPipeline, logoSize)).png().toBuffer()
   return sharp({
     create: { width, height, channels: 4, background: BRAND_WHITE },
+  }).composite([{ input: logoBuffer, gravity: 'center' }])
+}
+
+/** Full wordmark centered on Android's 288dp splash canvas (fits inside the 192dp circle mask). */
+async function androidSplashIcon(wordmarkPath, multiplier) {
+  const canvasSize = Math.round(ANDROID_SPLASH_CANVAS_DP * multiplier)
+  const imageSize = Math.round(ANDROID_SPLASH_IMAGE_WIDTH_DP * multiplier)
+  const meta = await sharp(wordmarkPath).metadata()
+  const aspect = (meta.width ?? 1) / (meta.height ?? 1)
+  const logoWidth = aspect >= 1 ? imageSize : Math.round(imageSize * aspect)
+  const logoHeight = aspect >= 1 ? Math.round(imageSize / aspect) : imageSize
+  const logoBuffer = await sharp(wordmarkPath)
+    .resize(logoWidth, logoHeight, { fit: 'contain', background: BRAND_WHITE })
+    .png()
+    .toBuffer()
+
+  return sharp({
+    create: { width: canvasSize, height: canvasSize, channels: 4, background: BRAND_WHITE },
   }).composite([{ input: logoBuffer, gravity: 'center' }])
 }
 
@@ -186,6 +207,20 @@ async function main() {
 
   await writePng(logoPipeline.clone(), path.join(assetsDir, 'logo-mark.png'))
 
+  const lbLogoPath = path.join(assetsDir, 'lb-logo.png')
+  try {
+    await fs.access(lbLogoPath)
+    const meta = await sharp(lbLogoPath).metadata()
+    const targetWidth = 1400
+    const targetHeight = Math.round(((meta.height ?? 1) / (meta.width ?? 1)) * targetWidth)
+    await sharp(lbLogoPath)
+      .resize(targetWidth, targetHeight, { fit: 'inside' })
+      .png({ compressionLevel: 9 })
+      .toFile(path.join(assetsDir, 'brand-logo.png'))
+  } catch {
+    // lb-logo.png is optional when using icon-source.png only.
+  }
+
   await writePng(await launcherIcon(logoPipeline, 1024), path.join(assetsDir, 'icon.png'))
   await writePng(await renderLogo(logoPipeline, 512), path.join(assetsDir, 'splash-icon.png'))
   await writePng(await adaptiveForeground(logoPipeline, 1024), path.join(assetsDir, 'adaptive-icon.png'))
@@ -210,7 +245,7 @@ async function main() {
     await writeWebp(await launcherIcon(logoPipeline, launcherSize), path.join(mipmapDir, 'ic_launcher.webp'))
     await writeWebp(await launcherIcon(logoPipeline, launcherSize), path.join(mipmapDir, 'ic_launcher_round.webp'))
     await writeWebp(await adaptiveForeground(logoPipeline, foregroundSize), path.join(mipmapDir, 'ic_launcher_foreground.webp'))
-    await writePng(await renderLogo(logoPipeline, splashLogoSize), path.join(drawableDir, 'splashscreen_logo.png'))
+    await writePng(await androidSplashIcon(sourcePath, scale), path.join(drawableDir, 'splashscreen_logo.png'))
     await writePng(await notificationIcon(logoPipeline, notificationSize), path.join(drawableDir, 'notification_icon.png'))
   }
 

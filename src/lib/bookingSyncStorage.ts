@@ -32,6 +32,10 @@ export function mergeBookingSnapshot(local: Booking, snapshot: Booking): Booking
     !!snapshot.paymentProofSentAt && !local.paymentProofSentAt
   const snapshotPaymentRequested =
     !!snapshot.paymentRequestedAt && !local.paymentRequestedAt
+  const snapshotGuestPickup =
+    !!snapshot.guestPickupConfirmedAt && !local.guestPickupConfirmedAt
+  const snapshotHostPickup =
+    !!snapshot.hostPickupConfirmedAt && !local.hostPickupConfirmedAt
 
   if (
     !snapshotAhead &&
@@ -39,6 +43,8 @@ export function mergeBookingSnapshot(local: Booking, snapshot: Booking): Booking
     !snapshotPaid &&
     !snapshotProofSent &&
     !snapshotPaymentRequested &&
+    !snapshotGuestPickup &&
+    !snapshotHostPickup &&
     snapshot.requestStatus === local.requestStatus
   ) {
     return local
@@ -50,6 +56,8 @@ export function mergeBookingSnapshot(local: Booking, snapshot: Booking): Booking
     customerId: local.customerId ?? snapshot.customerId,
     customerName: local.customerName ?? snapshot.customerName,
     stageTimes: { ...local.stageTimes, ...snapshot.stageTimes },
+    guestPickupConfirmedAt: snapshot.guestPickupConfirmedAt ?? local.guestPickupConfirmedAt,
+    hostPickupConfirmedAt: snapshot.hostPickupConfirmedAt ?? local.hostPickupConfirmedAt,
   }
 }
 

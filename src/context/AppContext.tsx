@@ -34,6 +34,7 @@ import {
   saveCompletedCustomerPayment,
   saveCompletedHostPayment,
   loadCustomerPaymentHistory,
+  loadHostPaymentHistory,
 } from '../lib/paymentHistoryStorage'
 import { loadActiveBookings, saveActiveBookings } from '../lib/bookingStorage'
 import {
@@ -41,6 +42,7 @@ import {
   mergeBookingSnapshot,
   removeBookingSnapshot,
   saveBookingSnapshot,
+  loadBookingSnapshot,
 } from '../lib/bookingSyncStorage'
 import { homeScreenForRole, mainTabScreens } from '../lib/navigationBack'
 import {
@@ -72,6 +74,7 @@ import {
   getHostOrders,
   mergeActiveLoads,
   mergeHostRequests,
+  patchHostActiveLoad,
   removeHostActiveLoad,
   removeHostPendingRequest,
   saveHostOrders,
@@ -102,6 +105,18 @@ import * as Location from 'expo-location'
 import Constants from 'expo-constants'
 import * as Linking from 'expo-linking'
 import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
+import {
+  countHostLoadsHosted,
+  countHostLoadsToday,
+  getHostLoadsHostedSeedBaseline,
+} from '../lib/hostLoadStats'
+import {
+  canGuestConfirmPickup,
+  canHostConfirmPickup,
+  isPickupComplete,
+  patchPickupConfirmation,
+} from '../lib/pickupConfirmation'
+import { shouldSuppressHardwareBack } from '../lib/cameraSession'
 import { canGuestCancelPendingRequest } from '../lib/pendingRequestCancel'
 import { deliverPaymentRequest, needsPaymentRequest, withPaymentRequestedAt } from '../lib/paymentRequestDelivery'
 import { inquiryThreadId, supportThreadId } from '../lib/chatThreads'
@@ -125,18 +140,22 @@ import {
   type AppNotification,
   type NotificationLink,
   type HostReview,
+  type BookingDraft,
 } from '../types'
 
 interface AppState {
   screen: Screen
   selectedHost: Host | null
+  bookingDraft: BookingDraft | null
+  patchBookingDraft: (patch: Partial<BookingDraft>) => void
+  clearBookingDraft: () => void
   booking: Booking | null
   guestBookings: Booking[]
   activeGuestBookings: Booking[]
   selectGuestBooking: (bookingId: string) => void
   hostRequests: HostRequest[]
   activeLoads: Booking[]
-  hostStats: { loadsToday: number; maxLoads: number; accepting: boolean }
+  hostStats: { loadsToday: number; loadsHosted: number; maxLoads: number; accepting: boolean }
   hostSettings: HostSettings | null
   hostSettingsMap: Record<string, HostSettings>
   onlineHosts: Host[]
@@ -195,8 +214,10 @@ interface AppState {
   markBagReceived: (loadId: string) => void
   advanceStage: (loadId: string, stage: BookingStage, extras?: { dryPhotoUri?: string }) => void
   openMarkDry: (loadId: string) => void
-  markDryLoadId: string | null
-  clearMarkDryFocus: () => void
+  markDryExpandedLoadId: string | null
+  setMarkDryExpandedLoadId: (loadId: string | null) => void
+  markDryPhotoDrafts: Record<string, string>
+  setMarkDryPhotoDraft: (loadId: string, uri: string | null) => void
   markDry: (loadId: string, dryPhotoUri?: string) => void
   confirmPickup: (loadId: string) => void
   confirmTransferPayment: (loadId: string) => void
@@ -238,6 +259,21 @@ function defaultScreen(role: 'customer' | 'host'): Screen {
   return role === 'host' ? 'host-dashboard' : 'customer-home'
 }
 
+function createDefaultBookingDraft(hostId: string): BookingDraft {
+  return {
+    hostId,
+    wizardStep: 0,
+    dropOffTime: 14,
+    loads: 1,
+    sheetsOption: 'own',
+    foldingService: false,
+    notes: '',
+    clothesList: [],
+    loadPhotoUri: null,
+    paymentMethod: 'cash',
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user, refreshCurrentUser } = useAuth()
   const { push } = useNotifications()
@@ -251,6 +287,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [screen, setScreen] = useState<Screen>(() => defaultScreen(role))
   const [selectedHost, setSelectedHost] = useState<Host | null>(null)
+  const [bookingDraft, setBookingDraft] = useState<BookingDraft | null>(null)
   const [guestBookings, setGuestBookings] = useState<Booking[]>(() => customerSeedBookings)
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
     () => customerSeedBookings[0]?.id ?? null,
@@ -261,11 +298,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activeLoads, setActiveLoads] = useState<Booking[]>(
     () => hostSeed?.activeLoads ?? [],
   )
-  const [hostStats, setHostStats] = useState({
-    loadsToday: hostSeed?.loadsToday ?? 0,
+  const [hostCapacity, setHostCapacity] = useState({
     maxLoads: hostSeed?.maxLoads ?? 4,
     accepting: hostSeed?.accepting ?? true,
   })
+  const [hostCompletedLoads, setHostCompletedLoads] = useState<Booking[]>([])
   const [hostSettingsMap, setHostSettingsMap] = useState<Record<string, HostSettings>>({})
   const [dynamicHostsVersion, setDynamicHostsVersion] = useState(0)
   const [hostSettings, setHostSettings] = useState<HostSettings | null>(null)
@@ -277,7 +314,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [reviewHostId, setReviewHostId] = useState<string | null>(null)
   const [reviewBookingId, setReviewBookingId] = useState<string | null>(null)
   const [hostReviewsMap, setHostReviewsMap] = useState<Record<string, HostReview[]>>({})
-  const [markDryLoadId, setMarkDryLoadId] = useState<string | null>(null)
+  const [markDryExpandedLoadId, setMarkDryExpandedLoadId] = useState<string | null>(null)
+  const [markDryPhotoDrafts, setMarkDryPhotoDrafts] = useState<Record<string, string>>({})
   const [chatThreadId, setChatThreadId] = useState<string | null>(null)
   const [chatBooking, setChatBooking] = useState<Booking | null>(null)
   const chatReturnScreenRef = useRef<Screen>(defaultScreen(role))
@@ -296,6 +334,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => filterActiveGuestBookings(guestBookings),
     [guestBookings],
   )
+
+  const hostStats = useMemo(() => {
+    const hostProfile = role === 'host' && user ? getHostByUserId(user.id) : undefined
+    const seedBaseline = getHostLoadsHostedSeedBaseline(hostProfile?.id)
+    return {
+      loadsToday: countHostLoadsToday(activeLoads, hostCompletedLoads),
+      loadsHosted: countHostLoadsHosted(seedBaseline, activeLoads, hostCompletedLoads),
+      maxLoads: hostCapacity.maxLoads,
+      accepting: hostCapacity.accepting,
+    }
+  }, [activeLoads, hostCapacity, hostCompletedLoads, role, user])
 
   const booking = useMemo(() => {
     if (selectedBookingId) {
@@ -397,32 +446,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
     )
   }, [role, user])
 
+  const refreshHostCompletedLoads = useCallback(async () => {
+    if (role !== 'host' || !user) return
+    const history = await loadHostPaymentHistory(user.id)
+    setHostCompletedLoads(history)
+  }, [role, user])
+
   useEffect(() => {
     screenHistoryRef.current = []
     setScreen(defaultScreen(role))
     void syncTrainingDemoIfNeeded().then(() => {
       if (role === 'host') {
         const seed = getHostDashboardSeed(user!.id)
-        getHostOrders(user!.id).then((stored) => {
-          const mergedLoads = dedupeActiveLoads(
+        void getHostOrders(user!.id).then(async (stored) => {
+          let mergedLoads = dedupeActiveLoads(
             mergeActiveLoads(seed.activeLoads, stored.activeLoads),
+          )
+          mergedLoads = await Promise.all(
+            mergedLoads.map(async (load) => {
+              const snapshot = await loadBookingSnapshot(load.id)
+              return snapshot ? mergeBookingSnapshot(load, snapshot) : load
+            }),
           )
           const activeLoadIds = mergedLoads.map((load) => load.id)
           setHostRequests(
             mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds),
           )
           setActiveLoads(mergedLoads)
-          setHostStats({
-            loadsToday: seed.loadsToday,
+          setHostCapacity({
             maxLoads: seed.maxLoads,
             accepting: seed.accepting,
           })
+          void refreshHostCompletedLoads()
         })
       } else {
         void applyGuestBookingsFromStorage()
       }
     })
-  }, [applyGuestBookingsFromStorage, role, user!.id])
+  }, [applyGuestBookingsFromStorage, refreshHostCompletedLoads, role, user!.id])
 
   useEffect(() => {
     if (role === 'customer' && user) {
@@ -582,11 +643,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (role !== 'host' || !user) return
     const seed = getHostDashboardSeed(user.id)
     const stored = await getHostOrders(user.id)
-    const mergedLoads = dedupeActiveLoads(mergeActiveLoads(seed.activeLoads, stored.activeLoads))
+    let mergedLoads = dedupeActiveLoads(mergeActiveLoads(seed.activeLoads, stored.activeLoads))
+    mergedLoads = await Promise.all(
+      mergedLoads.map(async (load) => {
+        const snapshot = await loadBookingSnapshot(load.id)
+        return snapshot ? mergeBookingSnapshot(load, snapshot) : load
+      }),
+    )
     const activeLoadIds = mergedLoads.map((load) => load.id)
     setHostRequests(mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds))
     setActiveLoads(mergedLoads)
-  }, [role, user])
+    await refreshHostCompletedLoads()
+  }, [refreshHostCompletedLoads, role, user])
 
   const refreshHostData = useCallback(async () => {
     const map = await getAllHostSettings()
@@ -710,6 +778,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const goBack = useCallback((): boolean => {
+    if (shouldSuppressHardwareBack()) return true
     if (hardwareBackHandlerRef.current?.()) return true
 
     if (screen === 'chat') {
@@ -718,7 +787,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     if (screen === 'host-mark-dry') {
-      setMarkDryLoadId(null)
+      setMarkDryExpandedLoadId(null)
       setScreen('host-dryer')
       return true
     }
@@ -855,10 +924,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined,
       )
       setSelectedHost(resolved)
+      setBookingDraft((current) =>
+        current?.hostId === resolved.id ? current : createDefaultBookingDraft(resolved.id),
+      )
       setScreen('customer-booking')
     },
     [hostSettingsMap, requireMarketplaceAccess, role, showToast],
   )
+
+  const patchBookingDraft = useCallback((patch: Partial<BookingDraft>) => {
+    setBookingDraft((current) => (current ? { ...current, ...patch } : current))
+  }, [])
+
+  const clearBookingDraft = useCallback(() => {
+    setBookingDraft(null)
+  }, [])
 
   const openHostInquiryChat = useCallback(
     (host: Host) => {
@@ -1172,6 +1252,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         bookingTrackingLink(bookingId),
       )
       showToast('Request sent to host', { icon: 'send' })
+      setBookingDraft(null)
     },
     [selectedHost, user, role, notifyHost, notifyCustomer, getSettingsForHost, showToast, requireMarketplaceAccess],
   )
@@ -1192,8 +1273,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const needsTransfer =
         request.paymentMethod === 'bank_transfer' && (request.totalAmount ?? 0) > 0
       const needsCash = request.paymentMethod === 'cash' && (request.totalAmount ?? 0) > 0
-      const acceptedAt = nowTime()
-      const paymentTimestamp = new Date().toISOString()
+      const acceptedAt = new Date().toISOString()
+      const paymentTimestamp = acceptedAt
 
       let load: Booking = {
         id: request.id,
@@ -1229,7 +1310,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const nextLoads = upsertActiveLoad(activeLoads, load)
       setActiveLoads(nextLoads)
       setHostRequests(nextRequests)
-      setHostStats((prev) => ({ ...prev, loadsToday: prev.loadsToday + 1 }))
       void saveHostOrders(user.id, { pendingRequests: nextRequests, activeLoads: nextLoads })
       persistBookingSnapshot(load)
 
@@ -1471,6 +1551,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      if (stage === 'picked-up' && role === 'host' && user) {
+        void refreshHostCompletedLoads()
+      }
+
       if (notifyTarget?.customerId && stage !== 'picked-up') {
         const title = stage === 'ready' ? 'Ready for pickup' : STAGE_LABELS[stage]
         const body =
@@ -1480,7 +1564,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
         notifyCustomer(notifyTarget.customerId, title, body, bookingTrackingLink(notifyTarget.id))
       }
     },
-    [notifyCustomer, role, user, hostRequests],
+    [notifyCustomer, refreshHostCompletedLoads, role, user, hostRequests],
+  )
+
+  const persistPickupPatch = useCallback(
+    (load: Booking, patch: (booking: Booking) => Booking) => {
+      const patched = patch(load)
+      const host = getHostById(patched.hostId)
+
+      setActiveLoads((prev) => {
+        const next = prev.map((entry) => (entry.id === patched.id ? patched : entry))
+        if (role === 'host' && user) {
+          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+        }
+        return next
+      })
+
+      setGuestBookings((prev) => patchGuestBooking(prev, patched.id, () => patched))
+      persistBookingSnapshot(patched)
+
+      if (host?.hostUserId) {
+        void patchHostActiveLoad(host.hostUserId, patched.id, () => patched)
+      }
+
+      return patched
+    },
+    [hostRequests, role, user],
   )
 
   const confirmPickup = useCallback(
@@ -1489,54 +1598,122 @@ export function AppProvider({ children }: { children: ReactNode }) {
         activeLoadsRef.current.find((load) => load.id === loadId) ??
         findGuestBooking(guestBookingsRef.current, loadId)
 
-      advanceStage(loadId, 'picked-up')
+      if (!pickedUp) return
 
-      if (pickedUp?.customerId) {
+      if (pickedUp.stage !== 'ready') {
+        showToast('Pickup unlocks after your host marks the load ready', { icon: 'info' })
+        return
+      }
+
+      if (role === 'host' && !canHostConfirmPickup(pickedUp)) {
+        showToast('You already confirmed this pickup', { icon: 'info' })
+        return
+      }
+
+      if (role === 'customer' && !canGuestConfirmPickup(pickedUp)) {
+        showToast('You already confirmed this pickup', { icon: 'info' })
+        return
+      }
+
+      const patched = persistPickupPatch(pickedUp, (booking) =>
+        patchPickupConfirmation(booking, role === 'host' ? 'host' : 'customer'),
+      )
+
+      if (isPickupComplete(patched)) {
+        advanceStage(loadId, 'picked-up')
+
+        if (patched.customerId) {
+          void notifyCustomer(
+            patched.customerId,
+            'Leave A Review',
+            `Thanks for picking up from ${pickedUp.hostName}! Leave a review to help others find great hosts.`,
+            hostReviewLink(patched.hostId, patched.id),
+          )
+        }
+
+        const host = getHostById(patched.hostId)
+        if (host?.hostUserId) {
+          void notifyHost(
+            host.hostUserId,
+            'Ask For A Review',
+            `${patched.customerName} picked up their load. Ask them to leave a review on Laundry Buddy — it helps you get more bookings.`,
+            hostDashboardLink(),
+            'update',
+          )
+        }
+
+        if (role === 'customer') {
+          openLeaveReview(patched.hostId, patched.id)
+          showToast('Pickup complete — leave a review for your host', { icon: 'star' })
+        } else {
+          showToast('Pickup complete — ask your guest for a review', { icon: 'star' })
+        }
+        return
+      }
+
+      const host = getHostById(patched.hostId)
+      if (role === 'customer') {
+        if (host?.hostUserId) {
+          void notifyHost(
+            host.hostUserId,
+            'Guest picked up',
+            `${patched.customerName} confirmed pickup — confirm on the Dryer tab to complete the load.`,
+            hostDashboardLink(),
+            'update',
+          )
+        }
+        showToast('Pickup noted — waiting for your host to confirm', { icon: 'check-circle' })
+        return
+      }
+
+      if (patched.customerId) {
         void notifyCustomer(
-          pickedUp.customerId,
-          'Leave A Review',
-          `Thanks for picking up from ${pickedUp.hostName}! Leave a review to help others find great hosts.`,
-          hostReviewLink(pickedUp.hostId, pickedUp.id),
+          patched.customerId,
+          'Confirm pickup',
+          `${patched.hostName} confirmed you collected your laundry — tap I picked up on My load when you are done.`,
+          bookingTrackingLink(patched.id),
         )
       }
-
-      const host = pickedUp ? getHostById(pickedUp.hostId) : undefined
-      if (host?.hostUserId && pickedUp) {
-        void notifyHost(
-          host.hostUserId,
-          'Ask For A Review',
-          `${pickedUp.customerName} picked up their load. Ask them to leave a review on Laundry Buddy — it helps you get more bookings.`,
-          hostDashboardLink(),
-          'update',
-        )
-      }
-
-      if (role === 'host') {
-        showToast('Pickup confirmed — ask your guest for a review', { icon: 'star' })
-      } else {
-        showToast('Thanks! Leave a review for your host', { icon: 'star' })
-      }
+      showToast('Pickup noted — waiting for guest to confirm', { icon: 'check-circle' })
     },
-    [advanceStage, notifyCustomer, notifyHost, role, showToast],
+    [
+      advanceStage,
+      notifyCustomer,
+      notifyHost,
+      openLeaveReview,
+      persistPickupPatch,
+      role,
+      showToast,
+    ],
   )
 
-  const openMarkDry = useCallback((loadId: string) => {
-    setMarkDryLoadId(loadId)
-    setScreen('host-dryer')
+  const setMarkDryPhotoDraft = useCallback((loadId: string, uri: string | null) => {
+    setMarkDryPhotoDrafts((prev) => {
+      if (!uri) {
+        if (!(loadId in prev)) return prev
+        const next = { ...prev }
+        delete next[loadId]
+        return next
+      }
+      if (prev[loadId] === uri) return prev
+      return { ...prev, [loadId]: uri }
+    })
   }, [])
 
-  const clearMarkDryFocus = useCallback(() => {
-    setMarkDryLoadId(null)
+  const openMarkDry = useCallback((loadId: string) => {
+    setMarkDryExpandedLoadId(loadId)
+    setScreen('host-dryer')
   }, [])
 
   const markDry = useCallback(
     (loadId: string, dryPhotoUri?: string) => {
       advanceStage(loadId, 'ready', dryPhotoUri ? { dryPhotoUri } : undefined)
-      setMarkDryLoadId(null)
+      setMarkDryExpandedLoadId(null)
+      setMarkDryPhotoDraft(loadId, null)
       showToast('Load marked dry — guest notified', { icon: 'check-circle' })
       setScreen('host-dryer')
     },
-    [advanceStage, showToast],
+    [advanceStage, setMarkDryPhotoDraft, showToast],
   )
 
   const sendPaymentRequest = useCallback(
@@ -1677,6 +1854,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => ({
       screen,
       selectedHost,
+      bookingDraft,
+      patchBookingDraft,
+      clearBookingDraft,
       booking,
       guestBookings,
       activeGuestBookings,
@@ -1728,8 +1908,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markBagReceived,
       advanceStage,
       openMarkDry,
-      markDryLoadId,
-      clearMarkDryFocus,
+      markDryExpandedLoadId,
+      setMarkDryExpandedLoadId,
+      markDryPhotoDrafts,
+      setMarkDryPhotoDraft,
       markDry,
       confirmPickup,
       confirmTransferPayment,
@@ -1747,6 +1929,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [
       screen,
       selectedHost,
+      bookingDraft,
+      patchBookingDraft,
+      clearBookingDraft,
       booking,
       guestBookings,
       activeGuestBookings,
@@ -1797,8 +1982,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       markBagReceived,
       advanceStage,
       openMarkDry,
-      markDryLoadId,
-      clearMarkDryFocus,
+      markDryExpandedLoadId,
+      setMarkDryExpandedLoadId,
+      markDryPhotoDrafts,
+      setMarkDryPhotoDraft,
       markDry,
       confirmPickup,
       confirmTransferPayment,

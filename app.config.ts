@@ -96,6 +96,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         image: './assets/lb-logo.png',
         imageWidth: 280,
         resizeMode: 'contain',
+        android: {
+          image: './assets/lb-logo.png',
+          // Android masks the splash icon to a 192dp circle on a 288dp canvas.
+          // Keep the wide wordmark under that diameter so the bunny + text aren't clipped.
+          imageWidth: 168,
+          backgroundColor: '#ffffff',
+          resizeMode: 'contain',
+        },
       },
     ],
     'expo-font',
@@ -123,7 +131,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-notifications',
       {
-        icon: './assets/notification-icon.png',
+        icon: './assets/AppIcons/status-icon.png',
         color: '#000000',
         sounds: [],
         mode: 'production',
@@ -147,6 +155,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   updates: {
     url: `https://u.expo.dev/${EAS_PROJECT_ID}`,
+    // Local preview APKs should use the embedded bundle, not an older OTA update.
+    enabled: process.env.EXPO_PUBLIC_DISABLE_OTA_UPDATES !== 'true',
   },
   runtimeVersion: '1.0.0',
   newArchEnabled: false,

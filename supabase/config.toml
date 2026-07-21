@@ -1,0 +1,4 @@
+# Supabase local/dev config (Edge Functions)
+
+[functions.host-profile]
+verify_jwt = false
