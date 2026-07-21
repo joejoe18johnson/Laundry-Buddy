@@ -42,6 +42,7 @@ import {
   supabaseSubmitIdentityVerification,
 } from '../lib/supabase'
 import { ensureSupabaseAdminProfile, ensureTrainingAdminSupabaseSession, isLikelyAdminUser } from '../lib/supabase/adminAccess'
+import { ADMIN_PHONE, ADMIN_SEED_PASSWORD } from '../data/seedData'
 import * as SplashScreen from 'expo-splash-screen'
 import * as Linking from 'expo-linking'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
@@ -334,7 +335,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (method: LoginMethod, identifier: string, password: string) => {
     if (isSupabaseConfigured()) {
-      const { user: signedIn, error } = await supabaseSignIn(method, identifier, password)
+      let { user: signedIn, error } = await supabaseSignIn(method, identifier, password)
+
+      if (
+        !signedIn &&
+        method === 'phone' &&
+        normalizePhone(identifier) === normalizePhone(ADMIN_PHONE) &&
+        password === ADMIN_SEED_PASSWORD
+      ) {
+        const linked = await ensureTrainingAdminSupabaseSession({
+          id: 'user-support-admin',
+          name: 'Support Admin',
+          email: 'support@laundrybuddy.app',
+          phone: ADMIN_PHONE,
+          password: ADMIN_SEED_PASSWORD,
+          role: 'admin',
+          identityVerification: emptyIdentityVerification(),
+        })
+        if (linked.ok && linked.user) {
+          signedIn = linked.user
+          error = null
+        } else if (linked.error) {
+          error = linked.error
+        }
+      }
+
       if (!signedIn || error) {
         setAuthError(error ?? 'Invalid credentials. Check your details and try again.')
         return false

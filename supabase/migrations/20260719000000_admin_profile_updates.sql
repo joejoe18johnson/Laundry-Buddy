@@ -75,6 +75,12 @@ update public.profiles
 set role = 'admin'
 where lower(coalesce(email, '')) = 'support@laundrybuddy.app';
 
+-- One-time: attach admin login phone for phone + password sign-in (safe to re-run).
+update public.profiles
+set phone = '5016220000'
+where lower(coalesce(email, '')) = 'support@laundrybuddy.app'
+   or role = 'admin';
+
 -- Pre-booking inquiry threads: inquiry:{guest_user_id}:{host_user_id}
 drop policy if exists "chat_messages_select_inquiry" on public.chat_messages;
 drop policy if exists "chat_messages_insert_inquiry" on public.chat_messages;

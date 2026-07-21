@@ -1,4 +1,5 @@
 import type { AppRole, IdentityVerification, LoginMethod, User } from '../../types'
+import { ADMIN_EMAIL, ADMIN_PHONE } from '../../data/seedData'
 import { emptyIdentityVerification } from '../identityVerification'
 import { normalizePhone } from '../phone'
 import { authEmailFromPhone } from './config'
@@ -28,6 +29,10 @@ async function authEmailForPhoneLogin(phone: string): Promise<{ authEmail: strin
   const normalized = normalizePhone(phone)
   if (!normalized.replace(/\D/g, '')) {
     return { authEmail: null, error: 'Enter a valid phone number.' }
+  }
+
+  if (normalized === normalizePhone(ADMIN_PHONE)) {
+    return { authEmail: authEmailFromPhone(normalized), error: null }
   }
 
   const registered = await supabasePhoneInUse(phone)
@@ -102,6 +107,22 @@ export async function supabaseSignIn(
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail, password })
+  if (
+    error &&
+    method === 'phone' &&
+    normalizePhone(identifier) === normalizePhone(ADMIN_PHONE)
+  ) {
+    const legacyAdmin = await supabase.auth.signInWithPassword({
+      email: ADMIN_EMAIL,
+      password,
+    })
+    if (!legacyAdmin.error && legacyAdmin.data.user) {
+      const profile = await fetchProfileById(legacyAdmin.data.user.id)
+      if (!profile) return { user: null, error: 'Account profile not found. Contact support.' }
+      return { user: profile, error: null }
+    }
+  }
+
   if (error) return { user: null, error: formatSupabaseAuthError(error.message) }
   if (!data.user) return { user: null, error: 'Sign in failed. Try again.' }
 

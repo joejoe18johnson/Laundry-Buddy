@@ -1,12 +1,11 @@
 import type { User } from '../../types'
-import { ADMIN_SEED_PASSWORD } from '../../data/seedData'
+import { ADMIN_EMAIL, ADMIN_PHONE, ADMIN_SEED_PASSWORD } from '../../data/seedData'
 import { getIdentityVerification, normalizeUserIdentity } from '../identityVerification'
 import { isSupabaseConfigured } from './config'
 import { getSupabaseClient } from './client'
 import { fetchProfileById, supabaseSignIn, supabaseSignUp, supabaseUpdateProfile } from './authService'
 
-export const ADMIN_EMAILS = ['support@laundrybuddy.app'] as const
-export const ADMIN_PHONE = '5016220000'
+export const ADMIN_EMAILS = [ADMIN_EMAIL] as const
 
 export function isLikelyAdminUser(user: Pick<User, 'role' | 'email'>): boolean {
   if (user.role === 'admin') return true
@@ -99,8 +98,7 @@ export async function ensureTrainingAdminSupabaseSession(
   if (!signedIn) {
     const signUpAttempt = await supabaseSignUp({
       name,
-      method: 'email',
-      email,
+      method: 'phone',
       phone: localUser?.phone ?? ADMIN_PHONE,
       password,
       role: 'admin',
