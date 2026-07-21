@@ -59,7 +59,9 @@ Under **Authentication → Providers → Email**, turn **off** “Confirm email�
 Email links open in the phone browser, which **cannot** load `laundrybuddy://` directly (blank page). Use the hosted callback page:
 
 1. Run `supabase/migrations/20260720000000_app_public_bucket.sql` in the SQL Editor.
-2. In **Storage**, open bucket **app-public** → upload `supabase/public/auth-callback.html`.
+2. Upload hosted pages (automated — see **§4b** below), or manually in **Storage** → **app-public**:
+   - `supabase/public/auth-callback.html`
+   - `supabase/public/host-profile.html`
 3. Add these **Redirect URLs** under **Authentication → URL configuration**:
 
 ```
@@ -76,6 +78,31 @@ EXPO_PUBLIC_AUTH_REDIRECT_URL=https://YOUR_PROJECT.supabase.co/storage/v1/object
 5. Restart Expo. Request a **new** password reset email (old links still point at the previous redirect).
 
 The hosted page shows an **Open Laundry Buddy** button, then the app opens to set a new password.
+
+### 4b. Upload hosted pages (CLI script)
+
+After the `app-public` bucket migration, upload `auth-callback.html` and `host-profile.html` from your machine:
+
+1. In Supabase → **Settings → API**, copy the **service_role** key (secret — not the anon key).
+2. Add to `.env` (never commit this value):
+
+```env
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+3. Run:
+
+```bash
+npm run upload:app-public
+```
+
+Upload a single file:
+
+```bash
+node scripts/upload-app-public.mjs --file host-profile.html
+```
+
+The script upserts every file in `supabase/public/` and prints the public URLs. Copy `EXPO_PUBLIC_AUTH_REDIRECT_URL` from the output if you use the hosted auth callback.
 
 ## 5. Storage buckets (optional, for photos)
 

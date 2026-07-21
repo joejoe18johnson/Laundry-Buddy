@@ -1,4 +1,4 @@
-import { Share } from 'react-native'
+import { Platform, Share } from 'react-native'
 import { formatHostDisplayName } from './displayName'
 import { hostIdForUser } from './dynamicHosts'
 import { openWhatsAppShareText } from './whatsapp'
@@ -9,6 +9,8 @@ export type HostProfileShareTarget = {
   hostUserId?: string
   hostName: string
 }
+
+const ANDROID_PACKAGE = 'com.laundrybuddy.app'
 
 export function resolveHostShareTarget(host: Host | null | undefined, userId: string): HostProfileShareTarget {
   const hostId = host?.id ?? hostIdForUser(userId, host)
@@ -46,18 +48,31 @@ export function buildHostProfileWebUrl(target: HostProfileShareTarget): string |
   return `${base}host-profile.html?${params.toString()}`
 }
 
+/** Android intent URL — opens the installed app directly from browsers / WhatsApp. */
+export function buildHostProfileAndroidIntentUrl(
+  target: HostProfileShareTarget,
+  browserFallbackUrl?: string | null,
+): string {
+  const deepLink = buildHostProfileDeepLink(target)
+  const intentPath = deepLink.replace(/^laundrybuddy:\/\//, '')
+  const fallback = browserFallbackUrl ?? buildHostProfileWebUrl(target) ?? deepLink
+  return `intent://${intentPath}#Intent;scheme=laundrybuddy;package=${ANDROID_PACKAGE};S.browser_fallback_url=${encodeURIComponent(fallback)};end`
+}
+
 export function buildHostProfileShareMessage(target: HostProfileShareTarget): string {
   const name = formatHostDisplayName(target.hostName)
-  const webUrl = buildHostProfileWebUrl(target)
   const deepLink = buildHostProfileDeepLink(target)
-  const link = webUrl ?? deepLink
-  return [
-    `Book laundry with ${name} on Laundry Buddy:`,
-    link,
-    webUrl ? `App link: ${deepLink}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n')
+  const webUrl = buildHostProfileWebUrl(target)
+
+  // Deep link opens Laundry Buddy directly when the recipient taps it in WhatsApp / SMS.
+  const lines = [`Book laundry with ${name} on Laundry Buddy:`, deepLink]
+
+  // Web link is a fallback for devices that block custom schemes — the page auto-opens the app.
+  if (webUrl) {
+    lines.push(`Backup link: ${webUrl}`)
+  }
+
+  return lines.join('\n')
 }
 
 export function parseHostProfileLink(url: string | null | undefined): {
@@ -77,6 +92,16 @@ export function parseHostProfileLink(url: string | null | undefined): {
       return null
     }
     return null
+  }
+
+  if (url.startsWith('intent://') && url.includes('scheme=laundrybuddy')) {
+    try {
+      const pathMatch = url.match(/^intent:\/\/([^#]+)/i)
+      if (!pathMatch) return null
+      return parseHostProfileLink(`laundrybuddy://${pathMatch[1]}`)
+    } catch {
+      return null
+    }
   }
 
   if (!url.startsWith('laundrybuddy://')) return null
@@ -103,12 +128,12 @@ export function parseHostProfileLink(url: string | null | undefined): {
 
 export async function shareHostProfile(target: HostProfileShareTarget): Promise<boolean> {
   const message = buildHostProfileShareMessage(target)
-  const url = buildHostProfileWebUrl(target) ?? buildHostProfileDeepLink(target)
+  const deepLink = buildHostProfileDeepLink(target)
   try {
     await Share.share({
       title: `${formatHostDisplayName(target.hostName)} on Laundry Buddy`,
       message,
-      url,
+      url: Platform.OS === 'ios' ? deepLink : undefined,
     })
     return true
   } catch {

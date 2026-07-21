@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Laundry Buddy Host</title>
+    <title>Laundry Buddy</title>
     <style>
       * {
         box-sizing: border-box;
@@ -61,8 +61,8 @@
   </head>
   <body>
     <div class="card">
-      <h1 id="title">Open host profile</h1>
-      <p id="status">Tap below to view this host in Laundry Buddy.</p>
+      <h1 id="title">Opening Laundry Buddy</h1>
+      <p id="status">Launching the app…</p>
       <a id="open-app" class="btn" href="#">Open Laundry Buddy</a>
       <div><a id="open-android" class="btn-secondary" href="#" style="display: none">Open on Android</a></div>
     </div>
@@ -75,6 +75,7 @@
         var status = document.getElementById('status');
         var openApp = document.getElementById('open-app');
         var openAndroid = document.getElementById('open-android');
+        var packageName = 'com.laundrybuddy.app';
 
         if (!hostId && !hostUserId) {
           title.textContent = 'Invalid link';
@@ -96,18 +97,51 @@
         openApp.href = deepLink;
 
         var isAndroid = /Android/i.test(navigator.userAgent);
+        var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        var intentUrl = null;
+
         if (isAndroid) {
           var intentPath = deepLink.replace(/^laundrybuddy:\/\//, '');
-          openAndroid.style.display = 'inline-block';
-          openAndroid.href =
+          intentUrl =
             'intent://' +
             intentPath +
-            '#Intent;scheme=laundrybuddy;package=com.laundrybuddy.app;end';
+            '#Intent;scheme=laundrybuddy;package=' +
+            packageName +
+            ';S.browser_fallback_url=' +
+            encodeURIComponent(window.location.href) +
+            ';end';
+          openAndroid.style.display = 'inline-block';
+          openAndroid.href = intentUrl;
         }
 
-        setTimeout(function () {
-          status.textContent = 'If nothing happens, tap Open Laundry Buddy to view the host profile.';
-        }, 1200);
+        function tryOpenApp() {
+          if (isAndroid && intentUrl) {
+            window.location.replace(intentUrl);
+            return;
+          }
+
+          if (isIOS) {
+            var iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = deepLink;
+            document.body.appendChild(iframe);
+            window.setTimeout(function () {
+              try {
+                document.body.removeChild(iframe);
+              } catch (e) {}
+            }, 2000);
+          }
+
+          window.location.replace(deepLink);
+        }
+
+        tryOpenApp();
+
+        window.setTimeout(function () {
+          title.textContent = 'Open host profile';
+          status.textContent =
+            'If Laundry Buddy did not open automatically, tap the button below.';
+        }, 2200);
       })();
     </script>
   </body>
