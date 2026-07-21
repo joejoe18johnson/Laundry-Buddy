@@ -105,10 +105,12 @@ export function SignupScreen() {
   const [role, setRole] = useState<AppRole>('customer')
   const [enableQuickAccess, setEnableQuickAccess] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
   const usingSupabase = isSupabaseConfigured()
 
   const handleSignup = async () => {
+    if (submitting) return
     clearAuthError()
     setLocalError(null)
 
@@ -137,16 +139,21 @@ export function SignupScreen() {
       return
     }
 
-    await signup({
-      name,
-      method: 'email',
-      email,
-      phone,
-      password,
-      confirmPassword,
-      role,
-      enableQuickAccess,
-    })
+    setSubmitting(true)
+    try {
+      await signup({
+        name,
+        method: 'email',
+        email,
+        phone,
+        password,
+        confirmPassword,
+        role,
+        enableQuickAccess,
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const displayError = localError ?? authError
@@ -164,7 +171,7 @@ export function SignupScreen() {
           <AppIcon name="mail" size={16} color={colors.gray600} />
           <Text style={styles.noticeText}>
             {toTitleCase(
-              'After you sign up, tap the confirmation link in your email on this phone. It opens Laundry Buddy — then log in with your phone and password.',
+              'After sign-up, tap the confirmation link in your email on this phone. For testing, you can disable Confirm email in Supabase to avoid the 2-emails/hour limit.',
             )}
           </Text>
         </View>
@@ -276,7 +283,7 @@ export function SignupScreen() {
 
       {displayError && <Text style={styles.error}>{displayError}</Text>}
 
-      <PrimaryButton title="Create account" onPress={handleSignup} full />
+      <PrimaryButton title={submitting ? 'Creating account…' : 'Create account'} onPress={handleSignup} full disabled={submitting} />
 
       <Pressable onPress={() => navigateAuth('login')} style={styles.switch}>
         <Text style={styles.switchText}>

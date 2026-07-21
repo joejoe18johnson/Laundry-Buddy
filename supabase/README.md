@@ -45,14 +45,29 @@ supabase db push
 
 ## 4. Auth settings (Supabase dashboard)
 
+### Upload the email confirmation page (required — fixes blank browser page)
+
+1. In Supabase → **Storage**, create a **public** bucket named `app-public`.
+2. Upload `supabase/public/auth-callback.html` to that bucket (keep the filename `auth-callback.html`).
+3. Confirm it opens in the browser, e.g.  
+   `https://YOUR_PROJECT.supabase.co/storage/v1/object/public/app-public/auth-callback.html`
+
+### URL configuration
+
 Under **Authentication → URL Configuration**:
 
 | Setting | Value |
 |---------|-------|
-| **Site URL** | `laundrybuddy://auth/callback` |
-| **Redirect URLs** | Add `laundrybuddy://**` (and `exp+laundry-buddy://**` if testing in Expo Go) |
+| **Site URL** | `https://YOUR_PROJECT.supabase.co/storage/v1/object/public/app-public/auth-callback.html` |
+| **Redirect URLs** | Same URL as Site URL, plus `laundrybuddy://auth/callback` and `laundrybuddy://**` |
 
-The default Supabase Site URL is `http://localhost:3000`. If you leave that in place, email confirmation links open a browser error on phones (`localhost refused to connect`). The app sends `emailRedirectTo: laundrybuddy://auth/callback` on sign-up, but Supabase only allows redirects listed above.
+The app sends confirmation emails to the hosted HTML page (not `localhost` and not a raw deep link). That page shows “Email confirmed” and opens the Laundry Buddy app with the login tokens.
+
+Optional override in `.env`:
+
+```env
+EXPO_PUBLIC_AUTH_REDIRECT_URL=https://YOUR_PROJECT.supabase.co/storage/v1/object/public/app-public/auth-callback.html
+```
 
 Under **Authentication → Providers → Email**:
 
@@ -60,6 +75,22 @@ Under **Authentication → Providers → Email**:
 - For quick local testing only, you can disable **Confirm email** so sign-up works immediately without a link.
 
 Phone logins look up the user’s profile by phone, then sign in with their signup email behind the scenes.
+
+### Email rate limits (important while testing)
+
+Supabase’s **built-in email** allows about **2 auth emails per hour** for the whole project. Repeated sign-up tests hit this quickly and show `email rate limit exceeded`.
+
+**Fastest fix for development:**
+
+1. Supabase → **Authentication → Providers → Email**
+2. Turn **off** “Confirm email”
+3. Sign up again — no confirmation email is sent; you can log in immediately with phone + password
+
+**Other options:**
+
+- Wait ~1 hour, then use a confirmation link already in your inbox (don’t sign up again)
+- Manually confirm a user: **Authentication → Users** → select user → confirm email
+- For production: set up **custom SMTP** (Authentication → SMTP) — raises limits to ~30/hour+
 
 ## 5. Storage buckets (optional, for photos)
 

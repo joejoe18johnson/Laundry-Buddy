@@ -1,13 +1,33 @@
-import * as Linking from 'expo-linking'
+import type { EmailOtpType } from '@supabase/supabase-js'
 import type { User } from '../../types'
+import { getSupabaseUrl } from './config'
 import { getSupabaseClient } from './client'
 import { profileRowToUser } from './mappers'
 
 const AUTH_CALLBACK_PATH = 'auth/callback'
+const APP_DEEP_LINK = `laundrybuddy://${AUTH_CALLBACK_PATH}`
 
-/** Deep link Supabase should redirect to after email confirmation. */
+/** Public bucket path — upload `supabase/public/auth-callback.html` here (see supabase/README.md). */
+export const AUTH_CALLBACK_STORAGE_PATH = 'app-public/auth-callback.html'
+
+function hostedAuthCallbackUrl(): string | undefined {
+  const override = process.env.EXPO_PUBLIC_AUTH_REDIRECT_URL?.trim()
+  if (override) return override
+
+  const supabaseUrl = getSupabaseUrl()
+  if (!supabaseUrl) return undefined
+
+  return `${supabaseUrl}/storage/v1/object/public/${AUTH_CALLBACK_STORAGE_PATH}`
+}
+
+/** Redirect target for Supabase sign-up confirmation emails. */
 export function getSupabaseAuthRedirectUrl(): string {
-  return Linking.createURL(AUTH_CALLBACK_PATH)
+  return hostedAuthCallbackUrl() ?? APP_DEEP_LINK
+}
+
+/** Deep link the mobile app handles after the hosted page forwards tokens. */
+export function getSupabaseAuthDeepLinkUrl(): string {
+  return APP_DEEP_LINK
 }
 
 function parseUrlParams(url: string): Record<string, string> {
@@ -29,12 +49,43 @@ function parseUrlParams(url: string): Record<string, string> {
 
 export function isSupabaseAuthCallbackUrl(url: string | null | undefined): boolean {
   if (!url) return false
-  const parsed = Linking.parse(url)
-  const path = parsed.path ?? ''
-  return path.includes(AUTH_CALLBACK_PATH) || url.includes(`${AUTH_CALLBACK_PATH}`)
+  if (url.startsWith('laundrybuddy://') && url.includes(AUTH_CALLBACK_PATH)) return true
+  if (url.startsWith('exp://') && url.includes(AUTH_CALLBACK_PATH)) return true
+  if (url.startsWith('exp+laundry-buddy://') && url.includes(AUTH_CALLBACK_PATH)) return true
+  const hosted = hostedAuthCallbackUrl()
+  if (hosted && url.startsWith(hosted.split('?')[0] ?? hosted)) return true
+  return false
 }
 
-/** Exchange tokens from a confirmation/magic-link redirect into a Supabase session. */
+async function profileFromActiveSession(): Promise<{ user: User | null; error: string | null }> {
+  const supabase = getSupabaseClient()
+  if (!supabase) return { user: null, error: 'Supabase is not configured.' }
+
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession()
+
+  if (sessionError) return { user: null, error: sessionError.message }
+  if (!session?.user.id) {
+    return { user: null, error: 'Email confirmed, but session could not start. Log in with your phone.' }
+  }
+
+  const { data: profileRow, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', session.user.id)
+    .maybeSingle()
+
+  if (profileError) return { user: null, error: profileError.message }
+  if (!profileRow) {
+    return { user: null, error: 'Email confirmed, but profile was not found. Contact support.' }
+  }
+
+  return { user: profileRowToUser(profileRow), error: null }
+}
+
+/** Exchange tokens from a confirmation redirect into a Supabase session. */
 export async function createSessionFromAuthRedirectUrl(
   url: string,
 ): Promise<{ user: User | null; error: string | null; confirmed: boolean }> {
@@ -48,44 +99,47 @@ export async function createSessionFromAuthRedirectUrl(
     return { user: null, error: errorDescription, confirmed: false }
   }
 
-  const accessToken = params.access_token
-  const refreshToken = params.refresh_token
-  if (!accessToken || !refreshToken) {
-    return { user: null, error: null, confirmed: false }
-  }
-
   const supabase = getSupabaseClient()
   if (!supabase) {
     return { user: null, error: 'Supabase is not configured.', confirmed: false }
   }
 
-  const { data, error } = await supabase.auth.setSession({
-    access_token: accessToken,
-    refresh_token: refreshToken,
-  })
-
-  if (error) {
-    return { user: null, error: error.message, confirmed: false }
+  if (params.code) {
+    const { error } = await supabase.auth.exchangeCodeForSession(params.code)
+    if (error) return { user: null, error: error.message, confirmed: false }
+    const profile = await profileFromActiveSession()
+    return { ...profile, confirmed: true }
   }
 
-  const userId = data.session?.user.id
-  if (!userId) {
-    return { user: null, error: 'Email confirmed, but session could not start. Log in with your phone.', confirmed: true }
+  if (params.token_hash && params.type) {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: params.token_hash,
+      type: params.type as EmailOtpType,
+    })
+    if (error) return { user: null, error: error.message, confirmed: false }
+    const profile = await profileFromActiveSession()
+    return { ...profile, confirmed: true }
   }
 
-  const { data: profileRow, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .maybeSingle()
-
-  if (profileError) {
-    return { user: null, error: profileError.message, confirmed: true }
+  const accessToken = params.access_token
+  const refreshToken = params.refresh_token
+  if (accessToken && refreshToken) {
+    const { error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    })
+    if (error) return { user: null, error: error.message, confirmed: false }
+    const profile = await profileFromActiveSession()
+    return { ...profile, confirmed: true }
   }
 
-  if (!profileRow) {
-    return { user: null, error: 'Email confirmed, but profile was not found. Contact support.', confirmed: true }
-  }
+  return { user: null, error: null, confirmed: false }
+}
 
-  return { user: profileRowToUser(profileRow), error: null, confirmed: true }
+/** Useful for debugging — log in dev what redirect URL sign-up will use. */
+export function getAuthRedirectDebugInfo(): { emailRedirectTo: string; deepLink: string } {
+  return {
+    emailRedirectTo: getSupabaseAuthRedirectUrl(),
+    deepLink: getSupabaseAuthDeepLinkUrl(),
+  }
 }

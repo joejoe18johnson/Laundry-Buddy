@@ -430,7 +430,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? await supabaseEmailInUse(input.email)
         : await emailInUse(input.email)
       if (emailTaken) {
-        setAuthError('This email is already registered.')
+        setAuthError(
+          'This email is already registered. Log in with your phone and password, or check your inbox for a confirmation link before signing up again.',
+        )
         return false
       }
     }

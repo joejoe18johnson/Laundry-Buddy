@@ -3,6 +3,7 @@ import { emptyIdentityVerification } from '../identityVerification'
 import { normalizePhone } from '../phone'
 import { authEmailFromPhone } from './config'
 import { getSupabaseAuthRedirectUrl } from './authRedirect'
+import { formatSupabaseAuthError } from './authErrors'
 import { getSupabaseClient } from './client'
 import { identityVerificationToJson, profileRowToUser } from './mappers'
 
@@ -99,7 +100,7 @@ export async function supabaseSignIn(
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail, password })
-  if (error) return { user: null, error: 'Invalid credentials. Check your details and try again.' }
+  if (error) return { user: null, error: formatSupabaseAuthError(error.message) }
   if (!data.user) return { user: null, error: 'Sign in failed. Try again.' }
 
   const profile = await fetchProfileById(data.user.id)
@@ -142,7 +143,7 @@ export async function supabaseSignUp(
     },
   })
 
-  if (error) return { user: null, error: error.message }
+  if (error) return { user: null, error: formatSupabaseAuthError(error.message) }
   if (!data.user) return { user: null, error: 'Sign up failed. Try again.' }
 
   if (!data.session) {

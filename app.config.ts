@@ -58,6 +58,20 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'VIBRATE',
     ],
     blockedPermissions: ['RECORD_AUDIO'],
+    intentFilters: [
+      {
+        action: 'VIEW',
+        autoVerify: false,
+        data: [
+          {
+            scheme: 'laundrybuddy',
+            host: 'auth',
+            pathPrefix: '/callback',
+          },
+        ],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
+    ],
   },
   web: {
     favicon: './assets/favicon.png',
