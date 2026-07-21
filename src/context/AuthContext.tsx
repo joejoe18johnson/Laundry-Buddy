@@ -11,7 +11,6 @@ import {
 import { SplashLoading } from '../components/SplashLoading'
 import { normalizePhone } from '../lib/phone'
 import {
-  emailInUse,
   findUserByEmail,
   findUserByPhone,
   getCurrentUser,
@@ -36,7 +35,6 @@ import {
   fetchProfileById,
   isSupabaseAuthCallbackUrl,
   isSupabaseConfigured,
-  supabaseEmailInUse,
   supabasePhoneInUse,
   supabaseSignIn,
   supabaseSignOut,
@@ -48,7 +46,6 @@ import * as SplashScreen from 'expo-splash-screen'
 import * as Linking from 'expo-linking'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
 import { emptyIdentityVerification, getIdentityVerification, normalizeUserIdentity, needsIdentityVerification } from '../lib/identityVerification'
-import { isValidEmail } from '../lib/email'
 import {
   approveUserVerification,
   approveUserAddressVerification,
@@ -70,9 +67,7 @@ import {
 
 interface SignupInput {
   name: string
-  method: LoginMethod
-  phone?: string
-  email?: string
+  phone: string
   password: string
   confirmPassword: string
   role: AppRole
@@ -394,56 +389,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false
     }
 
-    if (input.method === 'phone') {
-      if (!input.phone?.trim()) {
-        setAuthError('Phone number is required.')
-        return false
-      }
-      const phoneTaken = isSupabaseConfigured()
-        ? await supabasePhoneInUse(input.phone)
-        : await phoneInUse(input.phone)
-      if (phoneTaken) {
-        setAuthError('This phone number is already registered.')
-        return false
-      }
-    } else {
-      if (!input.email?.trim()) {
-        setAuthError('Email is required.')
-        return false
-      }
-      if (!isValidEmail(input.email)) {
-        setAuthError('Enter a valid email address.')
-        return false
-      }
-      if (!input.phone?.trim()) {
-        setAuthError('Phone number is required.')
-        return false
-      }
-      const phoneTaken = isSupabaseConfigured()
-        ? await supabasePhoneInUse(input.phone)
-        : await phoneInUse(input.phone)
-      if (phoneTaken) {
-        setAuthError('This phone number is already registered.')
-        return false
-      }
-      const emailTaken = isSupabaseConfigured()
-        ? await supabaseEmailInUse(input.email)
-        : await emailInUse(input.email)
-      if (emailTaken) {
-        setAuthError(
-          'This email is already registered. Log in with your phone and password, or check your inbox for a confirmation link before signing up again.',
-        )
-        return false
-      }
+    if (!input.phone?.trim()) {
+      setAuthError('Phone number is required.')
+      return false
+    }
+
+    const phoneTaken = isSupabaseConfigured()
+      ? await supabasePhoneInUse(input.phone)
+      : await phoneInUse(input.phone)
+    if (phoneTaken) {
+      setAuthError('This phone number is already registered. Log in instead.')
+      return false
     }
 
     if (isSupabaseConfigured()) {
-      const { user: created, error, needsEmailConfirmation } = await supabaseSignUp(input)
+      const { user: created, error, needsEmailConfirmation } = await supabaseSignUp({
+        name: input.name,
+        method: 'phone',
+        phone: input.phone,
+        password: input.password,
+        role: input.role,
+      })
       if (needsEmailConfirmation) {
-        const confirmedEmail = input.email?.trim().toLowerCase() ?? 'your email'
-        setAuthNotice(
-          `We sent a confirmation link to ${confirmedEmail}. Tap the link on this phone — it should open Laundry Buddy. Then log in with your phone number and password.`,
-        )
+        setAuthNotice('Account created. Log in with your phone number and password.')
         setAuthError(null)
         navigateAuth('login')
         return false
@@ -470,8 +438,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const newUser: User = {
       id: `user-${Date.now()}`,
       name: input.name.trim(),
-      phone: normalizePhone(input.phone!),
-      email: input.email?.trim().toLowerCase(),
+      phone: normalizePhone(input.phone),
       password: input.password,
       role: input.role,
       identityVerification: emptyIdentityVerification(),

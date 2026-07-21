@@ -2,7 +2,6 @@ import type { AppRole, IdentityVerification, LoginMethod, User } from '../../typ
 import { emptyIdentityVerification } from '../identityVerification'
 import { normalizePhone } from '../phone'
 import { authEmailFromPhone } from './config'
-import { getSupabaseAuthRedirectUrl } from './authRedirect'
 import { formatSupabaseAuthError } from './authErrors'
 import { getSupabaseClient } from './client'
 import { identityVerificationToJson, profileRowToUser } from './mappers'
@@ -23,6 +22,23 @@ function resolveAuthEmail(method: LoginMethod, phone?: string, email?: string): 
   }
   if (!email?.trim()) return null
   return email.trim().toLowerCase()
+}
+
+async function authEmailForPhoneLogin(phone: string): Promise<{ authEmail: string | null; error: string | null }> {
+  const normalized = normalizePhone(phone)
+  if (!normalized.replace(/\D/g, '')) {
+    return { authEmail: null, error: 'Enter a valid phone number.' }
+  }
+
+  const registered = await supabasePhoneInUse(phone)
+  if (!registered) {
+    return {
+      authEmail: null,
+      error: 'No account found for this phone number. Check the number or create an account.',
+    }
+  }
+
+  return { authEmail: authEmailFromPhone(normalized), error: null }
 }
 
 export async function fetchProfileById(userId: string): Promise<User | null> {
@@ -76,25 +92,11 @@ export async function supabaseSignIn(
 
   let authEmail: string
   if (method === 'phone') {
-    const normalized = normalizePhone(identifier)
-    if (!normalized.replace(/\D/g, '')) {
-      return { user: null, error: 'Enter a valid phone number.' }
+    const resolved = await authEmailForPhoneLogin(identifier)
+    if (!resolved.authEmail || resolved.error) {
+      return { user: null, error: resolved.error ?? 'Invalid credentials. Check your details and try again.' }
     }
-
-    const { data: profile, error: lookupError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('phone', normalized)
-      .maybeSingle()
-
-    if (lookupError) return { user: null, error: 'Could not look up account. Try again.' }
-    if (!profile?.email) {
-      return {
-        user: null,
-        error: 'No account found for this phone number. Check the number or create an account.',
-      }
-    }
-    authEmail = profile.email.trim().toLowerCase()
+    authEmail = resolved.authEmail
   } else {
     authEmail = identifier.trim().toLowerCase()
   }
@@ -127,21 +129,28 @@ export async function supabaseSignUp(
   }
 
   const normalizedPhone = input.phone ? normalizePhone(input.phone) : undefined
-  const normalizedEmail = input.email?.trim().toLowerCase()
 
-  const { data, error } = await supabase.auth.signUp({
+  const signUpOptions: {
+    email: string
+    password: string
+    options: { data: Record<string, string | undefined> }
+  } = {
     email: authEmail,
     password: input.password,
     options: {
-      emailRedirectTo: getSupabaseAuthRedirectUrl(),
       data: {
         name: input.name.trim(),
         role: input.role,
         phone: normalizedPhone,
-        login_email: normalizedEmail,
       },
     },
-  })
+  }
+
+  if (input.method === 'email' && input.email) {
+    signUpOptions.options.data.login_email = input.email.trim().toLowerCase()
+  }
+
+  const { data, error } = await supabase.auth.signUp(signUpOptions)
 
   if (error) return { user: null, error: formatSupabaseAuthError(error.message) }
   if (!data.user) return { user: null, error: 'Sign up failed. Try again.' }
@@ -158,7 +167,7 @@ export async function supabaseSignUp(
     id: data.user.id,
     name: input.name.trim(),
     phone: normalizedPhone ?? null,
-    email: normalizedEmail ?? null,
+    email: input.method === 'email' ? input.email?.trim().toLowerCase() ?? null : null,
     role: input.role,
     identity_verification: identityVerificationToJson(emptyIdentityVerification()),
   }

@@ -4,8 +4,6 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { AppTextInput, BackButton, BrandSwitch, PasswordInput, PrimaryButton, Screen } from '../../components/ui'
 import { AppIcon } from '../../components/AppIcon'
-import { isValidEmail } from '../../lib/email'
-import { isSupabaseConfigured } from '../../lib/supabase'
 import { radius, spacing } from '../../theme'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import type { AppRole } from '../../types'
@@ -98,7 +96,6 @@ export function SignupScreen() {
   const { colors } = useTheme()
   const styles = useMemo(() => createSignupStyles(colors), [colors])
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -107,8 +104,6 @@ export function SignupScreen() {
   const [localError, setLocalError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const usingSupabase = isSupabaseConfigured()
-
   const handleSignup = async () => {
     if (submitting) return
     clearAuthError()
@@ -116,14 +111,6 @@ export function SignupScreen() {
 
     if (!name.trim()) {
       setLocalError('Full name is required.')
-      return
-    }
-    if (!email.trim()) {
-      setLocalError('Email is required.')
-      return
-    }
-    if (!isValidEmail(email)) {
-      setLocalError('Enter a valid email address.')
       return
     }
     if (!phone.trim()) {
@@ -143,8 +130,6 @@ export function SignupScreen() {
     try {
       await signup({
         name,
-        method: 'email',
-        email,
         phone,
         password,
         confirmPassword,
@@ -162,20 +147,7 @@ export function SignupScreen() {
     <Screen>
       <BackButton onPress={() => navigateAuth('welcome')} />
       <Text style={styles.title}>{toTitleCase('Create account')}</Text>
-      <Text style={styles.subtitle}>
-        {toTitleCase(usingSupabase ? 'Sign up with email and phone — free to get started' : 'Join as a guest or host your dryer')}
-      </Text>
-
-      {usingSupabase ? (
-        <View style={styles.notice}>
-          <AppIcon name="mail" size={16} color={colors.gray600} />
-          <Text style={styles.noticeText}>
-            {toTitleCase(
-              'After sign-up, tap the confirmation link in your email on this phone. For testing, you can disable Confirm email in Supabase to avoid the 2-emails/hour limit.',
-            )}
-          </Text>
-        </View>
-      ) : null}
+      <Text style={styles.subtitle}>{toTitleCase('Sign up with your Belize phone number — free to get started')}</Text>
 
       <View style={styles.roleRow}>
         {(['customer', 'host'] as const).map((r) => (
@@ -199,13 +171,9 @@ export function SignupScreen() {
         <AppIcon name="shield" size={16} color={colors.gray600} />
         <Text style={styles.noticeText}>
           {toTitleCase(
-            usingSupabase
-              ? role === 'host'
-                ? 'Once your email is confirmed and you log in, verify your phone, ID, selfie, and address to start hosting.'
-                : 'Once your email is confirmed and you log in, verify your phone, ID, and selfie to start booking.'
-              : role === 'host'
-                ? 'Next: phone number, WhatsApp code, government ID, matching selfie, and host address proof.'
-                : 'Next: phone number, WhatsApp code, government ID, and a matching selfie.',
+            role === 'host'
+              ? 'After sign-up, verify your phone, ID, selfie, and address to start hosting.'
+              : 'After sign-up, verify your phone, ID, and selfie to start booking.',
           )}
         </Text>
       </View>
@@ -213,17 +181,6 @@ export function SignupScreen() {
       <View style={styles.field}>
         <Text style={styles.label}>{toTitleCase('Full name')}</Text>
         <AppTextInput placeholder="Your name" value={name} onChangeText={setName} />
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>{toTitleCase('Email')}</Text>
-        <AppTextInput
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
       </View>
 
       <View style={styles.field}>

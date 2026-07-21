@@ -45,52 +45,11 @@ supabase db push
 
 ## 4. Auth settings (Supabase dashboard)
 
-### Upload the email confirmation page (required — fixes blank browser page)
+### Phone-only sign-up and log-in
 
-1. In Supabase → **Storage**, create a **public** bucket named `app-public`.
-2. Upload `supabase/public/auth-callback.html` to that bucket (keep the filename `auth-callback.html`).
-3. Confirm it opens in the browser, e.g.  
-   `https://YOUR_PROJECT.supabase.co/storage/v1/object/public/app-public/auth-callback.html`
+Users sign up and log in with a **Belize phone number (+501)** and password. Supabase stores a synthetic auth email (`5016001234@phone.laundrybuddy.app`) behind the scenes — no real confirmation emails are sent.
 
-### URL configuration
-
-Under **Authentication → URL Configuration**:
-
-| Setting | Value |
-|---------|-------|
-| **Site URL** | `https://YOUR_PROJECT.supabase.co/storage/v1/object/public/app-public/auth-callback.html` |
-| **Redirect URLs** | Same URL as Site URL, plus `laundrybuddy://auth/callback` and `laundrybuddy://**` |
-
-The app sends confirmation emails to the hosted HTML page (not `localhost` and not a raw deep link). That page shows “Email confirmed” and opens the Laundry Buddy app with the login tokens.
-
-Optional override in `.env`:
-
-```env
-EXPO_PUBLIC_AUTH_REDIRECT_URL=https://YOUR_PROJECT.supabase.co/storage/v1/object/public/app-public/auth-callback.html
-```
-
-Under **Authentication → Providers → Email**:
-
-- Enable email provider.
-- For quick local testing only, you can disable **Confirm email** so sign-up works immediately without a link.
-
-Phone logins look up the user’s profile by phone, then sign in with their signup email behind the scenes.
-
-### Email rate limits (important while testing)
-
-Supabase’s **built-in email** allows about **2 auth emails per hour** for the whole project. Repeated sign-up tests hit this quickly and show `email rate limit exceeded`.
-
-**Fastest fix for development:**
-
-1. Supabase → **Authentication → Providers → Email**
-2. Turn **off** “Confirm email”
-3. Sign up again — no confirmation email is sent; you can log in immediately with phone + password
-
-**Other options:**
-
-- Wait ~1 hour, then use a confirmation link already in your inbox (don’t sign up again)
-- Manually confirm a user: **Authentication → Users** → select user → confirm email
-- For production: set up **custom SMTP** (Authentication → SMTP) — raises limits to ~30/hour+
+Under **Authentication → Providers → Email**, turn **off** “Confirm email” so new accounts work immediately.
 
 ## 5. Storage buckets (optional, for photos)
 
