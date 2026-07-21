@@ -58,6 +58,8 @@ function createLoginStyles(colors: ReturnType<typeof useTheme>['colors']) {
       borderColor: colors.green,
     },
     infoText: { flex: 1, fontSize: 14, color: colors.green, lineHeight: 20, fontWeight: '600' },
+    linkRow: { alignItems: 'flex-end', marginTop: spacing.sm, marginBottom: spacing.md },
+    forgotLink: { fontSize: 13, fontWeight: '600', color: colors.gray600, textDecorationLine: 'underline' },
     switch: { marginTop: spacing.xl, alignItems: 'center', paddingVertical: spacing.sm },
     switchText: { fontSize: 14, color: colors.gray500 },
     link: { fontWeight: '600', color: colors.black, textDecorationLine: 'underline' },
@@ -138,6 +140,9 @@ export function LoginScreen() {
           <Text style={styles.label}>{toTitleCase('Password')}</Text>
         </View>
         <PasswordInput placeholder="Your password" value={password} onChangeText={setPassword} />
+        <Pressable onPress={() => navigateAuth('forgot-password')} style={styles.linkRow}>
+          <Text style={styles.forgotLink}>{toTitleCase('Forgot password?')}</Text>
+        </Pressable>
       </View>
 
       {authNotice ? (

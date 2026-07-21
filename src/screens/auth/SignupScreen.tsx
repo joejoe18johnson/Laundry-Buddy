@@ -96,6 +96,7 @@ export function SignupScreen() {
   const { colors } = useTheme()
   const styles = useMemo(() => createSignupStyles(colors), [colors])
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -117,6 +118,10 @@ export function SignupScreen() {
       setLocalError('Phone number is required.')
       return
     }
+    if (!email.trim()) {
+      setLocalError('Email is required.')
+      return
+    }
     if (password.length < 6) {
       setLocalError('Password must be at least 6 characters.')
       return
@@ -130,6 +135,7 @@ export function SignupScreen() {
     try {
       await signup({
         name,
+        email,
         phone,
         password,
         confirmPassword,
@@ -147,7 +153,7 @@ export function SignupScreen() {
     <Screen>
       <BackButton onPress={() => navigateAuth('welcome')} />
       <Text style={styles.title}>{toTitleCase('Create account')}</Text>
-      <Text style={styles.subtitle}>{toTitleCase('Sign up with your Belize phone number — free to get started')}</Text>
+      <Text style={styles.subtitle}>{toTitleCase('Sign up with your phone, email, and password — free to get started')}</Text>
 
       <View style={styles.roleRow}>
         {(['customer', 'host'] as const).map((r) => (
@@ -181,6 +187,21 @@ export function SignupScreen() {
       <View style={styles.field}>
         <Text style={styles.label}>{toTitleCase('Full name')}</Text>
         <AppTextInput placeholder="Your name" value={name} onChangeText={setName} />
+      </View>
+
+      <View style={styles.field}>
+        <View style={styles.labelRow}>
+          <AppIcon name="mail" size={16} color={colors.gray600} />
+          <Text style={[styles.label, { marginBottom: 0 }]}>{toTitleCase('Email')}</Text>
+        </View>
+        <AppTextInput
+          placeholder="you@example.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={email}
+          onChangeText={setEmail}
+        />
       </View>
 
       <View style={styles.field}>

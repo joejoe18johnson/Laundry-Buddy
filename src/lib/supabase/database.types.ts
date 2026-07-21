@@ -306,8 +306,26 @@ export interface Database {
         }
         Returns: Json
       }
+      auth_email_for_phone: {
+        Args: {
+          raw_phone: string
+        }
+        Returns: string
+      }
       is_admin: {
         Args: Record<string, never>
+        Returns: boolean
+      }
+      profile_email_in_use: {
+        Args: {
+          raw_email: string
+        }
+        Returns: boolean
+      }
+      profile_phone_in_use: {
+        Args: {
+          raw_phone: string
+        }
         Returns: boolean
       }
     }

@@ -11,12 +11,15 @@ export {
 export {
   fetchCurrentSupabaseUser,
   fetchProfileById,
+  fetchProfileByPhone,
   supabaseEmailInUse,
   supabasePhoneInUse,
+  supabaseRequestPasswordReset,
   supabaseSignIn,
   supabaseSignOut,
   supabaseSignUp,
   supabaseSubmitIdentityVerification,
+  supabaseUpdatePassword,
   supabaseUpdateProfile,
 } from './authService'
 export type { Database } from './database.types'

@@ -31,8 +31,11 @@ When both variables are set, the app uses **Supabase Auth + profiles** instead o
 **Option A — SQL Editor (quickest)**
 
 1. Open Supabase → SQL Editor.
-2. Paste the contents of `supabase/migrations/20260718000000_initial_schema.sql`.
-3. Run.
+2. Paste and run each migration in order:
+   - `supabase/migrations/20260718000000_initial_schema.sql`
+   - `supabase/migrations/20260719000000_admin_profile_updates.sql`
+   - `supabase/migrations/20260720000000_app_public_bucket.sql` (optional hosted auth page)
+   - `supabase/migrations/20260720100000_phone_login_rpc.sql` (**required for phone login**)
 
 **Option B — Supabase CLI**
 
@@ -47,9 +50,32 @@ supabase db push
 
 ### Phone-only sign-up and log-in
 
-Users sign up and log in with a **Belize phone number (+501)** and password. Supabase stores a synthetic auth email (`5016001234@phone.laundrybuddy.app`) behind the scenes — no real confirmation emails are sent.
+Users sign up and log in with a **Belize phone number (+501)**, **email**, and password. Email is required for password reset — it is **not** confirmed at sign-up when confirm email is off.
 
 Under **Authentication → Providers → Email**, turn **off** “Confirm email” so new accounts work immediately.
+
+### Password reset and auth email links
+
+Email links open in the phone browser, which **cannot** load `laundrybuddy://` directly (blank page). Use the hosted callback page:
+
+1. Run `supabase/migrations/20260720000000_app_public_bucket.sql` in the SQL Editor.
+2. In **Storage**, open bucket **app-public** → upload `supabase/public/auth-callback.html`.
+3. Add these **Redirect URLs** under **Authentication → URL configuration**:
+
+```
+https://YOUR_PROJECT.supabase.co/storage/v1/object/public/app-public/auth-callback.html
+laundrybuddy://auth/callback
+```
+
+4. In `.env` (optional — auto-detected from project URL if omitted):
+
+```env
+EXPO_PUBLIC_AUTH_REDIRECT_URL=https://YOUR_PROJECT.supabase.co/storage/v1/object/public/app-public/auth-callback.html
+```
+
+5. Restart Expo. Request a **new** password reset email (old links still point at the previous redirect).
+
+The hosted page shows an **Open Laundry Buddy** button, then the app opens to set a new password.
 
 ## 5. Storage buckets (optional, for photos)
 

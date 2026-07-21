@@ -11,6 +11,7 @@ import {
 import { SplashLoading } from '../components/SplashLoading'
 import { normalizePhone } from '../lib/phone'
 import {
+  emailInUse,
   findUserByEmail,
   findUserByPhone,
   getCurrentUser,
@@ -19,6 +20,7 @@ import {
   saveUser,
   setSessionUserId,
 } from '../lib/authStorage'
+import { isValidEmail } from '../lib/email'
 import {
   disableBiometricLogin,
   enableBiometricLogin,
@@ -33,13 +35,17 @@ import {
   createSessionFromAuthRedirectUrl,
   fetchCurrentSupabaseUser,
   fetchProfileById,
+  getSupabaseClient,
   isSupabaseAuthCallbackUrl,
   isSupabaseConfigured,
+  supabaseEmailInUse,
   supabasePhoneInUse,
+  supabaseRequestPasswordReset,
   supabaseSignIn,
   supabaseSignOut,
   supabaseSignUp,
   supabaseSubmitIdentityVerification,
+  supabaseUpdatePassword,
 } from '../lib/supabase'
 import { ensureSupabaseAdminProfile, ensureTrainingAdminSupabaseSession, isLikelyAdminUser } from '../lib/supabase/adminAccess'
 import { ADMIN_PHONE, ADMIN_SEED_PASSWORD } from '../data/seedData'
@@ -69,6 +75,7 @@ import {
 interface SignupInput {
   name: string
   phone: string
+  email: string
   password: string
   confirmPassword: string
   role: AppRole
@@ -90,6 +97,8 @@ interface AuthState {
   login: (method: LoginMethod, identifier: string, password: string) => Promise<boolean>
   loginWithBiometrics: () => Promise<boolean>
   signup: (input: SignupInput) => Promise<boolean>
+  requestPasswordReset: (email: string) => Promise<boolean>
+  resetPassword: (password: string, confirmPassword: string) => Promise<boolean>
   logout: () => Promise<void>
   enableBiometricLogin: () => Promise<boolean>
   disableBiometricLogin: () => Promise<void>
@@ -221,6 +230,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
+      if (result.recovery) {
+        if (result.user) {
+          await saveUser(result.user)
+          setUser(result.user)
+        }
+        setAuthError(null)
+        setAuthNotice('Choose a new password for your account.')
+        setAuthScreen('reset-password')
+        return
+      }
+
       if (result.user) {
         await saveUser(result.user)
         setUser(result.user)
@@ -249,6 +269,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.remove()
   }, [handleAuthRedirect])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured()) return
+    const supabase = getSupabaseClient()
+    if (!supabase) return
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthError(null)
+        setAuthNotice('Choose a new password for your account.')
+        setAuthScreen('reset-password')
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
 
   useEffect(() => {
     if (ready) {
@@ -419,6 +457,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false
     }
 
+    if (!input.email?.trim()) {
+      setAuthError('Email is required.')
+      return false
+    }
+
+    if (!isValidEmail(input.email)) {
+      setAuthError('Enter a valid email address.')
+      return false
+    }
+
     const phoneTaken = isSupabaseConfigured()
       ? await supabasePhoneInUse(input.phone)
       : await phoneInUse(input.phone)
@@ -427,11 +475,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false
     }
 
+    const emailTaken = isSupabaseConfigured()
+      ? await supabaseEmailInUse(input.email)
+      : await emailInUse(input.email)
+    if (emailTaken) {
+      setAuthError('This email is already registered. Log in instead.')
+      return false
+    }
+
     if (isSupabaseConfigured()) {
       const { user: created, error, needsEmailConfirmation } = await supabaseSignUp({
         name: input.name,
-        method: 'phone',
         phone: input.phone,
+        email: input.email,
         password: input.password,
         role: input.role,
       })
@@ -464,6 +520,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       id: `user-${Date.now()}`,
       name: input.name.trim(),
       phone: normalizePhone(input.phone),
+      email: input.email.trim().toLowerCase(),
       password: input.password,
       role: input.role,
       identityVerification: emptyIdentityVerification(),
@@ -485,6 +542,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return true
   }, [bumpAuthSession, navigateAuth, refreshBiometricState])
+
+  const requestPasswordReset = useCallback(async (email: string) => {
+    clearAuthError()
+    clearAuthNotice()
+
+    if (!isSupabaseConfigured()) {
+      setAuthError('Password reset is only available when Supabase is connected.')
+      return false
+    }
+
+    if (!isValidEmail(email)) {
+      setAuthError('Enter a valid email address.')
+      return false
+    }
+
+    const { error } = await supabaseRequestPasswordReset(email)
+    if (error) {
+      setAuthError(error)
+      return false
+    }
+
+    setAuthNotice('Check your email for a password reset link. It may take a minute to arrive.')
+    navigateAuth('login')
+    return true
+  }, [clearAuthError, clearAuthNotice, navigateAuth])
+
+  const resetPassword = useCallback(async (password: string, confirmPassword: string) => {
+    clearAuthError()
+
+    if (password.length < 6) {
+      setAuthError('Password must be at least 6 characters.')
+      return false
+    }
+
+    if (password !== confirmPassword) {
+      setAuthError('Passwords do not match.')
+      return false
+    }
+
+    if (!isSupabaseConfigured()) {
+      setAuthError('Password reset is only available when Supabase is connected.')
+      return false
+    }
+
+    const { error } = await supabaseUpdatePassword(password)
+    if (error) {
+      setAuthError(error)
+      return false
+    }
+
+    await supabaseSignOut()
+    await setSessionUserId(null)
+    setUser(null)
+    setAuthError(null)
+    setAuthNotice('Password updated. Log in with your phone and new password.')
+    navigateAuth('login')
+    return true
+  }, [clearAuthError, navigateAuth])
 
   const enableBiometricLoginForUser = useCallback(async () => {
     if (!user) return false
@@ -789,6 +904,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       loginWithBiometrics,
       signup,
+      requestPasswordReset,
+      resetPassword,
       logout,
       enableBiometricLogin: enableBiometricLoginForUser,
       disableBiometricLogin: disableBiometricLoginForUser,
@@ -827,6 +944,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       loginWithBiometrics,
       signup,
+      requestPasswordReset,
+      resetPassword,
       logout,
       enableBiometricLoginForUser,
       disableBiometricLoginForUser,

@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Email confirmed · Laundry Buddy</title>
+    <title>Laundry Buddy</title>
     <style>
       * {
         box-sizing: border-box;
@@ -38,7 +38,22 @@
         line-height: 1.55;
         margin: 0 0 16px;
       }
-      a {
+      .error {
+        color: #b42318;
+      }
+      .btn {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 14px 20px;
+        border-radius: 12px;
+        background: #000;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .btn-secondary {
+        display: inline-block;
+        margin-top: 12px;
         color: #000;
         font-weight: 600;
       }
@@ -46,34 +61,76 @@
   </head>
   <body>
     <div class="card">
-      <h1>Email confirmed</h1>
-      <p id="status">Opening Laundry Buddy…</p>
-      <p><a id="open-app" href="#">Tap here if the app does not open</a></p>
+      <h1 id="title">Opening Laundry Buddy</h1>
+      <p id="status">One moment…</p>
+      <a id="open-app" class="btn" href="#">Open Laundry Buddy</a>
+      <div><a id="open-android" class="btn-secondary" href="#" style="display: none">Open on Android</a></div>
     </div>
     <script>
       (function () {
-        var deepLink = 'laundrybuddy://auth/callback';
+        var params = new URLSearchParams(window.location.search);
+        if (window.location.hash && window.location.hash.charAt(0) === '#') {
+          var hashParams = new URLSearchParams(window.location.hash.slice(1));
+          hashParams.forEach(function (value, key) {
+            if (!params.has(key)) params.set(key, value);
+          });
+        }
+
+        var authFlow = params.get('auth_flow') || '';
+        var type = params.get('type') || '';
+        var isRecovery = authFlow === 'recovery' || type === 'recovery';
+        var errorText = params.get('error_description') || params.get('error') || '';
+
+        var title = document.getElementById('title');
+        var status = document.getElementById('status');
+        var openApp = document.getElementById('open-app');
+        var openAndroid = document.getElementById('open-android');
+
+        if (errorText) {
+          title.textContent = 'Link problem';
+          status.textContent = decodeURIComponent(errorText.replace(/\+/g, ' '));
+          status.className = 'error';
+          openApp.textContent = 'Back to Laundry Buddy';
+          openApp.href = 'laundrybuddy://auth/callback';
+          return;
+        }
+
+        title.textContent = isRecovery ? 'Reset your password' : 'Continue to Laundry Buddy';
+        status.textContent = isRecovery
+          ? 'Tap the button below to open the app and choose a new password.'
+          : 'Tap the button below to open the app.';
+
         var suffix = window.location.search || '';
         if (window.location.hash) {
           suffix += window.location.hash;
         }
+        if (!suffix && isRecovery) {
+          suffix = '?auth_flow=recovery';
+        }
+
+        var deepLink = 'laundrybuddy://auth/callback';
         if (suffix) {
           deepLink += suffix.charAt(0) === '?' || suffix.charAt(0) === '#' ? suffix : '?' + suffix.slice(1);
         }
 
-        var link = document.getElementById('open-app');
-        link.href = deepLink;
+        openApp.href = deepLink;
 
-        try {
-          window.location.replace(deepLink);
-        } catch (e) {
-          document.getElementById('status').textContent = 'Tap the link below to open Laundry Buddy.';
+        var isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid) {
+          var intentPath = deepLink.replace(/^laundrybuddy:\/\//, '');
+          openAndroid.style.display = 'inline-block';
+          openAndroid.href =
+            'intent://' +
+            intentPath +
+            '#Intent;scheme=laundrybuddy;package=com.laundrybuddy.app;end';
         }
 
+        // Do not auto-redirect — email browsers often show a blank page for custom schemes.
         setTimeout(function () {
-          document.getElementById('status').textContent =
-            'Open Laundry Buddy and log in with your phone number and password.';
-        }, 2500);
+          status.textContent = isRecovery
+            ? 'If nothing happens, tap Open Laundry Buddy, then choose your new password.'
+            : 'If nothing happens, tap Open Laundry Buddy to continue.';
+        }, 1200);
       })();
     </script>
   </body>

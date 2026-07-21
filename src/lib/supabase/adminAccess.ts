@@ -98,8 +98,8 @@ export async function ensureTrainingAdminSupabaseSession(
   if (!signedIn) {
     const signUpAttempt = await supabaseSignUp({
       name,
-      method: 'phone',
       phone: localUser?.phone ?? ADMIN_PHONE,
+      email,
       password,
       role: 'admin',
     })

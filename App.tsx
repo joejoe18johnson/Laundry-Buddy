@@ -22,6 +22,8 @@ import { WelcomeScreen } from './src/screens/auth/WelcomeScreen'
 import { IntroOnboardingScreen } from './src/screens/auth/IntroOnboardingScreen'
 import { LoginScreen } from './src/screens/auth/LoginScreen'
 import { SignupScreen } from './src/screens/auth/SignupScreen'
+import { ForgotPasswordScreen } from './src/screens/auth/ForgotPasswordScreen'
+import { ResetPasswordScreen } from './src/screens/auth/ResetPasswordScreen'
 import { HeaderMenu } from './src/components/HeaderMenu'
 import { LocationSettingsSheet } from './src/components/LocationSettingsSheet'
 import { IdentityVerificationScreen } from './src/screens/auth/IdentityVerificationScreen'
@@ -636,6 +638,8 @@ function AuthenticatedApp() {
         {authScreen === 'welcome' && <WelcomeScreen />}
         {authScreen === 'login' && <LoginScreen />}
         {authScreen === 'signup' && <SignupScreen />}
+        {authScreen === 'forgot-password' && <ForgotPasswordScreen />}
+        {authScreen === 'reset-password' && <ResetPasswordScreen />}
       </SafeAreaView>
     )
   }

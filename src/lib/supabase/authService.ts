@@ -1,41 +1,57 @@
 import type { AppRole, IdentityVerification, LoginMethod, User } from '../../types'
 import { ADMIN_EMAIL, ADMIN_PHONE } from '../../data/seedData'
+import { isValidEmail } from '../email'
 import { emptyIdentityVerification } from '../identityVerification'
 import { normalizePhone } from '../phone'
 import { authEmailFromPhone } from './config'
+import { getSupabaseAuthRedirectUrl } from './authRedirect'
 import { formatSupabaseAuthError } from './authErrors'
 import { getSupabaseClient } from './client'
 import { identityVerificationToJson, profileRowToUser } from './mappers'
 
 export type SupabaseSignupInput = {
   name: string
-  method: LoginMethod
-  phone?: string
-  email?: string
+  phone: string
+  email: string
   password: string
   role: AppRole
 }
 
-function resolveAuthEmail(method: LoginMethod, phone?: string, email?: string): string | null {
-  if (method === 'phone') {
-    if (!phone?.trim()) return null
-    return authEmailFromPhone(normalizePhone(phone))
-  }
-  if (!email?.trim()) return null
-  return email.trim().toLowerCase()
-}
-
-function authEmailForPhoneLogin(phone: string): { authEmail: string | null; error: string | null } {
+async function resolveAuthEmailsForPhoneLogin(phone: string): Promise<{ emails: string[]; error: string | null }> {
   const normalized = normalizePhone(phone)
   if (!normalized.replace(/\D/g, '')) {
-    return { authEmail: null, error: 'Enter a valid phone number.' }
+    return { emails: [], error: 'Enter a valid phone number.' }
   }
 
-  return { authEmail: authEmailFromPhone(normalized), error: null }
+  const synthetic = authEmailFromPhone(normalized)
+  if (normalized === normalizePhone(ADMIN_PHONE)) {
+    return { emails: [ADMIN_EMAIL, synthetic], error: null }
+  }
+
+  const supabase = getSupabaseClient()
+  if (supabase) {
+    const { data, error } = await supabase.rpc('auth_email_for_phone', { raw_phone: phone })
+    if (!error && typeof data === 'string' && data.trim()) {
+      const primary = data.trim().toLowerCase()
+      const emails = primary === synthetic ? [primary] : [primary, synthetic]
+      return { emails, error: null }
+    }
+  }
+
+  const profile = await fetchProfileByPhone(normalized)
+  if (profile?.email) {
+    const profileEmail = profile.email.trim().toLowerCase()
+    return {
+      emails: profileEmail === synthetic ? [profileEmail] : [profileEmail, synthetic],
+      error: null,
+    }
+  }
+
+  return { emails: [synthetic], error: null }
 }
 
 async function ensureProfileForAuthUser(
-  authUser: { id: string; user_metadata?: Record<string, unknown> },
+  authUser: { id: string; email?: string; user_metadata?: Record<string, unknown> },
   loginPhone?: string,
 ): Promise<User | null> {
   const supabase = getSupabaseClient()
@@ -48,20 +64,31 @@ async function ensureProfileForAuthUser(
     : typeof meta.phone === 'string' && meta.phone.trim()
       ? normalizePhone(meta.phone)
       : undefined
+  const profileEmail =
+    typeof meta.login_email === 'string' && meta.login_email.trim()
+      ? meta.login_email.trim().toLowerCase()
+      : authUser.email?.trim().toLowerCase() ?? null
 
   if (existing) {
+    let next = existing
     if (normalizedPhone && existing.phone !== normalizedPhone) {
-      return supabaseUpdateProfile({ ...existing, phone: normalizedPhone })
+      next = { ...next, phone: normalizedPhone }
+    }
+    if (profileEmail && existing.email !== profileEmail) {
+      next = { ...next, email: profileEmail }
+    }
+    if (next !== existing) {
+      return supabaseUpdateProfile(next)
     }
     return existing
   }
 
-  const role = meta.role === 'host' || meta.role === 'admin' ? meta.role : 'customer'
+  const role: AppRole = meta.role === 'host' || meta.role === 'admin' ? meta.role : 'customer'
   const profilePayload = {
     id: authUser.id,
     name: typeof meta.name === 'string' && meta.name.trim() ? meta.name.trim() : 'Laundry Buddy user',
     phone: normalizedPhone ?? null,
-    email: typeof meta.login_email === 'string' ? meta.login_email.trim().toLowerCase() : null,
+    email: profileEmail,
     role,
     identity_verification: identityVerificationToJson(emptyIdentityVerification()),
   }
@@ -82,6 +109,17 @@ export async function fetchProfileById(userId: string): Promise<User | null> {
   return profileRowToUser(data)
 }
 
+export async function fetchProfileByPhone(phone: string): Promise<User | null> {
+  const supabase = getSupabaseClient()
+  if (!supabase) return null
+
+  const normalized = normalizePhone(phone)
+  const { data, error } = await supabase.from('profiles').select('*').eq('phone', normalized).maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  return profileRowToUser(data)
+}
+
 export async function fetchCurrentSupabaseUser(): Promise<User | null> {
   const supabase = getSupabaseClient()
   if (!supabase) return null
@@ -97,20 +135,34 @@ export async function supabasePhoneInUse(phone: string): Promise<boolean> {
   const supabase = getSupabaseClient()
   if (!supabase) return false
 
+  const { data, error } = await supabase.rpc('profile_phone_in_use', { raw_phone: phone })
+  if (!error && typeof data === 'boolean') return data
+
   const normalized = normalizePhone(phone)
-  const { data, error } = await supabase.from('profiles').select('id').eq('phone', normalized).maybeSingle()
-  if (error) throw error
-  return !!data
+  const { data: row, error: lookupError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('phone', normalized)
+    .maybeSingle()
+  if (lookupError) throw lookupError
+  return !!row
 }
 
 export async function supabaseEmailInUse(email: string): Promise<boolean> {
   const supabase = getSupabaseClient()
   if (!supabase) return false
 
+  const { data, error } = await supabase.rpc('profile_email_in_use', { raw_email: email })
+  if (!error && typeof data === 'boolean') return data
+
   const normalized = email.trim().toLowerCase()
-  const { data, error } = await supabase.from('profiles').select('id').eq('email', normalized).maybeSingle()
-  if (error) throw error
-  return !!data
+  const { data: row, error: lookupError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', normalized)
+    .maybeSingle()
+  if (lookupError) throw lookupError
+  return !!row
 }
 
 export async function supabaseSignIn(
@@ -121,20 +173,32 @@ export async function supabaseSignIn(
   const supabase = getSupabaseClient()
   if (!supabase) return { user: null, error: 'Supabase is not configured.' }
 
-  let authEmail: string
+  let authEmails: string[]
   if (method === 'phone') {
-    const resolved = authEmailForPhoneLogin(identifier)
-    if (!resolved.authEmail || resolved.error) {
+    const resolved = await resolveAuthEmailsForPhoneLogin(identifier)
+    if (!resolved.emails.length || resolved.error) {
       return { user: null, error: resolved.error ?? 'Invalid credentials. Check your details and try again.' }
     }
-    authEmail = resolved.authEmail
+    authEmails = resolved.emails
   } else {
-    authEmail = identifier.trim().toLowerCase()
+    authEmails = [identifier.trim().toLowerCase()]
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail, password })
+  let signedInUser: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null = null
+  let lastError: { message: string } | null = null
+
+  for (const authEmail of authEmails) {
+    const attempt = await supabase.auth.signInWithPassword({ email: authEmail, password })
+    if (!attempt.error && attempt.data.user) {
+      signedInUser = attempt.data.user
+      lastError = null
+      break
+    }
+    lastError = attempt.error
+  }
+
   if (
-    error &&
+    lastError &&
     method === 'phone' &&
     normalizePhone(identifier) === normalizePhone(ADMIN_PHONE)
   ) {
@@ -149,17 +213,17 @@ export async function supabaseSignIn(
     }
   }
 
-  if (error) {
+  if (lastError) {
     const message =
       method === 'phone'
         ? 'Invalid phone or password. Double-check your details or create an account.'
-        : formatSupabaseAuthError(error.message)
+        : formatSupabaseAuthError(lastError.message)
     return { user: null, error: message }
   }
-  if (!data.user) return { user: null, error: 'Sign in failed. Try again.' }
+  if (!signedInUser) return { user: null, error: 'Sign in failed. Try again.' }
 
   const profile = await ensureProfileForAuthUser(
-    data.user,
+    signedInUser,
     method === 'phone' ? identifier : undefined,
   )
   if (!profile) return { user: null, error: 'Account profile not found. Contact support.' }
@@ -172,25 +236,24 @@ export async function supabaseSignUp(
   const supabase = getSupabaseClient()
   if (!supabase) return { user: null, error: 'Supabase is not configured.' }
 
-  const authEmail = resolveAuthEmail(input.method, input.phone, input.email)
-  if (!authEmail) {
-    return { user: null, error: input.method === 'phone' ? 'Phone number is required.' : 'Email is required.' }
+  const authEmail = input.email.trim().toLowerCase()
+  if (!isValidEmail(authEmail)) {
+    return { user: null, error: 'Enter a valid email address.' }
+  }
+  if (!input.phone?.trim()) {
+    return { user: null, error: 'Phone number is required.' }
   }
 
-  if (input.method === 'phone' && input.phone && (await supabasePhoneInUse(input.phone))) {
+  if (await supabasePhoneInUse(input.phone)) {
     return { user: null, error: 'This phone number is already registered.' }
   }
-  if (input.method === 'email' && input.email && (await supabaseEmailInUse(input.email))) {
+  if (await supabaseEmailInUse(authEmail)) {
     return { user: null, error: 'This email is already registered.' }
   }
 
-  const normalizedPhone = input.phone ? normalizePhone(input.phone) : undefined
+  const normalizedPhone = normalizePhone(input.phone)
 
-  const signUpOptions: {
-    email: string
-    password: string
-    options: { data: Record<string, string | undefined> }
-  } = {
+  const { data, error } = await supabase.auth.signUp({
     email: authEmail,
     password: input.password,
     options: {
@@ -198,15 +261,10 @@ export async function supabaseSignUp(
         name: input.name.trim(),
         role: input.role,
         phone: normalizedPhone,
+        login_email: authEmail,
       },
     },
-  }
-
-  if (input.method === 'email' && input.email) {
-    signUpOptions.options.data.login_email = input.email.trim().toLowerCase()
-  }
-
-  const { data, error } = await supabase.auth.signUp(signUpOptions)
+  })
 
   if (error) return { user: null, error: formatSupabaseAuthError(error.message) }
   if (!data.user) return { user: null, error: 'Sign up failed. Try again.' }
@@ -222,8 +280,8 @@ export async function supabaseSignUp(
   const profilePayload = {
     id: data.user.id,
     name: input.name.trim(),
-    phone: normalizedPhone ?? null,
-    email: input.method === 'email' ? input.email?.trim().toLowerCase() ?? null : null,
+    phone: normalizedPhone,
+    email: authEmail,
     role: input.role,
     identity_verification: identityVerificationToJson(emptyIdentityVerification()),
   }
@@ -234,6 +292,35 @@ export async function supabaseSignUp(
   const profile = await fetchProfileById(data.user.id)
   if (!profile) return { user: null, error: 'Account created but profile missing. Contact support.' }
   return { user: profile, error: null }
+}
+
+export async function supabaseRequestPasswordReset(email: string): Promise<{ error: string | null }> {
+  const supabase = getSupabaseClient()
+  if (!supabase) return { error: 'Supabase is not configured.' }
+
+  const normalized = email.trim().toLowerCase()
+  if (!isValidEmail(normalized)) {
+    return { error: 'Enter a valid email address.' }
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(normalized, {
+    redirectTo: getSupabaseAuthRedirectUrl('recovery'),
+  })
+  if (error) return { error: formatSupabaseAuthError(error.message) }
+  return { error: null }
+}
+
+export async function supabaseUpdatePassword(newPassword: string): Promise<{ error: string | null }> {
+  const supabase = getSupabaseClient()
+  if (!supabase) return { error: 'Supabase is not configured.' }
+
+  if (newPassword.length < 6) {
+    return { error: 'Password must be at least 6 characters.' }
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) return { error: formatSupabaseAuthError(error.message) }
+  return { error: null }
 }
 
 export async function supabaseSignOut(): Promise<void> {

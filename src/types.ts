@@ -38,7 +38,7 @@ export interface IdentityVerification {
 /** @deprecated Use IdentityVerification on user.identityVerification */
 export type HostVerification = IdentityVerification
 
-export type AuthScreen = 'welcome' | 'login' | 'signup'
+export type AuthScreen = 'welcome' | 'login' | 'signup' | 'forgot-password' | 'reset-password'
 
 export type Screen =
   | 'customer-home'
