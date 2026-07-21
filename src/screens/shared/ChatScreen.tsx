@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Dimensions,
   FlatList,
   Image,
   Keyboard,
+  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
@@ -32,13 +35,32 @@ import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import type { Booking, ChatMessage } from '../../types'
 
+/** WhatsApp-style square chat image preview — tap opens full image in lightbox. */
+function chatImagePreviewSize(screenWidth: number) {
+  return Math.min(240, Math.round(screenWidth * 0.58))
+}
+
+function keyboardInsetFromEvent(
+  event: { endCoordinates: { height: number; screenY: number } },
+  windowHeight: number,
+) {
+  const { height, screenY } = event.endCoordinates
+  const fromScreenY = Math.max(0, windowHeight - screenY)
+  // When adjustResize already lifted the window, fromScreenY is ~0 — don't add extra lift.
+  if (fromScreenY > 0) return fromScreenY
+  const metricsHeight = Keyboard.metrics()?.height ?? 0
+  return Math.max(height, metricsHeight, 0)
+}
+
 function ChatMessageImage({
   uri,
-  style,
+  size,
+  previewStyle,
   onPress,
 }: {
   uri: string
-  style: ReturnType<typeof createStyles>['image']
+  size: number
+  previewStyle: ReturnType<typeof createStyles>['imagePreview']
   onPress: (uri: string) => void
 }) {
   return (
@@ -47,7 +69,9 @@ function ChatMessageImage({
       accessibilityRole="imagebutton"
       accessibilityLabel="View full image"
     >
-      <Image source={{ uri }} style={style} resizeMode="cover" />
+      <View style={[previewStyle, { width: size, height: size }]}>
+        <Image source={{ uri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+      </View>
     </Pressable>
   )
 }
@@ -79,6 +103,7 @@ function MessageBubble({
   isOwn,
   colors,
   styles,
+  imagePreviewSize,
   onImagePress,
   paymentConfirmed,
 }: {
@@ -86,6 +111,7 @@ function MessageBubble({
   isOwn: boolean
   colors: ReturnType<typeof useTheme>['colors']
   styles: ReturnType<typeof createStyles>
+  imagePreviewSize: number
   onImagePress: (uri: string) => void
   paymentConfirmed?: boolean
 }) {
@@ -104,7 +130,12 @@ function MessageBubble({
           {message.kind === 'payment_proof'
             ? renderPaymentProofContent(message, isOwn, styles, onImagePress, paymentConfirmed)
             : message.imageUri ? (
-                <ChatMessageImage uri={message.imageUri} style={styles.image} onPress={onImagePress} />
+                <ChatMessageImage
+                  uri={message.imageUri}
+                  size={imagePreviewSize}
+                  previewStyle={styles.imagePreview}
+                  onPress={onImagePress}
+                />
               ) : null}
           <Text style={styles.systemTime}>{formatChatTime(message.createdAt)}</Text>
         </View>
@@ -129,7 +160,12 @@ function MessageBubble({
           <>
             {message.text ? <Text style={[styles.body, isOwn && styles.bodyOwn]}>{message.text}</Text> : null}
             {message.imageUri ? (
-              <ChatMessageImage uri={message.imageUri} style={styles.image} onPress={onImagePress} />
+              <ChatMessageImage
+                uri={message.imageUri}
+                size={imagePreviewSize}
+                previewStyle={styles.imagePreview}
+                onPress={onImagePress}
+              />
             ) : null}
           </>
         )}
@@ -160,14 +196,16 @@ export function ChatThreadPanel({
 }) {
   const { user } = useAuth()
   const { colors, formStyles } = useTheme()
+  const { width: screenWidth, height: windowHeight } = useWindowDimensions()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const imagePreviewSize = useMemo(() => chatImagePreviewSize(screenWidth), [screenWidth])
   const insets = useSafeAreaInsets()
   const { getMessages, refreshThread, sendMessage, markRead } = useMessages()
   const [draft, setDraft] = useState('')
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null)
   const [lightboxUri, setLightboxUri] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
-  const [keyboardHeight, setKeyboardHeight] = useState(0)
+  const [keyboardInset, setKeyboardInset] = useState(0)
   const [attachSheetOpen, setAttachSheetOpen] = useState(false)
   const [permissionAlert, setPermissionAlert] = useState<{ title: string; message: string } | null>(null)
   const listRef = useRef<FlatList<ChatMessage>>(null)
@@ -194,19 +232,20 @@ export function ChatThreadPanel({
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
     const show = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardHeight(event.endCoordinates.height)
+      const liveWindowHeight = Dimensions.get('window').height
+      setKeyboardInset(keyboardInsetFromEvent(event, liveWindowHeight))
       setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true })
       }, Platform.OS === 'ios' ? 250 : 100)
     })
     const hide = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0)
+      setKeyboardInset(0)
     })
     return () => {
       show.remove()
       hide.remove()
     }
-  }, [])
+  }, [windowHeight])
 
   const scrollToLatest = useCallback(() => {
     listRef.current?.scrollToEnd({ animated: true })
@@ -318,11 +357,18 @@ export function ChatThreadPanel({
     )
   }
 
-  const composerBottomInset =
-    keyboardHeight > 0 ? keyboardHeight + spacing.sm : bottomSafePadding(insets.bottom, spacing.sm)
+  const composerSafeInset =
+    keyboardInset > 0 ? spacing.sm : bottomSafePadding(insets.bottom, spacing.sm)
+  const androidKeyboardLift = Platform.OS === 'android' && keyboardInset > 0 ? keyboardInset : 0
 
   return (
-    <View style={styles.wrap}>
+    <KeyboardAvoidingView
+      style={styles.wrap}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      enabled={Platform.OS === 'ios'}
+    >
+      <View style={[styles.chatBody, androidKeyboardLift > 0 && { paddingBottom: androidKeyboardLift }]}>
         <View style={styles.header}>
         {showBackButton && onBack ? <BackButton onPress={onBack} label="Back" /> : null}
         <View style={styles.headerCopy}>
@@ -357,6 +403,7 @@ export function ChatThreadPanel({
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="interactive"
+        automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         onContentSizeChange={scrollToLatest}
         onLayout={scrollToLatest}
         renderItem={({ item }) => (
@@ -365,6 +412,7 @@ export function ChatThreadPanel({
             isOwn={item.senderId === user.id}
             colors={colors}
             styles={styles}
+            imagePreviewSize={imagePreviewSize}
             onImagePress={setLightboxUri}
             paymentConfirmed={paymentConfirmed}
           />
@@ -384,16 +432,16 @@ export function ChatThreadPanel({
         }
       />
 
-      {pendingImageUri ? (
-        <View style={styles.pendingImageWrap}>
-          <Image source={{ uri: pendingImageUri }} style={styles.pendingImage} resizeMode="cover" />
-          <Pressable onPress={() => setPendingImageUri(null)} style={styles.removePending}>
-            <AppIcon name="x" size={14} color={colors.white} />
-          </Pressable>
-        </View>
-      ) : null}
+      <View style={[styles.composer, { paddingBottom: composerSafeInset }]}>
+        {pendingImageUri ? (
+          <View style={styles.pendingImageWrap}>
+            <Image source={{ uri: pendingImageUri }} style={styles.pendingImage} resizeMode="cover" />
+            <Pressable onPress={() => setPendingImageUri(null)} style={styles.removePending}>
+              <AppIcon name="x" size={14} color={colors.white} />
+            </Pressable>
+          </View>
+        ) : null}
 
-      <View style={[styles.composer, { paddingBottom: composerBottomInset }]}>
         <View style={styles.composerRow}>
           <Pressable onPress={showAttachOptions} style={styles.attachBtn} hitSlop={8}>
             <AppIcon name="image" size={22} color={colors.black} />
@@ -421,6 +469,7 @@ export function ChatThreadPanel({
           </Pressable>
         </View>
       </View>
+      </View>
       <ImageLightbox
         visible={!!lightboxUri}
         imageUri={lightboxUri}
@@ -443,7 +492,7 @@ export function ChatThreadPanel({
         icon="alert-circle"
         onClose={() => setPermissionAlert(null)}
       />
-    </View>
+    </KeyboardAvoidingView>
   )
 }
 
@@ -483,6 +532,7 @@ export function ChatScreen() {
 function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
     wrap: { flex: 1, backgroundColor: colors.white },
+    chatBody: { flex: 1 },
     flex: { flex: 1 },
     header: {
       paddingHorizontal: spacing.screen,
@@ -516,7 +566,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       flexGrow: 1,
       gap: spacing.sm,
     },
-    row: { flexDirection: 'row', marginBottom: spacing.sm },
+    row: { flexDirection: 'row', marginBottom: spacing.md },
     rowOwn: { justifyContent: 'flex-end' },
     rowOther: { justifyContent: 'flex-start' },
     bubble: {
@@ -531,7 +581,11 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     proofLabel: { fontSize: 11, fontWeight: '700', color: colors.gray500, letterSpacing: 0.4 },
     body: { fontSize: 15, lineHeight: 21, color: colors.black },
     bodyOwn: { color: colors.white },
-    image: { width: 220, height: 160, borderRadius: radius.md, backgroundColor: colors.gray100 },
+    imagePreview: {
+      borderRadius: radius.md,
+      overflow: 'hidden',
+      backgroundColor: colors.gray100,
+    },
     time: { fontSize: 11, color: colors.gray500, alignSelf: 'flex-end' },
     timeOwn: { color: 'rgba(255,255,255,0.75)' },
     systemWrap: { alignItems: 'center', marginVertical: spacing.sm },
@@ -553,11 +607,16 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     emptyThreadTitle: { fontSize: 16, fontWeight: '600', color: colors.black },
     emptyThreadSub: { fontSize: 14, color: colors.gray500, textAlign: 'center', lineHeight: 20, paddingHorizontal: spacing.lg },
     pendingImageWrap: {
-      marginHorizontal: spacing.screen,
       marginBottom: spacing.sm,
       alignSelf: 'flex-start',
     },
-    pendingImage: { width: 88, height: 88, borderRadius: radius.md },
+    pendingImage: {
+      width: 88,
+      height: 88,
+      borderRadius: radius.md,
+      overflow: 'hidden',
+      backgroundColor: colors.gray100,
+    },
     removePending: {
       position: 'absolute',
       top: -6,
