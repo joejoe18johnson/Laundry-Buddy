@@ -25,25 +25,51 @@ function resolveAuthEmail(method: LoginMethod, phone?: string, email?: string): 
   return email.trim().toLowerCase()
 }
 
-async function authEmailForPhoneLogin(phone: string): Promise<{ authEmail: string | null; error: string | null }> {
+function authEmailForPhoneLogin(phone: string): { authEmail: string | null; error: string | null } {
   const normalized = normalizePhone(phone)
   if (!normalized.replace(/\D/g, '')) {
     return { authEmail: null, error: 'Enter a valid phone number.' }
   }
 
-  if (normalized === normalizePhone(ADMIN_PHONE)) {
-    return { authEmail: authEmailFromPhone(normalized), error: null }
-  }
-
-  const registered = await supabasePhoneInUse(phone)
-  if (!registered) {
-    return {
-      authEmail: null,
-      error: 'No account found for this phone number. Check the number or create an account.',
-    }
-  }
-
   return { authEmail: authEmailFromPhone(normalized), error: null }
+}
+
+async function ensureProfileForAuthUser(
+  authUser: { id: string; user_metadata?: Record<string, unknown> },
+  loginPhone?: string,
+): Promise<User | null> {
+  const supabase = getSupabaseClient()
+  if (!supabase) return null
+
+  const existing = await fetchProfileById(authUser.id)
+  const meta = authUser.user_metadata ?? {}
+  const normalizedPhone = loginPhone
+    ? normalizePhone(loginPhone)
+    : typeof meta.phone === 'string' && meta.phone.trim()
+      ? normalizePhone(meta.phone)
+      : undefined
+
+  if (existing) {
+    if (normalizedPhone && existing.phone !== normalizedPhone) {
+      return supabaseUpdateProfile({ ...existing, phone: normalizedPhone })
+    }
+    return existing
+  }
+
+  const role = meta.role === 'host' || meta.role === 'admin' ? meta.role : 'customer'
+  const profilePayload = {
+    id: authUser.id,
+    name: typeof meta.name === 'string' && meta.name.trim() ? meta.name.trim() : 'Laundry Buddy user',
+    phone: normalizedPhone ?? null,
+    email: typeof meta.login_email === 'string' ? meta.login_email.trim().toLowerCase() : null,
+    role,
+    identity_verification: identityVerificationToJson(emptyIdentityVerification()),
+  }
+
+  const { error: profileError } = await supabase.from('profiles').upsert(profilePayload)
+  if (profileError) return null
+
+  return fetchProfileById(authUser.id)
 }
 
 export async function fetchProfileById(userId: string): Promise<User | null> {
@@ -97,7 +123,7 @@ export async function supabaseSignIn(
 
   let authEmail: string
   if (method === 'phone') {
-    const resolved = await authEmailForPhoneLogin(identifier)
+    const resolved = authEmailForPhoneLogin(identifier)
     if (!resolved.authEmail || resolved.error) {
       return { user: null, error: resolved.error ?? 'Invalid credentials. Check your details and try again.' }
     }
@@ -117,16 +143,25 @@ export async function supabaseSignIn(
       password,
     })
     if (!legacyAdmin.error && legacyAdmin.data.user) {
-      const profile = await fetchProfileById(legacyAdmin.data.user.id)
+      const profile = await ensureProfileForAuthUser(legacyAdmin.data.user, identifier)
       if (!profile) return { user: null, error: 'Account profile not found. Contact support.' }
       return { user: profile, error: null }
     }
   }
 
-  if (error) return { user: null, error: formatSupabaseAuthError(error.message) }
+  if (error) {
+    const message =
+      method === 'phone'
+        ? 'Invalid phone or password. Double-check your details or create an account.'
+        : formatSupabaseAuthError(error.message)
+    return { user: null, error: message }
+  }
   if (!data.user) return { user: null, error: 'Sign in failed. Try again.' }
 
-  const profile = await fetchProfileById(data.user.id)
+  const profile = await ensureProfileForAuthUser(
+    data.user,
+    method === 'phone' ? identifier : undefined,
+  )
   if (!profile) return { user: null, error: 'Account profile not found. Contact support.' }
   return { user: profile, error: null }
 }

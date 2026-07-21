@@ -13,10 +13,14 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
-import { GhostButton, OutlineButton, PrimaryButton } from './ui'
+import { OutlineButton, PrimaryButton } from './ui'
 import { useTheme } from '../context/ThemeContext'
 import { brand, radius, spacing } from '../theme'
 import { toTitleCase } from '../lib/titleCase'
+
+const SLIDE_HEIGHT = 348
+const TIPS_MIN_HEIGHT = 112
+const ACTIONS_MIN_HEIGHT = 112
 
 type TourRole = 'customer' | 'host'
 
@@ -138,7 +142,7 @@ export function VerificationCelebrationTour({ visible, role, onComplete, onDismi
   }
 
   const renderStep: ListRenderItem<TourStep> = ({ item }) => (
-    <View style={[styles.slide, slideWidth > 0 && { width: slideWidth }]}>
+    <View style={[styles.slide, slideWidth > 0 && { width: slideWidth, height: SLIDE_HEIGHT }]}>
       <View style={styles.iconWrap}>
         <AppIcon name={item.icon} size={28} color={colors.white} />
       </View>
@@ -198,12 +202,11 @@ export function VerificationCelebrationTour({ visible, role, onComplete, onDismi
               {isLast ? (
                 <PrimaryButton title={completeLabel} icon={role === 'host' ? 'settings' : 'search'} full onPress={onComplete} />
               ) : (
-                <PrimaryButton title="Next" full onPress={goNext} />
+                <>
+                  <PrimaryButton title="Next" full onPress={goNext} />
+                  <OutlineButton title="Skip tour" full onPress={onDismiss} />
+                </>
               )}
-              {!isLast ? <OutlineButton title="Skip tour" full onPress={onDismiss} /> : null}
-              {index > 0 && !isLast ? (
-                <GhostButton title="Back" onPress={() => scrollToStep(index - 1)} />
-              ) : null}
             </View>
           </View>
         </SafeAreaView>
@@ -229,6 +232,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       borderWidth: 1,
       borderColor: colors.gray100,
       maxHeight: '92%',
+      overflow: 'hidden',
     },
     header: {
       flexDirection: 'row',
@@ -245,12 +249,13 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       textTransform: 'uppercase',
     },
     skip: { fontSize: 14, fontWeight: '600', color: colors.gray500 },
-    listWrap: { width: '100%', overflow: 'hidden' },
-    list: { width: '100%' },
+    listWrap: { width: '100%', overflow: 'hidden', height: SLIDE_HEIGHT },
+    list: { width: '100%', height: SLIDE_HEIGHT },
     slide: {
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
       gap: spacing.md,
+      height: SLIDE_HEIGHT,
     },
     iconWrap: {
       width: 64,
@@ -276,13 +281,15 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       lineHeight: 22,
     },
     tips: {
-      marginTop: spacing.sm,
+      marginTop: 'auto',
       gap: spacing.sm,
       backgroundColor: colors.gray50,
       borderRadius: radius.lg,
       padding: spacing.md,
       borderWidth: 1,
       borderColor: colors.gray100,
+      minHeight: TIPS_MIN_HEIGHT,
+      justifyContent: 'center',
     },
     tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
     tipText: { flex: 1, fontSize: 14, color: colors.gray600, lineHeight: 20 },
@@ -303,6 +310,8 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     actions: {
       gap: spacing.sm,
       paddingHorizontal: spacing.lg,
+      minHeight: ACTIONS_MIN_HEIGHT,
+      justifyContent: 'flex-end',
     },
   })
 }
