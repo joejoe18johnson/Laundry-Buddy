@@ -15,6 +15,7 @@ import { HostProfileScreen } from './src/screens/customer/HostProfileScreen'
 import { TrackingScreen } from './src/screens/customer/TrackingScreen'
 import { LeaveReviewScreen } from './src/screens/customer/LeaveReviewScreen'
 import { DashboardScreen } from './src/screens/host/DashboardScreen'
+import { HostDryerScreen } from './src/screens/host/HostDryerScreen'
 import { HostHubScreen } from './src/screens/host/HostHubScreen'
 import { MarkDryScreen } from './src/screens/host/MarkDryScreen'
 import { WelcomeScreen } from './src/screens/auth/WelcomeScreen'
@@ -63,6 +64,7 @@ import {
   type PushPermissionStatus,
 } from './src/lib/pushNotifications'
 import { getGreetingName } from './src/lib/displayName'
+import { countDryerTabLoads } from './src/lib/hostLoads'
 import { linkFromPushData } from './src/lib/notificationLinks'
 import { VERIFICATION_CODE_REQUEST_TITLE } from './src/lib/verificationCodes'
 import type { Screen } from './src/types'
@@ -391,6 +393,7 @@ function AppShell() {
   const {
     screen,
     hostRequests,
+    activeLoads,
     activeGuestBookings,
     navigate,
     goBack,
@@ -456,6 +459,7 @@ function AppShell() {
   )
 
   const pendingRequestCount = hostRequests.length
+  const dryerLoadCount = countDryerTabLoads(activeLoads)
 
   const hostTabs: NavTab[] = useMemo(
     () => [
@@ -467,6 +471,15 @@ function AppShell() {
         matchScreens: ['host-dashboard'],
         badge: pendingRequestCount > 0,
         badgeCount: pendingRequestCount,
+      },
+      {
+        id: 'dryer',
+        label: 'Dryer',
+        icon: 'wind',
+        screen: 'host-dryer',
+        matchScreens: ['host-dryer', 'host-mark-dry'],
+        badge: dryerLoadCount > 0,
+        badgeCount: dryerLoadCount,
       },
       {
         id: 'browse',
@@ -492,7 +505,7 @@ function AppShell() {
         matchScreens: ['account'],
       },
     ],
-    [pendingRequestCount, totalUnreadCount],
+    [dryerLoadCount, pendingRequestCount, totalUnreadCount],
   )
 
   const tabs = isCustomer ? customerTabs : hostTabs
@@ -573,6 +586,7 @@ function AppShell() {
         {screen === 'customer-tracking' && <TrackingScreen />}
         {screen === 'customer-leave-review' && <LeaveReviewScreen />}
         {screen === 'host-dashboard' && <DashboardScreen />}
+        {screen === 'host-dryer' && <HostDryerScreen />}
         {screen === 'host-mark-dry' && <MarkDryScreen />}
         {screen === 'history' && <HistoryScreen />}
         {screen === 'messages' && <MessagesScreen />}

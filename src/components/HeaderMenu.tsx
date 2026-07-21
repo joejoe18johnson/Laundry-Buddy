@@ -79,23 +79,23 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
     role: { fontSize: 13, color: colors.gray500, marginTop: 2 },
     onlineStatus: { fontSize: 12, color: colors.gray400, marginTop: 4, fontWeight: '600' },
     onlineLive: { color: colors.green },
-    contact: { fontSize: 12, color: colors.gray400, marginTop: spacing.sm },
     closeBtn: { padding: spacing.sm },
-    menu: { flex: 1, paddingVertical: spacing.sm },
-    section: { paddingBottom: spacing.sm },
+    menu: { flex: 1, paddingVertical: 8 },
+    section: { paddingBottom: 8 },
     sectionTitle: {
       fontSize: 11,
       fontWeight: '700',
       color: colors.gray400,
       letterSpacing: 0.6,
       paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.sm,
+      paddingTop: spacing.sm,
+      paddingBottom: 6,
     },
     menuItem: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.md,
-      paddingVertical: spacing.md,
+      paddingVertical: 13,
       paddingHorizontal: spacing.lg,
     },
     menuItemPressed: { backgroundColor: colors.gray50 },
@@ -222,7 +222,6 @@ export function HeaderMenu({
   const styles = useMemo(() => createHeaderMenuStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const isCustomer = user.role === 'customer'
-  const contact = user.email ?? user.phone
   const locationHint =
     locationLabel && radiusMiles != null
       ? `${locationLabel} · ${formatRadiusMilesLabel(radiusMiles)}`
@@ -250,7 +249,6 @@ export function HeaderMenu({
                     {isHostOnline ? '● Online' : '○ Offline'}
                   </Text>
                 )}
-                {contact ? <Text style={styles.contact}>{contact}</Text> : null}
               </View>
               <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
                 <AppIcon name="x" size={20} color={colors.gray500} />

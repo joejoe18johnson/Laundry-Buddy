@@ -15,6 +15,7 @@ import { normalizeHostSettings } from '../../lib/hostSettingsStorage'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { formatMoney, getBookingAmount, cashPaymentHostHint } from '../../lib/bookingPayments'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
+import { splitHostActiveLoads } from '../../lib/hostLoads'
 import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen, StatusBadge, SuccessButton } from '../../components/ui'
 import { HostLoadProgress } from '../../components/HostLoadProgress'
@@ -143,8 +144,6 @@ export function DashboardScreen() {
     declineRequest,
     advanceStage,
     confirmTransferPayment,
-    confirmPickup,
-    openMarkDry,
     openChat,
   } = useApp()
   const [proofLightboxUri, setProofLightboxUri] = useState<string | null>(null)
@@ -162,6 +161,11 @@ export function DashboardScreen() {
   const showVerificationBanner = !!user && !canBookOrHost(user)
   const { colors } = useTheme()
   const styles = useMemo(() => createDashboardStyles(colors), [colors])
+
+  const { dashboardLoads, dryerLoads } = useMemo(
+    () => splitHostActiveLoads(activeLoads),
+    [activeLoads],
+  )
 
   useEffect(() => {
     if (!hostSettings) return
@@ -274,6 +278,25 @@ export function DashboardScreen() {
         </Text>
       )}
 
+      {dryerLoads.length > 0 && (
+        <Pressable style={styles.dryerBanner} onPress={() => navigate('host-dryer')}>
+          <View style={styles.dryerBannerIcon}>
+            <AppIcon name="wind" size={18} color={colors.white} />
+          </View>
+          <View style={styles.dryerBannerCopy}>
+            <Text style={styles.dryerBannerTitle}>
+              {toTitleCase(
+                `${dryerLoads.length} load${dryerLoads.length === 1 ? '' : 's'} in your dryer`,
+              )}
+            </Text>
+            <Text style={styles.dryerBannerSub}>
+              {toTitleCase('Confirm dry and pickup from the Dryer tab')}
+            </Text>
+          </View>
+          <AppIcon name="chevron-right" size={18} color="rgba(255,255,255,0.8)" />
+        </Pressable>
+      )}
+
       {hostRequests.length > 0 && (
         <View style={styles.newOrdersBanner}>
           <View style={styles.newOrdersBannerIcon}>
@@ -345,7 +368,7 @@ export function DashboardScreen() {
         </View>
       ))}
 
-      {activeLoads.map((load) => (
+      {dashboardLoads.map((load) => (
         <View key={load.id} style={styles.section}>
           <View style={styles.sectionLabelRow}>
             <AppIcon name="package" size={12} color={colors.gray500} />
@@ -425,31 +448,16 @@ export function DashboardScreen() {
             {load.paymentMethod === 'cash' && load.paymentStatus === 'paid' && (
               <SuccessButton title="Cash confirmed at drop-off" icon="check-circle" full disabled />
             )}
-            {load.paymentStatus === 'paid' &&
-              load.stage !== 'drying' &&
-              load.stage !== 'ready' && (
-                <PrimaryButton
-                  title="Start drying"
-                  icon="wind"
-                  full
-                  onPress={() => advanceStage(load.id, 'drying')}
-                />
-              )}
-            {load.stage === 'drying' && (
-              <PrimaryButton title="Mark as dry" onPress={() => openMarkDry(load.id)} full />
-            )}
-            {load.stage === 'ready' && (
-              <View style={styles.pickupBlock}>
-                <Text style={styles.pickupHint}>
-                  {toTitleCase('Confirm once the guest has collected their laundry.')}
-                </Text>
-                <PrimaryButton
-                  title="Guest Picked Up"
-                  icon="check-circle"
-                  full
-                  onPress={() => confirmPickup(load.id)}
-                />
-              </View>
+            {load.paymentStatus === 'paid' && (
+              <PrimaryButton
+                title="Start drying"
+                icon="wind"
+                full
+                onPress={() => {
+                  advanceStage(load.id, 'drying')
+                  navigate('host-dryer')
+                }}
+              />
             )}
             <GhostButton
               title="Message guest"
@@ -461,7 +469,7 @@ export function DashboardScreen() {
         </View>
       ))}
 
-      {hostRequests.length === 0 && activeLoads.length === 0 && (
+      {hostRequests.length === 0 && dashboardLoads.length === 0 && (
         <View style={styles.empty}>
           <AppIcon name="check-circle" size={32} color={colors.gray400} />
           <Text style={styles.emptyTitle}>{toTitleCase('All caught up')}</Text>
@@ -590,6 +598,26 @@ function createDashboardStyles(colors: ReturnType<typeof useTheme>['colors']) {
   newOrdersBannerCopy: { flex: 1, gap: 4 },
   newOrdersBannerTitle: { fontSize: 16, fontWeight: '700', color: colors.white },
   newOrdersBannerSub: { fontSize: 13, color: 'rgba(255,255,255,0.78)', lineHeight: 18 },
+  dryerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.black,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  dryerBannerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dryerBannerCopy: { flex: 1, gap: 4 },
+  dryerBannerTitle: { fontSize: 16, fontWeight: '700', color: colors.white },
+  dryerBannerSub: { fontSize: 13, color: 'rgba(255,255,255,0.78)', lineHeight: 18 },
   section: { marginBottom: spacing.lg },
   sectionLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
   sectionLabel: {

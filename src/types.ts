@@ -47,6 +47,7 @@ export type Screen =
   | 'customer-tracking'
   | 'customer-leave-review'
   | 'host-dashboard'
+  | 'host-dryer'
   | 'host-mark-dry'
   | 'history'
   | 'messages'
@@ -115,6 +116,7 @@ export type NotificationLink =
   | { screen: 'customer-leave-review'; hostId: string; bookingId?: string }
   | { screen: 'customer-host-profile'; hostId: string }
   | { screen: 'host-dashboard'; bookingId?: string }
+  | { screen: 'host-dryer'; bookingId?: string }
   | { screen: 'customer-home' }
   | { screen: 'history'; bookingId?: string }
   | { screen: 'chat'; threadId: string; bookingId?: string }

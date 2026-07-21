@@ -196,6 +196,7 @@ interface AppState {
   advanceStage: (loadId: string, stage: BookingStage, extras?: { dryPhotoUri?: string }) => void
   openMarkDry: (loadId: string) => void
   markDryLoadId: string | null
+  clearMarkDryFocus: () => void
   markDry: (loadId: string, dryPhotoUri?: string) => void
   confirmPickup: (loadId: string) => void
   confirmTransferPayment: (loadId: string) => void
@@ -718,7 +719,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (screen === 'host-mark-dry') {
       setMarkDryLoadId(null)
-      setScreen('host-dashboard')
+      setScreen('host-dryer')
       return true
     }
 
@@ -1521,7 +1522,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const openMarkDry = useCallback((loadId: string) => {
     setMarkDryLoadId(loadId)
-    setScreen('host-mark-dry')
+    setScreen('host-dryer')
+  }, [])
+
+  const clearMarkDryFocus = useCallback(() => {
+    setMarkDryLoadId(null)
   }, [])
 
   const markDry = useCallback(
@@ -1529,7 +1534,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       advanceStage(loadId, 'ready', dryPhotoUri ? { dryPhotoUri } : undefined)
       setMarkDryLoadId(null)
       showToast('Load marked dry — guest notified', { icon: 'check-circle' })
-      setScreen('host-dashboard')
+      setScreen('host-dryer')
     },
     [advanceStage, showToast],
   )
@@ -1724,6 +1729,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       advanceStage,
       openMarkDry,
       markDryLoadId,
+      clearMarkDryFocus,
       markDry,
       confirmPickup,
       confirmTransferPayment,
@@ -1792,6 +1798,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       advanceStage,
       openMarkDry,
       markDryLoadId,
+      clearMarkDryFocus,
       markDry,
       confirmPickup,
       confirmTransferPayment,
