@@ -22,7 +22,7 @@ import { getAllUsers } from '../lib/authStorage'
 import { calculateBookingTotal, applyHostPricing, getHostPricing, DRYER_SHEETS_PRICE } from '../lib/hostPricing'
 import { formatMoney, getBookingAmount } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
-import { refreshDynamicHostCatalog } from '../lib/hostCatalog'
+import { mergeRemoteMarketplaceCatalog } from '../lib/hostCatalog'
 import { resolveGuestFacingHostSettings } from '../lib/defaultHostSettings'
 import { scheduleDropOffReminder } from '../lib/pushNotifications'
 import { formatClothesListSummary, hasDelicates } from '../lib/clothesList'
@@ -36,6 +36,13 @@ import {
   loadCustomerPaymentHistory,
 } from '../lib/paymentHistoryStorage'
 import { loadActiveBookings, saveActiveBookings } from '../lib/bookingStorage'
+import {
+  loadBookingSnapshotsForCustomer,
+  mergeBookingSnapshot,
+  removeBookingSnapshot,
+  saveBookingSnapshot,
+} from '../lib/bookingSyncStorage'
+import { homeScreenForRole, mainTabScreens } from '../lib/navigationBack'
 import {
   filterActiveGuestBookings,
   findGuestBooking,
@@ -91,11 +98,19 @@ import {
 } from '../lib/locationPreferences'
 import { FILTER_AREA_RADIUS_KM, getFilterAreaCenter } from '../lib/belizeDistricts'
 import * as Location from 'expo-location'
+import Constants from 'expo-constants'
+import * as Linking from 'expo-linking'
 import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
 import { canGuestCancelPendingRequest } from '../lib/pendingRequestCancel'
 import { deliverPaymentRequest, needsPaymentRequest, withPaymentRequestedAt } from '../lib/paymentRequestDelivery'
 import { inquiryThreadId, supportThreadId } from '../lib/chatThreads'
 import { syncTrainingDemoIfNeeded } from '../lib/trainingSeedStorage'
+import { parseHostProfileLink } from '../lib/hostProfileLinks'
+import {
+  buildHostListingForSync,
+  fetchHostListingFromSupabase,
+  upsertHostListingToSupabase,
+} from '../lib/supabase/hostService'
 import {
   type Booking,
   type BookingStage,
@@ -138,8 +153,14 @@ interface AppState {
   showMap: boolean
   refreshHostData: () => Promise<void>
   refreshHostOrders: () => Promise<void>
+  refreshGuestBookings: () => Promise<void>
+  refreshAtHome: () => Promise<void>
+  homeRefreshKey: number
   navigate: (screen: Screen) => void
+  goBack: () => boolean
+  registerHardwareBackHandler: (handler: (() => boolean) | null) => void
   viewHostProfile: (host: Host) => void
+  openHostProfileFromLink: (hostId: string, hostUserId?: string) => Promise<boolean>
   openLeaveReview: (hostId: string, bookingId?: string) => void
   submitHostReview: (input: {
     hostId: string
@@ -207,6 +228,10 @@ function nowTime() {
   })
 }
 
+function persistBookingSnapshot(booking: Booking) {
+  void saveBookingSnapshot(booking)
+}
+
 function defaultScreen(role: 'customer' | 'host'): Screen {
   return role === 'host' ? 'host-dashboard' : 'customer-home'
 }
@@ -254,6 +279,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [chatThreadId, setChatThreadId] = useState<string | null>(null)
   const [chatBooking, setChatBooking] = useState<Booking | null>(null)
   const chatReturnScreenRef = useRef<Screen>(defaultScreen(role))
+  const screenHistoryRef = useRef<Screen[]>([])
+  const hardwareBackHandlerRef = useRef<(() => boolean) | null>(null)
+  const [homeRefreshKey, setHomeRefreshKey] = useState(0)
 
   const guestBookingsRef = useRef(guestBookings)
   const selectedBookingIdRef = useRef(selectedBookingId)
@@ -291,11 +319,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [guestBookings, selectedBookingId, activeGuestBookings])
 
   useEffect(() => {
-    loadLocationPreferences().then((prefs) => {
+    void (async () => {
+      const prefs = await loadLocationPreferences()
       setUserLocation(prefs.userLocation)
       setUserLocationLabel(prefs.userLocationLabel)
       setSearchRadiusKmState(prefs.searchRadiusKm)
-    })
+
+      // Standalone APK uses MapLibre; refresh GPS when permission is already granted.
+      if (Constants.appOwnership === 'expo') return
+
+      const { status: initialStatus } = await Location.getForegroundPermissionsAsync()
+      let status = initialStatus
+      if (status === 'undetermined') {
+        const requested = await Location.requestForegroundPermissionsAsync()
+        status = requested.status
+      }
+      if (status !== 'granted') return
+
+      try {
+        const position = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        })
+        const coords: Coordinates = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        }
+        setUserLocation(coords)
+        setUserLocationLabel('Your location')
+        await saveLocationPreferences({
+          userLocation: coords,
+          userLocationLabel: 'Your location',
+          searchRadiusKm: prefs.searchRadiusKm,
+        })
+      } catch {
+        // Keep saved prefs when GPS is temporarily unavailable.
+      }
+    })()
   }, [])
 
   const persistLocationPrefs = useCallback(
@@ -306,25 +365,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    void (async () => {
-      const map = await getAllHostSettings()
-      setHostSettingsMap(map)
-      if (role === 'host') {
-        setHostSettings(map[user!.id] ?? { ...DEFAULT_HOST_SETTINGS })
-      }
-      await refreshDynamicHostCatalog(map)
-      setDynamicHostsVersion((version) => version + 1)
-    })()
-  }, [role, user!.id])
+    if (role === 'host' && user) {
+      setHostSettings(hostSettingsMap[user.id] ?? { ...DEFAULT_HOST_SETTINGS })
+    }
+  }, [hostSettingsMap, role, user?.id])
 
-  useEffect(() => {
-    if (!user || !Object.keys(hostSettingsMap).length) return
-    void refreshDynamicHostCatalog(hostSettingsMap).then(() => {
-      setDynamicHostsVersion((version) => version + 1)
+  const applyGuestBookingsFromStorage = useCallback(async () => {
+    if (role !== 'customer' || !user) return
+    const stored = await loadActiveBookings(user.id)
+    const seed = filterActiveGuestBookings(getCustomerSeedBookings(user.id))
+    const snapshots = await loadBookingSnapshotsForCustomer(user.id)
+    const merged = mergeGuestBookings(seed, stored).map((booking) => {
+      const snapshot = snapshots.find((entry) => entry.id === booking.id)
+      return snapshot ? mergeBookingSnapshot(booking, snapshot) : booking
     })
-  }, [hostSettingsMap, user?.id, user?.identityVerification?.status])
+    for (const snapshot of snapshots) {
+      if (!merged.some((entry) => entry.id === snapshot.id)) {
+        merged.push(snapshot)
+      }
+    }
+    const active = filterActiveGuestBookings(merged)
+    setGuestBookings(active)
+    setSelectedBookingId((current) =>
+      current && findGuestBooking(active, current) ? current : active[0]?.id ?? null,
+    )
+  }, [role, user])
 
   useEffect(() => {
+    screenHistoryRef.current = []
     setScreen(defaultScreen(role))
     void syncTrainingDemoIfNeeded().then(() => {
       if (role === 'host') {
@@ -345,29 +413,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           })
         })
       } else {
-        void loadActiveBookings(user!.id).then((stored) => {
-          const seed = filterActiveGuestBookings(getCustomerSeedBookings(user!.id))
-          const merged = mergeGuestBookings(seed, stored)
-          setGuestBookings(merged)
-          setSelectedBookingId((current) =>
-            current && findGuestBooking(merged, current) ? current : merged[0]?.id ?? null,
-          )
-        })
+        void applyGuestBookingsFromStorage()
       }
     })
-  }, [role, user!.id])
+  }, [applyGuestBookingsFromStorage, role, user!.id])
 
   useEffect(() => {
     if (role === 'customer' && user) {
       void saveActiveBookings(user.id, guestBookings)
     }
   }, [guestBookings, role, user])
-
-  useEffect(() => {
-    if (role === 'host') {
-      setHostSettings(hostSettingsMap[user!.id] ?? { ...DEFAULT_HOST_SETTINGS })
-    }
-  }, [role, user!.id, hostSettingsMap])
 
   const allOnlineHosts = useMemo(() => {
     const available = getAvailableHosts()
@@ -480,10 +535,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return
       }
       const wasOnline = hostSettingsMap[user.id]?.isOnline ?? false
+      const mergedMap = { ...hostSettingsMap, [user.id]: settings }
       await saveHostSettings(user.id, settings)
       setHostSettings(settings)
-      setHostSettingsMap((prev) => ({ ...prev, [user.id]: settings }))
-      await refreshDynamicHostCatalog({ ...hostSettingsMap, [user.id]: settings })
+      setHostSettingsMap(mergedMap)
+
+      const existingHost = getHostByUserId(user.id)
+      const syncedHost = buildHostListingForSync(user, settings, existingHost ?? null)
+      setDynamicHostsVersion((version) => version + 1)
+      const syncResult = await upsertHostListingToSupabase(user, syncedHost, settings)
+      if (!syncResult.ok) {
+        showToast(syncResult.error ?? 'Could not sync listing to the server', { icon: 'alert-circle' })
+      }
+
+      const { settingsMap } = await mergeRemoteMarketplaceCatalog(mergedMap)
+      setHostSettingsMap(settingsMap)
       setDynamicHostsVersion((version) => version + 1)
       showToast('Settings saved', { icon: 'check' })
 
@@ -518,15 +584,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshHostData = useCallback(async () => {
     const map = await getAllHostSettings()
-    setHostSettingsMap(map)
+    const { settingsMap } = await mergeRemoteMarketplaceCatalog(map)
+    setHostSettingsMap(settingsMap)
     if (role === 'host' && user) {
-      setHostSettings(map[user.id] ?? { ...DEFAULT_HOST_SETTINGS })
+      setHostSettings(settingsMap[user.id] ?? { ...DEFAULT_HOST_SETTINGS })
     }
-    await refreshDynamicHostCatalog(map)
     setDynamicHostsVersion((version) => version + 1)
   }, [role, user])
 
-  const navigate = useCallback((next: Screen) => setScreen(next), [])
+  useEffect(() => {
+    void refreshHostData()
+  }, [refreshHostData, user?.id, user?.identityVerification?.status])
+
+  const navigate = useCallback((next: Screen) => {
+    setScreen((current) => {
+      if (current !== next) {
+        screenHistoryRef.current.push(current)
+      }
+      return next
+    })
+  }, [])
+
+  const registerHardwareBackHandler = useCallback((handler: (() => boolean) | null) => {
+    hardwareBackHandlerRef.current = handler
+  }, [])
+
+  const refreshGuestBookings = useCallback(async () => {
+    await applyGuestBookingsFromStorage()
+  }, [applyGuestBookingsFromStorage])
+
+  const refreshAtHome = useCallback(async () => {
+    if (role === 'host') {
+      await refreshHostOrders()
+    }
+    await refreshHostData()
+    if (role === 'customer') {
+      await refreshGuestBookings()
+    }
+    setHomeRefreshKey((key) => key + 1)
+    showToast('Refreshed', { icon: 'refresh-cw' })
+  }, [refreshGuestBookings, refreshHostData, refreshHostOrders, role, showToast])
 
   const requireMarketplaceAccess = useCallback(() => {
     if (!user || isIdentityVerified(user)) return true
@@ -606,6 +703,61 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setScreen(chatReturnScreenRef.current)
   }, [])
 
+  const goBack = useCallback((): boolean => {
+    if (hardwareBackHandlerRef.current?.()) return true
+
+    if (screen === 'chat') {
+      closeChat()
+      return true
+    }
+
+    if (screen === 'host-mark-dry') {
+      setMarkDryLoadId(null)
+      setScreen('host-dashboard')
+      return true
+    }
+
+    const homeScreen = homeScreenForRole(role)
+    const history = screenHistoryRef.current
+    if (history.length > 0) {
+      setScreen(history.pop()!)
+      return true
+    }
+
+    if (screen === homeScreen) {
+      void refreshAtHome()
+      return true
+    }
+
+    const tabs = mainTabScreens(role)
+    if (tabs.includes(screen)) {
+      setScreen(homeScreen)
+      return true
+    }
+
+    setScreen(homeScreen)
+    return true
+  }, [closeChat, refreshAtHome, role, screen])
+
+  useEffect(() => {
+    if (!selectedHost?.hostUserId) return
+    const settings = hostSettingsMap[selectedHost.hostUserId]
+    if (!settings) return
+    setSelectedHost((current) => {
+      if (!current || current.hostUserId !== selectedHost.hostUserId) return current
+      const next = applyHostSettings(current, settings)
+      if (
+        next.price === current.price &&
+        next.foldingPrice === current.foldingPrice &&
+        next.sheetsPrice === current.sheetsPrice &&
+        next.location === current.location
+      ) {
+        return current
+      }
+      return next
+    })
+  }, [hostSettingsMap, selectedHost?.hostUserId])
+
   const viewHostProfile = useCallback(
     (host: Host) => {
       const resolved = applyHostSettings(
@@ -617,6 +769,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [hostSettingsMap],
   )
+
+  const openHostProfileFromLink = useCallback(
+    async (hostId: string, hostUserId?: string) => {
+      let host =
+        getHostById(hostId) ?? (hostUserId ? getHostByUserId(hostUserId) : undefined)
+      let settingsOverride: HostSettings | undefined
+
+      if (!host) {
+        const remote = await fetchHostListingFromSupabase(hostId, hostUserId)
+        if (remote) {
+          host = remote.host
+          settingsOverride = remote.settings
+          const remoteUserId = remote.host.hostUserId
+          if (remoteUserId) {
+            setHostSettingsMap((prev) => ({ ...prev, [remoteUserId]: remote.settings }))
+          }
+          setDynamicHostsVersion((version) => version + 1)
+        }
+      }
+
+      if (!host) {
+        showToast('Host profile is not available yet', { icon: 'user' })
+        return false
+      }
+
+      const resolved = applyHostSettings(
+        host,
+        settingsOverride ?? (host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined),
+      )
+      setSelectedHost(resolved)
+      setScreen('customer-host-profile')
+      return true
+    },
+    [hostSettingsMap, showToast],
+  )
+
+  useEffect(() => {
+    const handleUrl = (url: string | null) => {
+      const parsed = parseHostProfileLink(url)
+      if (!parsed) return
+      void openHostProfileFromLink(parsed.hostId, parsed.hostUserId)
+    }
+
+    void Linking.getInitialURL().then(handleUrl)
+    const subscription = Linking.addEventListener('url', ({ url }) => handleUrl(url))
+    return () => subscription.remove()
+  }, [openHostProfileFromLink])
 
   const refreshHostReviews = useCallback(async (hostId: string) => {
     const stored = await loadStoredReviewsForHost(hostId)
@@ -928,6 +1127,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setGuestBookings((prev) => upsertGuestBooking(prev, newBooking))
       setSelectedBookingId(bookingId)
       setScreen('customer-tracking')
+      persistBookingSnapshot(newBooking)
 
       if (selectedHost.hostUserId) {
         const hostRequest: HostRequest = {
@@ -1025,6 +1225,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setHostRequests(nextRequests)
       setHostStats((prev) => ({ ...prev, loadsToday: prev.loadsToday + 1 }))
       void saveHostOrders(user.id, { pendingRequests: nextRequests, activeLoads: nextLoads })
+      persistBookingSnapshot(load)
 
       setGuestBookings((prev) =>
         patchGuestBooking(prev, request.id, (current) => ({
@@ -1091,6 +1292,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setGuestBookings((prev) =>
         patchGuestBooking(prev, requestId, (current) => ({ ...current, requestStatus: 'declined' })),
       )
+      const declined = findGuestBooking(guestBookingsRef.current, requestId)
+      if (declined) {
+        persistBookingSnapshot({ ...declined, requestStatus: 'declined' })
+      }
       showToast('Request declined', { icon: 'x-circle' })
     },
     [hostRequests, activeLoads, user, notifyCustomer, showToast],
@@ -1139,7 +1344,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const next = prev.map((load) => {
           if (load.id !== loadId) return load
           target = load
-          return patch(load)
+          const patched = patch(load)
+          persistBookingSnapshot(patched)
+          return patched
         })
         if (role === 'host' && user) {
           void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
@@ -1150,7 +1357,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setGuestBookings((prev) => {
         const existing = findGuestBooking(prev, loadId)
         if (existing) target = existing
-        return patchGuestBooking(prev, loadId, patch)
+        const next = patchGuestBooking(prev, loadId, patch)
+        const updated = findGuestBooking(next, loadId)
+        if (updated) persistBookingSnapshot(updated)
+        return next
       })
 
       if (target?.customerId) {
@@ -1221,7 +1431,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (load.id !== loadId) return load
           notifyTarget = load
           persistIfPickedUp(load)
-          return patchLoad(load)
+          const patched = patchLoad(load)
+          if (stage === 'picked-up') {
+            void removeBookingSnapshot(loadId)
+          } else {
+            persistBookingSnapshot(patched)
+          }
+          return patched
         })
         const filtered = stage === 'picked-up' ? next.filter((load) => load.id !== loadId) : next
         if (role === 'host' && user) {
@@ -1343,6 +1559,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (role === 'host') {
           void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
+        const updated = next.find((load) => load.id === loadId)
+        if (updated) persistBookingSnapshot(updated)
         return next
       })
 
@@ -1384,10 +1602,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (role === 'host' && user) {
           void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
+        const updated = next.find((load) => load.id === loadId)
+        if (updated) persistBookingSnapshot(updated)
         return next
       })
 
-      setGuestBookings((prev) => patchGuestBooking(prev, loadId, patch))
+      setGuestBookings((prev) => {
+        const next = patchGuestBooking(prev, loadId, patch)
+        const updated = findGuestBooking(next, loadId)
+        if (updated) persistBookingSnapshot(updated)
+        return next
+      })
     },
     [hostRequests, role, user],
   )
@@ -1402,7 +1627,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const next = prev.map((load) => {
           if (load.id !== loadId) return load
           target = load
-          return markPaid(load)
+          const paid = markPaid(load)
+          persistBookingSnapshot(paid)
+          return paid
         })
         if (role === 'host' && user) {
           void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
@@ -1413,7 +1640,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setGuestBookings((prev) => {
         const existing = findGuestBooking(prev, loadId)
         if (existing) target = existing
-        return patchGuestBooking(prev, loadId, markPaid)
+        const next = patchGuestBooking(prev, loadId, markPaid)
+        const updated = findGuestBooking(next, loadId)
+        if (updated) persistBookingSnapshot(updated)
+        return next
       })
 
       if (target?.customerId) {
@@ -1461,8 +1691,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       showMap,
       refreshHostData,
       refreshHostOrders,
+      refreshGuestBookings,
+      refreshAtHome,
+      homeRefreshKey,
       navigate,
+      goBack,
+      registerHardwareBackHandler,
       viewHostProfile,
+      openHostProfileFromLink,
       openLeaveReview,
       submitHostReview,
       getReviewsForHost,
@@ -1524,8 +1760,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       showMap,
       refreshHostData,
       refreshHostOrders,
+      refreshGuestBookings,
+      refreshAtHome,
+      homeRefreshKey,
       navigate,
+      goBack,
+      registerHardwareBackHandler,
       viewHostProfile,
+      openHostProfileFromLink,
       openLeaveReview,
       submitHostReview,
       getReviewsForHost,

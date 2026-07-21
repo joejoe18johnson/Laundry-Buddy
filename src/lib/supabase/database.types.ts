@@ -77,6 +77,7 @@ export interface Database {
           member_since: string | null
           loads_hosted: number
           response_time: string | null
+          is_online: boolean
           created_at: string
           updated_at: string
         }
@@ -106,6 +107,7 @@ export interface Database {
           member_since?: string | null
           loads_hosted?: number
           response_time?: string | null
+          is_online?: boolean
           created_at?: string
           updated_at?: string
         }

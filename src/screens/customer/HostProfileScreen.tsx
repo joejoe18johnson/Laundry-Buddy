@@ -16,7 +16,7 @@ import { formatHostPrice } from '../../lib/hostFilters'
 import { isTopRatedHost } from '../../lib/hostReputation'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
-import { formatDryerSheetsRate, formatServicePrice } from '../../lib/hostPricing'
+import { formatDryerSheetsRate, formatServicePrice, getHostPricing } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import { canBookOrHost } from '../../lib/identityVerification'
@@ -306,6 +306,7 @@ export function HostProfileScreen() {
   const displayName = formatHostDisplayName(host.name)
   const profile = getHostProfileDetails(host.id)
   const settings = getSettingsForHost(host.hostUserId)
+  const pricing = getHostPricing(host, settings)
   const reviews = getReviewsForHost(host.id)
   const ratingSummary = summarizeRatings(reviews)
   const topRated = isTopRatedHost(host, reviews)
@@ -320,7 +321,7 @@ export function HostProfileScreen() {
   const gradient = coverColors[host.id] ?? ['#667eea', '#764ba2']
   const verified = user ? canBookOrHost(user) : false
   const activeLoadCount = activeGuestBookings.length
-  const foldingPrice = host.foldingPrice ?? 0
+  const foldingPrice = pricing.foldingPrice
   const footerMetaParts = [
     `${formatTurnaroundHours(host.turnaroundHours)} dry`,
     foldingPrice > 0 ? `${formatHostPrice(foldingPrice)} folding` : null,
@@ -400,18 +401,18 @@ export function HostProfileScreen() {
         <View style={styles.detailsGrid}>
           <View style={styles.detailChip}>
             <AppIcon name="wind" size={16} />
-            <Text style={styles.detailText}>{toTitleCase('Drying')} — {formatHostPrice(host.price)} {toTitleCase('Per Load')}</Text>
+            <Text style={styles.detailText}>{toTitleCase('Drying')} — {formatServicePrice(pricing.dryPrice)} {toTitleCase('Per Load')}</Text>
           </View>
-          {(host.foldingPrice ?? 0) > 0 && (
+          {foldingPrice > 0 && (
             <View style={styles.detailChip}>
               <AppIcon name="layers" size={16} />
-              <Text style={styles.detailText}>{toTitleCase('Folding')} — {formatHostPrice(host.foldingPrice!)} {toTitleCase('Per Load')}</Text>
+              <Text style={styles.detailText}>{toTitleCase('Folding')} — {formatServicePrice(foldingPrice)} {toTitleCase('Per Load')}</Text>
             </View>
           )}
           <View style={styles.detailChip}>
             <AppIcon name="tag" size={16} />
             <Text style={styles.detailText}>
-              {toTitleCase('Dryer Sheets')} — {formatDryerSheetsRate()} {toTitleCase('If Guest Buys')}
+              {toTitleCase('Dryer Sheets')} — {formatDryerSheetsRate(pricing.sheetsPrice)} {toTitleCase('If Guest Buys')}
             </Text>
           </View>
           <View style={styles.detailChip}>
@@ -481,8 +482,8 @@ export function HostProfileScreen() {
         <View style={styles.footer}>
           <View style={styles.footerPricing}>
             <View style={styles.footerPriceRow}>
-              <Text style={[styles.footerPrice, host.price <= 0 && styles.footerPriceFree]}>
-                {formatHostPrice(host.price)}
+              <Text style={[styles.footerPrice, pricing.dryPrice <= 0 && styles.footerPriceFree]}>
+                {formatHostPrice(pricing.dryPrice)}
               </Text>
               <Text style={styles.footerPriceUnit}>{toTitleCase('Per Load')}</Text>
             </View>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AppState } from 'react-native'
 import {
   Animated,
   FlatList,
@@ -87,7 +88,7 @@ function nearestSnap(height: number, containerHeight: number, velocityY: number)
   return best
 }
 
-export function HomeScreen() {
+export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   const insets = useSafeAreaInsets()
   const { colors } = useTheme()
   const styles = useMemo(() => createHomeStyles(colors), [colors])
@@ -200,6 +201,25 @@ export function HomeScreen() {
     loop.start()
     return () => loop.stop()
   }, [snap, chevronBounce])
+
+  useEffect(() => {
+    void refreshHostData()
+  }, [refreshHostData, refreshKey])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void refreshHostData()
+      }
+    })
+    const interval = setInterval(() => {
+      void refreshHostData()
+    }, 20000)
+    return () => {
+      subscription.remove()
+      clearInterval(interval)
+    }
+  }, [refreshHostData])
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)

@@ -15,7 +15,7 @@ export function getRuntimeDynamicHosts(): Host[] {
   return runtimeDynamicHosts
 }
 
-function hostIdForUser(userId: string, existing?: Host | null): string {
+export function hostIdForUser(userId: string, existing?: Host | null): string {
   if (existing?.id) return existing.id
   if (userId.startsWith('user-')) return `host-${userId}`
   return `host-${userId.slice(0, 8)}`

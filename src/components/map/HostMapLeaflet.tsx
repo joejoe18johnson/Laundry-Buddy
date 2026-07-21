@@ -1,7 +1,8 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 import { buildLeafletMapHtml } from '../../lib/leafletMapHtml'
+import { hostsMapRenderKey } from '../../lib/mapMarkers'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
 import { colors } from '../../theme'
 import type { HostMapProps } from '../HostMap'
@@ -25,7 +26,16 @@ export function HostMapLeaflet({
     [hosts, nearbyHostIds, userLocation, radiusKm, fitToResults, fitToHosts],
   )
 
-  const mapKey = `${userLocation.latitude.toFixed(3)}-${userLocation.longitude.toFixed(3)}-${radiusKm}-${fitToResults ? 'fit' : 'radius'}`
+  const hostSig = useMemo(() => hostsMapRenderKey(hosts), [hosts])
+  const mapKey = useMemo(
+    () =>
+      `${userLocation.latitude.toFixed(3)}-${userLocation.longitude.toFixed(3)}-${radiusKm}-${fitToResults ? 'fit' : 'radius'}-${hostSig}`,
+    [fitToResults, hostSig, radiusKm, userLocation.latitude, userLocation.longitude],
+  )
+
+  useEffect(() => {
+    webRef.current?.reload()
+  }, [html, hostSig])
 
   return (
     <View style={styles.wrap}>

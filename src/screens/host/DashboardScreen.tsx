@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, useEffect, type ReactNode } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { ImageLightbox } from '../../components/ImageLightbox'
@@ -10,8 +10,8 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
 import { applyHostSettings } from '../../lib/hostListing'
-import { formatHostPrice } from '../../lib/hostFilters'
-import { formatDryerSheetsRate } from '../../lib/hostPricing'
+import { HostPricingSection } from '../../components/host/HostPricingSection'
+import { normalizeHostSettings } from '../../lib/hostSettingsStorage'
 import { formatTurnaroundHours } from '../../lib/turnaroundTime'
 import { formatMoney, getBookingAmount, cashPaymentHostHint } from '../../lib/bookingPayments'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
@@ -21,7 +21,7 @@ import { HostLoadProgress } from '../../components/HostLoadProgress'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useTheme } from '../../context/ThemeContext'
 import { radius, spacing } from '../../theme'
-import type { BookingStage } from '../../types'
+import type { BookingStage, HostPricing } from '../../types'
 
 function stageBadge(stage: BookingStage) {
   switch (stage) {
@@ -154,14 +154,35 @@ export function DashboardScreen() {
     ? applyHostSettings(rawHost, hostSettings)
     : rawHost
   const isOnline = hostSettings?.isOnline ?? false
+  const [pricingDraft, setPricingDraft] = useState<HostPricing>(() =>
+    normalizeHostSettings(hostSettings, rawHost).pricing,
+  )
+  const [pricingSaved, setPricingSaved] = useState(true)
   const verification = user ? getIdentityVerification(user) : null
   const showVerificationBanner = !!user && !canBookOrHost(user)
   const { colors } = useTheme()
   const styles = useMemo(() => createDashboardStyles(colors), [colors])
 
+  useEffect(() => {
+    if (!hostSettings) return
+    setPricingDraft(normalizeHostSettings(hostSettings, rawHost).pricing)
+    setPricingSaved(true)
+  }, [hostSettings, rawHost])
+
   const toggleOnline = async (online: boolean) => {
     if (!hostSettings) return
     await updateHostSettings({ ...hostSettings, isOnline: online })
+  }
+
+  const patchPricing = (partial: Partial<HostPricing>) => {
+    setPricingDraft((prev) => ({ ...prev, ...partial }))
+    setPricingSaved(false)
+  }
+
+  const handleSavePricing = async () => {
+    if (!hostSettings) return
+    await updateHostSettings({ ...hostSettings, pricing: pricingDraft })
+    setPricingSaved(true)
   }
 
   return (
@@ -218,6 +239,18 @@ export function DashboardScreen() {
         </View>
       )}
 
+      {hostSettings && (
+        <HostPricingSection
+          variant="card"
+          pricing={pricingDraft}
+          onPricingChange={patchPricing}
+          showSaveButton
+          saved={pricingSaved}
+          onSave={() => void handleSavePricing()}
+          onEditInSettings={() => navigate('account')}
+        />
+      )}
+
       <View style={styles.statsRow}>
         <View style={styles.statChip}>
           <Text style={styles.statNum}>{hostStats.loadsToday}</Text>
@@ -237,12 +270,7 @@ export function DashboardScreen() {
 
       {hostProfile && (
         <Text style={styles.listingMeta}>
-          Dry {formatHostPrice(hostProfile.price)}
-          {(hostProfile.foldingPrice ?? 0) > 0
-            ? ` · Folding ${formatHostPrice(hostProfile.foldingPrice!)}`
-            : ''}
-          {' · Sheets '}{formatDryerSheetsRate()}
-          {' · '}{formatTurnaroundHours(hostProfile.turnaroundHours)} dry
+          {formatTurnaroundHours(hostProfile.turnaroundHours)} dry turnaround
         </Text>
       )}
 
@@ -383,7 +411,7 @@ export function DashboardScreen() {
             {load.paymentMethod === 'cash' && load.paymentStatus === 'pending' && (load.totalAmount ?? 0) > 0 && (
               <>
                 <Text style={styles.transferHint}>{toTitleCase(cashPaymentHostHint())}</Text>
-                <GhostButton
+                <PrimaryButton
                   title={`Confirm ${formatMoney(getBookingAmount(load))} cash at drop-off`}
                   icon="check-circle"
                   full

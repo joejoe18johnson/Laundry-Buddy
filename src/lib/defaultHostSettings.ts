@@ -3,8 +3,7 @@ import { getHostProfileDetails } from '../data/seedData'
 import { DRYER_SHEETS_PRICE } from './hostPricing'
 import { DEFAULT_HOST_SETTINGS, normalizeHostSettings } from './hostSettingsStorage'
 import { defaultListingFromHost } from './hostListing'
-
-const DEMO_BANKS = ['Belize Bank', 'Heritage Bank', 'Atlantic Bank', 'ScotiaBank']
+import { BELIZE_BANKS } from './belizeBanks'
 
 function hashHostId(id: string): number {
   return id.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0)
@@ -13,7 +12,7 @@ function hashHostId(id: string): number {
 function demoBankDetails(host: Host): HostBankDetails {
   const seed = hashHostId(host.id)
   return {
-    bankName: DEMO_BANKS[seed % DEMO_BANKS.length],
+    bankName: BELIZE_BANKS[seed % BELIZE_BANKS.length],
     accountName: host.name,
     accountNumber: String(1_000_000 + (seed % 9_000_000)),
   }

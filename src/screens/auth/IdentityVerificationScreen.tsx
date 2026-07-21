@@ -16,9 +16,7 @@ import {
   Screen,
 } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
-import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
-import { getAdminUsers } from '../../lib/adminUsers'
 import {
   formatIdDocumentType,
   getIdentityVerification,
@@ -27,13 +25,8 @@ import {
   isPhoneVerificationComplete,
   type VerificationWizardStep,
 } from '../../lib/identityVerification'
-import { adminDashboardLink } from '../../lib/notificationLinks'
 import { normalizePhone } from '../../lib/phone'
 import { getOpenVerificationCodeRequest } from '../../lib/verificationCodeService'
-import {
-  buildAdminVerificationRequestBody,
-  VERIFICATION_CODE_REQUEST_TITLE,
-} from '../../lib/verificationCodes'
 import {
   formatWhatsAppNumberDisplay,
   isValidWhatsAppNumber,
@@ -56,7 +49,6 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     authError,
     clearAuthError,
   } = useAuth()
-  const { push } = useNotifications()
   const [step, setStep] = useState<WizardStep>('phone')
   const [phone, setPhone] = useState('')
   const [idType, setIdType] = useState<IdDocumentType | null>(null)
@@ -145,18 +137,6 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
     const ok = await requestVerificationCode(normalizePhone(phone))
     if (ok) {
       await refreshCodeRequest()
-      const admins = await getAdminUsers()
-      const normalizedPhone = normalizePhone(phone)
-      await Promise.all(
-        admins.map((admin) =>
-          push(
-            admin.id,
-            VERIFICATION_CODE_REQUEST_TITLE,
-            buildAdminVerificationRequestBody(user.name, normalizedPhone),
-            adminDashboardLink(user.id),
-          ),
-        ),
-      )
     }
     setRequestingCode(false)
   }

@@ -1,7 +1,7 @@
 import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
-import { useCallback, useMemo, useState, useEffect } from 'react'
-import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
+import { AppState, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './src/components/AppIcon'
 import { BottomNav, type NavTab } from './src/components/BottomNav'
@@ -49,6 +49,8 @@ import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
 import { isFullFlowTesting, TESTING_SPLASH_MS } from './src/lib/testingFlow'
 import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
+import { AdminVerificationRequestSync } from './src/components/AdminVerificationRequestSync'
+import { GuestBookingSync } from './src/components/GuestBookingSync'
 import { HostRequestAlertSync } from './src/components/HostRequestAlertSync'
 import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
@@ -60,6 +62,8 @@ import {
   type PushPermissionStatus,
 } from './src/lib/pushNotifications'
 import { getGreetingName } from './src/lib/displayName'
+import { linkFromPushData } from './src/lib/notificationLinks'
+import { VERIFICATION_CODE_REQUEST_TITLE } from './src/lib/verificationCodes'
 import type { Screen } from './src/types'
 
 SplashScreen.preventAutoHideAsync().catch(() => {})
@@ -79,6 +83,9 @@ function AdminAppShell() {
   const { user, logout, refreshCurrentUser } = useAuth()
   const { colors } = useTheme()
   const { unreadCount } = useUserNotifications(user!.id)
+  const adminHistoryRef = useRef<
+    ('overview' | 'queue' | 'users' | 'codes' | 'support' | 'support-chat' | 'notifications' | 'user-review')[]
+  >([])
   const [screen, setScreen] = useState<
     'overview' | 'queue' | 'users' | 'codes' | 'support' | 'support-chat' | 'notifications' | 'user-review'
   >('overview')
@@ -95,14 +102,69 @@ function AdminAppShell() {
     void refreshCurrentUser()
   }, [refreshCurrentUser, user?.id, user?.role])
 
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return
+
+    const subscription = addNotificationResponseListener((title, data) => {
+      const link = linkFromPushData(data)
+      if (link?.screen === 'admin-dashboard' && link.userId) {
+        setHighlightUserId(link.userId)
+        openUserReview(link.userId)
+        return
+      }
+      if (title === VERIFICATION_CODE_REQUEST_TITLE) {
+        setScreen('queue')
+      }
+    })
+
+    return () => subscription.remove()
+  }, [user?.id, user?.role])
+
+  const navigateAdmin = (
+    next: 'overview' | 'queue' | 'users' | 'codes' | 'support' | 'support-chat' | 'notifications' | 'user-review',
+  ) => {
+    setScreen((current) => {
+      if (current !== next) adminHistoryRef.current.push(current)
+      return next
+    })
+  }
+
   const openUserReview = (userId: string) => {
     setReviewUserId(userId)
-    setScreen('user-review')
+    navigateAdmin('user-review')
   }
 
   const handleReviewUpdated = () => {
     setDashboardRefreshKey((key) => key + 1)
   }
+
+  const goBackAdmin = useCallback(() => {
+    if (screen === 'user-review') {
+      setReviewUserId(null)
+      setScreen('queue')
+      return true
+    }
+    if (screen === 'support-chat') {
+      setScreen('support')
+      return true
+    }
+    const history = adminHistoryRef.current
+    if (history.length > 0) {
+      setScreen(history.pop()!)
+      return true
+    }
+    if (screen === 'overview') {
+      setDashboardRefreshKey((key) => key + 1)
+      return true
+    }
+    setScreen('overview')
+    return true
+  }, [screen])
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', goBackAdmin)
+    return () => subscription.remove()
+  }, [goBackAdmin])
 
   const adminTab: AdminTabId =
     screen === 'queue' || screen === 'users' || screen === 'codes' || screen === 'overview'
@@ -112,7 +174,7 @@ function AdminAppShell() {
   const openSupportThread = (threadId: string, title: string) => {
     setSupportThreadId(threadId)
     setSupportThreadTitle(title)
-    setScreen('support-chat')
+    navigateAdmin('support-chat')
   }
 
   const headerTitle =
@@ -180,6 +242,7 @@ function AdminAppShell() {
   return (
     <SafeAreaView style={shellStyles.app} edges={['top']}>
       <StatusBar style="dark" />
+      <AdminVerificationRequestSync onNewRequest={() => setDashboardRefreshKey((key) => key + 1)} />
       {screen !== 'user-review' && screen !== 'support-chat' ? (
         <View style={shellStyles.header}>
           <Text style={shellStyles.title}>{headerTitle}</Text>
@@ -209,10 +272,10 @@ function AdminAppShell() {
             supportUnreadCount={supportUnreadCount}
             onNavigate={(section) => {
               if (section === 'support') {
-                setScreen('support')
+                navigateAdmin('support')
                 return
               }
-              setScreen(section)
+              navigateAdmin(section)
             }}
           />
         ) : screen === 'queue' ? (
@@ -239,7 +302,7 @@ function AdminAppShell() {
             threadId={supportThreadId}
             titleOverride={supportThreadTitle}
             subtitleOverride="In-app support"
-            onBack={() => setScreen('support')}
+            onBack={() => navigateAdmin(adminTab)}
           />
         ) : screen === 'notifications' ? (
           <AdminNotificationsScreen
@@ -266,7 +329,7 @@ function AdminAppShell() {
       </View>
       {showAdminNav ? (
         <SafeAreaView edges={['bottom']} style={shellStyles.bottomNavWrap}>
-          <AdminBottomNav tabs={adminTabs} currentTab={adminTab} onNavigate={setScreen} />
+          <AdminBottomNav tabs={adminTabs} currentTab={adminTab} onNavigate={navigateAdmin} />
         </SafeAreaView>
       ) : null}
     </SafeAreaView>
@@ -329,6 +392,8 @@ function AppShell() {
     hostRequests,
     activeGuestBookings,
     navigate,
+    goBack,
+    homeRefreshKey,
     hostSettings,
     userLocationLabel,
     searchRadiusKm,
@@ -440,6 +505,11 @@ function AppShell() {
     return () => subscription.remove()
   }, [openNotificationFromPush])
 
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', goBack)
+    return () => subscription.remove()
+  }, [goBack])
+
   return (
     <SafeAreaView style={shellStyles.app} edges={['top']}>
       <StatusBar style="dark" />
@@ -496,7 +566,7 @@ function AppShell() {
       />
 
       <View style={shellStyles.main}>
-        {screen === 'customer-home' && <HomeScreen />}
+        {screen === 'customer-home' && <HomeScreen refreshKey={homeRefreshKey} />}
         {screen === 'customer-host-profile' && <HostProfileScreen />}
         {screen === 'customer-booking' && <BookingScreen />}
         {screen === 'customer-tracking' && <TrackingScreen />}
@@ -684,6 +754,7 @@ function AuthenticatedApp() {
                 <AppProvider>
                   <VerificationStatusSync />
                   <HostRequestAlertSync />
+                  <GuestBookingSync />
                   <AppShell />
                 </AppProvider>
               </>
@@ -691,7 +762,7 @@ function AuthenticatedApp() {
           </ToastProvider>
         </MessageProvider>
       </NotificationProvider>
-      {user!.role !== 'admin' ? <PushNotificationPromptGate /> : null}
+      <PushNotificationPromptGate />
     </>
   )
 }

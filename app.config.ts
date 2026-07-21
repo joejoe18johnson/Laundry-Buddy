@@ -71,6 +71,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         ],
         category: ['BROWSABLE', 'DEFAULT'],
       },
+      {
+        action: 'VIEW',
+        autoVerify: false,
+        data: [
+          {
+            scheme: 'laundrybuddy',
+            host: 'host',
+            pathPrefix: '/',
+          },
+        ],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
     ],
   },
   web: {

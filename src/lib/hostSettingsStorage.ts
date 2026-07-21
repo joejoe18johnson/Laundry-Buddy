@@ -3,6 +3,7 @@ import { getHostProfileDetails, SEED_HOST_SETTINGS, SEED_DATA_VERSION, SEED_HOST
 import { DEFAULT_HOST_PRICING, DRYER_SHEETS_PRICE } from './hostPricing'
 import { normalizeListing } from './hostListing'
 import { normalizeDropOffAvailability } from './dropOffAvailability'
+import { normalizeBelizeBankName } from './belizeBanks'
 import type { Host, HostSettings, PaymentMethod } from '../types'
 
 const SETTINGS_KEY = 'laundry-buddy-host-settings'
@@ -41,6 +42,7 @@ export function normalizeHostSettings(
     bankDetails: {
       ...DEFAULT_HOST_SETTINGS.bankDetails,
       ...settings?.bankDetails,
+      bankName: normalizeBelizeBankName(settings?.bankDetails?.bankName),
     },
     pricing: {
       ...pricing,

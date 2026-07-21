@@ -30,7 +30,6 @@ import {
   authenticateBiometric,
   type BiometricSupport,
 } from '../lib/biometricAuth'
-import { isFullFlowTesting } from '../lib/testingFlow'
 import {
   createSessionFromAuthRedirectUrl,
   fetchCurrentSupabaseUser,
@@ -170,17 +169,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function init() {
-      if (isFullFlowTesting()) {
-        if (!isSupabaseConfigured()) {
-          await setSessionUserId(null)
-        } else {
-          await supabaseSignOut()
-        }
-        setUser(null)
-        setReady(true)
-        return
-      }
-
       if (isSupabaseConfigured()) {
         try {
           const u = await fetchCurrentSupabaseUser()
@@ -424,6 +412,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       await saveUser(sessionUser)
+      await setSessionUserId(sessionUser.id)
       setUser(sessionUser)
       setAuthError(null)
       bumpAuthSession()

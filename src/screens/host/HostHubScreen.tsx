@@ -8,21 +8,26 @@ import {
   View,
 } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
+import { BrandActionSheet, type BrandDialogAction } from '../../components/BrandDialog'
 import { BackButton, BrandSwitch, PrimaryButton, Screen, StickySaveBar, ChoiceChip } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { getHostByUserId, getHostProfileDetails } from '../../data/mockData'
-import { formatHostPrice } from '../../lib/hostFilters'
-import { formatDryerSheetsPerLoadCharge, formatDryerSheetsRate } from '../../lib/hostPricing'
+import { HostPricingSection } from '../../components/host/HostPricingSection'
 import { getHostPaymentMethods, normalizeHostSettings, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { parseListingInt } from '../../lib/hostListing'
-import { parsePriceInput } from '../../lib/hostPricing'
 import { formatTurnaroundHours, TURNAROUND_HOUR_OPTIONS } from '../../lib/turnaroundTime'
 import { formatDropOffAvailability, formatDropOffHoursWindow } from '../../lib/dropOffAvailability'
 import { resolveHostLocationFromGps } from '../../lib/hostLocation'
+import {
+  resolveHostShareTarget,
+  shareHostProfile,
+  shareHostProfileViaWhatsApp,
+} from '../../lib/hostProfileLinks'
+import { BELIZE_BANKS } from '../../lib/belizeBanks'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import { colors, radius, spacing } from '../../theme'
@@ -178,6 +183,7 @@ export function HostHubScreen() {
   )
   const [saved, setSaved] = useState(true)
   const [locatingListing, setLocatingListing] = useState(false)
+  const [bankPickerOpen, setBankPickerOpen] = useState(false)
 
   useEffect(() => {
     if (!hostSettings || !user) return
@@ -304,12 +310,44 @@ export function HostHubScreen() {
     }
   }
 
+  const shareTarget = resolveHostShareTarget(host, user.id)
+
+  const handleShareProfile = async () => {
+    const ok = await shareHostProfile(shareTarget)
+    if (!ok) {
+      showToast('Could not open share sheet', { icon: 'share-2' })
+    }
+  }
+
+  const handleShareProfileWhatsApp = async () => {
+    const ok = await shareHostProfileViaWhatsApp(shareTarget)
+    if (!ok) {
+      showToast('Could not open WhatsApp', { icon: 'message-circle' })
+    }
+  }
+
   const paymentSummary = [
     draft.acceptCash ? PAYMENT_METHOD_LABELS.cash : null,
     draft.acceptBankTransfer ? PAYMENT_METHOD_LABELS.bank_transfer : null,
   ]
     .filter(Boolean)
     .join(' · ')
+
+  const bankPickerActions: BrandDialogAction[] = [
+    ...BELIZE_BANKS.map((bank) => ({
+      label: bank,
+      variant: 'outline' as const,
+      onPress: () => {
+        patchBank('bankName', bank)
+        setBankPickerOpen(false)
+      },
+    })),
+    {
+      label: 'Cancel',
+      variant: 'ghost',
+      onPress: () => setBankPickerOpen(false),
+    },
+  ]
 
   return (
     <View style={styles.hubWrap}>
@@ -376,6 +414,26 @@ export function HostHubScreen() {
           />
         </Section>
       ) : null}
+
+      <Section title="Share profile">
+        <Text style={styles.sectionHint}>
+          {toTitleCase('Send your profile link so guests can open your listing and book in the app.')}
+        </Text>
+        <Pressable
+          style={({ pressed }) => [styles.gpsBtn, pressed && styles.gpsBtnPressed]}
+          onPress={() => void handleShareProfile()}
+        >
+          <AppIcon name="share-2" size={16} color={colors.black} />
+          <Text style={styles.gpsBtnText}>{toTitleCase('Share profile link')}</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [styles.gpsBtn, pressed && styles.gpsBtnPressed]}
+          onPress={() => void handleShareProfileWhatsApp()}
+        >
+          <AppIcon name="message-circle" size={16} color={colors.black} />
+          <Text style={styles.gpsBtnText}>{toTitleCase('Send on WhatsApp')}</Text>
+        </Pressable>
+      </Section>
 
       <Section title="Drop-off availability">
         <Text style={styles.sectionHint}>
@@ -497,40 +555,7 @@ export function HostHubScreen() {
       </Section>
 
       <Section title="Your prices">
-        <Text style={styles.sectionHint}>
-          {toTitleCase(
-            'You control what you charge. Guests see these rates when booking. Set folding to $0 to hide that service.',
-          )}
-        </Text>
-        <View style={styles.priceField}>
-          <Text style={styles.priceLabel}>{toTitleCase('Drying (per load)')}</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={String(pricing.dryPrice)}
-            onChangeText={(v) => patchPricing({ dryPrice: parsePriceInput(v) })}
-          />
-        </View>
-        <View style={styles.priceField}>
-          <Text style={styles.priceLabel}>{toTitleCase('Folding service (per load)')}</Text>
-          <TextInput
-            style={styles.input}
-            keyboardType="number-pad"
-            value={String(pricing.foldingPrice)}
-            onChangeText={(v) => patchPricing({ foldingPrice: parsePriceInput(v) })}
-          />
-        </View>
-        <View style={styles.priceField}>
-          <Text style={styles.priceLabel}>{toTitleCase('Dryer sheets (if guest buys)')}</Text>
-          <Text style={styles.sectionHint}>
-            {formatDryerSheetsRate()} · {formatDryerSheetsPerLoadCharge()}
-          </Text>
-        </View>
-        <Text style={styles.paymentSummary}>
-          {toTitleCase('Guests see')}: Dry {formatHostPrice(pricing.dryPrice)}
-          {pricing.foldingPrice > 0 ? ` · Folding ${formatHostPrice(pricing.foldingPrice)}` : ''}
-          {' · Sheets '}{formatDryerSheetsRate()}
-        </Text>
+        <HostPricingSection pricing={pricing} onPricingChange={patchPricing} />
       </Section>
 
       <Section title="Payments">
@@ -550,13 +575,21 @@ export function HostHubScreen() {
         {draft.acceptBankTransfer && (
           <View style={styles.bankForm}>
             <Text style={styles.bankTitle}>{toTitleCase('Bank details for guests')}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Bank name"
-              placeholderTextColor={colors.gray400}
-              value={draft.bankDetails.bankName}
-              onChangeText={(v) => patchBank('bankName', v)}
-            />
+            <Pressable
+              style={styles.selectField}
+              onPress={() => setBankPickerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Select bank"
+            >
+              <Text
+                style={
+                  draft.bankDetails.bankName ? styles.selectFieldValue : styles.selectFieldPlaceholder
+                }
+              >
+                {draft.bankDetails.bankName || toTitleCase('Select bank')}
+              </Text>
+              <AppIcon name="chevron-down" size={18} color={colors.gray400} />
+            </Pressable>
             <TextInput
               style={styles.input}
               placeholder="Account holder name"
@@ -635,6 +668,14 @@ export function HostHubScreen() {
         </Pressable>
       </View>
     </Screen>
+    <BrandActionSheet
+      visible={bankPickerOpen}
+      title="Select bank"
+      message="Choose the bank guests should transfer to."
+      icon="credit-card"
+      actions={bankPickerActions}
+      onClose={() => setBankPickerOpen(false)}
+    />
     {!saved && (
       <View style={styles.stickySaveWrap}>
         <StickySaveBar onSave={() => void handleSave()} />
@@ -755,6 +796,20 @@ const styles = StyleSheet.create({
   toggleSub: { fontSize: 12, color: colors.gray500, lineHeight: 17 },
   bankForm: { gap: spacing.sm, marginTop: spacing.sm },
   bankTitle: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+  selectField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    backgroundColor: colors.white,
+  },
+  selectFieldValue: { flex: 1, fontSize: 15, color: colors.black },
+  selectFieldPlaceholder: { flex: 1, fontSize: 15, color: colors.gray400 },
   input: {
     borderWidth: 1,
     borderColor: colors.gray200,

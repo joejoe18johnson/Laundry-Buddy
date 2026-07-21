@@ -30,11 +30,12 @@ export function getHostPricing(host: Host, settings?: HostSettings): HostPricing
   const base = settings?.pricing ?? {
     dryPrice: host.price,
     foldingPrice: host.foldingPrice ?? 0,
-    sheetsPrice: DRYER_SHEETS_PRICE,
+    sheetsPrice: host.sheetsPrice ?? DRYER_SHEETS_PRICE,
   }
   return {
-    ...base,
-    sheetsPrice: DRYER_SHEETS_PRICE,
+    dryPrice: base.dryPrice,
+    foldingPrice: base.foldingPrice,
+    sheetsPrice: base.sheetsPrice ?? DRYER_SHEETS_PRICE,
   }
 }
 

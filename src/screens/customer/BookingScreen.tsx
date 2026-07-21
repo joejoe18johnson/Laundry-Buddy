@@ -10,14 +10,14 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { canBookOrHost } from '../../lib/identityVerification'
-import { BackButton, AppTextInput, GhostButton, OptionRow, PrimaryButton, Screen, StepIndicator } from '../../components/ui'
+import { BackButton, AppTextInput, OptionRow, PrimaryButton, Screen, StepIndicator } from '../../components/ui'
 import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import {
   calculateBookingTotal,
-  DRYER_SHEETS_PRICE,
   formatDryerSheetsPerLoadCharge,
   formatDryerSheetsRate,
   formatServicePrice,
+  getHostPricing,
   offersFoldingService,
   bookingTotalLabel,
 } from '../../lib/hostPricing'
@@ -30,7 +30,7 @@ import { radius, spacing } from '../../theme'
 import type { ClothesListItem, PaymentMethod, SheetsOption } from '../../types'
 
 export function BookingScreen() {
-  const { selectedHost, navigate, confirmBooking, getSettingsForHost } = useApp()
+  const { selectedHost, navigate, confirmBooking, getSettingsForHost, registerHardwareBackHandler } = useApp()
   const { user } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createBookingStyles(colors), [colors])
@@ -74,24 +74,32 @@ export function BookingScreen() {
     navigate('identity-verification')
   }, [navigate, user])
 
-  if (!selectedHost) return null
+  useEffect(() => {
+    registerHardwareBackHandler(() => {
+      if (wizardStep > 0) {
+        setWizardStep((step) => step - 1)
+        return true
+      }
+      return false
+    })
+    return () => registerHardwareBackHandler(null)
+  }, [registerHardwareBackHandler, wizardStep])
+
+  if (!selectedHost || !hostSettings) return null
 
   const displayName = formatHostDisplayName(selectedHost.name)
-  const dryPrice = selectedHost.price
-  const foldingPrice = selectedHost.foldingPrice ?? 0
-  const sheetsPrice = DRYER_SHEETS_PRICE
-  const showFolding = offersFoldingService({
-    dryPrice,
-    foldingPrice,
-    sheetsPrice,
-  })
+  const pricing = getHostPricing(selectedHost, hostSettings)
+  const dryPrice = pricing.dryPrice
+  const foldingPrice = pricing.foldingPrice
+  const sheetsPrice = pricing.sheetsPrice
+  const showFolding = offersFoldingService(pricing)
 
   const sheets: { value: SheetsOption; label: string; sub?: string }[] = [
     { value: 'own', label: "I'll Bring My Own" },
     {
       value: 'buy',
       label: 'Buy From Host',
-      sub: `${formatDryerSheetsRate()} (${formatDryerSheetsPerLoadCharge()})`,
+      sub: `${formatDryerSheetsRate(sheetsPrice)} (${formatDryerSheetsPerLoadCharge(sheetsPrice)})`,
     },
     { value: 'none', label: 'No Sheets' },
   ]
@@ -204,17 +212,21 @@ export function BookingScreen() {
                   ))}
                 </View>
                 {paymentMethod === 'bank_transfer' && (
-                  <Text style={styles.paymentNote}>
-                    {titleCaseWithName(
-                      `After ${displayName} accepts, open My loads for bank details. Transfer in the app and submit your receipt screenshot — no WhatsApp needed.`,
-                      displayName,
-                    )}
-                  </Text>
+                  <View style={styles.paymentCallout}>
+                    <Text style={styles.paymentCalloutText}>
+                      {titleCaseWithName(
+                        `After ${displayName} accepts, open My loads for bank details. Transfer in the app and submit your receipt screenshot — no WhatsApp needed.`,
+                        displayName,
+                      )}
+                    </Text>
+                  </View>
                 )}
                 {paymentMethod === 'cash' && (
-                  <Text style={styles.paymentNote}>
-                    {titleCaseWithName(cashPaymentGuestHint(displayName), displayName)}
-                  </Text>
+                  <View style={styles.paymentCallout}>
+                    <Text style={styles.paymentCalloutText}>
+                      {titleCaseWithName(cashPaymentGuestHint(displayName), displayName)}
+                    </Text>
+                  </View>
                 )}
               </>
             )}
@@ -224,7 +236,7 @@ export function BookingScreen() {
         {wizardStep === 1 ? (
           <>
             <Text style={styles.sectionHint}>
-              {toTitleCase('Optional — skip if you are in a hurry. You can add details later in chat.')}
+              {toTitleCase('Optional — you can add more details later in chat.')}
             </Text>
 
             <Text style={styles.section}>{toTitleCase('Dryer Sheets')}</Text>
@@ -314,10 +326,7 @@ export function BookingScreen() {
                 onPress={() => setWizardStep(1)}
               />
             ) : wizardStep === 1 ? (
-              <View style={styles.footerButtons}>
-                <GhostButton title="Skip" onPress={() => setWizardStep(2)} />
-                <PrimaryButton title="Review" icon="eye" onPress={() => setWizardStep(2)} />
-              </View>
+              <PrimaryButton title="Review" icon="eye" onPress={() => setWizardStep(2)} />
             ) : (
               <PrimaryButton title="Send request" icon="send" disabled={!canConfirm} onPress={submitBooking} />
             )}
@@ -368,6 +377,22 @@ function createBookingStyles(colors: ReturnType<typeof useTheme>['colors']) {
   chipText: { fontSize: 14, fontWeight: '500', color: colors.black },
   chipTextSelected: { color: colors.white },
   paymentNote: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
+  paymentCallout: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.black,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.gray50,
+  },
+  paymentCalloutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.black,
+    lineHeight: 24,
+  },
   bankCard: {
     marginTop: spacing.md,
     borderWidth: 1,
@@ -433,7 +458,6 @@ function createBookingStyles(colors: ReturnType<typeof useTheme>['colors']) {
   footerPriceFree: { color: colors.green },
   footerMetaInline: { fontSize: 13, fontWeight: '500', color: colors.gray500 },
   footerAction: { flexShrink: 0, alignSelf: 'center' },
-  footerButtons: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   validationHint: { fontSize: 12, color: colors.danger, fontWeight: '600', lineHeight: 16 },
   })
 }

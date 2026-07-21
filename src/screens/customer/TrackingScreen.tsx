@@ -51,7 +51,7 @@ function getLoadStatusLabel(load: Booking): string {
 
 export function TrackingScreen() {
   const { user } = useAuth()
-  const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking, cancelPendingRequest, openChat, markPaymentProofSent } = useApp()
+  const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, openLeaveReview, clearBooking, cancelPendingRequest, openChat, markPaymentProofSent, refreshGuestBookings } = useApp()
   const { sendMessage } = useMessages()
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
@@ -59,6 +59,10 @@ export function TrackingScreen() {
   const pulse = useRef(new Animated.Value(1)).current
   const { colors } = useTheme()
   const styles = useMemo(() => createTrackingStyles(colors), [colors])
+
+  useEffect(() => {
+    void refreshGuestBookings()
+  }, [refreshGuestBookings])
 
   useEffect(() => {
     setBannerVisible(true)

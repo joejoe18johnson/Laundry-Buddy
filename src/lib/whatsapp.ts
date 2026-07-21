@@ -24,6 +24,32 @@ function buildWhatsAppUrls(phone: string, message: string): { appUrl: string; we
   }
 }
 
+/** Opens WhatsApp with a pre-filled message and no recipient (share sheet style). */
+export async function openWhatsAppShareText(message: string): Promise<boolean> {
+  const text = encodeURIComponent(message)
+  const appUrl = `whatsapp://send?text=${text}`
+  const webUrl = `https://wa.me/?text=${text}`
+
+  if (Platform.OS !== 'web') {
+    try {
+      const canOpenApp = await Linking.canOpenURL(appUrl)
+      if (canOpenApp) {
+        await Linking.openURL(appUrl)
+        return true
+      }
+    } catch {
+      // fall through to wa.me
+    }
+  }
+
+  try {
+    await Linking.openURL(webUrl)
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Opens WhatsApp with a pre-filled message. Admin still taps Send inside WhatsApp. */
 export async function openWhatsAppChat(phone: string, message: string): Promise<boolean> {
   const normalized = normalizeWhatsAppPhone(phone)

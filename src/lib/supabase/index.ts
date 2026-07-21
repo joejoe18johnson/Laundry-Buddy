@@ -22,4 +22,10 @@ export {
   supabaseUpdatePassword,
   supabaseUpdateProfile,
 } from './authService'
+export {
+  buildHostListingForSync,
+  fetchHostListingFromSupabase,
+  fetchMarketplaceFromSupabase,
+  upsertHostListingToSupabase,
+} from './hostService'
 export type { Database } from './database.types'

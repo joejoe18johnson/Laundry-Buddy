@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { Camera, FillLayer, LineLayer, MapView, MarkerView, ShapeSource } from '@maplibre/maplibre-react-native'
-import { HostPricePin, YouMarker } from './MapPins'
+import { Camera, CircleLayer, FillLayer, LineLayer, MapView, MarkerView, ShapeSource } from '@maplibre/maplibre-react-native'
+import { HostPricePin } from './MapPins'
+import { hostMarkerRenderKey, hostsMapRenderKey } from '../../lib/mapMarkers'
 import { circleRing } from '../../lib/geo'
 import { zoomLevelForRadiusKm, OPENFREEMAP_STYLE_URL } from '../../lib/mapRegion'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
@@ -15,8 +16,23 @@ export function HostMapLibre({
   userLocation,
   radiusKm = SEARCH_RADIUS_KM,
 }: HostMapProps) {
-  const zoomLevel = useMemo(() => zoomLevelForRadiusKm(radiusKm), [radiusKm])
+  const zoomLevel = useMemo(
+    () => zoomLevelForRadiusKm(radiusKm, userLocation),
+    [radiusKm, userLocation],
+  )
   const cameraKey = `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}-${radiusKm}`
+
+  const userPointGeo = useMemo(
+    () => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Point' as const,
+        coordinates: [userLocation.longitude, userLocation.latitude],
+      },
+      properties: {},
+    }),
+    [userLocation],
+  )
 
   const sortedHosts = useMemo(
     () =>
@@ -40,9 +56,12 @@ export function HostMapLibre({
     [userLocation, radiusKm],
   )
 
+  const markerRenderKey = useMemo(() => hostsMapRenderKey(hosts), [hosts])
+
   return (
     <View style={styles.wrap}>
       <MapView
+        key={markerRenderKey}
         style={styles.map}
         mapStyle={OPENFREEMAP_STYLE_URL}
         logoEnabled={false}
@@ -72,19 +91,32 @@ export function HostMapLibre({
             }}
           />
         </ShapeSource>
-        <MarkerView
-          coordinate={[userLocation.longitude, userLocation.latitude]}
-          anchor={{ x: 0.5, y: 0.5 }}
-        >
-          <YouMarker />
-        </MarkerView>
+        <ShapeSource id="user-location" shape={userPointGeo}>
+          <CircleLayer
+            id="user-halo"
+            style={{
+              circleRadius: 14,
+              circleColor: 'rgba(39, 110, 241, 0.35)',
+            }}
+          />
+          <CircleLayer
+            id="user-core"
+            style={{
+              circleRadius: 7,
+              circleColor: '#276ef1',
+              circleStrokeWidth: 3,
+              circleStrokeColor: '#ffffff',
+            }}
+          />
+        </ShapeSource>
         {sortedHosts.map((host) => (
           <MarkerView
-            key={host.id}
+            key={hostMarkerRenderKey(host)}
             coordinate={[host.longitude, host.latitude]}
             anchor={{ x: 0.5, y: 0.5 }}
           >
             <HostPricePin
+              key={hostMarkerRenderKey(host)}
               price={host.price}
               inRadius={nearbyHostIds.has(host.id)}
               onPress={() => onHostPress(host)}
