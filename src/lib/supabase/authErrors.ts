@@ -11,11 +11,11 @@ export function formatSupabaseAuthError(message: string): string {
   }
 
   if (lower.includes('already registered') || lower.includes('already been registered')) {
-    return 'This email is already registered. Log in with your phone and password, or check your inbox for an earlier confirmation link.'
+    return 'This email is already registered. Log in with your email and password, or use Forgot password.'
   }
 
   if (lower.includes('email not confirmed') || lower.includes('email_not_confirmed')) {
-    return 'Confirm your email first — check your inbox for the Laundry Buddy link, then log in with your phone and password.'
+    return 'Confirm your email first — check your inbox for the Laundry Buddy link, then log in with your email and password.'
   }
 
   return message

@@ -251,7 +251,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (result.confirmed) {
-        setAuthNotice('Email confirmed! Log in with your phone number and password.')
+        setAuthNotice('Email confirmed! Log in with your email and password.')
         setAuthScreen('login')
       }
     },
@@ -372,13 +372,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearAuthError, restoreUserSession])
 
   const login = useCallback(async (method: LoginMethod, identifier: string, password: string) => {
+    if (method === 'email' && !identifier.trim()) {
+      setAuthError('Email is required.')
+      return false
+    }
+
     if (isSupabaseConfigured()) {
       let { user: signedIn, error } = await supabaseSignIn(method, identifier, password)
 
       if (
         !signedIn &&
-        method === 'phone' &&
-        normalizePhone(identifier) === normalizePhone(ADMIN_PHONE) &&
+        method === 'email' &&
+        identifier.trim().toLowerCase() === 'support@laundrybuddy.app' &&
         password === ADMIN_SEED_PASSWORD
       ) {
         const linked = await ensureTrainingAdminSupabaseSession({
@@ -492,7 +497,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: input.role,
       })
       if (needsEmailConfirmation) {
-        setAuthNotice('Account created. Log in with your phone number and password.')
+        setAuthNotice('Account created. Log in with your email and password.')
         setAuthError(null)
         navigateAuth('login')
         return false
@@ -596,7 +601,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setSessionUserId(null)
     setUser(null)
     setAuthError(null)
-    setAuthNotice('Password updated. Log in with your phone and new password.')
+    setAuthNotice('Password updated. Log in with your email and new password.')
     navigateAuth('login')
     return true
   }, [clearAuthError, navigateAuth])

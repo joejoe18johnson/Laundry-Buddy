@@ -15,28 +15,6 @@ function createLoginStyles(colors: ReturnType<typeof useTheme>['colors']) {
     field: { marginBottom: spacing.md },
     labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
     label: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-    phoneRow: {
-      flexDirection: 'row',
-      borderWidth: 1,
-      borderColor: colors.gray200,
-      borderRadius: radius.sm,
-      overflow: 'hidden',
-      backgroundColor: colors.white,
-    },
-    prefix: {
-      padding: 16,
-      backgroundColor: colors.gray50,
-      borderRightWidth: 1,
-      borderRightColor: colors.gray200,
-      fontSize: 16,
-      color: colors.gray600,
-    },
-    phoneInput: {
-      flex: 1,
-      borderWidth: 0,
-      padding: 16,
-      backgroundColor: colors.white,
-    },
     error: {
       color: colors.danger,
       backgroundColor: colors.gray50,
@@ -80,7 +58,7 @@ export function LoginScreen() {
   } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createLoginStyles(colors), [colors])
-  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [biometricLoading, setBiometricLoading] = useState(false)
 
@@ -89,7 +67,7 @@ export function LoginScreen() {
   const handleLogin = async () => {
     clearAuthError()
     clearAuthNotice()
-    await login('phone', phone, password)
+    await login('email', email, password)
   }
 
   const handleBiometricLogin = async () => {
@@ -103,7 +81,7 @@ export function LoginScreen() {
     <Screen>
       <BackButton onPress={() => navigateAuth('welcome')} />
       <Text style={styles.title}>{toTitleCase('Welcome back')}</Text>
-      <Text style={styles.subtitle}>{toTitleCase('Log in with your phone number and password')}</Text>
+      <Text style={styles.subtitle}>{toTitleCase('Log in with the email and password from sign-up')}</Text>
 
       {showBiometric ? (
         <>
@@ -119,19 +97,17 @@ export function LoginScreen() {
 
       <View style={styles.field}>
         <View style={styles.labelRow}>
-          <AppIcon name="smartphone" size={16} color={colors.gray600} />
-          <Text style={styles.label}>{toTitleCase('Phone number')}</Text>
+          <AppIcon name="mail" size={16} color={colors.gray600} />
+          <Text style={styles.label}>{toTitleCase('Email')}</Text>
         </View>
-        <View style={styles.phoneRow}>
-          <Text style={styles.prefix}>+501</Text>
-          <AppTextInput
-            style={styles.phoneInput}
-            placeholder="600 1234"
-            keyboardType="phone-pad"
-            value={phone}
-            onChangeText={setPhone}
-          />
-        </View>
+        <AppTextInput
+          placeholder="you@example.com"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={email}
+          onChangeText={setEmail}
+        />
       </View>
 
       <View style={styles.field}>
@@ -147,7 +123,7 @@ export function LoginScreen() {
 
       {authNotice ? (
         <View style={styles.info}>
-          <AppIcon name="smartphone" size={18} color={colors.green} />
+          <AppIcon name="mail" size={18} color={colors.green} />
           <Text style={styles.infoText}>{toTitleCase(authNotice)}</Text>
         </View>
       ) : null}

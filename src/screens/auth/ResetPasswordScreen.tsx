@@ -55,7 +55,7 @@ export function ResetPasswordScreen() {
       <BackButton onPress={() => navigateAuth('login')} />
       <Text style={styles.title}>{toTitleCase('Choose new password')}</Text>
       <Text style={styles.subtitle}>
-        {toTitleCase('Set a new password for your account, then log in with your phone number.')}
+        {toTitleCase('Set a new password for your account, then log in with your email.')}
       </Text>
 
       <View style={styles.field}>

@@ -217,7 +217,8 @@ export async function supabaseSignIn(
     const message =
       method === 'phone'
         ? 'Invalid phone or password. Double-check your details or create an account.'
-        : formatSupabaseAuthError(lastError.message)
+        : formatSupabaseAuthError(lastError.message) ||
+          'Invalid email or password. Double-check your details or create an account.'
     return { user: null, error: message }
   }
   if (!signedInUser) return { user: null, error: 'Sign in failed. Try again.' }
