@@ -1,97 +1,59 @@
 import { useMemo, useState } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
-import { AppIcon } from './AppIcon'
-import { BrandActionSheet, type BrandDialogAction } from './BrandDialog'
 import { SelfieCameraModal } from './SelfieCameraModal'
 import { SelfieFrameGuide } from './SelfieFrameGuide'
+import { PrimaryButton } from './ui'
 import { useTheme } from '../context/ThemeContext'
 import { toTitleCase } from '../lib/titleCase'
-import { colors, radius, spacing } from '../theme'
+import { radius, spacing } from '../theme'
 
 interface SelfieCaptureProps {
   photoUri: string | null
   onPhotoChange: (uri: string | null) => void
-  label?: string
   disabled?: boolean
 }
 
-export function SelfieCapture({ photoUri, onPhotoChange, label, disabled }: SelfieCaptureProps) {
-  const styles = useMemo(() => createStyles(), [])
-  const [sheetOpen, setSheetOpen] = useState(false)
+export function SelfieCapture({ photoUri, onPhotoChange, disabled }: SelfieCaptureProps) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const [cameraOpen, setCameraOpen] = useState(false)
 
   const openCamera = () => {
-    setSheetOpen(false)
+    if (disabled) return
     setCameraOpen(true)
   }
 
-  const sheetActions: BrandDialogAction[] = [
-    {
-      label: 'Take selfie',
-      icon: 'camera',
-      variant: 'primary',
-      onPress: openCamera,
-    },
-    ...(photoUri
-      ? [
-          {
-            label: 'Retake selfie',
-            icon: 'refresh-cw' as const,
-            variant: 'outline' as const,
-            onPress: openCamera,
-          },
-          {
-            label: 'Remove photo',
-            icon: 'trash-2' as const,
-            variant: 'danger' as const,
-            onPress: () => {
-              setSheetOpen(false)
-              onPhotoChange(null)
-            },
-          },
-        ]
-      : []),
-    {
-      label: 'Cancel',
-      variant: 'ghost',
-      onPress: () => setSheetOpen(false),
-    },
-  ]
-
   return (
-    <View>
-      <Pressable
-        onPress={() => !disabled && setSheetOpen(true)}
-        disabled={disabled}
-        style={[styles.upload, photoUri && styles.uploadDone, disabled && styles.uploadDisabled]}
-      >
-        {photoUri ? (
+    <View style={styles.wrap}>
+      {photoUri ? (
+        <>
           <View style={styles.previewWrap}>
             <Image source={{ uri: photoUri }} style={styles.preview} resizeMode="cover" />
             <SelfieFrameGuide />
           </View>
-        ) : (
-          <View style={styles.placeholder}>
-            <SelfieFrameGuide label="Center your face in the oval" />
-            <View style={styles.placeholderContent}>
-              <AppIcon name="user" size={24} color={colors.gray500} />
-              <Text style={styles.uploadText}>{label ?? toTitleCase('Take verification selfie')}</Text>
-              <Text style={styles.uploadHint}>
-                {toTitleCase('Front camera · face clearly visible · good lighting')}
-              </Text>
-            </View>
+          <View style={styles.actionRow}>
+            <PrimaryButton title="Retake selfie" icon="camera" full onPress={openCamera} disabled={disabled} />
+            {!disabled ? (
+              <Pressable onPress={() => onPhotoChange(null)} hitSlop={8} style={styles.removeBtn}>
+                <Text style={styles.removeText}>{toTitleCase('Remove photo')}</Text>
+              </Pressable>
+            ) : null}
           </View>
-        )}
-      </Pressable>
-
-      <BrandActionSheet
-        visible={sheetOpen}
-        title="Verification selfie"
-        message="Use the face guide to center yourself. We compare this selfie to the photo on your ID."
-        icon="user"
-        actions={sheetActions}
-        onClose={() => setSheetOpen(false)}
-      />
+        </>
+      ) : (
+        <View style={[styles.captureCard, disabled && styles.captureCardDisabled]}>
+          <SelfieFrameGuide />
+          <View style={styles.captureContent}>
+            <PrimaryButton
+              title="Take selfie"
+              icon="camera"
+              full
+              onPress={openCamera}
+              disabled={disabled}
+            />
+          </View>
+        </View>
+      )}
 
       <SelfieCameraModal
         visible={cameraOpen}
@@ -102,41 +64,42 @@ export function SelfieCapture({ photoUri, onPhotoChange, label, disabled }: Self
   )
 }
 
-function createStyles() {
+function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
-    upload: {
-      minHeight: 220,
+    wrap: { gap: spacing.md },
+    captureCard: {
+      minHeight: 240,
       borderWidth: 2,
       borderStyle: 'dashed',
       borderColor: colors.gray200,
-      borderRadius: radius.md,
+      borderRadius: radius.lg,
       backgroundColor: colors.gray50,
       overflow: 'hidden',
+      justifyContent: 'flex-end',
     },
-    uploadDone: {
-      borderStyle: 'solid',
+    captureCardDisabled: {
+      opacity: 0.55,
+    },
+    captureContent: {
+      padding: spacing.lg,
+    },
+    previewWrap: {
+      minHeight: 260,
+      borderRadius: radius.lg,
+      overflow: 'hidden',
+      borderWidth: 2,
       borderColor: colors.green,
       backgroundColor: colors.greenBg,
-    },
-    uploadDisabled: {
-      opacity: 0.55,
-      backgroundColor: colors.gray75,
-    },
-    placeholder: {
-      minHeight: 220,
-      justifyContent: 'center',
-    },
-    placeholderContent: {
-      alignItems: 'center',
-      gap: spacing.sm,
-      padding: spacing.md,
-    },
-    uploadText: { fontSize: 15, fontWeight: '600', color: colors.gray600, textAlign: 'center' },
-    uploadHint: { fontSize: 12, color: colors.gray500, textAlign: 'center' },
-    previewWrap: {
-      minHeight: 220,
       position: 'relative',
     },
-    preview: { width: '100%', height: 260 },
+    preview: { width: '100%', height: 280 },
+    actionRow: { gap: spacing.sm },
+    removeBtn: { alignItems: 'center', paddingVertical: spacing.sm },
+    removeText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.gray500,
+      textDecorationLine: 'underline',
+    },
   })
 }

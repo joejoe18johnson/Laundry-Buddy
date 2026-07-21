@@ -44,9 +44,6 @@ export function SelfieCameraModal({ visible, onClose, onCapture }: Props) {
         {!permission?.granted ? (
           <SafeAreaView style={styles.permissionWrap}>
             <Text style={styles.permissionTitle}>{toTitleCase('Camera access needed')}</Text>
-            <Text style={styles.permissionBody}>
-              {toTitleCase('Allow camera access to take your verification selfie with the face guide.')}
-            </Text>
             <Pressable style={styles.primaryBtn} onPress={() => void requestPermission()}>
               <Text style={styles.primaryBtnText}>{toTitleCase('Allow camera')}</Text>
             </Pressable>
@@ -62,15 +59,10 @@ export function SelfieCameraModal({ visible, onClose, onCapture }: Props) {
                 <Pressable style={styles.closeBtn} onPress={onClose} hitSlop={8}>
                   <AppIcon name="x" size={22} color={colors.white} />
                 </Pressable>
-                <Text style={styles.title}>{toTitleCase('Verification selfie')}</Text>
-                <View style={styles.closeBtn} />
               </View>
 
               <View style={styles.guideArea}>
-                <SelfieFrameGuide
-                  light
-                  label="Center your face in the oval — good lighting, no hat or sunglasses"
-                />
+                <SelfieFrameGuide light />
               </View>
 
               <View style={styles.bottomBar}>
@@ -78,6 +70,7 @@ export function SelfieCameraModal({ visible, onClose, onCapture }: Props) {
                   style={[styles.shutter, capturing && styles.shutterDisabled]}
                   onPress={() => void handleCapture()}
                   disabled={capturing}
+                  accessibilityLabel="Take selfie"
                 >
                   <View style={styles.shutterInner} />
                 </Pressable>
@@ -101,7 +94,6 @@ function createStyles(themeColors: ReturnType<typeof useTheme>['colors']) {
     topBar: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.sm,
     },
@@ -112,11 +104,6 @@ function createStyles(themeColors: ReturnType<typeof useTheme>['colors']) {
       backgroundColor: 'rgba(0,0,0,0.35)',
       alignItems: 'center',
       justifyContent: 'center',
-    },
-    title: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.white,
     },
     guideArea: {
       flex: 1,
@@ -154,12 +141,6 @@ function createStyles(themeColors: ReturnType<typeof useTheme>['colors']) {
       fontSize: 22,
       fontWeight: '700',
       color: themeColors.black,
-      textAlign: 'center',
-    },
-    permissionBody: {
-      fontSize: 15,
-      color: themeColors.gray600,
-      lineHeight: 22,
       textAlign: 'center',
     },
     primaryBtn: {

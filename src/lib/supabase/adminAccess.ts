@@ -2,15 +2,32 @@ import type { User } from '../../types'
 import { ADMIN_EMAIL, ADMIN_PHONE, ADMIN_SEED_PASSWORD } from '../../data/seedData'
 import { getIdentityVerification, normalizeUserIdentity } from '../identityVerification'
 import { isSupabaseConfigured } from './config'
+import { authEmailFromPhone } from './config'
 import { getSupabaseClient } from './client'
 import { fetchProfileById, supabaseSignIn, supabaseSignUp, supabaseUpdateProfile } from './authService'
+import { normalizePhone } from '../phone'
 
 export const ADMIN_EMAILS = [ADMIN_EMAIL] as const
 
-export function isLikelyAdminUser(user: Pick<User, 'role' | 'email'>): boolean {
+export function isLikelyAdminUser(user: Pick<User, 'role' | 'email' | 'phone'>): boolean {
   if (user.role === 'admin') return true
   const email = user.email?.trim().toLowerCase()
-  return !!email && ADMIN_EMAILS.includes(email as (typeof ADMIN_EMAILS)[number])
+  if (!!email && ADMIN_EMAILS.includes(email as (typeof ADMIN_EMAILS)[number])) return true
+  if (user.phone && normalizePhone(user.phone) === normalizePhone(ADMIN_PHONE)) return true
+  return false
+}
+
+function adminAuthEmails(): string[] {
+  const synthetic = authEmailFromPhone(ADMIN_PHONE)
+  return synthetic === ADMIN_EMAIL ? [ADMIN_EMAIL] : [ADMIN_EMAIL, synthetic]
+}
+
+async function signInAdminAccount(password: string): Promise<{ user: User | null; error: string | null }> {
+  for (const authEmail of adminAuthEmails()) {
+    const attempt = await supabaseSignIn('email', authEmail, password)
+    if (attempt.user) return attempt
+  }
+  return { user: null, error: 'Could not sign in the support admin account.' }
 }
 
 export type SupabaseAdminStatus = {
@@ -92,8 +109,10 @@ export async function ensureTrainingAdminSupabaseSession(
   const name = localUser?.name?.trim() || 'Support Admin'
 
   let signedIn: User | null = null
-  const signInAttempt = await supabaseSignIn('email', email, password)
+  let lastError: string | null = null
+  const signInAttempt = await signInAdminAccount(password)
   signedIn = signInAttempt.user
+  lastError = signInAttempt.error
 
   if (!signedIn) {
     const signUpAttempt = await supabaseSignUp({
@@ -106,9 +125,11 @@ export async function ensureTrainingAdminSupabaseSession(
 
     if (signUpAttempt.user) {
       signedIn = signUpAttempt.user
+      lastError = null
     } else if (signUpAttempt.needsEmailConfirmation) {
-      const retry = await supabaseSignIn('email', email, password)
+      const retry = await signInAdminAccount(password)
       signedIn = retry.user
+      lastError = retry.error
       if (!signedIn) {
         return {
           ok: false,
@@ -118,22 +139,28 @@ export async function ensureTrainingAdminSupabaseSession(
         }
       }
     } else {
-      const retry = await supabaseSignIn('email', email, password)
+      const retry = await signInAdminAccount(password)
       signedIn = retry.user
+      lastError = retry.error ?? signUpAttempt.error ?? lastError
       if (!signedIn) {
         return {
           ok: false,
           user: localUser ?? null,
           error:
             signUpAttempt.error ??
-            signInAttempt.error ??
-            'Could not link the Support admin training account to Supabase.',
+            lastError ??
+            'Could not link the Support admin account to Supabase. Use password demo1234 or reset it via Forgot password.',
         }
       }
     }
   }
 
-  let sessionUser = normalizeUserIdentity({ ...signedIn, role: 'admin' })
+  let sessionUser = normalizeUserIdentity({
+    ...signedIn,
+    role: 'admin',
+    email: signedIn.email ?? ADMIN_EMAIL,
+    phone: signedIn.phone ?? ADMIN_PHONE,
+  })
   try {
     sessionUser = await ensureSupabaseAdminProfile(sessionUser)
   } catch (err) {
@@ -144,13 +171,12 @@ export async function ensureTrainingAdminSupabaseSession(
     }
   }
 
-  const nextStatus = await getSupabaseAdminStatus()
-  if (!nextStatus.isAdmin) {
+  if (!isLikelyAdminUser(sessionUser)) {
     return {
       ok: false,
       user: sessionUser,
       error:
-        'Run supabase/migrations/20260719000000_admin_profile_updates.sql in Supabase SQL Editor, then tap Support admin again.',
+        'Signed in, but admin access is not active. Run supabase/migrations/20260719000000_admin_profile_updates.sql in Supabase SQL Editor.',
     }
   }
 

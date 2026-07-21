@@ -48,7 +48,7 @@ import {
   supabaseUpdatePassword,
 } from '../lib/supabase'
 import { ensureSupabaseAdminProfile, ensureTrainingAdminSupabaseSession, isLikelyAdminUser } from '../lib/supabase/adminAccess'
-import { ADMIN_PHONE, ADMIN_SEED_PASSWORD } from '../data/seedData'
+import { ADMIN_EMAIL, ADMIN_PHONE, ADMIN_SEED_PASSWORD } from '../data/seedData'
 import * as SplashScreen from 'expo-splash-screen'
 import * as Linking from 'expo-linking'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
@@ -409,8 +409,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       const merged = await resolveUserById(signedIn.id)
       let sessionUser = merged ?? signedIn
-      if (isLikelyAdminUser(sessionUser)) {
-        sessionUser = normalizeUserIdentity({ ...sessionUser, role: 'admin' })
+      const adminLoginAttempt =
+        method === 'email' && identifier.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase()
+      if (adminLoginAttempt || isLikelyAdminUser(sessionUser)) {
+        sessionUser = normalizeUserIdentity({
+          ...sessionUser,
+          role: 'admin',
+          email: sessionUser.email ?? ADMIN_EMAIL,
+          phone: sessionUser.phone ?? ADMIN_PHONE,
+        })
         try {
           sessionUser = await ensureSupabaseAdminProfile(sessionUser)
         } catch {

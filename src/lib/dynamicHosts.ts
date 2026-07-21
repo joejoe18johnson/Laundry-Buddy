@@ -59,7 +59,7 @@ export function buildHostFromUserSettings(
     hasGenerator: listing.hasGenerator ?? existing?.hasGenerator ?? false,
     address: listing.address.trim() || existing?.address || listing.location.trim(),
     gateCode: listing.gateCode.trim() || existing?.gateCode || '',
-    whatsapp: listing.whatsapp.trim() || existing?.whatsapp || user.phone?.replace(/^501/, '') || '',
+    whatsapp: listing.whatsapp.trim() || existing?.whatsapp || '',
     latitude: coords.latitude,
     longitude: coords.longitude,
     photos: listing.setup.length > 0 ? listing.setup : existing?.photos ?? [],

@@ -378,22 +378,14 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
           <View style={styles.stepBlock}>
             <View style={styles.sectionHeader}>
               <AppIcon name="user" size={18} />
-              <Text style={styles.sectionTitle}>
-                {toTitleCase(isHost ? 'Step 3 · Verification selfie' : 'Step 3 · Verification selfie')}
-              </Text>
+              <Text style={styles.sectionTitle}>{toTitleCase('Step 3 · Selfie')}</Text>
             </View>
-            <Text style={styles.sectionSub}>
-              {toTitleCase(
-                'Take a live selfie so we can confirm your face matches the photo on your ID. Hold your phone at eye level in good lighting.',
-              )}
-            </Text>
             <SelfieCapture
               photoUri={selfiePhotoUri}
               onPhotoChange={(uri) => {
                 setSelfiePhotoUri(uri)
                 clearAuthError()
               }}
-              label={toTitleCase('Take verification selfie')}
             />
             {authError ? <Text style={styles.error}>{authError}</Text> : null}
             <View style={styles.actionStack}>

@@ -458,13 +458,6 @@ export function HostHubScreen() {
           onChangeText={(v) => patchListing({ gateCode: v })}
           placeholder="Gate code, buzzer, or landmark"
         />
-        <Field
-          label="WhatsApp number"
-          value={listing.whatsapp}
-          onChangeText={(v) => patchListing({ whatsapp: v })}
-          placeholder="5016001234"
-          keyboardType="phone-pad"
-        />
         <Text style={styles.fieldLabel}>{toTitleCase('Dry time (standard load)')}</Text>
         <View style={styles.turnaroundRow}>
           {TURNAROUND_HOUR_OPTIONS.map((hours) => (

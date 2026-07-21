@@ -17,6 +17,15 @@ export type SupabaseSignupInput = {
   role: AppRole
 }
 
+async function resolveAuthEmailsForEmailLogin(email: string): Promise<string[]> {
+  const normalized = email.trim().toLowerCase()
+  if (normalized === ADMIN_EMAIL.toLowerCase()) {
+    const synthetic = authEmailFromPhone(ADMIN_PHONE)
+    return normalized === synthetic ? [normalized] : [normalized, synthetic]
+  }
+  return [normalized]
+}
+
 async function resolveAuthEmailsForPhoneLogin(phone: string): Promise<{ emails: string[]; error: string | null }> {
   const normalized = normalizePhone(phone)
   if (!normalized.replace(/\D/g, '')) {
@@ -181,7 +190,7 @@ export async function supabaseSignIn(
     }
     authEmails = resolved.emails
   } else {
-    authEmails = [identifier.trim().toLowerCase()]
+    authEmails = await resolveAuthEmailsForEmailLogin(identifier)
   }
 
   let signedInUser: { id: string; email?: string; user_metadata?: Record<string, unknown> } | null = null

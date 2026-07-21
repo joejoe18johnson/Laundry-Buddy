@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Dimensions,
   FlatList,
   Modal,
   NativeScrollEvent,
@@ -18,9 +19,9 @@ import { useTheme } from '../context/ThemeContext'
 import { brand, radius, spacing } from '../theme'
 import { toTitleCase } from '../lib/titleCase'
 
-const SLIDE_HEIGHT = 348
-const TIPS_MIN_HEIGHT = 112
-const ACTIONS_MIN_HEIGHT = 112
+const WINDOW_HEIGHT = Dimensions.get('window').height
+const SLIDE_HEIGHT = Math.min(460, Math.round(WINDOW_HEIGHT * 0.44))
+const ACTIONS_HEIGHT = 132
 
 type TourRole = 'customer' | 'host'
 
@@ -223,16 +224,14 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       justifyContent: 'center',
       paddingHorizontal: spacing.screen,
     },
-    safe: { width: '100%' },
+    safe: { width: '100%', maxHeight: '94%' },
     card: {
       backgroundColor: colors.white,
       borderRadius: radius.xl,
       paddingTop: spacing.lg,
-      paddingBottom: spacing.lg,
+      paddingBottom: spacing.xl,
       borderWidth: 1,
       borderColor: colors.gray100,
-      maxHeight: '92%',
-      overflow: 'hidden',
     },
     header: {
       flexDirection: 'row',
@@ -249,12 +248,12 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       textTransform: 'uppercase',
     },
     skip: { fontSize: 14, fontWeight: '600', color: colors.gray500 },
-    listWrap: { width: '100%', overflow: 'hidden', height: SLIDE_HEIGHT },
+    listWrap: { width: '100%', height: SLIDE_HEIGHT },
     list: { width: '100%', height: SLIDE_HEIGHT },
     slide: {
       paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.sm,
-      gap: spacing.md,
+      paddingTop: spacing.xs,
+      paddingBottom: spacing.sm,
       height: SLIDE_HEIGHT,
     },
     iconWrap: {
@@ -265,6 +264,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       alignItems: 'center',
       justifyContent: 'center',
       alignSelf: 'center',
+      marginBottom: spacing.sm,
     },
     slideTitle: {
       fontSize: 24,
@@ -273,22 +273,24 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       textAlign: 'center',
       letterSpacing: -0.4,
       lineHeight: 30,
+      marginBottom: spacing.sm,
     },
     slideBody: {
       fontSize: 15,
       color: colors.gray600,
       textAlign: 'center',
       lineHeight: 22,
+      marginBottom: spacing.md,
     },
     tips: {
-      marginTop: 'auto',
+      flex: 1,
       gap: spacing.sm,
       backgroundColor: colors.gray50,
       borderRadius: radius.lg,
-      padding: spacing.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
       borderWidth: 1,
       borderColor: colors.gray100,
-      minHeight: TIPS_MIN_HEIGHT,
       justifyContent: 'center',
     },
     tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
@@ -297,8 +299,8 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       flexDirection: 'row',
       justifyContent: 'center',
       gap: 6,
-      marginTop: spacing.lg,
-      marginBottom: spacing.md,
+      marginTop: spacing.md,
+      marginBottom: spacing.lg,
     },
     dot: {
       width: 7,
@@ -310,8 +312,8 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     actions: {
       gap: spacing.sm,
       paddingHorizontal: spacing.lg,
-      minHeight: ACTIONS_MIN_HEIGHT,
-      justifyContent: 'flex-end',
+      minHeight: ACTIONS_HEIGHT,
+      justifyContent: 'flex-start',
     },
   })
 }
