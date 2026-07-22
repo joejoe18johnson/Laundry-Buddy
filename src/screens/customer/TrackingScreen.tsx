@@ -146,11 +146,29 @@ export function TrackingScreen() {
     isAccepted && isCash && booking.paymentStatus === 'pending' && amount > 0
   const bank = hostSettings.bankDetails
 
+  const dropOffUnlocked =
+    isAccepted &&
+    (amount <= 0 || isCash || (isBankTransfer && booking.paymentStatus === 'paid'))
+  const showDropOffCard = !isDeclined && !isLoadComplete
+  const phaseLocked = !dropOffUnlocked && !isDeclined
+  const dropOffAddress = booking.address.trim() || host?.address?.trim() || ''
+  const dropOffGate = booking.gateCode.trim() || host?.gateCode?.trim() || ''
+  const dropOffLockMessage = isPending
+    ? titleCaseWithName(
+        `Drop-off address and directions unlock after ${booking.hostName} accepts your request.`,
+        booking.hostName,
+      )
+    : isBankTransfer && booking.paymentStatus !== 'paid'
+      ? titleCaseWithName(
+          `Drop-off address and directions unlock after ${booking.hostName} verifies your bank transfer.`,
+          booking.hostName,
+        )
+      : ''
+
   const isReadyForPickup = isAccepted && booking.stage === 'ready' && !isPickupComplete(booking)
   const isLoadComplete = booking.stage === 'picked-up' || isPickupComplete(booking)
   const canConfirmGuestPickup = canGuestConfirmPickup(booking)
   const awaitingHostPickupConfirm = isAwaitingHostPickupConfirmation(booking)
-  const isDropOffPhase = isAccepted && !isReadyForPickup
   const canCancelPending = isPending && canGuestCancelPendingRequest(booking)
   const msUntilCancel = isPending ? getMsUntilGuestCanCancel(booking) : 0
   void cancelTick
@@ -179,17 +197,17 @@ export function TrackingScreen() {
                 : { label: 'Accepted', variant: 'accepted' as const }
 
   const handleDirections = () => {
-    if (!isAccepted) return
+    if (!dropOffUnlocked) return
     if (host) {
       void openHostDirections({
         latitude: host.latitude,
         longitude: host.longitude,
         name: formatHostDisplayName(host.name),
-        address: booking.address,
+        address: dropOffAddress,
       })
       return
     }
-    void openDirections({ address: booking.address, label: booking.hostName })
+    void openDirections({ address: dropOffAddress, label: booking.hostName })
   }
 
   const openLoadChat = () => {
@@ -247,6 +265,65 @@ export function TrackingScreen() {
           </ScrollView>
         </View>
       )}
+
+      {showDropOffCard ? (
+        <View
+          style={[
+            styles.pickupCard,
+            dropOffUnlocked ? styles.pickupCardProminent : styles.pickupCardLocked,
+          ]}
+        >
+          <View style={styles.pickupTitleRow}>
+            <AppIcon
+              name="map-pin"
+              size={18}
+              color={dropOffUnlocked ? colors.black : colors.gray400}
+            />
+            <Text
+              style={[styles.pickupTitle, !dropOffUnlocked && styles.pickupTitleMuted]}
+            >
+              {toTitleCase('Drop-off details')}
+            </Text>
+            {dropOffUnlocked ? (
+              <View style={styles.dropOffLiveBadge}>
+                <Text style={styles.dropOffLiveBadgeText}>{toTitleCase('Ready')}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {!dropOffUnlocked ? (
+            <Text style={styles.pendingDirectionsHint}>{dropOffLockMessage}</Text>
+          ) : (
+            <>
+              <View style={styles.pickupField}>
+                <AppIcon name="home" size={14} color={colors.gray500} />
+                <View style={styles.pickupFieldText}>
+                  <Text style={styles.pickupLabel}>{toTitleCase('Address')}</Text>
+                  <Text style={styles.pickupValue}>{dropOffAddress || toTitleCase('Ask your host in chat')}</Text>
+                </View>
+              </View>
+              {dropOffGate ? (
+                <View style={styles.pickupField}>
+                  <AppIcon name="key" size={14} color={colors.gray500} />
+                  <View style={styles.pickupFieldText}>
+                    <Text style={styles.pickupLabel}>{toTitleCase('Gate code')}</Text>
+                    <Text style={styles.pickupValue}>{dropOffGate}</Text>
+                  </View>
+                </View>
+              ) : null}
+            </>
+          )}
+
+          <OutlineButton
+            title="Directions"
+            icon="navigation"
+            full
+            disabled={!dropOffUnlocked || !dropOffAddress}
+            onPress={handleDirections}
+          />
+          <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
+        </View>
+      ) : null}
 
       {needsPayNow && (
         <View style={styles.urgentPayCard}>
@@ -337,20 +414,13 @@ export function TrackingScreen() {
                     `Waiting for ${booking.hostName} to accept your load`,
                     booking.hostName,
                   )
-                : isBankTransfer && amount > 0
-                  ? titleCaseWithName(
-                      `Next: drop off at ${booking.address}. Use the Pay now section when ready.`,
-                      booking.address,
-                    )
+                : isBankTransfer && amount > 0 && !dropOffUnlocked
+                  ? toTitleCase('Next: complete your bank transfer below. Drop-off directions unlock once payment is verified.')
                   : isCash && amount > 0
-                    ? titleCaseWithName(
-                        `Next: drop off at ${booking.address} and pay ${formatMoney(amount)} in cash.`,
-                        booking.address,
-                      )
-                    : titleCaseWithName(
-                        `Next: drop off at ${booking.address}.`,
-                        booking.address,
-                      )}
+                    ? toTitleCase(`Next: head to drop-off and pay ${formatMoney(amount)} in cash. Directions are above.`)
+                    : dropOffUnlocked
+                      ? toTitleCase('Drop-off directions are ready at the top of this page.')
+                      : toTitleCase('Your host accepted — follow the steps below to continue.')}
             </Text>
           </View>
           <AppIcon name="x" size={16} color={colors.gray500} />
@@ -387,30 +457,6 @@ export function TrackingScreen() {
         </View>
       )}
 
-      {!isDeclined && (
-        <View style={styles.progressSection}>
-          <View style={styles.statusHeader}>
-            <AppIcon name="package" size={20} color={colors.gray500} />
-            <Text style={styles.eyebrow}>{toTitleCase('Load progress')}</Text>
-            <StatusBadge label={statusBadge.label} variant={statusBadge.variant} />
-          </View>
-
-          <LoadProgressTracker booking={booking} pulse={pulse} />
-        </View>
-      )}
-
-      {!isDeclined && isPending && (
-        <View style={styles.infoCard}>
-          <AppIcon name="message-circle" size={18} color={colors.gray600} />
-          <Text style={styles.infoText}>
-            {titleCaseWithName(
-              `Step 1: waiting for ${booking.hostName} to accept your request.`,
-              booking.hostName,
-            )}
-          </Text>
-        </View>
-      )}
-
       {!isDeclined && isPending && (
         <View style={styles.cancelCard}>
           <View style={styles.cancelHeader}>
@@ -435,6 +481,31 @@ export function TrackingScreen() {
         </View>
       )}
 
+      <View style={phaseLocked ? styles.lockedPhase : undefined} pointerEvents={phaseLocked ? 'none' : 'auto'}>
+      {!isDeclined && (
+        <View style={styles.progressSection}>
+          <View style={styles.statusHeader}>
+            <AppIcon name="package" size={20} color={colors.gray500} />
+            <Text style={styles.eyebrow}>{toTitleCase('Load progress')}</Text>
+            <StatusBadge label={statusBadge.label} variant={statusBadge.variant} />
+          </View>
+
+          <LoadProgressTracker booking={booking} pulse={pulse} />
+        </View>
+      )}
+
+      {!isDeclined && isPending && (
+        <View style={styles.infoCard}>
+          <AppIcon name="message-circle" size={18} color={colors.gray600} />
+          <Text style={styles.infoText}>
+            {titleCaseWithName(
+              `Step 1: waiting for ${booking.hostName} to accept your request.`,
+              booking.hostName,
+            )}
+          </Text>
+        </View>
+      )}
+
       {!isDeclined && booking.clothesList && booking.clothesList.length > 0 && (
         <View style={styles.clothesSection}>
           <LoadListBreakdown items={booking.clothesList} title="Your load list" />
@@ -449,32 +520,7 @@ export function TrackingScreen() {
         </Text>
       </View>
       )}
-
-      {isDropOffPhase && (
-      <View style={styles.pickupCard}>
-        <View style={styles.pickupTitleRow}>
-          <AppIcon name="map-pin" size={18} />
-          <Text style={styles.pickupTitle}>{toTitleCase('Drop-off details')}</Text>
-        </View>
-        <View style={styles.pickupField}>
-          <AppIcon name="home" size={14} color={colors.gray500} />
-          <View style={styles.pickupFieldText}>
-            <Text style={styles.pickupLabel}>{toTitleCase('Address')}</Text>
-            <Text style={styles.pickupValue}>{booking.address}</Text>
-          </View>
-        </View>
-        <View style={styles.pickupField}>
-          <AppIcon name="key" size={14} color={colors.gray500} />
-          <View style={styles.pickupFieldText}>
-            <Text style={styles.pickupLabel}>{toTitleCase('Gate code')}</Text>
-            <Text style={styles.pickupValue}>{booking.gateCode}</Text>
-          </View>
-        </View>
-        <View style={{ height: spacing.md }} />
-        <OutlineButton title="Directions" icon="navigation" full onPress={handleDirections} />
-        <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
       </View>
-      )}
 
       {isLoadComplete && (
         <View style={styles.reviewCard}>
@@ -542,22 +588,6 @@ export function TrackingScreen() {
             )}
           </Text>
           <PrimaryButton title="I Picked Up My Load" icon="check-circle" full onPress={handleConfirmPickup} />
-        </View>
-      )}
-
-      {isPending && (
-        <View style={styles.pickupCard}>
-          <View style={styles.pickupTitleRow}>
-            <AppIcon name="map-pin" size={18} color={colors.gray400} />
-            <Text style={[styles.pickupTitle, styles.pickupTitleMuted]}>{toTitleCase('Drop-off details')}</Text>
-          </View>
-          <Text style={styles.pendingDirectionsHint}>
-            {titleCaseWithName(
-              `Drop-off address and directions unlock after ${booking.hostName} accepts your request.`,
-              booking.hostName,
-            )}
-          </Text>
-          <OutlineButton title="Directions" icon="navigation" full disabled onPress={() => {}} />
         </View>
       )}
     </Screen>
@@ -737,14 +767,41 @@ function createTrackingStyles(colors: ReturnType<typeof useTheme>['colors']) {
   pickupCard: {
     backgroundColor: colors.gray50,
     padding: spacing.lg,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  pickupTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  pickupTitle: { fontSize: 16, fontWeight: '600' },
+  pickupCardProminent: {
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.black,
+  },
+  pickupCardLocked: {
+    backgroundColor: colors.gray100,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    opacity: 0.92,
+  },
+  pickupTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
+  pickupTitle: { fontSize: 17, fontWeight: '700' },
   pickupTitleMuted: { color: colors.gray500 },
+  dropOffLiveBadge: {
+    marginLeft: 'auto',
+    backgroundColor: colors.greenBg,
+    borderRadius: radius.pill,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(5,148,79,0.25)',
+  },
+  dropOffLiveBadgeText: { fontSize: 11, fontWeight: '700', color: colors.green },
   pendingDirectionsHint: { fontSize: 14, color: colors.gray500, lineHeight: 20 },
+  lockedPhase: { opacity: 0.42 },
   pickupField: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   pickupFieldText: { flex: 1 },
   pickupLabel: {

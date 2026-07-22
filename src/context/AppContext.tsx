@@ -1514,6 +1514,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           showToast('Guest notified', { icon: 'check-circle' })
         }
       }
+
+      setScreen('host-dryer')
     },
     [hostRequests, activeLoads, user, notifyCustomer, getSettingsForHost, showToast, requireMarketplaceAccess],
   )

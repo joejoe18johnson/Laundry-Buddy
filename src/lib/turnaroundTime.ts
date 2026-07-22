@@ -25,12 +25,9 @@ export function formatTurnaroundHoursLabel(hours: number): string {
   return formatDryTimeInline(hours)
 }
 
-/** Profile stats — "Under 2 hrs" */
+/** Profile stats — "1 hr 30 min" */
 export function formatDryTimeStat(hours: number): string {
-  const value = clampTurnaroundHours(hours)
-  if (value === 1) return 'Under 1 hr'
-  if (value === 1.5) return 'Under 1 hr 30 min'
-  return 'Under 2 hrs'
+  return formatTurnaroundHours(hours)
 }
 
 /** Lists, cards, chips — "2 hr dry" */

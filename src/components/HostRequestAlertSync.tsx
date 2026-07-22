@@ -88,7 +88,7 @@ export function HostRequestAlertSync() {
   const handleAccept = useCallback(() => {
     if (!visibleRequest) return
     acceptRequest(visibleRequest.id)
-    closePopup(visibleRequest.id, true)
+    closePopup(visibleRequest.id, false)
   }, [acceptRequest, closePopup, visibleRequest])
 
   const handleDecline = useCallback(() => {
