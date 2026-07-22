@@ -1,5 +1,6 @@
 import type { IconName } from '../components/AppIcon'
 import { CASH_PAY_AT_DROP_OFF, cashPaymentGuestHint, cashPaymentHostHint } from './bookingPayments'
+import { isPickupComplete } from './pickupConfirmation'
 import type { Booking, BookingStage } from '../types'
 
 export type GuestProgressStep = {
@@ -118,7 +119,7 @@ function isCashPayment(booking: Booking): boolean {
 export function getGuestProgressIndex(booking: Booking): number {
   if (booking.requestStatus === 'pending') return 0
   if (booking.requestStatus === 'declined') return -1
-  if (booking.stage === 'picked-up') return GUEST_LOAD_STEPS.length
+  if (booking.stage === 'picked-up' || isPickupComplete(booking)) return GUEST_LOAD_STEPS.length
 
   const proofSent = !!booking.paymentProofSentAt
   const paid = booking.paymentStatus === 'paid'
@@ -139,6 +140,7 @@ export function getGuestProgressIndex(booking: Booking): number {
 
 export function getHostProgressIndex(load: Booking): number {
   if (load.requestStatus !== 'accepted') return 0
+  if (load.stage === 'picked-up' || isPickupComplete(load)) return HOST_LOAD_STEPS.length
 
   const needsBank = needsBankPayment(load)
   const needsCash = isCashPayment(load)

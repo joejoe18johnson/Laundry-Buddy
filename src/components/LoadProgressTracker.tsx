@@ -11,6 +11,7 @@ import {
   getStepTimestamp,
   type GuestProgressStep,
 } from '../lib/loadProgress'
+import { isPickupComplete } from '../lib/pickupConfirmation'
 import { toTitleCase } from '../lib/titleCase'
 import { radius, spacing } from '../theme'
 import type { Booking } from '../types'
@@ -192,7 +193,7 @@ export function LoadProgressTracker({ booking, pulse }: LoadProgressTrackerProps
   const activeIndex = getGuestProgressIndex(booking)
   const currentStep = GUEST_LOAD_STEPS[Math.max(0, Math.min(activeIndex, GUEST_LOAD_STEPS.length - 1))]
   const progressPercent = getProgressPercent(activeIndex, GUEST_LOAD_STEPS.length)
-  const isComplete = booking.stage === 'picked-up'
+  const isComplete = booking.stage === 'picked-up' || isPickupComplete(booking)
 
   return (
     <View style={styles.card}>

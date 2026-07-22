@@ -3,14 +3,19 @@ import { formatMoney } from './bookingPayments'
 import type { Booking, BookingStage } from '../types'
 
 export type BookingStepEventKind =
+  | 'request-sent'
   | 'request-accepted'
+  | 'request-declined'
   | 'payment-requested'
+  | 'payment-proof-submitted'
   | 'payment-proof-sent'
   | 'payment-confirmed'
+  | 'bag-received'
   | 'drying-started'
   | 'ready-for-pickup'
+  | 'guest-pickup-confirmed'
+  | 'host-pickup-confirmed'
   | 'picked-up'
-  | 'request-declined'
 
 export type BookingStepSnapshot = {
   id: string
@@ -22,6 +27,9 @@ export type BookingStepSnapshot = {
   paymentMethod?: Booking['paymentMethod']
   paymentRequestedAt?: string
   paymentProofSentAt?: string
+  gotBagAt?: string
+  guestPickupConfirmedAt?: string
+  hostPickupConfirmedAt?: string
   stage: BookingStage
   totalAmount?: number
 }
@@ -49,6 +57,9 @@ export function toBookingStepSnapshot(booking: Booking): BookingStepSnapshot {
     paymentMethod: booking.paymentMethod,
     paymentRequestedAt: booking.paymentRequestedAt,
     paymentProofSentAt: booking.paymentProofSentAt,
+    gotBagAt: booking.stageTimes?.['got-bag'],
+    guestPickupConfirmedAt: booking.guestPickupConfirmedAt,
+    hostPickupConfirmedAt: booking.hostPickupConfirmedAt,
     stage: booking.stage,
     totalAmount: booking.totalAmount,
   }
@@ -70,6 +81,18 @@ function buildGuestEvent(
   const host = snapshot.hostName
 
   switch (kind) {
+    case 'request-sent':
+      return {
+        id: eventId(snapshot.id, kind),
+        bookingId: snapshot.id,
+        hostId: snapshot.hostId,
+        kind,
+        kicker: 'Request sent',
+        title: 'Waiting for your host',
+        body: `${host} will accept or decline your load request — we'll notify you right away.`,
+        icon: 'send',
+        primaryLabel: 'View load',
+      }
     case 'request-accepted': {
       const isBank = snapshot.paymentMethod === 'bank_transfer' && needsPayment(snapshot)
       const isCash = snapshot.paymentMethod === 'cash' && needsPayment(snapshot)
@@ -101,6 +124,18 @@ function buildGuestEvent(
         icon: 'credit-card',
         primaryLabel: 'Pay now',
       }
+    case 'payment-proof-submitted':
+      return {
+        id: eventId(snapshot.id, kind),
+        bookingId: snapshot.id,
+        hostId: snapshot.hostId,
+        kind,
+        kicker: 'Proof sent',
+        title: 'Payment proof submitted',
+        body: `${host} is reviewing your ${amount} transfer — we'll notify you when it's confirmed.`,
+        icon: 'image',
+        primaryLabel: 'View load',
+      }
     case 'payment-confirmed': {
       const isCash = snapshot.paymentMethod === 'cash'
       return {
@@ -117,6 +152,18 @@ function buildGuestEvent(
         primaryLabel: 'View load',
       }
     }
+    case 'bag-received':
+      return {
+        id: eventId(snapshot.id, kind),
+        bookingId: snapshot.id,
+        hostId: snapshot.hostId,
+        kind,
+        kicker: 'Bag received',
+        title: `${host} has your laundry`,
+        body: "Your host marked your bag received — we'll update you when it's in the dryer.",
+        icon: 'package',
+        primaryLabel: 'View load',
+      }
     case 'drying-started':
       return {
         id: eventId(snapshot.id, kind),
@@ -140,6 +187,18 @@ function buildGuestEvent(
         body: `${host} marked your load ready — collect it when you can.`,
         icon: 'package',
         primaryLabel: 'View load',
+      }
+    case 'host-pickup-confirmed':
+      return {
+        id: eventId(snapshot.id, kind),
+        bookingId: snapshot.id,
+        hostId: snapshot.hostId,
+        kind,
+        kicker: 'Pickup confirmed',
+        title: `${host} confirmed pickup`,
+        body: 'Tap I picked up on My load once you have your laundry — both of you must confirm.',
+        icon: 'check-circle',
+        primaryLabel: 'Confirm pickup',
       }
     case 'picked-up':
       return {
@@ -186,9 +245,69 @@ function buildHostEvent(
         kind,
         kicker: 'Payment proof',
         title: `${guest} submitted payment proof`,
-        body: `Review the ${amount} transfer screenshot, then confirm payment on your dashboard.`,
+        body: `Review the ${amount} transfer screenshot, then confirm payment on the Dryer tab.`,
         icon: 'credit-card',
         primaryLabel: 'Review payment',
+      }
+    case 'payment-confirmed':
+      return {
+        id: eventId(snapshot.id, kind),
+        bookingId: snapshot.id,
+        hostId: snapshot.hostId,
+        kind,
+        kicker: 'Payment confirmed',
+        title: `${guest}'s payment is verified`,
+        body: `The ${amount} payment is confirmed — you can start drying when the bag arrives.`,
+        icon: 'check-circle',
+        primaryLabel: 'Open dryer',
+      }
+    case 'bag-received':
+      return {
+        id: eventId(snapshot.id, kind),
+        bookingId: snapshot.id,
+        hostId: snapshot.hostId,
+        kind,
+        kicker: 'Bag received',
+        title: `${guest}'s bag is checked in`,
+        body: 'Bag received — confirm payment if needed, then move the load to the dryer.',
+        icon: 'package',
+        primaryLabel: 'Open dryer',
+      }
+    case 'drying-started':
+      return {
+        id: eventId(snapshot.id, kind),
+        bookingId: snapshot.id,
+        hostId: snapshot.hostId,
+        kind,
+        kicker: 'In the dryer',
+        title: `${guest}'s load is drying`,
+        body: 'We notified your guest — mark dry when the cycle finishes.',
+        icon: 'wind',
+        primaryLabel: 'Open dryer',
+      }
+    case 'ready-for-pickup':
+      return {
+        id: eventId(snapshot.id, kind),
+        bookingId: snapshot.id,
+        hostId: snapshot.hostId,
+        kind,
+        kicker: 'Ready for pickup',
+        title: `${guest}'s load is ready`,
+        body: 'Your guest was notified — confirm pickup once they collect their laundry.',
+        icon: 'package',
+        primaryLabel: 'Open dryer',
+      }
+    case 'guest-pickup-confirmed':
+      return {
+        id: eventId(snapshot.id, kind),
+        bookingId: snapshot.id,
+        hostId: snapshot.hostId,
+        kind,
+        kicker: 'Guest picked up',
+        title: `${guest} confirmed pickup`,
+        body: 'Confirm on your end to complete the load and ask for a review.',
+        icon: 'check-circle',
+        primaryLabel: 'Confirm pickup',
       }
     case 'picked-up':
       return {
@@ -200,7 +319,7 @@ function buildHostEvent(
         title: `${guest} picked up`,
         body: 'The load is done — ask your guest for a review to get more bookings.',
         icon: 'check-circle',
-        primaryLabel: 'Go to dashboard',
+        primaryLabel: 'Open dryer',
       }
     default:
       return buildHostEvent(snapshot, 'payment-proof-sent')
@@ -211,7 +330,10 @@ function detectGuestTransitions(
   prev: BookingStepSnapshot | undefined,
   next: BookingStepSnapshot,
 ): BookingStepEventKind[] {
-  if (!prev) return []
+  if (!prev) {
+    if (next.requestStatus === 'pending') return ['request-sent']
+    return []
+  }
 
   const kinds: BookingStepEventKind[] = []
 
@@ -224,14 +346,21 @@ function detectGuestTransitions(
   if (
     !prev.paymentRequestedAt &&
     next.paymentRequestedAt &&
-    next.requestStatus === 'accepted' &&
-    prev.requestStatus === 'accepted'
+    next.requestStatus === 'accepted'
   ) {
     kinds.push('payment-requested')
   }
 
+  if (!prev.paymentProofSentAt && next.paymentProofSentAt) {
+    kinds.push('payment-proof-submitted')
+  }
+
   if (prev.paymentStatus !== 'paid' && next.paymentStatus === 'paid') {
     kinds.push('payment-confirmed')
+  }
+
+  if (!prev.gotBagAt && next.gotBagAt) {
+    kinds.push('bag-received')
   }
 
   if (prev.stage !== 'drying' && next.stage === 'drying') {
@@ -240,6 +369,14 @@ function detectGuestTransitions(
 
   if (prev.stage !== 'ready' && next.stage === 'ready') {
     kinds.push('ready-for-pickup')
+  }
+
+  if (!prev.hostPickupConfirmedAt && next.hostPickupConfirmedAt && !next.guestPickupConfirmedAt) {
+    kinds.push('host-pickup-confirmed')
+  }
+
+  if (prev.stage !== 'picked-up' && next.stage === 'picked-up') {
+    kinds.push('picked-up')
   }
 
   return kinds
@@ -255,6 +392,30 @@ function detectHostTransitions(
 
   if (!prev.paymentProofSentAt && next.paymentProofSentAt) {
     kinds.push('payment-proof-sent')
+  }
+
+  if (prev.paymentStatus !== 'paid' && next.paymentStatus === 'paid') {
+    kinds.push('payment-confirmed')
+  }
+
+  if (!prev.gotBagAt && next.gotBagAt) {
+    kinds.push('bag-received')
+  }
+
+  if (prev.stage !== 'drying' && next.stage === 'drying') {
+    kinds.push('drying-started')
+  }
+
+  if (prev.stage !== 'ready' && next.stage === 'ready') {
+    kinds.push('ready-for-pickup')
+  }
+
+  if (!prev.guestPickupConfirmedAt && next.guestPickupConfirmedAt && !next.hostPickupConfirmedAt) {
+    kinds.push('guest-pickup-confirmed')
+  }
+
+  if (prev.stage !== 'picked-up' && next.stage === 'picked-up') {
+    kinds.push('picked-up')
   }
 
   return kinds

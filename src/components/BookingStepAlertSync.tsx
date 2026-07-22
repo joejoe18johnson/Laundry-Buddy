@@ -7,8 +7,31 @@ import {
   detectHostStepEvents,
   toBookingStepSnapshot,
   type BookingStepEvent,
+  type BookingStepEventKind,
   type BookingStepSnapshot,
 } from '../lib/bookingStepEvents'
+
+const GUEST_TRACKING_EVENTS: BookingStepEventKind[] = [
+  'request-sent',
+  'request-accepted',
+  'payment-requested',
+  'payment-proof-submitted',
+  'payment-confirmed',
+  'bag-received',
+  'drying-started',
+  'ready-for-pickup',
+  'host-pickup-confirmed',
+]
+
+const HOST_DRYER_EVENTS: BookingStepEventKind[] = [
+  'payment-proof-sent',
+  'payment-confirmed',
+  'bag-received',
+  'drying-started',
+  'ready-for-pickup',
+  'guest-pickup-confirmed',
+  'picked-up',
+]
 
 /** Surfaces booking milestone updates (payment, drying, ready, done) with in-app popups. */
 export function BookingStepAlertSync() {
@@ -80,17 +103,22 @@ export function BookingStepAlertSync() {
         navigate('customer-home')
         return
       }
+      if (GUEST_TRACKING_EVENTS.includes(event.kind)) {
+        selectGuestBooking(event.bookingId)
+        navigate('customer-tracking')
+        return
+      }
       selectGuestBooking(event.bookingId)
       navigate('customer-tracking')
       return
     }
 
     if (user?.role === 'host') {
-      if (event.kind === 'picked-up') {
-        navigate('host-dashboard')
+      if (HOST_DRYER_EVENTS.includes(event.kind)) {
+        navigate('host-dryer')
         return
       }
-      navigate('host-dryer')
+      navigate('host-dashboard')
       return
     }
 

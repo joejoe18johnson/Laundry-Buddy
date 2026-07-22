@@ -21,7 +21,7 @@ export function HostBookingSync() {
 
     const interval = setInterval(() => {
       void refreshHostOrders()
-    }, 12000)
+    }, 5000)
 
     return () => {
       subscription.remove()

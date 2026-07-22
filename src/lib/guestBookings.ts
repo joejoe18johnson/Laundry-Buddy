@@ -39,5 +39,9 @@ export function mergeGuestBookings(...lists: Booking[][]): Booking[] {
       byId.set(booking.id, booking)
     }
   }
-  return filterActiveGuestBookings([...byId.values()])
+  return [...byId.values()]
+}
+
+export function filterVisibleGuestBookings(bookings: Booking[]): Booking[] {
+  return bookings.filter((booking) => booking.requestStatus !== 'declined')
 }

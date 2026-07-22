@@ -22,6 +22,7 @@ import {
 import {
   canGuestConfirmPickup,
   isAwaitingHostPickupConfirmation,
+  isPickupComplete,
 } from '../../lib/pickupConfirmation'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
@@ -32,6 +33,7 @@ import type { Booking } from '../../types'
 function getLoadStatusLabel(load: Booking): string {
   if (load.requestStatus === 'pending') return 'Awaiting'
   if (load.requestStatus === 'declined') return 'Declined'
+  if (load.stage === 'picked-up' || isPickupComplete(load)) return 'Complete'
   if (load.stage === 'ready') return 'Ready'
   if (load.stage === 'drying') return 'Drying'
   if (
@@ -55,7 +57,7 @@ function getLoadStatusLabel(load: Booking): string {
 
 export function TrackingScreen() {
   const { user } = useAuth()
-  const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, clearBooking, cancelPendingRequest, openChat, markPaymentProofSent, refreshGuestBookings } = useApp()
+  const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, clearBooking, cancelPendingRequest, openChat, markPaymentProofSent, refreshGuestBookings, openLeaveReview } = useApp()
   const { sendMessage } = useMessages()
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
@@ -128,7 +130,8 @@ export function TrackingScreen() {
     isAccepted && isCash && booking.paymentStatus === 'pending' && amount > 0
   const bank = hostSettings.bankDetails
 
-  const isReadyForPickup = isAccepted && booking.stage === 'ready'
+  const isReadyForPickup = isAccepted && booking.stage === 'ready' && !isPickupComplete(booking)
+  const isLoadComplete = booking.stage === 'picked-up' || isPickupComplete(booking)
   const canConfirmGuestPickup = canGuestConfirmPickup(booking)
   const awaitingHostPickupConfirm = isAwaitingHostPickupConfirmation(booking)
   const isDropOffPhase = isAccepted && !isReadyForPickup
@@ -143,6 +146,8 @@ export function TrackingScreen() {
 
   const statusBadge = isDeclined
     ? { label: 'Declined', variant: 'declined' as const }
+    : isLoadComplete
+      ? { label: 'Complete', variant: 'accepted' as const }
     : isPending
       ? { label: 'Awaiting host', variant: 'awaiting' as const }
       : booking.stage === 'ready'
@@ -452,6 +457,28 @@ export function TrackingScreen() {
         <OutlineButton title="Directions" icon="navigation" full onPress={handleDirections} />
         <OutlineButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
       </View>
+      )}
+
+      {isLoadComplete && (
+        <View style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <AppIcon name="check-circle" size={18} color={colors.green} />
+            <Text style={styles.reviewTitle}>{toTitleCase('All done')}</Text>
+          </View>
+          <Text style={styles.reviewSub}>
+            {titleCaseWithName(
+              `Step 6 of 6 — your load with ${booking.hostName} is complete. Leave a review to help others find great hosts.`,
+              booking.hostName,
+            )}
+          </Text>
+          <PrimaryButton
+            title="Leave review"
+            icon="star"
+            full
+            onPress={() => openLeaveReview(booking.hostId, booking.id)}
+          />
+          <OutlineButton title="Back to home" icon="home" full onPress={() => { clearBooking(); navigate('customer-home') }} />
+        </View>
       )}
 
       {isReadyForPickup && canConfirmGuestPickup && !booking.hostPickupConfirmedAt && (

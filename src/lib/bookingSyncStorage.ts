@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { isPickupComplete, normalizePickupStage } from './pickupConfirmation'
 import type { Booking } from '../types'
 
 const KEY = 'laundry-buddy-booking-snapshots'
@@ -36,6 +37,8 @@ export function mergeBookingSnapshot(local: Booking, snapshot: Booking): Booking
     !!snapshot.guestPickupConfirmedAt && !local.guestPickupConfirmedAt
   const snapshotHostPickup =
     !!snapshot.hostPickupConfirmedAt && !local.hostPickupConfirmedAt
+  const snapshotPickupComplete =
+    isPickupComplete(snapshot) && !isPickupComplete(local)
 
   if (
     !snapshotAhead &&
@@ -45,12 +48,13 @@ export function mergeBookingSnapshot(local: Booking, snapshot: Booking): Booking
     !snapshotPaymentRequested &&
     !snapshotGuestPickup &&
     !snapshotHostPickup &&
+    !snapshotPickupComplete &&
     snapshot.requestStatus === local.requestStatus
   ) {
     return local
   }
 
-  return {
+  const merged = normalizePickupStage({
     ...local,
     ...snapshot,
     customerId: local.customerId ?? snapshot.customerId,
@@ -58,12 +62,15 @@ export function mergeBookingSnapshot(local: Booking, snapshot: Booking): Booking
     stageTimes: { ...local.stageTimes, ...snapshot.stageTimes },
     guestPickupConfirmedAt: snapshot.guestPickupConfirmedAt ?? local.guestPickupConfirmedAt,
     hostPickupConfirmedAt: snapshot.hostPickupConfirmedAt ?? local.hostPickupConfirmedAt,
-  }
+    stage: snapshotStageIdx >= localStageIdx ? snapshot.stage : local.stage,
+  })
+
+  return normalizePickupStage(merged)
 }
 
 export async function saveBookingSnapshot(booking: Booking): Promise<void> {
   const map = await readMap()
-  map[booking.id] = booking
+  map[booking.id] = normalizePickupStage(booking)
   await writeMap(map)
 }
 
@@ -76,10 +83,13 @@ export async function removeBookingSnapshot(bookingId: string): Promise<void> {
 
 export async function loadBookingSnapshot(bookingId: string): Promise<Booking | null> {
   const map = await readMap()
-  return map[bookingId] ?? null
+  const snapshot = map[bookingId]
+  return snapshot ? normalizePickupStage(snapshot) : null
 }
 
 export async function loadBookingSnapshotsForCustomer(customerId: string): Promise<Booking[]> {
   const map = await readMap()
-  return Object.values(map).filter((booking) => booking.customerId === customerId)
+  return Object.values(map)
+    .filter((booking) => booking.customerId === customerId)
+    .map(normalizePickupStage)
 }

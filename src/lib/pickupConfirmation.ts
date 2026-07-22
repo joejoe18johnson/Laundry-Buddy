@@ -42,11 +42,40 @@ export function patchPickupConfirmation(
   role: 'host' | 'customer',
 ): Booking {
   const timestamp = new Date().toISOString()
-  return {
+  return normalizePickupStage({
     ...booking,
     hostPickupConfirmedAt:
       role === 'host' ? timestamp : booking.hostPickupConfirmedAt,
     guestPickupConfirmedAt:
       role === 'customer' ? timestamp : booking.guestPickupConfirmedAt,
+  })
+}
+
+/** When both parties confirmed pickup, advance stage so guest/host progress stays in sync. */
+export function normalizePickupStage(booking: Booking): Booking {
+  if (!isPickupComplete(booking)) return booking
+  if (booking.stage === 'picked-up') return booking
+
+  const time = new Date().toISOString()
+  const completedDate =
+    booking.completedAt ??
+    new Date().toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+
+  return {
+    ...booking,
+    stage: 'picked-up',
+    completedAt: completedDate,
+    stageTimes: {
+      ...booking.stageTimes,
+      'picked-up': booking.stageTimes['picked-up'] ?? time,
+    },
+    paymentStatus:
+      booking.paymentMethod === 'cash' || booking.paymentStatus === 'paid'
+        ? ('paid' as const)
+        : (booking.paymentStatus ?? 'pending'),
   }
 }

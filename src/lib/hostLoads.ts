@@ -1,4 +1,5 @@
 import type { Booking, BookingStage } from '../types'
+import { isPickupComplete } from './pickupConfirmation'
 
 /** Payment / drop-off — before the dryer cycle starts. */
 export function isPreDryerLoad(load: Booking): boolean {
@@ -7,7 +8,7 @@ export function isPreDryerLoad(load: Booking): boolean {
 
 /** Any in-progress host load belongs on the Dryer tab (not the dashboard). */
 export function isDryerTabLoad(load: Booking): boolean {
-  return load.stage !== 'picked-up'
+  return load.stage !== 'picked-up' && !isPickupComplete(load)
 }
 
 export function countDryerTabLoads(loads: Booking[]): number {

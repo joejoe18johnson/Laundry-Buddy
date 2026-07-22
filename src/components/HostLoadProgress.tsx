@@ -9,6 +9,7 @@ import {
   getHostStepLabel,
   getProgressPercent,
 } from '../lib/loadProgress'
+import { isPickupComplete } from '../lib/pickupConfirmation'
 import { toTitleCase } from '../lib/titleCase'
 import { radius, spacing } from '../theme'
 import type { Booking } from '../types'
@@ -19,28 +20,37 @@ export function HostLoadProgress({ load }: { load: Booking }) {
   const activeIndex = getHostProgressIndex(load)
   const currentStep = HOST_LOAD_STEPS[Math.min(activeIndex, HOST_LOAD_STEPS.length - 1)]
   const progressPercent = getProgressPercent(activeIndex, HOST_LOAD_STEPS.length)
+  const isComplete = load.stage === 'picked-up' || isPickupComplete(load)
 
   return (
     <View style={styles.card}>
       <View style={styles.summaryRow}>
         <View style={styles.summaryCopy}>
           <Text style={styles.eyebrow}>
-            {toTitleCase(`Step ${activeIndex + 1} of ${HOST_LOAD_STEPS.length}`)}
+            {isComplete
+              ? toTitleCase('Load complete')
+              : toTitleCase(`Step ${Math.min(activeIndex + 1, HOST_LOAD_STEPS.length)} of ${HOST_LOAD_STEPS.length}`)}
           </Text>
-          <Text style={styles.title}>{toTitleCase(getHostStepLabel(load, currentStep))}</Text>
-          <Text style={styles.sub}>{toTitleCase(getHostStepDescription(load, currentStep))}</Text>
+          <Text style={styles.title}>
+            {isComplete ? toTitleCase('Picked up') : toTitleCase(getHostStepLabel(load, currentStep))}
+          </Text>
+          <Text style={styles.sub}>
+            {isComplete
+              ? toTitleCase('All done — ask your guest for a review')
+              : toTitleCase(getHostStepDescription(load, currentStep))}
+          </Text>
         </View>
         <View style={styles.percentBadge}>
-          <Text style={styles.percentValue}>{progressPercent}%</Text>
+          <Text style={styles.percentValue}>{isComplete ? '100' : progressPercent}%</Text>
         </View>
       </View>
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${progressPercent}%` }]} />
+        <View style={[styles.fill, { width: `${isComplete ? 100 : progressPercent}%` }]} />
       </View>
       <View style={styles.stepsRow}>
         {HOST_LOAD_STEPS.map((step, index) => {
-          const done = index < activeIndex
-          const active = index === activeIndex
+          const done = isComplete || index < activeIndex
+          const active = !isComplete && index === activeIndex
           return (
             <View key={step.key} style={styles.stepWrap}>
               <View style={[styles.dot, done && styles.dotDone, active && styles.dotActive]}>

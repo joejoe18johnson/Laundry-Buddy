@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { AppState as RNAppState } from 'react-native'
 import { useAuth } from './AuthContext'
 import { useNotifications } from './NotificationContext'
 import { useToast } from './ToastContext'
@@ -37,6 +38,7 @@ import {
   loadHostPaymentHistory,
 } from '../lib/paymentHistoryStorage'
 import { loadActiveBookings, saveActiveBookings } from '../lib/bookingStorage'
+import { loadStoredBookingDraft, saveStoredBookingDraft } from '../lib/bookingDraftStorage'
 import {
   loadBookingSnapshotsForCustomer,
   mergeBookingSnapshot,
@@ -47,6 +49,7 @@ import {
 import { homeScreenForRole, mainTabScreens } from '../lib/navigationBack'
 import {
   filterActiveGuestBookings,
+  filterVisibleGuestBookings,
   findGuestBooking,
   isActiveGuestBooking,
   mergeGuestBookings,
@@ -116,7 +119,7 @@ import {
   isPickupComplete,
   patchPickupConfirmation,
 } from '../lib/pickupConfirmation'
-import { shouldSuppressHardwareBack } from '../lib/cameraSession'
+import { shouldSuppressHardwareBack, consumePendingBookingFlowRestore } from '../lib/cameraSession'
 import { canGuestCancelPendingRequest } from '../lib/pendingRequestCancel'
 import { deliverPaymentRequest, needsPaymentRequest, withPaymentRequestedAt } from '../lib/paymentRequestDelivery'
 import { inquiryThreadId, supportThreadId } from '../lib/chatThreads'
@@ -321,7 +324,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const chatReturnScreenRef = useRef<Screen>(defaultScreen(role))
   const screenHistoryRef = useRef<Screen[]>([])
   const hardwareBackHandlerRef = useRef<(() => boolean) | null>(null)
+  const bookingDraftRef = useRef<BookingDraft | null>(null)
   const [homeRefreshKey, setHomeRefreshKey] = useState(0)
+
+  bookingDraftRef.current = bookingDraft
 
   const guestBookingsRef = useRef(guestBookings)
   const selectedBookingIdRef = useRef(selectedBookingId)
@@ -349,13 +355,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const booking = useMemo(() => {
     if (selectedBookingId) {
       const selected = findGuestBooking(guestBookings, selectedBookingId)
-      if (selected) {
-        if (isActiveGuestBooking(selected) || selected.requestStatus === 'declined') {
-          return selected
-        }
+      if (selected && selected.requestStatus !== 'declined') {
+        return selected
       }
     }
-    return activeGuestBookings[0] ?? null
+    return activeGuestBookings[0] ?? guestBookings.find((entry) => entry.stage === 'picked-up') ?? null
   }, [guestBookings, selectedBookingId, activeGuestBookings])
 
   const selectGuestBooking = useCallback((bookingId: string) => {
@@ -364,9 +368,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!selectedBookingId) return
-    const stillActive = findGuestBooking(guestBookings, selectedBookingId)
-    if (stillActive && isActiveGuestBooking(stillActive)) return
-    setSelectedBookingId(activeGuestBookings[0]?.id ?? null)
+    const stillVisible = findGuestBooking(guestBookings, selectedBookingId)
+    if (stillVisible && stillVisible.requestStatus !== 'declined') return
+    const active = activeGuestBookings[0]
+    const completed = guestBookings.find((entry) => entry.stage === 'picked-up')
+    setSelectedBookingId(active?.id ?? completed?.id ?? null)
   }, [guestBookings, selectedBookingId, activeGuestBookings])
 
   useEffect(() => {
@@ -428,7 +434,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const applyGuestBookingsFromStorage = useCallback(async () => {
     if (role !== 'customer' || !user) return
     const stored = await loadActiveBookings(user.id)
-    const seed = filterActiveGuestBookings(getCustomerSeedBookings(user.id))
+    const seed = filterVisibleGuestBookings(getCustomerSeedBookings(user.id))
     const snapshots = await loadBookingSnapshotsForCustomer(user.id)
     const merged = mergeGuestBookings(seed, stored).map((booking) => {
       const snapshot = snapshots.find((entry) => entry.id === booking.id)
@@ -439,11 +445,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         merged.push(snapshot)
       }
     }
-    const active = filterActiveGuestBookings(merged)
-    setGuestBookings(active)
-    setSelectedBookingId((current) =>
-      current && findGuestBooking(active, current) ? current : active[0]?.id ?? null,
-    )
+    const visible = filterVisibleGuestBookings(merged)
+    setGuestBookings(visible)
+    setSelectedBookingId((current) => {
+      if (current && findGuestBooking(visible, current)) return current
+      const active = filterActiveGuestBookings(visible)
+      return active[0]?.id ?? visible.find((entry) => entry.stage === 'picked-up')?.id ?? null
+    })
   }, [role, user])
 
   const refreshHostCompletedLoads = useCallback(async () => {
@@ -452,10 +460,83 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setHostCompletedLoads(history)
   }, [role, user])
 
+  const ensureBookingHostSelected = useCallback(
+    (hostId: string): boolean => {
+      const host = getHostById(hostId)
+      if (!host) return false
+      const resolved = applyHostSettings(
+        host,
+        host.hostUserId ? hostSettingsMap[host.hostUserId] : undefined,
+      )
+      setSelectedHost(resolved)
+      return true
+    },
+    [hostSettingsMap],
+  )
+
+  const resumeBookingFlow = useCallback((draftOverride?: BookingDraft) => {
+    const draft = draftOverride ?? bookingDraftRef.current
+    if (!draft || role !== 'customer') return
+    if (!ensureBookingHostSelected(draft.hostId)) return
+    setScreen('customer-booking')
+  }, [ensureBookingHostSelected, role])
+
+  const patchBookingDraft = useCallback(
+    (patch: Partial<BookingDraft>) => {
+      setBookingDraft((current) => {
+        if (!current) return current
+        const next = { ...current, ...patch }
+        if ('loadPhotoUri' in patch) {
+          queueMicrotask(() => resumeBookingFlow(next))
+        }
+        return next
+      })
+    },
+    [resumeBookingFlow],
+  )
+
+  useEffect(() => {
+    if (role !== 'customer' || !user || !bookingDraft) return
+    void saveStoredBookingDraft(user.id, bookingDraft)
+  }, [bookingDraft, role, user])
+
+  useEffect(() => {
+    if (role !== 'customer') return
+
+    const subscription = RNAppState.addEventListener('change', (state) => {
+      if (state !== 'active') return
+      if (!bookingDraftRef.current) return
+      if (!consumePendingBookingFlowRestore()) return
+      resumeBookingFlow()
+    })
+
+    return () => subscription.remove()
+  }, [resumeBookingFlow, role])
+
   useEffect(() => {
     screenHistoryRef.current = []
-    setScreen(defaultScreen(role))
-    void syncTrainingDemoIfNeeded().then(() => {
+    let cancelled = false
+
+    const boot = async () => {
+      let restoredBooking = false
+      if (role === 'customer' && user) {
+        const stored = await loadStoredBookingDraft(user.id)
+        if (cancelled) return
+        if (stored) {
+          setBookingDraft(stored)
+          ensureBookingHostSelected(stored.hostId)
+          setScreen('customer-booking')
+          restoredBooking = true
+        }
+      }
+
+      if (!restoredBooking) {
+        setScreen(defaultScreen(role))
+      }
+
+      await syncTrainingDemoIfNeeded()
+      if (cancelled) return
+
       if (role === 'host') {
         const seed = getHostDashboardSeed(user!.id)
         void getHostOrders(user!.id).then(async (stored) => {
@@ -468,6 +549,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
               return snapshot ? mergeBookingSnapshot(load, snapshot) : load
             }),
           )
+          mergedLoads = mergedLoads.filter(
+            (load) => load.stage !== 'picked-up' && !isPickupComplete(load),
+          )
           const activeLoadIds = mergedLoads.map((load) => load.id)
           setHostRequests(
             mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds),
@@ -479,11 +563,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
           })
           void refreshHostCompletedLoads()
         })
-      } else {
+      } else if (role === 'customer') {
         void applyGuestBookingsFromStorage()
       }
-    })
-  }, [applyGuestBookingsFromStorage, refreshHostCompletedLoads, role, user!.id])
+    }
+
+    void boot()
+
+    return () => {
+      cancelled = true
+    }
+  }, [applyGuestBookingsFromStorage, ensureBookingHostSelected, refreshHostCompletedLoads, role, user!.id])
 
   useEffect(() => {
     if (role === 'customer' && user) {
@@ -650,6 +740,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return snapshot ? mergeBookingSnapshot(load, snapshot) : load
       }),
     )
+    mergedLoads = mergedLoads.filter(
+      (load) => load.stage !== 'picked-up' && !isPickupComplete(load),
+    )
     const activeLoadIds = mergedLoads.map((load) => load.id)
     setHostRequests(mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds))
     setActiveLoads(mergedLoads)
@@ -778,7 +871,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const goBack = useCallback((): boolean => {
-    if (shouldSuppressHardwareBack()) return true
+    if (shouldSuppressHardwareBack()) {
+      if (
+        role === 'customer' &&
+        bookingDraftRef.current &&
+        screen !== 'customer-booking'
+      ) {
+        resumeBookingFlow()
+      }
+      return true
+    }
     if (hardwareBackHandlerRef.current?.()) return true
 
     if (screen === 'chat') {
@@ -790,6 +892,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setMarkDryExpandedLoadId(null)
       setScreen('host-dryer')
       return true
+    }
+
+    if (screen === 'customer-booking') {
+      const draft = bookingDraftRef.current
+      if (draft) {
+        if (draft.wizardStep > 0) {
+          setBookingDraft({ ...draft, wizardStep: draft.wizardStep - 1 })
+          return true
+        }
+        setScreen('customer-host-profile')
+        return true
+      }
     }
 
     const homeScreen = homeScreenForRole(role)
@@ -812,7 +926,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setScreen(homeScreen)
     return true
-  }, [closeChat, refreshAtHome, role, screen])
+  }, [closeChat, refreshAtHome, resumeBookingFlow, role, screen])
 
   useEffect(() => {
     if (!selectedHost?.hostUserId) return
@@ -932,13 +1046,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [hostSettingsMap, requireMarketplaceAccess, role, showToast],
   )
 
-  const patchBookingDraft = useCallback((patch: Partial<BookingDraft>) => {
-    setBookingDraft((current) => (current ? { ...current, ...patch } : current))
-  }, [])
-
   const clearBookingDraft = useCallback(() => {
     setBookingDraft(null)
-  }, [])
+    if (user && role === 'customer') {
+      void saveStoredBookingDraft(user.id, null)
+    }
+  }, [role, user])
 
   const openHostInquiryChat = useCallback(
     (host: Host) => {
@@ -1067,6 +1180,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const bookingId = selectedBookingIdRef.current
     if (!bookingId) return
     setGuestBookings((prev) => removeGuestBooking(prev, bookingId))
+    void removeBookingSnapshot(bookingId)
   }, [])
 
   const openNotification = useCallback(
@@ -1253,6 +1367,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       )
       showToast('Request sent to host', { icon: 'send' })
       setBookingDraft(null)
+      if (user) void saveStoredBookingDraft(user.id, null)
     },
     [selectedHost, user, role, notifyHost, notifyCustomer, getSettingsForHost, showToast, requireMarketplaceAccess],
   )
@@ -1518,11 +1633,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           notifyTarget = load
           persistIfPickedUp(load)
           const patched = patchLoad(load)
-          if (stage === 'picked-up') {
-            void removeBookingSnapshot(loadId)
-          } else {
-            persistBookingSnapshot(patched)
-          }
+          void saveBookingSnapshot(patched)
           return patched
         })
         const filtered = stage === 'picked-up' ? next.filter((load) => load.id !== loadId) : next
@@ -1537,9 +1648,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (existing) {
           notifyTarget = existing
           persistIfPickedUp(existing)
-        }
-        if (stage === 'picked-up') {
-          return removeGuestBooking(prev, loadId)
         }
         return patchGuestBooking(prev, loadId, patchLoad)
       })

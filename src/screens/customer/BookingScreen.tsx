@@ -35,7 +35,6 @@ export function BookingScreen() {
     navigate,
     confirmBooking,
     getSettingsForHost,
-    registerHardwareBackHandler,
     bookingDraft,
     patchBookingDraft,
   } = useApp()
@@ -73,19 +72,6 @@ export function BookingScreen() {
       patchBookingDraft({ paymentMethod: paymentMethods[0] })
     }
   }, [bookingDraft, patchBookingDraft, paymentMethods])
-
-  useEffect(() => {
-    registerHardwareBackHandler(() => {
-      const step = bookingDraft?.wizardStep ?? 0
-      if (step > 0) {
-        patchBookingDraft({ wizardStep: step - 1 })
-        return true
-      }
-      navigate('customer-host-profile')
-      return true
-    })
-    return () => registerHardwareBackHandler(null)
-  }, [bookingDraft?.wizardStep, navigate, patchBookingDraft, registerHardwareBackHandler])
 
   if (!selectedHost || !hostSettings || !bookingDraft || bookingDraft.hostId !== selectedHost.id) {
     return null

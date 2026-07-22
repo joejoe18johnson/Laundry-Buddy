@@ -21,7 +21,7 @@ export function GuestBookingSync() {
 
     const interval = setInterval(() => {
       void refreshGuestBookings()
-    }, 12000)
+    }, 5000)
 
     return () => {
       subscription.remove()
