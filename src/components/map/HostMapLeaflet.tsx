@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 import { buildLeafletMapHtml } from '../../lib/leafletMapHtml'
-import { hostsMapRenderKey } from '../../lib/mapMarkers'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
 import { colors } from '../../theme'
 import type { HostMapProps } from '../HostMap'
@@ -21,21 +20,50 @@ export function HostMapLeaflet({
   fitToHosts,
 }: HostMapProps) {
   const webRef = useRef<WebView>(null)
-  const html = useMemo(
-    () => buildLeafletMapHtml(hosts, nearbyHostIds, userLocation, radiusKm, fitToResults, fitToHosts),
-    [hosts, nearbyHostIds, userLocation, radiusKm, fitToResults, fitToHosts],
-  )
 
-  const hostSig = useMemo(() => hostsMapRenderKey(hosts), [hosts])
   const mapKey = useMemo(
     () =>
-      `${userLocation.latitude.toFixed(3)}-${userLocation.longitude.toFixed(3)}-${radiusKm}-${fitToResults ? 'fit' : 'radius'}-${hostSig}`,
-    [fitToResults, hostSig, radiusKm, userLocation.latitude, userLocation.longitude],
+      `${userLocation.latitude.toFixed(3)}-${userLocation.longitude.toFixed(3)}-${radiusKm}`,
+    [radiusKm, userLocation.latitude, userLocation.longitude],
+  )
+
+  // Rebuild the WebView only when search center/radius changes — host pin updates go via injectJavaScript.
+  const html = useMemo(
+    () => buildLeafletMapHtml(hosts, nearbyHostIds, userLocation, radiusKm, fitToResults, fitToHosts),
+    [mapKey, fitToResults],
+  )
+
+  const hostsPayload = useMemo(
+    () =>
+      JSON.stringify(
+        hosts.map((h) => ({
+          id: h.id,
+          lat: h.latitude,
+          lng: h.longitude,
+          price: h.price,
+          name: h.name,
+          inRadius: nearbyHostIds.has(h.id),
+        })),
+      ),
+    [hosts, nearbyHostIds],
+  )
+
+  const fitPayload = useMemo(
+    () =>
+      JSON.stringify(
+        (fitToHosts ?? hosts).map((h) => ({ lat: h.latitude, lng: h.longitude })),
+      ),
+    [fitToHosts, hosts],
   )
 
   useEffect(() => {
-    webRef.current?.reload()
-  }, [html, hostSig])
+    webRef.current?.injectJavaScript(`
+      if (window.__lbUpdateHosts) {
+        window.__lbUpdateHosts(${hostsPayload}, ${fitPayload}, ${fitToResults ? 'true' : 'false'});
+      }
+      true;
+    `)
+  }, [fitPayload, fitToResults, hostsPayload])
 
   return (
     <View style={styles.wrap}>

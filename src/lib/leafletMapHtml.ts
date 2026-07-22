@@ -270,28 +270,54 @@ export function buildLeafletMapHtml(
       iconSize: [40, 40],
       iconAnchor: [20, 20]
     });
-    L.marker([you.lat, you.lng], { icon: youIcon, zIndexOffset: 1000 }).addTo(map);
+    const youMarker = L.marker([you.lat, you.lng], { icon: youIcon, zIndexOffset: 1000 }).addTo(map);
+    const hostLayer = L.layerGroup().addTo(map);
 
-    hosts.forEach(function(h) {
-      const isFree = h.price <= 0;
-      const label = isFree ? 'Free' : ('$' + h.price);
-      const halo = h.inRadius ? HALO : HALO_DISTANT;
-      const icon = L.divIcon({
-        html: hostMarkerHtml(label, isFree, h.inRadius),
-        className: 'host-marker-icon',
-        iconSize: [halo, halo],
-        iconAnchor: [halo / 2, halo / 2]
+    function addHostMarkers(hostList) {
+      hostLayer.clearLayers();
+      hostList.forEach(function(h) {
+        const isFree = h.price <= 0;
+        const label = isFree ? 'Free' : ('$' + h.price);
+        const halo = h.inRadius ? HALO : HALO_DISTANT;
+        const icon = L.divIcon({
+          html: hostMarkerHtml(label, isFree, h.inRadius),
+          className: 'host-marker-icon',
+          iconSize: [halo, halo],
+          iconAnchor: [halo / 2, halo / 2]
+        });
+        const marker = L.marker([h.lat, h.lng], {
+          icon: icon,
+          zIndexOffset: h.inRadius ? 500 : 100
+        });
+        marker.on('click', function() {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'host', hostId: h.id }));
+          }
+        });
+        hostLayer.addLayer(marker);
       });
-      const marker = L.marker([h.lat, h.lng], {
-        icon: icon,
-        zIndexOffset: h.inRadius ? 500 : 100
-      }).addTo(map);
-      marker.on('click', function() {
-        if (window.ReactNativeWebView) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'host', hostId: h.id }));
-        }
-      });
-    });
+    }
+
+    addHostMarkers(hosts);
+
+    window.__lbUpdateHosts = function(nextHosts, nextFitHosts, shouldFitResults) {
+      addHostMarkers(nextHosts);
+      if (shouldFitResults && nextFitHosts.length > 0) {
+        const bounds = L.latLngBounds([[you.lat, you.lng]]);
+        nextFitHosts.forEach(function(h) { bounds.extend([h.lat, h.lng]); });
+        map.fitBounds(bounds, { padding: [52, 52], maxZoom: 14 });
+      }
+    };
+
+    window.__lbRecenterSearch = function(lat, lng, nextRadiusM) {
+      you.lat = lat;
+      you.lng = lng;
+      radiusM = nextRadiusM;
+      searchCircle.setLatLng([lat, lng]);
+      searchCircle.setRadius(nextRadiusM);
+      youMarker.setLatLng([lat, lng]);
+      fitSearchArea();
+    };
 
     if (fitToResults && fitHosts.length > 0) {
       const bounds = L.latLngBounds([[you.lat, you.lng]]);
@@ -303,9 +329,6 @@ export function buildLeafletMapHtml(
 
     setTimeout(function() {
       map.invalidateSize();
-      if (!fitToResults || fitHosts.length === 0) {
-        fitSearchArea();
-      }
     }, 300);
     window.addEventListener('resize', function() { map.invalidateSize(); });
   </script>

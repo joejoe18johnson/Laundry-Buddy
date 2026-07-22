@@ -119,7 +119,7 @@ import {
   isPickupComplete,
   patchPickupConfirmation,
 } from '../lib/pickupConfirmation'
-import { shouldSuppressHardwareBack, consumePendingBookingFlowRestore } from '../lib/cameraSession'
+import { shouldSuppressHardwareBack, consumePendingCameraFlowRestore, peekCameraReturnScreen } from '../lib/cameraSession'
 import { canGuestCancelPendingRequest } from '../lib/pendingRequestCancel'
 import { deliverPaymentRequest, needsPaymentRequest, withPaymentRequestedAt } from '../lib/paymentRequestDelivery'
 import { inquiryThreadId, supportThreadId } from '../lib/chatThreads'
@@ -181,6 +181,7 @@ interface AppState {
   homeRefreshKey: number
   navigate: (screen: Screen) => void
   goBack: () => boolean
+  restoreAfterCamera: () => void
   registerHardwareBackHandler: (handler: (() => boolean) | null) => void
   viewHostProfile: (host: Host) => void
   openHostProfileFromLink: (hostId: string, hostUserId?: string) => Promise<boolean>
@@ -325,9 +326,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const screenHistoryRef = useRef<Screen[]>([])
   const hardwareBackHandlerRef = useRef<(() => boolean) | null>(null)
   const bookingDraftRef = useRef<BookingDraft | null>(null)
+  const screenRef = useRef<Screen>(defaultScreen(role))
   const [homeRefreshKey, setHomeRefreshKey] = useState(0)
 
   bookingDraftRef.current = bookingDraft
+  screenRef.current = screen
 
   const guestBookingsRef = useRef(guestBookings)
   const selectedBookingIdRef = useRef(selectedBookingId)
@@ -481,6 +484,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setScreen('customer-booking')
   }, [ensureBookingHostSelected, role])
 
+  const restoreAfterCamera = useCallback(() => {
+    const { consumed, returnScreen: restoreTo } = consumePendingCameraFlowRestore()
+    if (!consumed) return
+
+    if (restoreTo) {
+      setScreen(restoreTo)
+      return
+    }
+
+    if (role === 'customer' && bookingDraftRef.current) {
+      resumeBookingFlow()
+      return
+    }
+
+    if (role === 'customer' && guestBookingsRef.current.some(isActiveGuestBooking)) {
+      setScreen('customer-tracking')
+    }
+  }, [resumeBookingFlow, role])
+
   const patchBookingDraft = useCallback(
     (patch: Partial<BookingDraft>) => {
       setBookingDraft((current) => {
@@ -501,17 +523,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [bookingDraft, role, user])
 
   useEffect(() => {
-    if (role !== 'customer') return
-
     const subscription = RNAppState.addEventListener('change', (state) => {
       if (state !== 'active') return
-      if (!bookingDraftRef.current) return
-      if (!consumePendingBookingFlowRestore()) return
-      resumeBookingFlow()
+      restoreAfterCamera()
     })
 
     return () => subscription.remove()
-  }, [resumeBookingFlow, role])
+  }, [restoreAfterCamera])
 
   useEffect(() => {
     screenHistoryRef.current = []
@@ -531,7 +549,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       if (!restoredBooking) {
-        setScreen(defaultScreen(role))
+        if (role === 'customer' && user) {
+          const stored = await loadActiveBookings(user.id)
+          const seed = filterActiveGuestBookings(getCustomerSeedBookings(user.id))
+          if (stored.length > 0 || seed.length > 0) {
+            setScreen('customer-tracking')
+          } else {
+            setScreen(defaultScreen(role))
+          }
+        } else {
+          setScreen(defaultScreen(role))
+        }
       }
 
       await syncTrainingDemoIfNeeded()
@@ -872,12 +900,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const goBack = useCallback((): boolean => {
     if (shouldSuppressHardwareBack()) {
+      const restoreTo = peekCameraReturnScreen()
+      if (restoreTo && screen !== restoreTo) {
+        setScreen(restoreTo)
+        return true
+      }
       if (
         role === 'customer' &&
         bookingDraftRef.current &&
         screen !== 'customer-booking'
       ) {
         resumeBookingFlow()
+        return true
+      }
+      if (
+        role === 'customer' &&
+        screen === 'customer-home' &&
+        guestBookingsRef.current.some(isActiveGuestBooking)
+      ) {
+        setScreen('customer-tracking')
+        return true
       }
       return true
     }
@@ -1994,6 +2036,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       homeRefreshKey,
       navigate,
       goBack,
+      restoreAfterCamera,
       registerHardwareBackHandler,
       viewHostProfile,
       openHostProfileFromLink,
@@ -2069,6 +2112,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       homeRefreshKey,
       navigate,
       goBack,
+      restoreAfterCamera,
       registerHardwareBackHandler,
       viewHostProfile,
       openHostProfileFromLink,

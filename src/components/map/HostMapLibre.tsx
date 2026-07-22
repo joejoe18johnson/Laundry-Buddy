@@ -1,8 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, type ComponentRef } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { Camera, CircleLayer, FillLayer, LineLayer, MapView, MarkerView, ShapeSource } from '@maplibre/maplibre-react-native'
 import { HostPricePin } from './MapPins'
-import { hostMarkerRenderKey, hostsMapRenderKey } from '../../lib/mapMarkers'
+import { hostMarkerRenderKey } from '../../lib/mapMarkers'
 import { circleRing } from '../../lib/geo'
 import { zoomLevelForRadiusKm, OPENFREEMAP_STYLE_URL } from '../../lib/mapRegion'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
@@ -16,11 +16,20 @@ export function HostMapLibre({
   userLocation,
   radiusKm = SEARCH_RADIUS_KM,
 }: HostMapProps) {
+  const cameraRef = useRef<ComponentRef<typeof Camera>>(null)
   const zoomLevel = useMemo(
     () => zoomLevelForRadiusKm(radiusKm, userLocation),
     [radiusKm, userLocation],
   )
-  const cameraKey = `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}-${radiusKm}`
+  const recenterKey = `${userLocation.latitude.toFixed(4)}-${userLocation.longitude.toFixed(4)}-${radiusKm}`
+
+  useEffect(() => {
+    cameraRef.current?.setCamera({
+      centerCoordinate: [userLocation.longitude, userLocation.latitude],
+      zoomLevel,
+      animationDuration: 400,
+    })
+  }, [recenterKey, userLocation.latitude, userLocation.longitude, zoomLevel])
 
   const userPointGeo = useMemo(
     () => ({
@@ -56,12 +65,9 @@ export function HostMapLibre({
     [userLocation, radiusKm],
   )
 
-  const markerRenderKey = useMemo(() => hostsMapRenderKey(hosts), [hosts])
-
   return (
     <View style={styles.wrap}>
       <MapView
-        key={markerRenderKey}
         style={styles.map}
         mapStyle={OPENFREEMAP_STYLE_URL}
         logoEnabled={false}
@@ -71,10 +77,11 @@ export function HostMapLibre({
         rotateEnabled={false}
       >
         <Camera
-          key={cameraKey}
-          centerCoordinate={[userLocation.longitude, userLocation.latitude]}
-          zoomLevel={zoomLevel}
-          animationDuration={400}
+          ref={cameraRef}
+          defaultSettings={{
+            centerCoordinate: [userLocation.longitude, userLocation.latitude],
+            zoomLevel,
+          }}
         />
         <ShapeSource id="radius-circle" shape={circleGeo}>
           <FillLayer

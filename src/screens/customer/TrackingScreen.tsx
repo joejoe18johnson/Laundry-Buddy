@@ -10,6 +10,7 @@ import { formatHostDisplayName } from '../../lib/displayName'
 import { getBookingAmount, formatMoney, cashPaymentGuestHint } from '../../lib/bookingPayments'
 import { buildPaymentProofChatNotice } from '../../lib/chatThreads'
 import { openDirections, openHostDirections } from '../../lib/openDirections'
+import { loadPaymentProofDraft, savePaymentProofDraft } from '../../lib/paymentProofDraftStorage'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { NotificationBellReminder } from '../../components/NotificationBellReminder'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
@@ -72,8 +73,23 @@ export function TrackingScreen() {
 
   useEffect(() => {
     setBannerVisible(true)
-    setTransferProofUri(null)
+    if (!booking?.id) {
+      setTransferProofUri(null)
+      return
+    }
+    let cancelled = false
+    void loadPaymentProofDraft(booking.id).then((uri) => {
+      if (!cancelled) setTransferProofUri(uri)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [booking?.id])
+
+  useEffect(() => {
+    if (!booking?.id || !transferProofUri) return
+    void savePaymentProofDraft(booking.id, transferProofUri)
+  }, [booking?.id, transferProofUri])
 
   useEffect(() => {
     if (!booking?.isNew || booking.requestStatus === 'declined') return
@@ -191,6 +207,7 @@ export function TrackingScreen() {
       paymentProof: true,
     })
     markPaymentProofSent(booking.id, transferProofUri)
+    void savePaymentProofDraft(booking.id, null)
     setTransferProofUri(null)
   }
 

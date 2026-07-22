@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker'
 import { beginCameraSession, endCameraSession } from './cameraSession'
+import type { Screen } from '../types'
 
 export type ImagePickSource = 'camera' | 'library'
 
@@ -9,9 +10,9 @@ export type ImagePickResult =
 
 export async function pickImage(
   source: ImagePickSource,
-  options?: { quality?: number },
+  options?: { quality?: number; returnScreen?: Screen },
 ): Promise<ImagePickResult> {
-  beginCameraSession()
+  beginCameraSession(options?.returnScreen)
   try {
     const useCamera = source === 'camera'
     const permission = useCamera

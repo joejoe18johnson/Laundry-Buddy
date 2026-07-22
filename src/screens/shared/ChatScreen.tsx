@@ -195,6 +195,7 @@ export function ChatThreadPanel({
   subtitleOverride?: string
 }) {
   const { user } = useAuth()
+  const { restoreAfterCamera } = useApp()
   const { colors, formStyles } = useTheme()
   const { width: screenWidth, height: windowHeight } = useWindowDimensions()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -257,7 +258,11 @@ export function ChatThreadPanel({
   }, [messages.length, scrollToLatest])
 
   const pickImageAttachment = async (useCamera: boolean) => {
-    const result = await pickImage(useCamera ? 'camera' : 'library', { quality: 0.8 })
+    const result = await pickImage(useCamera ? 'camera' : 'library', {
+      quality: 0.8,
+      returnScreen: 'chat',
+    })
+    restoreAfterCamera()
 
     if (result.ok) {
       setPendingImageUri(result.uri)
