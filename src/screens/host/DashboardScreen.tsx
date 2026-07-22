@@ -10,7 +10,7 @@ import { getHostByUserId } from '../../data/mockData'
 import { applyHostSettings } from '../../lib/hostListing'
 import { HostPricingSection } from '../../components/host/HostPricingSection'
 import { normalizeHostSettings } from '../../lib/hostSettingsStorage'
-import { formatTurnaroundHours } from '../../lib/turnaroundTime'
+import { formatDryTimeInline } from '../../lib/turnaroundTime'
 import { formatMoney } from '../../lib/bookingPayments'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { countDryerTabLoads } from '../../lib/hostLoads'
@@ -247,7 +247,7 @@ export function DashboardScreen() {
 
       {hostProfile && (
         <Text style={styles.listingMeta}>
-          {formatTurnaroundHours(hostProfile.turnaroundHours)} dry turnaround
+          {formatDryTimeInline(hostProfile.turnaroundHours)}
         </Text>
       )}
 

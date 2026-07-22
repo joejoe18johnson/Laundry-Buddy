@@ -4,7 +4,7 @@ import { formatHostDisplayName } from '../lib/displayName'
 import { formatHostPrice } from '../lib/hostFilters'
 import { isTopRatedHost } from '../lib/hostReputation'
 import { toTitleCase } from '../lib/titleCase'
-import { formatTurnaroundHours } from '../lib/turnaroundTime'
+import { formatDryTimeInline } from '../lib/turnaroundTime'
 import type { Host } from '../types'
 import { colors, radius, spacing } from '../theme'
 import { AppIcon } from './AppIcon'
@@ -38,7 +38,7 @@ export function HostCard({ host }: { host: Host }) {
         </Text>
         <Text style={styles.subMeta}>
           {host.rating > 0 ? `★ ${host.rating.toFixed(1)}` : toTitleCase('New Host')}
-          {' · '}{formatTurnaroundHours(host.turnaroundHours)} dry
+          {' · '}{formatDryTimeInline(host.turnaroundHours)}
           {host.foldingPrice != null && host.foldingPrice > 0 ? ` · ${toTitleCase('Folding')}` : ''}
         </Text>
       </View>

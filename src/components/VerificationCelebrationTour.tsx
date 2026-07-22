@@ -84,7 +84,7 @@ const HOST_STEPS: TourStep[] = [
     icon: 'clock',
     title: 'Choose hours & go online',
     body: 'Set drop-off hours that fit your schedule, then toggle Online when you are ready to accept laundry.',
-    tips: ['Offline hides you from guest search', 'Add setup photos so guests trust your space'],
+    tips: ['Offline hides you from guest search', 'Add house rules so guests know what to expect'],
   },
   {
     id: 'promote',

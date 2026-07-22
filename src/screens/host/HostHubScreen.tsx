@@ -207,7 +207,7 @@ export function HostHubScreen() {
     setSaved(false)
   }
 
-  const patchListingList = (key: 'setup' | 'rules', index: number, value: string) => {
+  const patchListingList = (key: 'rules', index: number, value: string) => {
     setDraft((prev) => {
       const base = normalizeHostSettings(prev, host)
       const next = [...base.listing[key]]
@@ -217,7 +217,7 @@ export function HostHubScreen() {
     setSaved(false)
   }
 
-  const addListingLine = (key: 'setup' | 'rules') => {
+  const addListingLine = (key: 'rules') => {
     setDraft((prev) => {
       const base = normalizeHostSettings(prev, host)
       return normalizeHostSettings(
@@ -228,7 +228,7 @@ export function HostHubScreen() {
     setSaved(false)
   }
 
-  const removeListingLine = (key: 'setup' | 'rules', index: number) => {
+  const removeListingLine = (key: 'rules', index: number) => {
     setDraft((prev) => {
       const base = normalizeHostSettings(prev, host)
       const next = base.listing[key].filter((_, i) => i !== index)
@@ -276,7 +276,6 @@ export function HostHubScreen() {
       ...draft,
       listing: {
         ...draft.listing,
-        setup: draft.listing.setup.map((s) => s.trim()).filter(Boolean),
         rules: draft.listing.rules.map((s) => s.trim()).filter(Boolean),
       },
     }
@@ -453,7 +452,7 @@ export function HostHubScreen() {
       </Section>
 
       <Section title="About you">
-        <Text style={styles.sectionHint}>{toTitleCase('Tell guests about yourself and your laundry setup.')}</Text>
+        <Text style={styles.sectionHint}>{toTitleCase('Tell guests about yourself and your laundry space.')}</Text>
         <Field
           label="Bio"
           value={listing.bio}
@@ -527,18 +526,6 @@ export function HostHubScreen() {
           sub="Show guests you can run during power outages"
           value={listing.hasGenerator}
           onChange={(v) => patchListing({ hasGenerator: v })}
-        />
-      </Section>
-
-      <Section title="Your setup">
-        <EditableLineList
-          label="Setup highlights"
-          hint="Describe your laundry space — guests see these on your profile."
-          items={listing.setup}
-          placeholder="e.g. Covered porch drop-off"
-          onChange={(i, v) => patchListingList('setup', i, v)}
-          onAdd={() => addListingLine('setup')}
-          onRemove={(i) => removeListingLine('setup', i)}
         />
       </Section>
 

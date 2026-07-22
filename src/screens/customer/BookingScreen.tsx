@@ -8,6 +8,7 @@ import { ClothesListEditor } from '../../components/ClothesListEditor'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { LoadPhotoCapture } from '../../components/LoadPhotoCapture'
 import { NotificationBellReminder } from '../../components/NotificationBellReminder'
+import { PriceFooterBar, priceFooterShellStyle } from '../../components/PriceFooterBar'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -354,41 +355,27 @@ export function BookingScreen() {
       </Screen>
 
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
-        <View style={styles.footer}>
-          <View style={[styles.priceOrb, totalPrice <= 0 && styles.priceOrbFree]}>
-            <Text style={styles.priceOrbText}>{formatMoney(totalPrice)}</Text>
-          </View>
-
-          <View style={styles.footerDetails}>
-            {wizardStep === 2 ? (
-              <>
-                <Text style={styles.footerBaseLine}>{toTitleCase('Ready to send')}</Text>
-                <Text style={styles.footerAddonLine} numberOfLines={1}>
-                  {formatDropOffHour(dropOffTime)} · {PAYMENT_METHOD_LABELS[paymentMethod]}
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.footerBaseLine} numberOfLines={1}>
-                  {loads} load{loads === 1 ? '' : 's'} · {formatServicePrice(dryPrice)} dry
-                  {loads > 1 ? ` (${formatMoney(drySubtotal)})` : ''}
-                </Text>
-                {footerAddonLines.map((line) => (
-                  <Text key={line.label} style={styles.footerAddonLine} numberOfLines={1}>
-                    +{line.label}: {formatFooterAddonAmount(line.amount)}
-                  </Text>
-                ))}
-              </>
-            )}
-            {validationHint ? (
-              <Text style={styles.validationHint} numberOfLines={2}>
-                {toTitleCase(validationHint)}
-              </Text>
-            ) : null}
-          </View>
-
-          <View style={styles.footerAction}>
-            {wizardStep === 0 ? (
+        <PriceFooterBar
+          price={formatMoney(totalPrice)}
+          isFree={totalPrice <= 0}
+          baseLine={
+            wizardStep === 2
+              ? toTitleCase('Ready to send')
+              : `${loads} load${loads === 1 ? '' : 's'} · ${formatServicePrice(dryPrice)} dry${
+                  loads > 1 ? ` (${formatMoney(drySubtotal)})` : ''
+                }`
+          }
+          addonLines={
+            wizardStep === 2
+              ? []
+              : footerAddonLines.map((line) => ({
+                  label: line.label,
+                  amount: formatFooterAddonAmount(line.amount),
+                }))
+          }
+          hint={validationHint ? toTitleCase(validationHint) : undefined}
+          action={
+            wizardStep === 0 ? (
               <PrimaryButton
                 title="Continue"
                 icon="chevron-right"
@@ -399,9 +386,14 @@ export function BookingScreen() {
               <PrimaryButton title="Review" icon="eye" onPress={() => patchBookingDraft({ wizardStep: 2 })} />
             ) : (
               <PrimaryButton title="Send request" icon="send" disabled={!canConfirm} onPress={submitBooking} />
-            )}
-          </View>
-        </View>
+            )
+          }
+        />
+        {wizardStep === 2 ? (
+          <Text style={styles.footerSendMeta}>
+            {formatDropOffHour(dropOffTime)} · {PAYMENT_METHOD_LABELS[paymentMethod]}
+          </Text>
+        ) : null}
       </View>
     </View>
   )
@@ -644,62 +636,14 @@ function createBookingStyles(colors: ReturnType<typeof useTheme>['colors']) {
     borderRadius: radius.md,
     minHeight: 100,
   },
-  footerShell: {
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray100,
-    shadowColor: colors.black,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
+  footerShell: priceFooterShellStyle(colors),
+  footerSendMeta: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.gray500,
+    textAlign: 'center',
     paddingHorizontal: spacing.screen,
-    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
-  priceOrb: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.black,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  priceOrbFree: {
-    backgroundColor: colors.green,
-  },
-  priceOrbText: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: colors.white,
-    letterSpacing: -0.3,
-  },
-  footerDetails: {
-    flex: 1,
-    minWidth: 0,
-    justifyContent: 'center',
-    gap: 2,
-    paddingVertical: 2,
-  },
-  footerBaseLine: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.gray600,
-    lineHeight: 18,
-  },
-  footerAddonLine: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: colors.gray500,
-    lineHeight: 18,
-  },
-  footerAction: { flexShrink: 0, maxWidth: '42%' },
-  validationHint: { fontSize: 11, color: colors.danger, fontWeight: '600', lineHeight: 15, marginTop: 2 },
   })
 }

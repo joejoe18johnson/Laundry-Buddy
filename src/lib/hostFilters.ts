@@ -2,7 +2,7 @@ import type { AppRole, Host } from '../types'
 import { BELIZE_FILTER_AREAS, FILTER_AREA_DISTRICT, hostMatchesFilterArea } from './belizeDistricts'
 import { formatHostDisplayName } from './displayName'
 import { toTitleCase } from './titleCase'
-import { formatTurnaroundHoursLabel } from './turnaroundTime'
+import { formatDryTimeInline } from './turnaroundTime'
 
 export type HostSort = 'nearest' | 'cheapest' | 'rating' | 'fastest'
 
@@ -38,7 +38,7 @@ export function hostPriceLabel(price: number): string {
 }
 
 export function formatHostFooterMeta(turnaroundHours: number): string {
-  return toTitleCase(`${formatTurnaroundHoursLabel(turnaroundHours)} dry`)
+  return toTitleCase(formatDryTimeInline(turnaroundHours))
 }
 
 export function countActiveFilters(filters: HostFilters): number {

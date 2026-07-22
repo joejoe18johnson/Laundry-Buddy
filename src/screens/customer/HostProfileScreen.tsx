@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { TopRatedHostBadge } from '../../components/TopRatedHostBadge'
+import { priceFooterShellStyle, SimpleBookFooterBar } from '../../components/PriceFooterBar'
 import { BackButton, PrimaryButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -12,9 +13,9 @@ import { useTheme } from '../../context/ThemeContext'
 import { getHostProfileDetails } from '../../data/mockData'
 import { summarizeRatings } from '../../lib/reviewStorage'
 import { formatHostDisplayName } from '../../lib/displayName'
-import { formatHostPrice } from '../../lib/hostFilters'
+import { formatHostPrice, hostPriceLabel } from '../../lib/hostFilters'
 import { isTopRatedHost } from '../../lib/hostReputation'
-import { formatTurnaroundHours } from '../../lib/turnaroundTime'
+import { formatDryTimeStat, formatDryTimeInline } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { formatDryerSheetsRate, formatServicePrice, getHostPricing } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
@@ -138,50 +139,16 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
     reviewDate: { fontSize: 12, color: colors.gray400, marginTop: 2 },
     reviewComment: { fontSize: 14, color: colors.gray600, lineHeight: 22 },
     emptyReviews: { fontSize: 14, color: colors.gray500, fontStyle: 'italic', lineHeight: 22 },
-    footerShell: {
-      backgroundColor: colors.white,
-      borderTopWidth: 1,
-      borderTopColor: colors.gray100,
-      shadowColor: colors.black,
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: 0.06,
-      shadowRadius: 8,
-      elevation: 8,
-    },
-    footer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.lg,
-      paddingHorizontal: spacing.screen,
-      paddingTop: spacing.md,
-      paddingBottom: spacing.md,
-    },
-    footerPricing: { flex: 1, minWidth: 0, gap: 4 },
-    footerPriceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
-    footerPrice: {
-      fontSize: 24,
-      fontWeight: '700',
-      letterSpacing: -0.5,
-      color: colors.black,
-    },
-    footerPriceFree: { color: colors.green },
-    footerPriceUnit: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.gray500,
-    },
-    footerMeta: {
-      fontSize: 13,
+    footerShell: priceFooterShellStyle(colors),
+    footerBrowseNote: {
+      fontSize: 12,
       fontWeight: '500',
       color: colors.gray500,
-      lineHeight: 18,
+      textAlign: 'center',
+      paddingHorizontal: spacing.screen,
+      paddingBottom: spacing.sm,
+      lineHeight: 17,
     },
-    browseOnlyNote: {
-      fontSize: 13,
-      color: colors.gray500,
-      lineHeight: 20,
-    },
-    footerButton: { flexShrink: 0, minWidth: 132 },
   })
 }
 
@@ -223,7 +190,7 @@ function Stat({
   styles,
   colors,
 }: {
-  icon: 'package' | 'clock' | 'calendar'
+  icon: 'package' | 'wind' | 'calendar'
   label: string
   value: string
   styles: ReturnType<typeof createHostProfileStyles>
@@ -322,10 +289,6 @@ export function HostProfileScreen() {
   const verified = user ? canBookOrHost(user) : false
   const activeLoadCount = activeGuestBookings.length
   const foldingPrice = pricing.foldingPrice
-  const footerMetaParts = [
-    `${formatTurnaroundHours(host.turnaroundHours)} dry`,
-    foldingPrice > 0 ? `${formatHostPrice(foldingPrice)} folding` : null,
-  ].filter(Boolean)
 
   return (
     <View style={styles.wrapper}>
@@ -387,7 +350,13 @@ export function HostProfileScreen() {
         <View style={styles.statsRow}>
           <Stat icon="package" label="Loads Hosted" value={String(profile.loadsHosted)} styles={styles} colors={colors} />
           <View style={styles.statDivider} />
-          <Stat icon="clock" label="Response Time" value={profile.responseTime} styles={styles} colors={colors} />
+          <Stat
+            icon="wind"
+            label="Dry Time"
+            value={formatDryTimeStat(host.turnaroundHours)}
+            styles={styles}
+            colors={colors}
+          />
           <View style={styles.statDivider} />
           <Stat icon="calendar" label="Member Since" value={profile.memberSince} styles={styles} colors={colors} />
         </View>
@@ -416,8 +385,8 @@ export function HostProfileScreen() {
             </Text>
           </View>
           <View style={styles.detailChip}>
-            <AppIcon name="clock" size={16} />
-            <Text style={styles.detailText}>{formatTurnaroundHours(host.turnaroundHours)} to dry</Text>
+            <AppIcon name="wind" size={16} />
+            <Text style={styles.detailText}>{formatDryTimeInline(host.turnaroundHours)}</Text>
           </View>
           <View style={styles.detailChip}>
             <AppIcon name="calendar" size={16} />
@@ -439,17 +408,8 @@ export function HostProfileScreen() {
           )}
         </View>
 
-        <InfoSection title="Setup" icon="image" styles={styles}>
-          {host.photos.map((photo) => (
-            <View key={photo} style={styles.listItem}>
-              <AppIcon name="check" size={14} color={colors.green} />
-              <Text style={styles.listText}>{photo}</Text>
-            </View>
-          ))}
-        </InfoSection>
-
         <InfoSection title="House Rules" icon="list" styles={styles}>
-          {host.rules.map((rule) => (
+          {(host.rules.length > 0 ? host.rules : [toTitleCase('No house rules listed yet.')]).map((rule) => (
             <View key={rule} style={styles.listItem}>
               <Text style={styles.bullet}>·</Text>
               <Text style={styles.listText}>{rule}</Text>
@@ -479,25 +439,12 @@ export function HostProfileScreen() {
       </Screen>
 
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
-        <View style={styles.footer}>
-          <View style={styles.footerPricing}>
-            <View style={styles.footerPriceRow}>
-              <Text style={[styles.footerPrice, pricing.dryPrice <= 0 && styles.footerPriceFree]}>
-                {formatHostPrice(pricing.dryPrice)}
-              </Text>
-              <Text style={styles.footerPriceUnit}>{toTitleCase('Per Load')}</Text>
-            </View>
-            <Text style={styles.footerMeta} numberOfLines={2}>
-              {footerMetaParts.join(' · ')}
-            </Text>
-            {browseOnly ? (
-              <Text style={styles.browseOnlyNote}>
-                {toTitleCase('Browse only — hosts can compare prices but cannot book or message each other.')}
-              </Text>
-            ) : null}
-          </View>
-          {!browseOnly ? (
-            <View style={styles.footerButton}>
+        {!browseOnly ? (
+          <SimpleBookFooterBar
+            price={formatHostPrice(pricing.dryPrice)}
+            isFree={pricing.dryPrice <= 0}
+            unit={toTitleCase(hostPriceLabel(pricing.dryPrice))}
+            action={
               <PrimaryButton
                 title={
                   !verified
@@ -508,13 +455,25 @@ export function HostProfileScreen() {
                         ? 'Book Another Load'
                         : 'Book now'
                 }
-                icon="calendar"
+                compact
                 disabled={!settings.isOnline && verified}
                 onPress={() => selectHost(host)}
               />
-            </View>
-          ) : null}
-        </View>
+            }
+          />
+        ) : (
+          <SimpleBookFooterBar
+            price={formatHostPrice(pricing.dryPrice)}
+            isFree={pricing.dryPrice <= 0}
+            unit={toTitleCase(hostPriceLabel(pricing.dryPrice))}
+            action={<PrimaryButton title="Browse only" compact disabled onPress={() => {}} />}
+          />
+        )}
+        {browseOnly ? (
+          <Text style={styles.footerBrowseNote}>
+            {toTitleCase('Browse only — hosts can compare prices but cannot book or message each other.')}
+          </Text>
+        ) : null}
       </View>
     </View>
   )

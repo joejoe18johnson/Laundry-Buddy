@@ -236,12 +236,14 @@ export function PrimaryButton({
   disabled,
   full,
   icon,
+  compact,
 }: {
   title: string
   onPress: () => void
   disabled?: boolean
   full?: boolean
   icon?: IconName
+  compact?: boolean
 }) {
   const { uiStyles: styles, colors } = useTheme()
   return (
@@ -250,14 +252,20 @@ export function PrimaryButton({
       disabled={disabled}
       style={({ pressed }) => [
         styles.btnPrimary,
+        compact && styles.btnPrimaryCompact,
         full && styles.btnFull,
         disabled && styles.btnDisabled,
         pressed && !disabled && styles.btnPressed,
       ]}
     >
       <View style={[styles.btnContent, full && styles.btnContentFull]}>
-        {icon && <AppIcon name={icon} size={18} color={colors.white} />}
-        <Text style={styles.btnPrimaryText}>{toTitleCase(title)}</Text>
+        {icon && <AppIcon name={icon} size={compact ? 16 : 18} color={colors.white} />}
+        <Text
+          style={[styles.btnPrimaryText, compact && styles.btnPrimaryTextCompact]}
+          numberOfLines={1}
+        >
+          {toTitleCase(title)}
+        </Text>
       </View>
     </Pressable>
   )

@@ -14,7 +14,7 @@ import {
   verificationStatusLabel,
 } from '../../lib/identityVerification'
 import { formatWhatsAppNumberDisplay } from '../../lib/whatsappVerification'
-import { formatTurnaroundHours } from '../../lib/turnaroundTime'
+import { formatDryTimeStat } from '../../lib/turnaroundTime'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 
@@ -166,8 +166,8 @@ export function AccountScreen() {
         {!isCustomer && hostProfile ? (
           <DetailRow
             icon="wind"
-            label="Dryer Setup"
-            value={`${formatTurnaroundHours(hostProfile.turnaroundHours)} turnaround`}
+            label="Dry Time"
+            value={formatDryTimeStat(hostProfile.turnaroundHours)}
             styles={styles}
           />
         ) : null}
@@ -176,7 +176,7 @@ export function AccountScreen() {
       <Text style={styles.note}>
         {isCustomer
           ? 'Need To Update Your Details? Contact Support From The Help Menu.'
-          : 'Update Your Bio, Setup, Rules, And Prices In Host Profile From The Menu.'}
+          : 'Update your bio, house rules, and prices in Host Profile from the menu.'}
       </Text>
     </Screen>
   )

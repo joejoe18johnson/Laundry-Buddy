@@ -22,7 +22,20 @@ export function formatTurnaroundHours(hours: number): string {
 }
 
 export function formatTurnaroundHoursLabel(hours: number): string {
-  return `~${formatTurnaroundHours(hours)} dry`
+  return formatDryTimeInline(hours)
+}
+
+/** Profile stats — "Under 2 hrs" */
+export function formatDryTimeStat(hours: number): string {
+  const value = clampTurnaroundHours(hours)
+  if (value === 1) return 'Under 1 hr'
+  if (value === 1.5) return 'Under 1 hr 30 min'
+  return 'Under 2 hrs'
+}
+
+/** Lists, cards, chips — "2 hr dry" */
+export function formatDryTimeInline(hours: number): string {
+  return `${formatTurnaroundHours(hours)} dry`
 }
 
 export const TURNAROUND_FILTER_OPTIONS: { label: string; value: number | null }[] = [

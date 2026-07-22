@@ -19,16 +19,29 @@ export function createUiStyles(colors: ThemeColors, formStyles: FormStyles) {
       marginBottom: spacing.md,
     },
     backText: { fontSize: 15, fontWeight: '500', color: colors.black },
-    btnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
+    btnContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      flexWrap: 'nowrap',
+    },
     btnContentFull: { width: '100%' },
     btnPrimary: {
       backgroundColor: colors.black,
       paddingVertical: 16,
-      paddingHorizontal: 28,
+      paddingHorizontal: 24,
       borderRadius: radius.pill,
       alignItems: 'center',
     },
-    btnPrimaryText: { color: colors.white, fontSize: 16, fontWeight: '600' },
+    btnPrimaryText: { color: colors.white, fontSize: 16, fontWeight: '600', flexShrink: 0 },
+    btnPrimaryCompact: {
+      paddingVertical: 14,
+      paddingHorizontal: 18,
+    },
+    btnPrimaryTextCompact: {
+      fontSize: 14,
+    },
     btnSuccess: {
       backgroundColor: colors.green,
       paddingVertical: 16,

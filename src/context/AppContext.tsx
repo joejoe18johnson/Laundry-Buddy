@@ -324,6 +324,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [chatBooking, setChatBooking] = useState<Booking | null>(null)
   const chatReturnScreenRef = useRef<Screen>(defaultScreen(role))
   const screenHistoryRef = useRef<Screen[]>([])
+  const navigationBootstrappedRef = useRef(false)
   const hardwareBackHandlerRef = useRef<(() => boolean) | null>(null)
   const bookingDraftRef = useRef<BookingDraft | null>(null)
   const screenRef = useRef<Screen>(defaultScreen(role))
@@ -495,11 +496,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (role === 'customer' && bookingDraftRef.current) {
       resumeBookingFlow()
-      return
-    }
-
-    if (role === 'customer' && guestBookingsRef.current.some(isActiveGuestBooking)) {
-      setScreen('customer-tracking')
     }
   }, [resumeBookingFlow, role])
 
@@ -532,12 +528,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [restoreAfterCamera])
 
   useEffect(() => {
+    navigationBootstrappedRef.current = false
     screenHistoryRef.current = []
+  }, [user!.id])
+
+  useEffect(() => {
     let cancelled = false
 
     const boot = async () => {
+      const shouldSetInitialScreen = !navigationBootstrappedRef.current
       let restoredBooking = false
-      if (role === 'customer' && user) {
+
+      if (shouldSetInitialScreen && role === 'customer' && user) {
         const stored = await loadStoredBookingDraft(user.id)
         if (cancelled) return
         if (stored) {
@@ -548,7 +550,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      if (!restoredBooking) {
+      if (shouldSetInitialScreen && !restoredBooking) {
         if (role === 'customer' && user) {
           const stored = await loadActiveBookings(user.id)
           const seed = filterActiveGuestBookings(getCustomerSeedBookings(user.id))
@@ -560,6 +562,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         } else {
           setScreen(defaultScreen(role))
         }
+      }
+
+      if (shouldSetInitialScreen) {
+        navigationBootstrappedRef.current = true
       }
 
       await syncTrainingDemoIfNeeded()
@@ -601,7 +607,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [applyGuestBookingsFromStorage, ensureBookingHostSelected, refreshHostCompletedLoads, role, user!.id])
+  }, [applyGuestBookingsFromStorage, refreshHostCompletedLoads, role, user!.id])
 
   useEffect(() => {
     if (role === 'customer' && user) {
@@ -793,12 +799,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const navigate = useCallback((next: Screen) => {
     setScreen((current) => {
-      if (current !== next) {
+      if (current === next) return current
+      const tabs = mainTabScreens(role)
+      if (tabs.includes(next)) {
+        screenHistoryRef.current = []
+      } else {
         screenHistoryRef.current.push(current)
       }
       return next
     })
-  }, [])
+  }, [role])
 
   const registerHardwareBackHandler = useCallback((handler: (() => boolean) | null) => {
     hardwareBackHandlerRef.current = handler
@@ -911,14 +921,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         screen !== 'customer-booking'
       ) {
         resumeBookingFlow()
-        return true
-      }
-      if (
-        role === 'customer' &&
-        screen === 'customer-home' &&
-        guestBookingsRef.current.some(isActiveGuestBooking)
-      ) {
-        setScreen('customer-tracking')
         return true
       }
       return true
