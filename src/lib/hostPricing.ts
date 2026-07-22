@@ -97,6 +97,74 @@ export function bookingTotalLabel(input: BookingPriceInput): string {
   return parts.join(' + ')
 }
 
+export type BookingFooterLine = {
+  label: string
+  amount: number
+}
+
+/** Optional add-ons for the booking footer — base dry total lives in the price badge. */
+export function bookingFooterAddonLines(input: BookingPriceInput): BookingFooterLine[] {
+  const lines: BookingFooterLine[] = []
+  if (input.foldingService && input.foldingPrice > 0) {
+    lines.push({
+      label: 'Folding',
+      amount: input.foldingPrice * input.loads,
+    })
+  }
+  if (input.sheetsOption === 'buy') {
+    lines.push({
+      label: 'Dryer Sheets',
+      amount: sheetsPurchaseTotalPerLoad(input.sheetsPrice) * input.loads,
+    })
+  }
+  return lines
+}
+
+export function formatFooterAddonAmount(amount: number): string {
+  return amount <= 0 ? 'Free' : `$${amount}`
+}
+
+export type BookingReceiptLine = {
+  label: string
+  detail: string
+  amount: number
+}
+
+/** Line items for review cards and receipts — one row per charge. */
+export function bookingReceiptLines(input: BookingPriceInput): BookingReceiptLine[] {
+  const loadLabel = `${input.loads} load${input.loads === 1 ? '' : 's'}`
+  const lines: BookingReceiptLine[] = [
+    {
+      label: 'Drying',
+      detail: `${loadLabel} × ${formatServicePrice(input.dryPrice)}`,
+      amount: input.dryPrice * input.loads,
+    },
+  ]
+
+  if (input.sheetsOption === 'buy') {
+    lines.push({
+      label: 'Dryer sheets',
+      detail: loadLabel,
+      amount: sheetsPurchaseTotalPerLoad(input.sheetsPrice) * input.loads,
+    })
+  }
+
+  if (input.foldingService && input.foldingPrice > 0) {
+    lines.push({
+      label: 'Folding',
+      detail: loadLabel,
+      amount: input.foldingPrice * input.loads,
+    })
+  }
+
+  return lines
+}
+
+export function formatReceiptAmount(amount: number): string {
+  if (amount <= 0) return 'Free'
+  return `$${amount}`
+}
+
 export function parsePriceInput(value: string): number {
   const n = parseInt(value.replace(/[^0-9]/g, ''), 10)
   return Number.isFinite(n) ? Math.max(0, n) : 0
