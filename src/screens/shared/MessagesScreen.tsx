@@ -35,7 +35,9 @@ type ThreadRow = {
 function createMessagesStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
     titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-    title: { fontSize: 26, fontWeight: '700', lineHeight: 32, color: colors.black },
+    title: { flex: 1, fontSize: 26, fontWeight: '700', lineHeight: 32, color: colors.black },
+    markAllBtn: { paddingHorizontal: spacing.sm, paddingVertical: 6 },
+    markAllText: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
     subtitle: { fontSize: 15, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 22 },
     row: {
       flexDirection: 'row',
@@ -120,10 +122,11 @@ export function MessagesScreen() {
   } = useApp()
   const { colors } = useTheme()
   const styles = useMemo(() => createMessagesStyles(colors), [colors])
-  const { refreshThreads } = useMessages()
+  const { refreshThreads, markAllRead } = useMessages()
   const [threads, setThreads] = useState<ThreadRow[]>([])
 
   const isCustomer = user!.role === 'customer'
+  const totalUnread = useMemo(() => threads.reduce((sum, row) => sum + row.unread, 0), [threads])
 
   const reload = useCallback(async () => {
     if (!user) return
@@ -215,6 +218,12 @@ export function MessagesScreen() {
     openChat(row.threadId, row.bookingId)
   }
 
+  const handleMarkAllRead = async () => {
+    if (threads.length === 0) return
+    await markAllRead(threads.map((row) => row.threadId))
+    await reload()
+  }
+
   const { activeThreads, pastThreads } = useMemo(() => {
     const active: ThreadRow[] = []
     const past: ThreadRow[] = []
@@ -264,6 +273,11 @@ export function MessagesScreen() {
       <View style={styles.titleRow}>
         <AppIcon name="message-circle" size={22} />
         <Text style={styles.title}>{toTitleCase('Messages')}</Text>
+        {totalUnread > 0 ? (
+          <Pressable onPress={() => void handleMarkAllRead()} style={styles.markAllBtn} hitSlop={8}>
+            <Text style={styles.markAllText}>{toTitleCase('Mark all as read')}</Text>
+          </Pressable>
+        ) : null}
       </View>
       <Text style={styles.subtitle}>
         {toTitleCase('Active load chats stay on top. Message hosts before booking to plan drop-off.')}

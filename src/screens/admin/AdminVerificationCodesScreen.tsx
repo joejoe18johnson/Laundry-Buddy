@@ -19,7 +19,7 @@ export function AdminVerificationCodesScreen({ refreshKey }: Props) {
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>
-          {toTitleCase('Pre-loaded 6-digit WhatsApp codes for phone verification.')}
+          {toTitleCase('Pre-loaded 6-digit codes for phone verification.')}
         </Text>
 
         <View style={styles.card}>

@@ -8,7 +8,7 @@ import {
   parseSupportThread,
   supportThreadId,
 } from '../lib/chatThreads'
-import { countUnreadInThread, loadAllThreadIds, loadThreadMessages } from '../lib/messageStorage'
+import { countUnreadInThread, loadAllThreadIds, loadSupportThreadIds, loadThreadMessages } from '../lib/messageStorage'
 import { formatAdminLogin } from '../screens/admin/adminStyles'
 import type { User } from '../types'
 
@@ -37,9 +37,10 @@ export function useAdminSupportMessages(refreshKey = 0) {
     setLoading(true)
     const users = await listAllUsers()
     const userMap = new Map(users.filter((entry) => entry.role !== 'admin').map((entry) => [entry.id, entry]))
-    const storedIds = await loadAllThreadIds()
+    const [storedIds, remoteSupportIds] = await Promise.all([loadAllThreadIds(), loadSupportThreadIds()])
     const threadIds = Array.from(
       new Set([
+        ...remoteSupportIds,
         ...storedIds.filter((threadId) => isSupportThread(threadId)),
         ...Array.from(userMap.keys()).map((userId) => supportThreadId(userId)),
       ]),

@@ -4,6 +4,7 @@ import { HostNewRequestPopup } from './HostNewRequestPopup'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useUserNotifications } from '../context/NotificationContext'
+import { hasOpenHostLoad } from '../lib/hostLoads'
 import { isNewBookingNotification } from '../lib/hostNotifications'
 import type { HostRequest } from '../types'
 
@@ -13,11 +14,14 @@ export function HostRequestAlertSync() {
   const { notifications, markRead } = useUserNotifications(user?.id)
   const {
     hostRequests,
+    activeLoads,
     refreshHostOrders,
     acceptRequest,
     declineRequest,
     navigate,
   } = useApp()
+
+  const hostLoadInProgress = useMemo(() => hasOpenHostLoad(activeLoads), [activeLoads])
 
   const [visibleRequest, setVisibleRequest] = useState<HostRequest | null>(null)
   const [dismissedPopupIds, setDismissedPopupIds] = useState<string[]>([])
@@ -70,9 +74,10 @@ export function HostRequestAlertSync() {
   useEffect(() => {
     if (user?.role !== 'host') return
     if (visibleRequest) return
+    if (hostLoadInProgress) return
     if (unseenRequests.length === 0) return
     setVisibleRequest(unseenRequests[0])
-  }, [unseenRequests, user?.role, visibleRequest])
+  }, [hostLoadInProgress, unseenRequests, user?.role, visibleRequest])
 
   const closePopup = useCallback(
     (requestId: string, goToDashboard: boolean) => {

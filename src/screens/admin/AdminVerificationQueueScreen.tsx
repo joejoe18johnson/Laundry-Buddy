@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useNotifications } from '../../context/NotificationContext'
 import { useTheme } from '../../context/ThemeContext'
 import { useAdminDashboardData } from '../../hooks/useAdminDashboardData'
-import { deliverVerificationCodeViaWhatsApp } from '../../lib/adminVerificationDelivery'
+import { deliverVerificationCodeToUser } from '../../lib/adminVerificationDelivery'
 import { formatIdDocumentType, getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
 import type { VerificationCodeRequest } from '../../lib/verificationRequestStorage'
@@ -34,7 +34,7 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
   const handleSendCode = async (request: VerificationCodeRequest) => {
     setBusyUserId(request.userId)
     setActionError(null)
-    const result = await deliverVerificationCodeViaWhatsApp({
+    const result = await deliverVerificationCodeToUser({
       request,
       adminSendVerificationCode,
       push,
@@ -86,7 +86,7 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
                 </View>
                 <View style={styles.actions}>
                   <PrimaryButton
-                    title={busyUserId === request.userId ? 'Opening WhatsApp…' : 'Send via WhatsApp'}
+                    title={busyUserId === request.userId ? 'Opening messages…' : 'Send verification code'}
                     icon="message-circle"
                     onPress={() => void handleSendCode(request)}
                     disabled={busyUserId === request.userId}
@@ -128,7 +128,7 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
 
       <BrandAlert
         visible={!!successAlert}
-        title="WhatsApp ready"
+        title="Code ready to send"
         message={successAlert ?? undefined}
         icon="message-circle"
         onClose={() => setSuccessAlert(null)}

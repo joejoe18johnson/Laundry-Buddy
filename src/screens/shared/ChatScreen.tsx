@@ -35,7 +35,7 @@ import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import type { Booking, ChatMessage } from '../../types'
 
-/** WhatsApp-style square chat image preview — tap opens full image in lightbox. */
+/** Square chat image preview — tap opens full image in lightbox. */
 function chatImagePreviewSize(screenWidth: number) {
   return Math.min(240, Math.round(screenWidth * 0.58))
 }

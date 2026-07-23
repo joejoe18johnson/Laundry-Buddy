@@ -13,7 +13,7 @@ import {
   getIdentityVerification,
   verificationStatusLabel,
 } from '../../lib/identityVerification'
-import { formatWhatsAppNumberDisplay } from '../../lib/whatsappVerification'
+import { formatPhoneNumberDisplay } from '../../lib/whatsappVerification'
 import { formatDryTimeStat } from '../../lib/turnaroundTime'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
@@ -150,8 +150,8 @@ export function AccountScreen() {
         {verifiedPhone ? (
           <DetailRow
             icon="phone"
-            label="WhatsApp"
-            value={formatWhatsAppNumberDisplay(verifiedPhone)}
+            label="Phone"
+            value={formatPhoneNumberDisplay(verifiedPhone)}
             styles={styles}
           />
         ) : null}

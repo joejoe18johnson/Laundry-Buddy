@@ -244,6 +244,24 @@ export function HelpScreen() {
           <Text style={styles.contactSub}>{toTitleCase('Use in-app chat for the fastest reply')}</Text>
         </View>
       </View>
+
+      <Text style={styles.section}>{toTitleCase('Legal')}</Text>
+      <Pressable style={styles.contactBtn} onPress={() => navigate('terms')}>
+        <AppIcon name="file-text" size={18} />
+        <View style={styles.contactCopy}>
+          <Text style={styles.contactLabel}>{toTitleCase('Terms and conditions')}</Text>
+          <Text style={styles.contactSub}>{toTitleCase('Rules for using Laundry Buddy')}</Text>
+        </View>
+        <AppIcon name="chevron-right" size={18} color={colors.gray400} />
+      </Pressable>
+      <Pressable style={styles.contactBtn} onPress={() => navigate('privacy')}>
+        <AppIcon name="shield" size={18} />
+        <View style={styles.contactCopy}>
+          <Text style={styles.contactLabel}>{toTitleCase('Privacy policy')}</Text>
+          <Text style={styles.contactSub}>{toTitleCase('How we handle your information')}</Text>
+        </View>
+        <AppIcon name="chevron-right" size={18} color={colors.gray400} />
+      </Pressable>
     </Screen>
   )
 }

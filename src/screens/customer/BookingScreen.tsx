@@ -234,7 +234,7 @@ export function BookingScreen() {
                   <View style={styles.paymentCallout}>
                     <Text style={styles.paymentCalloutText}>
                       {titleCaseWithName(
-                        `After ${displayName} accepts, open My loads for bank details. Transfer in the app and submit your receipt screenshot — no WhatsApp needed.`,
+                        `After ${displayName} accepts, open My loads for bank details. Transfer in the app and submit your receipt screenshot there.`,
                         displayName,
                       )}
                     </Text>

@@ -58,7 +58,7 @@ export function AdminOverviewScreen({ refreshKey, onNavigate, supportUnreadCount
       tab: 'codes' as const,
       icon: 'key' as const,
       title: 'Verification codes',
-      subtitle: `${codeCounts.available} available · 6-digit WhatsApp codes`,
+      subtitle: `${codeCounts.available} available · 6-digit phone codes`,
       count: 0,
     },
   ]

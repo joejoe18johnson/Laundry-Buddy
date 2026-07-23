@@ -132,11 +132,21 @@ Wire upload helpers in a later phase (bookings + chat migration).
 | 1     | Auth + profiles   | **Started**   |
 | 2     | Hosts + settings  | Schema ready  |
 | 3     | Bookings          | Schema ready  |
-| 4     | Chat + realtime   | Schema ready  |
+| 4     | Chat + realtime   | **Started**   |
 | 5     | Notifications     | Schema ready  |
 | 6     | Reviews + history | Schema ready  |
 
 Local AsyncStorage remains the fallback when env vars are missing, so Expo Go dev without Supabase still works.
+
+### Chat sync (required for cross-device APK testing)
+
+Run `supabase/migrations/20260722000000_chat_sync_policies.sql` in the Supabase SQL Editor (or `supabase db push`) so:
+
+- Messages sync through `chat_messages` instead of device-only storage
+- Admins can reply in `support:{userId}` threads from another device
+- Realtime updates deliver new messages while the app is open
+
+Preview/production EAS builds must include `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` (see `eas.json`).
 
 ## 7. Regenerate TypeScript types (optional)
 

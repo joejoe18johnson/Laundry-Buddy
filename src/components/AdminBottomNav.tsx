@@ -4,7 +4,7 @@ import { UnreadCountBadge } from './UnreadCountBadge'
 import { useTheme } from '../context/ThemeContext'
 import { toTitleCase } from '../lib/titleCase'
 
-export type AdminTabId = 'overview' | 'queue' | 'users' | 'codes'
+export type AdminTabId = 'overview' | 'queue' | 'users' | 'codes' | 'support'
 
 export type AdminNavTab = {
   id: AdminTabId

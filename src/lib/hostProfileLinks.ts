@@ -43,7 +43,7 @@ export function buildHostProfileWebUrl(target: HostProfileShareTarget): string |
   return `${base}/functions/v1/host-profile?${params.toString()}`
 }
 
-/** Android intent URL — opens the installed app directly from browsers / WhatsApp. */
+/** Android intent URL — opens the installed app directly from browsers. */
 export function buildHostProfileAndroidIntentUrl(
   target: HostProfileShareTarget,
   browserFallbackUrl?: string | null,

@@ -46,7 +46,11 @@ import {
   supabaseSubmitIdentityVerification,
   supabaseUpdatePassword,
 } from '../lib/supabase'
-import { ensureSupabaseAdminProfile, ensureTrainingAdminSupabaseSession, isLikelyAdminUser } from '../lib/supabase/adminAccess'
+import {
+  ensureSupabaseAdminProfile,
+  ensureTrainingAdminSupabaseSession,
+  isLikelyAdminUser,
+} from '../lib/supabase/adminAccess'
 import { ADMIN_EMAIL, ADMIN_PHONE, ADMIN_SEED_PASSWORD } from '../data/seedData'
 import * as SplashScreen from 'expo-splash-screen'
 import * as Linking from 'expo-linking'
@@ -65,6 +69,7 @@ import {
   resolveUserById,
   type AdminUserActionResult,
 } from '../lib/adminUsers'
+import { notifyAdminsOfNewSignup } from '../lib/adminNotifications'
 import {
   adminSendVerificationCodeToUser,
   requestVerificationCodeForUser,
@@ -503,6 +508,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(created)
       setAuthError(null)
       bumpAuthSession()
+      void notifyAdminsOfNewSignup(created)
 
       return true
     }
@@ -522,6 +528,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(newUser)
     setAuthError(null)
     bumpAuthSession()
+    void notifyAdminsOfNewSignup(newUser)
 
     return true
   }, [bumpAuthSession, navigateAuth, refreshBiometricState])

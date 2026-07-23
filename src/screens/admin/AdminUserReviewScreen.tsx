@@ -32,7 +32,7 @@ import {
   isPhoneVerificationComplete,
   verificationStatusLabel,
 } from '../../lib/identityVerification'
-import { deliverVerificationCodeViaWhatsApp } from '../../lib/adminVerificationDelivery'
+import { deliverVerificationCodeToUser } from '../../lib/adminVerificationDelivery'
 import { buildVerificationApprovedBody, VERIFICATION_APPROVED_TITLE } from '../../lib/verificationCodes'
 import { verificationApprovedLink } from '../../lib/notificationLinks'
 import { getAssignedCodeForUser } from '../../lib/verificationCodeStorage'
@@ -40,7 +40,7 @@ import { getOpenVerificationCodeRequest } from '../../lib/verificationCodeServic
 import {
   type VerificationCodeRequest,
 } from '../../lib/verificationRequestStorage'
-import { formatWhatsAppDisplay } from '../../lib/whatsapp'
+import { formatPhoneDisplay } from '../../lib/whatsapp'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import type { User } from '../../types'
@@ -124,7 +124,7 @@ function DocumentReviewActions({
     <>
       {!phoneVerified ? (
         <Text style={styles.emptyText}>
-          {toTitleCase('Phone must be verified via WhatsApp code before you can approve documents.')}
+          {toTitleCase('Phone must be verified with a support code before you can approve documents.')}
         </Text>
       ) : null}
       <View style={styles.actions}>
@@ -240,7 +240,7 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
     setBusy(true)
     setActionError(null)
     setActionMessage(null)
-    const result = await deliverVerificationCodeViaWhatsApp({
+    const result = await deliverVerificationCodeToUser({
       request: codeRequest,
       adminSendVerificationCode,
       push,
@@ -315,19 +315,19 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
           <View style={styles.card}>
             <DetailRow
               label="Phone verified"
-              value={phoneVerified ? 'Yes — code entered in app' : 'Waiting for WhatsApp code'}
+              value={phoneVerified ? 'Yes — code entered in app' : 'Waiting for verification code'}
             />
             {codeRequest ? (
               <>
                 <DetailRow
                   label="Code request"
-                  value={codeRequest.status === 'pending' ? 'Waiting to send' : 'Sent via WhatsApp'}
+                  value={codeRequest.status === 'pending' ? 'Waiting to send' : 'Code sent to phone'}
                 />
-                <DetailRow label="WhatsApp number" value={formatWhatsAppDisplay(codeRequest.phone)} />
+                <DetailRow label="Phone number" value={formatPhoneDisplay(codeRequest.phone)} />
                 {assignedCode ? <DetailRow label="Assigned code" value={assignedCode} mono /> : null}
                 {canSendCode ? (
                   <PrimaryButton
-                    title={busy ? 'Opening WhatsApp…' : 'Send code via WhatsApp'}
+                    title={busy ? 'Opening messages…' : 'Send verification code'}
                     icon="message-circle"
                     full
                     disabled={busy}

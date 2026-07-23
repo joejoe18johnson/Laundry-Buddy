@@ -120,7 +120,7 @@ export async function submitVerificationCodeForUser(
 ): Promise<{ ok: boolean; error?: string }> {
   const trimmed = codeInput.trim()
   if (!isSixDigitCode(trimmed)) {
-    return { ok: false, error: 'Enter the 6-digit code from WhatsApp.' }
+    return { ok: false, error: 'Enter the 6-digit code we sent you.' }
   }
 
   const user = await resolveUserById(userId)
@@ -135,11 +135,11 @@ export async function submitVerificationCodeForUser(
   const expectedCode = assigned?.code ?? remoteCode
 
   if (!expectedCode) {
-    return { ok: false, error: 'Request a verification code first and wait for support to send it on WhatsApp.' }
+    return { ok: false, error: 'Request a verification code first and wait for support to send it.' }
   }
 
   if (expectedCode !== trimmed) {
-    return { ok: false, error: 'That code does not match. Check the code we sent on WhatsApp.' }
+    return { ok: false, error: 'That code does not match. Check the code we sent and try again.' }
   }
 
   if (assigned) {
@@ -165,7 +165,11 @@ export async function getOpenVerificationCodeRequest(
   const user = await resolveUserById(userId)
   const verification = user ? getIdentityVerification(user) : null
 
-  if (verification?.codeRequestStatus && verification.codeRequestStatus !== 'completed') {
+  if (verification?.phoneVerified || verification?.codeRequestStatus === 'completed') {
+    return null
+  }
+
+  if (verification?.codeRequestStatus) {
     return {
       id: `vreq-${userId}`,
       userId,
@@ -187,7 +191,18 @@ export async function listOpenVerificationCodeRequests(): Promise<VerificationCo
   )
 
   if (!isSupabaseConfigured()) {
-    return localRequests
+    const filtered: VerificationCodeRequest[] = []
+    for (const entry of localRequests) {
+      const user = await resolveUserById(entry.userId)
+      const verification = user ? getIdentityVerification(user) : null
+      if (verification?.phoneVerified || verification?.codeRequestStatus === 'completed') {
+        continue
+      }
+      filtered.push(entry)
+    }
+    return filtered.sort(
+      (a, b) => Date.parse(b.requestedAt) - Date.parse(a.requestedAt),
+    )
   }
 
   const users = await listAllUsers()
@@ -195,6 +210,7 @@ export async function listOpenVerificationCodeRequests(): Promise<VerificationCo
 
   for (const entry of users) {
     const verification = getIdentityVerification(entry)
+    if (verification.phoneVerified) continue
     if (!verification.codeRequestStatus || verification.codeRequestStatus === 'completed') {
       continue
     }

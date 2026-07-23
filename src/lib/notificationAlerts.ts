@@ -1,6 +1,7 @@
 import { PAYMENT_REQUEST_NOTIFICATION_TITLE } from './paymentRequestDelivery'
 import { NEW_BOOKING_NOTIFICATION_TITLE, isNewBookingNotification } from './hostNotifications'
 import {
+  NEW_USER_SIGNUP_TITLE,
   VERIFICATION_APPROVED_TITLE,
   VERIFICATION_CODE_REQUEST_TITLE,
   VERIFICATION_CODE_SENT_TITLE,
@@ -15,6 +16,7 @@ export function shouldDeliverPhoneAlert(title: string, body = ''): boolean {
     title === NEW_BOOKING_NOTIFICATION_TITLE ||
     title === VERIFICATION_CODE_SENT_TITLE ||
     title === VERIFICATION_CODE_REQUEST_TITLE ||
+    title === NEW_USER_SIGNUP_TITLE ||
     title === VERIFICATION_APPROVED_TITLE ||
     isNewBookingNotification(title)
   ) {

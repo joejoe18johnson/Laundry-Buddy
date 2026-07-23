@@ -30,6 +30,8 @@ import { IdentityVerificationScreen } from './src/screens/auth/IdentityVerificat
 import { HistoryScreen } from './src/screens/shared/HistoryScreen'
 import { AccountScreen } from './src/screens/shared/AccountScreen'
 import { HelpScreen } from './src/screens/shared/HelpScreen'
+import { TermsScreen } from './src/screens/shared/TermsScreen'
+import { PrivacyScreen } from './src/screens/shared/PrivacyScreen'
 import { NotificationsScreen } from './src/screens/shared/NotificationsScreen'
 import { MessagesScreen } from './src/screens/shared/MessagesScreen'
 import { AdminBottomNav, type AdminTabId } from './src/components/AdminBottomNav'
@@ -79,6 +81,8 @@ const HIDE_BOTTOM_NAV: Screen[] = [
   'host-mark-dry',
   'notifications',
   'help',
+  'terms',
+  'privacy',
   'chat',
   'identity-verification',
 ]
@@ -171,7 +175,11 @@ function AdminAppShell() {
   }, [goBackAdmin])
 
   const adminTab: AdminTabId =
-    screen === 'queue' || screen === 'users' || screen === 'codes' || screen === 'overview'
+    screen === 'queue' ||
+    screen === 'users' ||
+    screen === 'codes' ||
+    screen === 'overview' ||
+    screen === 'support'
       ? screen
       : 'overview'
 
@@ -202,10 +210,11 @@ function AdminAppShell() {
     () => [
       { id: 'overview' as const, label: 'Overview', icon: 'home' as const },
       { id: 'queue' as const, label: 'Queue', icon: 'inbox' as const, badgeCount: queueCount },
+      { id: 'support' as const, label: 'Messages', icon: 'message-circle' as const, badgeCount: supportUnreadCount },
       { id: 'users' as const, label: 'Users', icon: 'users' as const },
       { id: 'codes' as const, label: 'Codes', icon: 'key' as const },
     ],
-    [queueCount],
+    [queueCount, supportUnreadCount],
   )
 
   const showAdminNav =
@@ -563,6 +572,8 @@ function AppShell() {
         onAccount={() => navigate('account')}
         onContactSupport={openSupportChat}
         onHelp={() => navigate('help')}
+        onTerms={() => navigate('terms')}
+        onPrivacy={() => navigate('privacy')}
         onNotifications={() => navigate('notifications')}
         onLogout={logout}
       />
@@ -593,6 +604,8 @@ function AppShell() {
         {screen === 'messages' && <MessagesScreen />}
         {screen === 'account' && (isCustomer ? <AccountScreen /> : <HostHubScreen />)}
         {screen === 'help' && <HelpScreen />}
+        {screen === 'terms' && <TermsScreen />}
+        {screen === 'privacy' && <PrivacyScreen />}
         {screen === 'notifications' && <NotificationsScreen />}
         {screen === 'chat' && <ChatScreen />}
         {screen === 'identity-verification' && (

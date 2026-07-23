@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import {
   createContext,
   useCallback,
@@ -9,7 +8,12 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { AppState } from 'react-native'
 import type { AppNotification, NotificationLink } from '../types'
+import {
+  readAllNotifications,
+  writeAllNotifications,
+} from '../lib/notificationStorage'
 import {
   initPushNotifications,
   showLocalNotification,
@@ -17,8 +21,6 @@ import {
 } from '../lib/pushNotifications'
 import { shouldDeliverPhoneAlert } from '../lib/notificationAlerts'
 import { linkToPushData } from '../lib/notificationLinks'
-
-const NOTIFICATIONS_KEY = 'laundry-buddy-notifications'
 
 function nowLabel() {
   return new Date().toLocaleTimeString('en-US', {
@@ -34,19 +36,10 @@ interface NotificationState {
   push: (userId: string, title: string, body: string, link?: NotificationLink) => Promise<void>
   markRead: (id: string) => Promise<void>
   markAllRead: (userId: string) => Promise<void>
+  reload: () => Promise<void>
 }
 
 const NotificationContext = createContext<NotificationState | null>(null)
-
-async function readAll(): Promise<AppNotification[]> {
-  const raw = await AsyncStorage.getItem(NOTIFICATIONS_KEY)
-  if (!raw) return []
-  return JSON.parse(raw) as AppNotification[]
-}
-
-async function writeAll(notifications: AppNotification[]) {
-  await AsyncStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications))
-}
 
 export function NotificationProvider({
   children,
@@ -58,10 +51,23 @@ export function NotificationProvider({
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const deliveredPhoneAlertsRef = useRef<Set<string>>(new Set())
 
-  useEffect(() => {
-    readAll().then(setNotifications)
-    void initPushNotifications()
+  const reload = useCallback(async () => {
+    const next = await readAllNotifications()
+    setNotifications(next)
   }, [])
+
+  useEffect(() => {
+    void reload()
+    void initPushNotifications()
+
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void reload()
+      }
+    })
+
+    return () => subscription.remove()
+  }, [reload])
 
   useEffect(() => {
     if (!activeUserId) return
@@ -94,7 +100,7 @@ export function NotificationProvider({
       }
       setNotifications((prev) => {
         const next = [item, ...prev].slice(0, 100)
-        writeAll(next)
+        void writeAllNotifications(next)
         return next
       })
 
@@ -108,7 +114,7 @@ export function NotificationProvider({
   const markRead = useCallback(async (id: string) => {
     setNotifications((prev) => {
       const next = prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      writeAll(next)
+      void writeAllNotifications(next)
       return next
     })
   }, [])
@@ -116,7 +122,7 @@ export function NotificationProvider({
   const markAllRead = useCallback(async (userId: string) => {
     setNotifications((prev) => {
       const next = prev.map((n) => (n.userId === userId ? { ...n, read: true } : n))
-      writeAll(next)
+      void writeAllNotifications(next)
       return next
     })
   }, [])
@@ -133,8 +139,8 @@ export function NotificationProvider({
   }, [notifications, activeUserId])
 
   const value = useMemo(
-    () => ({ notifications, unreadCount, push, markRead, markAllRead }),
-    [notifications, unreadCount, push, markRead, markAllRead],
+    () => ({ notifications, unreadCount, push, markRead, markAllRead, reload }),
+    [notifications, unreadCount, push, markRead, markAllRead, reload],
   )
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>

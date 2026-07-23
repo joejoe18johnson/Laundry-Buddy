@@ -15,7 +15,9 @@ import {
   countUnreadInThread,
   loadAllThreadIds,
   loadThreadMessages,
+  markAllThreadsRead,
   markThreadRead,
+  mergeRemoteMessage,
 } from '../lib/messageStorage'
 import {
   defaultMessageKind,
@@ -28,6 +30,8 @@ import {
 } from '../lib/chatThreads'
 import { listAllUsers } from '../lib/adminUsers'
 import { chatLink } from '../lib/notificationLinks'
+import { isSupabaseConfigured } from '../lib/supabase'
+import { subscribeToChatInserts } from '../lib/supabase/messageService'
 import type { AppRole, Booking, ChatMessage } from '../types'
 
 interface SendMessageInput {
@@ -45,6 +49,7 @@ interface MessageState {
   refreshThreads: (threadIds: string[]) => Promise<void>
   sendMessage: (input: SendMessageInput) => Promise<ChatMessage | null>
   markRead: (threadId: string) => Promise<void>
+  markAllRead: (threadIds: string[]) => Promise<void>
   unreadCount: (threadId: string) => number
   totalUnreadCount: number
   openSupportChat: () => string
@@ -128,8 +133,20 @@ export function MessageProvider({ children }: { children: ReactNode }) {
       if (state === 'active') void refreshKnownThreads()
     })
 
-    return () => subscription.remove()
-  }, [refreshThreads, user])
+    const unsubscribeRealtime = isSupabaseConfigured()
+      ? subscribeToChatInserts((message) => {
+          void mergeRemoteMessage(message).then((messages) => {
+            setMessagesByThread((prev) => ({ ...prev, [message.threadId]: messages }))
+            void refreshUnread(message.threadId, messages)
+          })
+        })
+      : () => {}
+
+    return () => {
+      subscription.remove()
+      unsubscribeRealtime()
+    }
+  }, [refreshThreads, refreshUnread, user])
 
   const getMessages = useCallback(
     (threadId: string) => messagesByThread[threadId] ?? [],
@@ -141,6 +158,21 @@ export function MessageProvider({ children }: { children: ReactNode }) {
       if (!user) return
       await markThreadRead(user.id, threadId)
       setUnreadByThread((prev) => ({ ...prev, [threadId]: 0 }))
+    },
+    [user],
+  )
+
+  const markAllRead = useCallback(
+    async (threadIds: string[]) => {
+      if (!user || threadIds.length === 0) return
+      await markAllThreadsRead(user.id, threadIds)
+      setUnreadByThread((prev) => {
+        const next = { ...prev }
+        for (const threadId of threadIds) {
+          next[threadId] = 0
+        }
+        return next
+      })
     },
     [user],
   )
@@ -170,7 +202,12 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         createdAt: nowIso(),
       }
 
-      const next = await appendThreadMessage(message)
+      let next: ChatMessage[]
+      try {
+        next = await appendThreadMessage(message)
+      } catch {
+        return null
+      }
       setMessagesByThread((prev) => ({ ...prev, [threadId]: next }))
       await markThreadRead(user.id, threadId)
       setUnreadByThread((prev) => ({ ...prev, [threadId]: 0 }))
@@ -190,24 +227,27 @@ export function MessageProvider({ children }: { children: ReactNode }) {
           return message
         }
 
-        const supportReply: ChatMessage = {
-          id: `msg-${Date.now()}-support`,
-          threadId,
-          senderId: 'support',
-          senderName: 'Laundry Buddy Support',
-          senderRole: 'support',
-          text: 'Thanks for your message. Our team will reply here in the app as soon as we can.',
-          kind: 'system',
-          createdAt: nowIso(),
+        if (!isSupabaseConfigured()) {
+          const supportReply: ChatMessage = {
+            id: `msg-${Date.now()}-support`,
+            threadId,
+            senderId: 'support',
+            senderName: 'Laundry Buddy Support',
+            senderRole: 'support',
+            text: 'Thanks for your message. Our team will reply here in the app as soon as we can.',
+            kind: 'system',
+            createdAt: nowIso(),
+          }
+          const withReply = await appendThreadMessage(supportReply)
+          setMessagesByThread((prev) => ({ ...prev, [threadId]: withReply }))
+          void push(
+            user.id,
+            'Support replied',
+            supportReply.text ?? 'New message from Laundry Buddy Support',
+            chatLink(threadId),
+          )
         }
-        const withReply = await appendThreadMessage(supportReply)
-        setMessagesByThread((prev) => ({ ...prev, [threadId]: withReply }))
-        void push(
-          user.id,
-          'Support replied',
-          supportReply.text ?? 'New message from Laundry Buddy Support',
-          chatLink(threadId),
-        )
+
         return message
       }
 
@@ -264,11 +304,12 @@ export function MessageProvider({ children }: { children: ReactNode }) {
       refreshThreads,
       sendMessage,
       markRead,
+      markAllRead,
       unreadCount,
       totalUnreadCount,
       openSupportChat,
     }),
-    [getMessages, markRead, openSupportChat, refreshThread, refreshThreads, sendMessage, totalUnreadCount, unreadCount],
+    [getMessages, markAllRead, markRead, openSupportChat, refreshThread, refreshThreads, sendMessage, totalUnreadCount, unreadCount],
   )
 
   return <MessageContext.Provider value={value}>{children}</MessageContext.Provider>

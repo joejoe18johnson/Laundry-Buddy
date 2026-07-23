@@ -21,6 +21,7 @@ import {
 } from '../data/mockData'
 import { getAllUsers } from '../lib/authStorage'
 import { calculateBookingTotal, applyHostPricing, getHostPricing, DRYER_SHEETS_PRICE } from '../lib/hostPricing'
+import { hasOpenHostLoad } from '../lib/hostLoads'
 import { formatMoney, getBookingAmount } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
 import { mergeRemoteMarketplaceCatalog } from '../lib/hostCatalog'
@@ -1419,6 +1420,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const acceptRequest = useCallback(
     (requestId: string) => {
       if (!requireMarketplaceAccess()) return
+      if (hasOpenHostLoad(activeLoads)) {
+        showToast('Finish your current load before accepting another one.', { icon: 'info' })
+        return
+      }
       const request = hostRequests.find((r) => r.id === requestId)
       if (!request || !user) return
 

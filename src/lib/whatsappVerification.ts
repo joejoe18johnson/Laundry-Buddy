@@ -1,8 +1,16 @@
 import { normalizePhone } from './phone'
 
+export function isValidPhoneNumber(phone: string): boolean {
+  return isValidWhatsAppNumber(phone)
+}
+
 export function isValidWhatsAppNumber(phone: string): boolean {
   const normalized = normalizePhone(phone)
   return normalized.length >= 10 && normalized.startsWith('501')
+}
+
+export function formatPhoneNumberDisplay(phone: string): string {
+  return formatWhatsAppNumberDisplay(phone)
 }
 
 export function formatWhatsAppNumberDisplay(phone: string): string {

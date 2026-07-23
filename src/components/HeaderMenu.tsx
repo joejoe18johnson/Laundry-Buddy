@@ -32,6 +32,8 @@ type Props = {
   onPastLoads?: () => void
   onAccount?: () => void
   onHelp?: () => void
+  onTerms?: () => void
+  onPrivacy?: () => void
   onContactSupport?: () => void
   onNotifications?: () => void
   notificationCount?: number
@@ -213,6 +215,8 @@ export function HeaderMenu({
   onPastLoads,
   onAccount,
   onHelp,
+  onTerms,
+  onPrivacy,
   onContactSupport,
   onNotifications,
   notificationCount,
@@ -322,6 +326,12 @@ export function HeaderMenu({
                 ) : null}
                 {onHelp ? (
                   <MenuItem icon="help-circle" label="Help & support" onPress={() => go(onHelp)} styles={styles} />
+                ) : null}
+                {onTerms ? (
+                  <MenuItem icon="file-text" label="Terms and conditions" onPress={() => go(onTerms)} styles={styles} />
+                ) : null}
+                {onPrivacy ? (
+                  <MenuItem icon="shield" label="Privacy policy" onPress={() => go(onPrivacy)} styles={styles} />
                 ) : null}
               </MenuSection>
             </ScrollView>

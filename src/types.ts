@@ -28,7 +28,7 @@ export interface IdentityVerification {
   addressProofName?: string
   addressReviewStatus?: DocumentReviewStatus
   submittedAt?: string
-  /** WhatsApp code flow — synced to Supabase for admin review across devices. */
+  /** Phone verification code flow — synced to Supabase for admin review across devices. */
   codeRequestStatus?: 'pending' | 'code_sent' | 'completed'
   codeRequestedAt?: string
   codeSentAt?: string
@@ -53,6 +53,8 @@ export type Screen =
   | 'messages'
   | 'account'
   | 'help'
+  | 'terms'
+  | 'privacy'
   | 'notifications'
   | 'chat'
   | 'identity-verification'

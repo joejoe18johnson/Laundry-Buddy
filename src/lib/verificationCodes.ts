@@ -40,12 +40,21 @@ export function isSixDigitCode(text: string): boolean {
 export const VERIFICATION_CODE_REQUEST_TITLE = 'Verification code requested'
 export const VERIFICATION_CODE_SENT_TITLE = 'Your verification code'
 export const VERIFICATION_APPROVED_TITLE = "You're verified!"
+export const NEW_USER_SIGNUP_TITLE = 'New user signed up'
 
 export function buildAdminVerificationRequestBody(userName: string, phone: string): string {
   return `${userName} requested a 6-digit verification code for ${phone}.`
 }
 
-export function buildWhatsAppVerificationCodeMessage(userName: string, code: string): string {
+export function buildAdminNewSignupBody(
+  userName: string,
+  phone: string,
+  role: 'customer' | 'host',
+): string {
+  return `${userName} signed up as a ${role === 'host' ? 'host' : 'guest'} · ${phone}. Send a verification code when ready.`
+}
+
+export function buildVerificationCodeMessage(userName: string, code: string): string {
   return [
     `Hi ${userName}!`,
     '',
@@ -58,8 +67,11 @@ export function buildWhatsAppVerificationCodeMessage(userName: string, code: str
 }
 
 export function buildUserVerificationCodeSentBody(phone: string): string {
-  return `We sent your 6-digit code on WhatsApp to ${phone}. Open Verification Center and enter it to continue.`
+  return `We sent your 6-digit code to ${phone}. Open Verification Center and enter it to continue.`
 }
+
+/** @deprecated Use buildVerificationCodeMessage */
+export const buildWhatsAppVerificationCodeMessage = buildVerificationCodeMessage
 
 export function buildCodeAcceptedMessage(): string {
   return 'Code verified! Your account is approved — booking and hosting are now unlocked. Welcome to Laundry Buddy.'

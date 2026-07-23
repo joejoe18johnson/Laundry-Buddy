@@ -13,7 +13,7 @@ import { normalizeHostSettings } from '../../lib/hostSettingsStorage'
 import { formatDryTimeInline } from '../../lib/turnaroundTime'
 import { formatMoney } from '../../lib/bookingPayments'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
-import { countDryerTabLoads } from '../../lib/hostLoads'
+import { countDryerTabLoads, hasOpenHostLoad } from '../../lib/hostLoads'
 import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
@@ -139,6 +139,7 @@ export function DashboardScreen() {
   const styles = useMemo(() => createDashboardStyles(colors), [colors])
 
   const dryerLoadCount = useMemo(() => countDryerTabLoads(activeLoads), [activeLoads])
+  const hostLoadInProgress = useMemo(() => hasOpenHostLoad(activeLoads), [activeLoads])
 
   useEffect(() => {
     if (!hostSettings) return
@@ -270,7 +271,21 @@ export function DashboardScreen() {
         </Pressable>
       )}
 
-      {hostRequests.length > 0 && (
+      {hostLoadInProgress && hostRequests.length > 0 ? (
+        <View style={styles.newOrdersBanner}>
+          <View style={styles.newOrdersBannerIcon}>
+            <AppIcon name="clock" size={18} color={colors.white} />
+          </View>
+          <View style={styles.newOrdersBannerCopy}>
+            <Text style={styles.newOrdersBannerTitle}>
+              {toTitleCase('Finish your current load first')}
+            </Text>
+            <Text style={styles.newOrdersBannerSub}>
+              {toTitleCase('Mark the active load picked up before accepting a new request.')}
+            </Text>
+          </View>
+        </View>
+      ) : hostRequests.length > 0 ? (
         <View style={styles.newOrdersBanner}>
           <View style={styles.newOrdersBannerIcon}>
             <AppIcon name="inbox" size={18} color={colors.white} />
@@ -284,7 +299,7 @@ export function DashboardScreen() {
             </Text>
           </View>
         </View>
-      )}
+      ) : null}
 
       {hostRequests.length > 0 && (
         <View style={styles.sectionHeader}>
@@ -325,7 +340,12 @@ export function DashboardScreen() {
             </View>
             <View style={styles.actions}>
               <View style={styles.actionBtn}>
-                <PrimaryButton title="Accept" onPress={() => acceptRequest(request.id)} full />
+                <PrimaryButton
+                  title="Accept"
+                  onPress={() => acceptRequest(request.id)}
+                  full
+                  disabled={hostLoadInProgress}
+                />
               </View>
               <View style={styles.actionBtn}>
                 <GhostButton title="Decline" onPress={() => declineRequest(request.id)} full />

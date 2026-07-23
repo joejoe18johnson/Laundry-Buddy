@@ -15,6 +15,10 @@ export function countDryerTabLoads(loads: Booking[]): number {
   return loads.filter(isDryerTabLoad).length
 }
 
+export function hasOpenHostLoad(loads: Booking[]): boolean {
+  return loads.some(isDryerTabLoad)
+}
+
 export function splitHostActiveLoads(loads: Booking[]): {
   preDryerLoads: Booking[]
   dryerLoads: Booking[]

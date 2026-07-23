@@ -28,8 +28,8 @@ import {
 import { normalizePhone } from '../../lib/phone'
 import { getOpenVerificationCodeRequest } from '../../lib/verificationCodeService'
 import {
-  formatWhatsAppNumberDisplay,
-  isValidWhatsAppNumber,
+  formatPhoneNumberDisplay,
+  isValidPhoneNumber,
 } from '../../lib/whatsappVerification'
 import { radius, spacing } from '../../theme'
 import { toTitleCase } from '../../lib/titleCase'
@@ -117,7 +117,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
 
   if (!user || !verification) return null
 
-  const phoneReady = isValidWhatsAppNumber(phone)
+  const phoneReady = isValidPhoneNumber(phone)
   const idReady = !!idType && !!idPhotoUri
   const selfieReady = !!selfiePhotoUri
   const addressReady = !isHost || (address.trim().length > 0 && !!addressProof)
@@ -210,7 +210,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
       </View>
       <Text style={styles.sectionSub}>
         {toTitleCase(
-          'Step 1: request a code. Support sends it on WhatsApp. Step 2: enter the 6-digit code here.',
+          'Step 1: request a code. Support sends it to your phone. Step 2: enter the 6-digit code here.',
         )}
       </Text>
       <View style={styles.phoneRow}>
@@ -225,7 +225,7 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
       </View>
       {phoneReady ? (
         <Text style={styles.phonePreview}>
-          {formatWhatsAppNumberDisplay(normalizePhone(phone))}
+          {formatPhoneNumberDisplay(normalizePhone(phone))}
         </Text>
       ) : null}
       {hasOpenCodeRequest ? (
@@ -237,8 +237,8 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
           />
           <Text style={styles.requestStatusText}>
             {codeRequest?.status === 'code_sent'
-              ? toTitleCase('Code sent on WhatsApp — enter it below.')
-              : toTitleCase('Request sent — support will WhatsApp your code soon.')}
+              ? toTitleCase('Code sent — enter it below.')
+              : toTitleCase('Request sent — support will send your code soon.')}
           </Text>
         </View>
       ) : null}

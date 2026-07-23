@@ -1,5 +1,5 @@
 import { getHostById, getHostByUserId } from '../data/mockData'
-import { getUserById } from './authStorage'
+import { resolveUserById } from './adminUsers'
 import { formatMoney } from './bookingPayments'
 import { formatHostDisplayName } from './displayName'
 import { formatWhatsAppDisplay } from './whatsapp'
@@ -148,12 +148,13 @@ export async function resolveInquiryChatRecipient(
 
   if (senderId === parsed.guestUserId) {
     const host = getHostByUserId(parsed.hostUserId)
-    if (!host?.hostUserId) return null
-    return { userId: host.hostUserId, name: host.name }
+    const profile = host ? null : await resolveUserById(parsed.hostUserId)
+    const name = host?.name ?? profile?.name ?? 'Host'
+    return { userId: parsed.hostUserId, name }
   }
 
   if (senderId === parsed.hostUserId) {
-    const guest = await getUserById(parsed.guestUserId)
+    const guest = await resolveUserById(parsed.guestUserId)
     return { userId: parsed.guestUserId, name: guest?.name ?? 'Guest' }
   }
 

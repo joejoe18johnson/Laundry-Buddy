@@ -37,7 +37,7 @@ type Props = {
   onNewRequest?: () => void
 }
 
-/** Polls for new WhatsApp verification code requests and alerts the signed-in admin. */
+/** Polls for new phone verification code requests and alerts the signed-in admin. */
 export function AdminVerificationRequestSync({ onNewRequest }: Props) {
   const { user } = useAuth()
   const { push } = useNotifications()

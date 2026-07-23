@@ -28,4 +28,11 @@ export {
   fetchMarketplaceFromSupabase,
   upsertHostListingToSupabase,
 } from './hostService'
+export {
+  fetchAccessibleThreadIdsFromSupabase,
+  fetchSupportThreadIdsFromSupabase,
+  fetchThreadMessagesFromSupabase,
+  insertChatMessageToSupabase,
+  subscribeToChatInserts,
+} from './messageService'
 export type { Database } from './database.types'

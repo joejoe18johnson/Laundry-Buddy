@@ -81,8 +81,16 @@ export async function openWhatsAppVerificationCode(phone: string, message: strin
   return openWhatsAppChat(phone, message)
 }
 
-export const WHATSAPP_SEND_INSTRUCTION =
-  'WhatsApp opened with the code ready — tap Send to deliver it to the user.'
+/** Opens the user's messaging app with a pre-filled verification code. */
+export async function openPhoneVerificationMessage(phone: string, message: string): Promise<boolean> {
+  return openWhatsAppChat(phone, message)
+}
+
+export const CODE_SEND_INSTRUCTION =
+  'Messaging app opened with the code ready — tap Send to deliver it to the user.'
+
+/** @deprecated Use CODE_SEND_INSTRUCTION */
+export const WHATSAPP_SEND_INSTRUCTION = CODE_SEND_INSTRUCTION
 
 /** @deprecated Use in-app support chat instead. */
 export function openSupportWhatsApp(message: string): void {
@@ -105,3 +113,6 @@ export function formatWhatsAppDisplay(phone: string): string {
   }
   return phone
 }
+
+/** @deprecated Use formatPhoneDisplay */
+export const formatPhoneDisplay = formatWhatsAppDisplay

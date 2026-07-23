@@ -271,7 +271,7 @@ export type VerificationTrackStep = {
 
 type WizardStep = VerificationWizardStep
 
-const PHONE_WHATSAPP_DETAIL = 'Verification code sent via WhatsApp'
+const PHONE_VERIFICATION_DETAIL = 'Verification code sent by support'
 
 function teamReviewPendingDetail(role: AppRole): string {
   return role === 'host'
@@ -297,7 +297,7 @@ function buildCoreTrack(
     {
       key: 'phone',
       label: 'Phone number',
-      detail: details?.phone ?? (states.phone === 'active' ? PHONE_WHATSAPP_DETAIL : undefined),
+      detail: details?.phone ?? (states.phone === 'active' ? PHONE_VERIFICATION_DETAIL : undefined),
       state: states.phone,
     },
     {
@@ -368,7 +368,7 @@ export function getVerificationTrackSteps(
         phoneState === 'done'
           ? phoneDisplay
           : phoneState === 'active'
-            ? PHONE_WHATSAPP_DETAIL
+            ? PHONE_VERIFICATION_DETAIL
             : undefined,
       review:
         reviewState === 'active'
@@ -406,6 +406,6 @@ export function verificationCenterSubtitle(status: VerificationStatus, role: App
     return 'Please resubmit clear photos and correct details below.'
   }
   return role === 'host'
-    ? 'Add your phone number, verify via WhatsApp code, then submit your ID, a matching selfie, and address proof.'
-    : 'Add your phone number, verify via WhatsApp code, then submit your ID and a matching selfie.'
+    ? 'Add your phone number, verify with a support code, then submit your ID, a matching selfie, and address proof.'
+    : 'Add your phone number, verify with a support code, then submit your ID and a matching selfie.'
 }

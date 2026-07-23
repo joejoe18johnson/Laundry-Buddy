@@ -25,7 +25,6 @@ import { resolveHostLocationFromGps } from '../../lib/hostLocation'
 import {
   resolveHostShareTarget,
   shareHostProfile,
-  shareHostProfileViaWhatsApp,
 } from '../../lib/hostProfileLinks'
 import { BELIZE_BANKS } from '../../lib/belizeBanks'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
@@ -318,13 +317,6 @@ export function HostHubScreen() {
     }
   }
 
-  const handleShareProfileWhatsApp = async () => {
-    const ok = await shareHostProfileViaWhatsApp(shareTarget)
-    if (!ok) {
-      showToast('Could not open WhatsApp', { icon: 'message-circle' })
-    }
-  }
-
   const paymentSummary = [
     draft.acceptCash ? PAYMENT_METHOD_LABELS.cash : null,
     draft.acceptBankTransfer ? PAYMENT_METHOD_LABELS.bank_transfer : null,
@@ -424,13 +416,6 @@ export function HostHubScreen() {
         >
           <AppIcon name="share-2" size={16} color={colors.black} />
           <Text style={styles.gpsBtnText}>{toTitleCase('Share profile link')}</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [styles.gpsBtn, pressed && styles.gpsBtnPressed]}
-          onPress={() => void handleShareProfileWhatsApp()}
-        >
-          <AppIcon name="message-circle" size={16} color={colors.black} />
-          <Text style={styles.gpsBtnText}>{toTitleCase('Send on WhatsApp')}</Text>
         </Pressable>
       </Section>
 
