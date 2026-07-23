@@ -20,7 +20,7 @@ import { getHostPaymentMethods, normalizeHostSettings, PAYMENT_METHOD_LABELS } f
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { parseListingInt } from '../../lib/hostListing'
 import { formatTurnaroundHours, TURNAROUND_HOUR_OPTIONS } from '../../lib/turnaroundTime'
-import { formatDropOffAvailability, formatDropOffHoursWindow } from '../../lib/dropOffAvailability'
+import { formatDropOffAvailability, formatDropOffHoursWindow, isWithinDropOffAvailability, resolveEffectiveHostOnline } from '../../lib/dropOffAvailability'
 import { resolveHostLocationFromGps } from '../../lib/hostLocation'
 import {
   resolveHostShareTarget,
@@ -264,6 +264,10 @@ export function HostHubScreen() {
     setSaved(false)
   }
 
+  const withinDropOffHours = isWithinDropOffAvailability(draft.dropOffAvailability)
+  const effectivelyOnline = resolveEffectiveHostOnline(draft)
+  const dropOffHoursLabel = formatDropOffAvailability(draft.dropOffAvailability)
+
   const handleOnlineToggle = async (online: boolean) => {
     const next = { ...draft, isOnline: online }
     setDraft(next)
@@ -360,21 +364,28 @@ export function HostHubScreen() {
         />
       ) : null}
 
-      <View style={[styles.onlineCard, draft.isOnline ? styles.onlineCardLive : styles.onlineCardOff]}>
+      <View style={[styles.onlineCard, effectivelyOnline ? styles.onlineCardLive : styles.onlineCardOff]}>
         <View style={styles.onlineHeader}>
-          <View style={[styles.onlineDot, draft.isOnline && styles.onlineDotLive]} />
+          <View style={[styles.onlineDot, effectivelyOnline && styles.onlineDotLive]} />
           <View style={styles.onlineText}>
             <Text style={styles.onlineTitle}>
-              {draft.isOnline ? toTitleCase('You are online') : toTitleCase('You are offline')}
+              {withinDropOffHours
+                ? toTitleCase('Online — drop-off hours')
+                : effectivelyOnline
+                  ? toTitleCase('You are online')
+                  : toTitleCase('You are offline')}
             </Text>
             <Text style={styles.onlineSub}>
-              {draft.isOnline
-                ? toTitleCase('Guests can find and book your dryer right now.')
-                : toTitleCase('Go online when you are ready to accept loads.')}
+              {withinDropOffHours
+                ? toTitleCase(`Automatic during ${dropOffHoursLabel}. Toggle offline only outside these hours.`)
+                : effectivelyOnline
+                  ? toTitleCase('Guests can find and book your dryer right now.')
+                  : toTitleCase('Go online when you are ready to accept loads.')}
             </Text>
           </View>
           <BrandSwitch
-            value={draft.isOnline}
+            value={effectivelyOnline}
+            disabled={withinDropOffHours}
             onValueChange={handleOnlineToggle}
             accent="green"
           />

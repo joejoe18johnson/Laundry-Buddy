@@ -1,10 +1,12 @@
 import { PAYMENT_REQUEST_NOTIFICATION_TITLE } from './paymentRequestDelivery'
 import { NEW_BOOKING_NOTIFICATION_TITLE, isNewBookingNotification } from './hostNotifications'
 import {
-  NEW_USER_SIGNUP_TITLE,
   VERIFICATION_APPROVED_TITLE,
-  VERIFICATION_CODE_REQUEST_TITLE,
+  VERIFICATION_DOC_APPROVED_TITLE,
+  VERIFICATION_REJECTED_TITLE,
   VERIFICATION_CODE_SENT_TITLE,
+  VERIFICATION_CODE_REQUEST_TITLE,
+  NEW_USER_SIGNUP_TITLE,
 } from './verificationCodes'
 
 /** Whether a notification should also trigger a phone banner/sound alert. */
@@ -18,6 +20,8 @@ export function shouldDeliverPhoneAlert(title: string, body = ''): boolean {
     title === VERIFICATION_CODE_REQUEST_TITLE ||
     title === NEW_USER_SIGNUP_TITLE ||
     title === VERIFICATION_APPROVED_TITLE ||
+    title === VERIFICATION_REJECTED_TITLE ||
+    title === VERIFICATION_DOC_APPROVED_TITLE ||
     isNewBookingNotification(title)
   ) {
     return true

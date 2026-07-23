@@ -15,7 +15,25 @@ import {
 } from '../../lib/pushNotifications'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
+import {
+  VERIFICATION_APPROVED_TITLE,
+  VERIFICATION_DOC_APPROVED_TITLE,
+  VERIFICATION_REJECTED_TITLE,
+} from '../../lib/verificationCodes'
 import type { AppNotification } from '../../types'
+
+function verificationNotificationStyle(
+  item: AppNotification,
+  colors: ReturnType<typeof useTheme>['colors'],
+) {
+  if (item.title === VERIFICATION_APPROVED_TITLE || item.title === VERIFICATION_DOC_APPROVED_TITLE) {
+    return { borderColor: colors.green, backgroundColor: colors.greenBg ?? '#ECFDF5' }
+  }
+  if (item.title === VERIFICATION_REJECTED_TITLE) {
+    return { borderColor: colors.danger, backgroundColor: '#FEF2F2' }
+  }
+  return null
+}
 
 function groupNotifications(items: AppNotification[]) {
   if (items.length === 0) return []
@@ -73,6 +91,8 @@ function createNotificationsStyles(colors: ReturnType<typeof useTheme>['colors']
       gap: spacing.sm,
     },
     cardUnread: { borderColor: colors.black, backgroundColor: colors.gray50 },
+    cardApproved: { borderWidth: 2 },
+    cardRejected: { borderWidth: 2 },
     cardTop: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
     cardTitle: { flex: 1, fontSize: 15, fontWeight: '700', lineHeight: 20 },
     cardTime: { fontSize: 12, color: colors.gray400 },
@@ -184,14 +204,33 @@ export function NotificationsScreen() {
             <Text style={styles.sectionLabel}>{toTitleCase(section.title)}</Text>
             {section.data.map((item) => {
               const hasDestination = notificationHasDestination(item, user.role)
+              const verificationStyle = verificationNotificationStyle(item, colors)
+              const isVerificationAlert =
+                item.title === VERIFICATION_APPROVED_TITLE ||
+                item.title === VERIFICATION_DOC_APPROVED_TITLE ||
+                item.title === VERIFICATION_REJECTED_TITLE
               return (
                 <Pressable
                   key={item.id}
-                  style={[styles.card, !item.read && styles.cardUnread]}
+                  style={[
+                    styles.card,
+                    !item.read && !verificationStyle && styles.cardUnread,
+                    verificationStyle,
+                    isVerificationAlert && styles.cardApproved,
+                  ]}
                   onPress={() => openNotificationItem(item)}
                 >
                   <View style={styles.cardTop}>
-                    <Text style={styles.cardTitle}>{toTitleCase(item.title)}</Text>
+                    <Text
+                      style={[
+                        styles.cardTitle,
+                        item.title === VERIFICATION_REJECTED_TITLE && { color: colors.danger },
+                        (item.title === VERIFICATION_APPROVED_TITLE ||
+                          item.title === VERIFICATION_DOC_APPROVED_TITLE) && { color: colors.green },
+                      ]}
+                    >
+                      {toTitleCase(item.title)}
+                    </Text>
                     <Text style={styles.cardTime}>{item.time}</Text>
                   </View>
                   <Text style={styles.cardBody}>{toTitleCase(item.body)}</Text>

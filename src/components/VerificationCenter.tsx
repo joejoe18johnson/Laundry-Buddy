@@ -4,6 +4,7 @@ import { AppIcon } from './AppIcon'
 import { useTheme } from '../context/ThemeContext'
 import {
   getVerificationTrackSteps,
+  rejectedVerificationSummary,
   verificationCenterHeadline,
   verificationCenterSubtitle,
   type VerificationTrackStep,
@@ -46,7 +47,7 @@ export function VerificationCenter({ user, status, wizardStep, children, footer 
           <Text style={styles.percent}>{progressPercent}%</Text>
         </View>
         <Text style={styles.title}>{toTitleCase(verificationCenterHeadline(status, user.role))}</Text>
-        <Text style={styles.subtitle}>{toTitleCase(verificationCenterSubtitle(status, user.role))}</Text>
+        <Text style={styles.subtitle}>{toTitleCase(verificationCenterSubtitle(status, user.role, user))}</Text>
         <View style={styles.track}>
           <View style={[styles.trackFill, { width: `${progressPercent}%` }]} />
         </View>
@@ -58,6 +59,15 @@ export function VerificationCenter({ user, status, wizardStep, children, footer 
           <TrackRow key={step.key} step={step} isLast={index === steps.length - 1} styles={styles} colors={colors} />
         ))}
       </View>
+
+      {status === 'rejected' ? (
+        <View style={styles.rejectedBanner}>
+          <AppIcon name="alert-circle" size={18} color={colors.danger} />
+          <Text style={styles.rejectedBannerText}>
+            {toTitleCase(rejectedVerificationSummary(user))}
+          </Text>
+        </View>
+      ) : null}
 
       {status === 'pending' ? (
         <View style={styles.hintCard}>
@@ -146,7 +156,7 @@ function statusPillLabel(status: VerificationStatus) {
 function statusPillStyle(status: VerificationStatus, colors: ReturnType<typeof useTheme>['colors']) {
   if (status === 'verified') return { backgroundColor: colors.greenBg, borderColor: colors.green }
   if (status === 'pending') return { backgroundColor: colors.gray50, borderColor: colors.gray200 }
-  if (status === 'rejected') return { backgroundColor: colors.gray50, borderColor: colors.danger }
+  if (status === 'rejected') return { backgroundColor: '#FEF2F2', borderColor: colors.danger }
   return { backgroundColor: colors.gray50, borderColor: colors.gray200 }
 }
 
@@ -236,6 +246,17 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       borderRadius: radius.md,
     },
     hintText: { flex: 1, fontSize: 14, color: colors.gray600, lineHeight: 20 },
+    rejectedBanner: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      backgroundColor: '#FEF2F2',
+      borderWidth: 1,
+      borderColor: colors.danger,
+      padding: spacing.md,
+      borderRadius: radius.md,
+    },
+    rejectedBannerText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.danger, lineHeight: 20 },
     content: { gap: spacing.md },
     footer: { gap: spacing.sm, paddingTop: spacing.sm, paddingBottom: spacing.lg },
   })

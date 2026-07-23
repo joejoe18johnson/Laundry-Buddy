@@ -108,7 +108,7 @@ import { FILTER_AREA_RADIUS_MILES, getFilterAreaCenter } from '../lib/belizeDist
 import * as Location from 'expo-location'
 import Constants from 'expo-constants'
 import * as Linking from 'expo-linking'
-import { formatDropOffHour, type DropOffHour } from '../lib/dropOffAvailability'
+import { formatDropOffHour, isWithinDropOffAvailability, type DropOffHour } from '../lib/dropOffAvailability'
 import {
   countHostLoadsHosted,
   countHostLoadsToday,
@@ -724,6 +724,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (settings.isOnline && !isIdentityVerified(user)) {
         showToast(marketplaceLockMessage('host', getIdentityVerification(user).status), { icon: 'shield' })
         setScreen('identity-verification')
+        return
+      }
+      if (
+        !settings.isOnline &&
+        isWithinDropOffAvailability(settings.dropOffAvailability)
+      ) {
+        showToast('You stay online automatically during your drop-off hours.', { icon: 'clock' })
         return
       }
       const wasOnline = hostSettingsMap[user.id]?.isOnline ?? false

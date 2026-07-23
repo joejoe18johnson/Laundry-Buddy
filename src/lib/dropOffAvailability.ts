@@ -82,3 +82,28 @@ export function toggleDropOffHour(current: DropOffHour[], hour: DropOffHour): Dr
   }
   return sortDropOffHours([...current, hour])
 }
+
+/** Current hour mapped into the drop-off grid (5am–10pm). */
+export function getCurrentDropOffHour(now = new Date()): DropOffHour {
+  const hour = now.getHours()
+  if (hour <= DROP_OFF_HOUR_MIN) return DROP_OFF_HOUR_MIN
+  if (hour >= DROP_OFF_HOUR_MAX) return DROP_OFF_HOUR_MAX
+  return hour as DropOffHour
+}
+
+export function isWithinDropOffAvailability(
+  hours: readonly DropOffHour[] | undefined,
+  now = new Date(),
+): boolean {
+  const normalized = normalizeDropOffAvailability(hours ? [...hours] : undefined)
+  return normalized.includes(getCurrentDropOffHour(now))
+}
+
+/** During set drop-off hours hosts stay online automatically; outside hours use manual toggle. */
+export function resolveEffectiveHostOnline(
+  settings: { isOnline: boolean; dropOffAvailability: DropOffHour[] },
+  now = new Date(),
+): boolean {
+  if (isWithinDropOffAvailability(settings.dropOffAvailability, now)) return true
+  return settings.isOnline
+}

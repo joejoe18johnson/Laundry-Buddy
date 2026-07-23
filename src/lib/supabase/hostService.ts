@@ -3,6 +3,7 @@ import { buildHostFromUserSettings } from '../dynamicHosts'
 import { applyHostPricing, getHostPricing } from '../hostPricing'
 import { isIdentityVerified } from '../identityVerification'
 import { normalizeHostSettings } from '../hostSettingsStorage'
+import { resolveEffectiveHostOnline } from '../dropOffAvailability'
 import { isSupabaseConfigured } from './config'
 import { getSupabaseClient } from './client'
 import type { Database, Json } from './database.types'
@@ -92,7 +93,7 @@ export async function upsertHostListingToSupabase(
     latitude: host.latitude,
     longitude: host.longitude,
     bio: listing.bio.trim() || null,
-    is_online: settings.isOnline,
+    is_online: resolveEffectiveHostOnline(settings),
   }
 
   const { error: hostError } = await supabase.from('hosts').upsert(payload)

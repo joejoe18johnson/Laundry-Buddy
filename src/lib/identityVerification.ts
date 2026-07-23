@@ -1,5 +1,6 @@
 import type { AppRole, DocumentReviewStatus, IdDocumentType, IdentityVerification, User, VerificationStatus } from '../types'
 import type { VerificationCodeRequest } from './verificationRequestStorage'
+import type { VerificationDocumentKind } from './verificationCodes'
 
 export function emptyIdentityVerification(): IdentityVerification {
   return {
@@ -139,9 +140,129 @@ export function marketplaceLockMessage(role: AppRole, status: VerificationStatus
       ? 'Verification is under review — you can browse the app, but hosting unlocks after approval.'
       : 'Verification is under review — you can browse dryers, but booking unlocks after approval.'
   }
+  if (status === 'rejected') {
+    return role === 'host'
+      ? 'One or more documents need to be resubmitted — only redo the declined items in Verification Center.'
+      : 'One or more documents need to be resubmitted — only redo the declined items in Verification Center.'
+  }
   return role === 'host'
     ? 'Verify your ID to accept loads and go online.'
     : 'Verify your ID to book dryer sessions.'
+}
+
+export function needsIdResubmit(user: User): boolean {
+  return getIdReviewStatus(getIdentityVerification(user)) === 'rejected'
+}
+
+export function needsSelfieResubmit(user: User): boolean {
+  return getSelfieReviewStatus(getIdentityVerification(user)) === 'rejected'
+}
+
+export function needsAddressResubmit(user: User): boolean {
+  if (user.role !== 'host') return false
+  return getAddressReviewStatus(getIdentityVerification(user)) === 'rejected'
+}
+
+export function getRejectedVerificationDocuments(user: User): VerificationDocumentKind[] {
+  const rejected: VerificationDocumentKind[] = []
+  if (needsIdResubmit(user)) rejected.push('id')
+  if (needsSelfieResubmit(user)) rejected.push('selfie')
+  if (needsAddressResubmit(user)) rejected.push('address')
+  return rejected
+}
+
+export function rejectedVerificationSummary(user: User): string {
+  const rejected = getRejectedVerificationDocuments(user)
+  if (rejected.length === 0) {
+    return 'Please resubmit clear photos and correct details below.'
+  }
+  const labels = rejected.map((kind) => {
+    if (kind === 'id') return 'government ID'
+    if (kind === 'selfie') return 'selfie'
+    return 'address proof'
+  })
+  if (labels.length === 1) {
+    return `Only your ${labels[0]} needs to be resubmitted — everything else stays approved.`
+  }
+  return `Resubmit: ${labels.join(' and ')}. Approved documents stay on file.`
+}
+
+export function getInitialResubmitWizardStep(user: User): VerificationWizardStep {
+  if (needsIdResubmit(user)) return 'id'
+  if (needsSelfieResubmit(user)) return 'selfie'
+  if (needsAddressResubmit(user)) return 'address'
+  return 'id'
+}
+
+export function isVerificationDocumentApproved(
+  user: User,
+  kind: VerificationDocumentKind,
+): boolean {
+  const verification = getIdentityVerification(user)
+  if (kind === 'id') return getIdReviewStatus(verification) === 'approved'
+  if (kind === 'selfie') return getSelfieReviewStatus(verification) === 'approved'
+  return getAddressReviewStatus(verification) === 'approved'
+}
+
+export function buildResubmitVerification(
+  user: User,
+  data: {
+    phone: string
+    idType?: IdDocumentType
+    idPhotoUri?: string
+    selfiePhotoUri?: string
+    address?: string
+    addressProofUri?: string
+    addressProofMimeType?: string
+    addressProofName?: string
+  },
+): IdentityVerification {
+  const existing = getIdentityVerification(user)
+  const idResubmit = needsIdResubmit(user) || existing.status === 'none'
+  const selfieResubmit = needsSelfieResubmit(user) || existing.status === 'none'
+  const addressResubmit =
+    user.role === 'host' && (needsAddressResubmit(user) || existing.status === 'none')
+
+  const idStatus = getIdReviewStatus(existing)
+  const selfieStatus = getSelfieReviewStatus(existing)
+  const addressStatus = getAddressReviewStatus(existing)
+
+  const next: IdentityVerification = {
+    ...existing,
+    verifiedPhone: data.phone,
+    submittedAt: new Date().toISOString(),
+    idType: idResubmit ? data.idType ?? existing.idType : existing.idType,
+    idPhotoUri: idResubmit ? data.idPhotoUri ?? existing.idPhotoUri : existing.idPhotoUri,
+    idUploaded: idResubmit ? !!data.idPhotoUri : existing.idUploaded,
+    idReviewStatus: idResubmit ? 'pending' : idStatus === 'approved' ? 'approved' : existing.idReviewStatus,
+    selfiePhotoUri: selfieResubmit
+      ? data.selfiePhotoUri ?? existing.selfiePhotoUri
+      : existing.selfiePhotoUri,
+    selfieUploaded: selfieResubmit ? !!data.selfiePhotoUri : existing.selfieUploaded,
+    selfieReviewStatus: selfieResubmit
+      ? 'pending'
+      : selfieStatus === 'approved'
+        ? 'approved'
+        : existing.selfieReviewStatus,
+    address: addressResubmit ? data.address?.trim() ?? existing.address : existing.address,
+    addressUploaded: addressResubmit ? !!data.addressProofUri : existing.addressUploaded,
+    addressProofUri: addressResubmit
+      ? data.addressProofUri ?? existing.addressProofUri
+      : existing.addressProofUri,
+    addressProofMimeType: addressResubmit
+      ? data.addressProofMimeType ?? existing.addressProofMimeType
+      : existing.addressProofMimeType,
+    addressProofName: addressResubmit
+      ? data.addressProofName ?? existing.addressProofName
+      : existing.addressProofName,
+    addressReviewStatus: addressResubmit
+      ? 'pending'
+      : addressStatus === 'approved'
+        ? 'approved'
+        : existing.addressReviewStatus,
+  }
+
+  return recomputeOverallVerification(user, next)
 }
 
 export function hostNeedsAddressProof(role: AppRole): boolean {
@@ -348,10 +469,17 @@ export function getVerificationTrackSteps(
   }
 
   if (status === 'rejected') {
+    const rejected = getRejectedVerificationDocuments(user)
+    const reviewDetail =
+      rejected.length === 1
+        ? `${verificationDocumentLabel(rejected[0])} declined — resubmit below`
+        : rejected.length > 1
+          ? `${rejected.length} items declined — resubmit below`
+          : 'Previous submission declined — resubmit below'
     return buildCoreTrack(
       user,
-      { phone: 'upcoming', review: 'active', unlock: 'upcoming' },
-      { review: 'Previous submission declined — resubmit below' },
+      { phone: 'done', review: 'active', unlock: 'upcoming' },
+      { phone: phoneDisplay, review: reviewDetail },
     )
   }
 
@@ -386,14 +514,26 @@ export function getVerificationTrackSteps(
   )
 }
 
+function verificationDocumentLabel(kind: VerificationDocumentKind): string {
+  if (kind === 'id') return 'Government ID'
+  if (kind === 'selfie') return 'Selfie'
+  return 'Address proof'
+}
+
 export function verificationCenterHeadline(status: VerificationStatus, role: AppRole): string {
   if (status === 'verified') return 'Verification complete'
   if (status === 'pending') return 'Verification submitted'
-  if (status === 'rejected') return 'Verification declined'
+  if (status === 'rejected') {
+    return 'Action needed — resubmit declined items'
+  }
   return 'Verification center'
 }
 
-export function verificationCenterSubtitle(status: VerificationStatus, role: AppRole): string {
+export function verificationCenterSubtitle(
+  status: VerificationStatus,
+  role: AppRole,
+  user?: User,
+): string {
   if (status === 'verified') {
     return role === 'host'
       ? 'You are verified — hosting is unlocked. You will not need to complete verification again.'
@@ -403,7 +543,9 @@ export function verificationCenterSubtitle(status: VerificationStatus, role: App
     return 'Browse the app while we verify your documents. Usually done within 30 minutes.'
   }
   if (status === 'rejected') {
-    return 'Please resubmit clear photos and correct details below.'
+    return user
+      ? rejectedVerificationSummary(user)
+      : 'Please resubmit only the declined documents below.'
   }
   return role === 'host'
     ? 'Add your phone number, verify with a support code, then submit your ID, a matching selfie, and address proof.'

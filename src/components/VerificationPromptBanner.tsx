@@ -23,24 +23,36 @@ export function VerificationPromptBanner({
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const isPending = status === 'pending'
+  const isRejected = status === 'rejected'
   const message = marketplaceLockMessage(role, status)
 
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.card, isPending && styles.cardPending, compact && styles.cardCompact]}
+      style={[
+        styles.card,
+        isPending && styles.cardPending,
+        isRejected && styles.cardRejected,
+        compact && styles.cardCompact,
+      ]}
     >
-      <View style={styles.iconWrap}>
-        <AppIcon name={isPending ? 'clock' : 'shield'} size={18} color={colors.black} />
+      <View style={[styles.iconWrap, isRejected && styles.iconWrapRejected, isPending && styles.iconWrapPending]}>
+        <AppIcon
+          name={isRejected ? 'alert-circle' : isPending ? 'clock' : 'shield'}
+          size={18}
+          color={isRejected ? colors.danger : colors.black}
+        />
       </View>
       <View style={styles.copy}>
-        <Text style={styles.title}>
+        <Text style={[styles.title, isRejected && styles.titleRejected]}>
           {toTitleCase(
-            isPending
-              ? 'Verification in progress'
-              : role === 'host'
-                ? 'Verify to unlock hosting'
-                : 'Verify to unlock booking',
+            isRejected
+              ? 'Verification update needed'
+              : isPending
+                ? 'Verification in progress'
+                : role === 'host'
+                  ? 'Verify to unlock hosting'
+                  : 'Verify to unlock booking',
           )}
         </Text>
         <Text style={styles.body}>{toTitleCase(message)}</Text>
@@ -70,8 +82,20 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       borderColor: colors.gray200,
       backgroundColor: colors.white,
     },
+    cardRejected: {
+      borderColor: colors.danger,
+      backgroundColor: '#FEF2F2',
+    },
     cardCompact: {
       marginBottom: spacing.md,
+    },
+    iconWrapRejected: {
+      borderColor: '#FECACA',
+      backgroundColor: '#FEE2E2',
+    },
+    iconWrapPending: {
+      borderColor: colors.gray100,
+      backgroundColor: colors.white,
     },
     iconWrap: {
       width: 36,
@@ -85,6 +109,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     },
     copy: { flex: 1, gap: 4 },
     title: { fontSize: 15, fontWeight: '700', color: colors.black, lineHeight: 20 },
+    titleRejected: { color: colors.danger },
     body: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
     link: { fontSize: 13, fontWeight: '700', color: colors.black, marginTop: 2 },
   })

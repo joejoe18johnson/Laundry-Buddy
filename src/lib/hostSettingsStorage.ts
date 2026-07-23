@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getHostProfileDetails, SEED_HOST_SETTINGS, SEED_DATA_VERSION, SEED_HOSTS } from '../data/seedData'
 import { DEFAULT_HOST_PRICING, DRYER_SHEETS_PRICE } from './hostPricing'
 import { normalizeListing } from './hostListing'
-import { normalizeDropOffAvailability } from './dropOffAvailability'
+import { normalizeDropOffAvailability, resolveEffectiveHostOnline } from './dropOffAvailability'
 import { normalizeBelizeBankName } from './belizeBanks'
 import type { Host, HostSettings, PaymentMethod } from '../types'
 
@@ -109,7 +109,9 @@ export function isHostOnline(
 ): boolean {
   if (!hostUserId) return false
   if (hostUserId.startsWith('gen-host-')) return true
-  return settingsMap[hostUserId]?.isOnline ?? false
+  const settings = settingsMap[hostUserId]
+  if (!settings) return false
+  return resolveEffectiveHostOnline(settings)
 }
 
 export function getHostPaymentMethods(settings: HostSettings): PaymentMethod[] {

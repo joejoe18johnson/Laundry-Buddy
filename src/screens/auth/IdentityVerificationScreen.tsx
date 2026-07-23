@@ -20,9 +20,14 @@ import { useTheme } from '../../context/ThemeContext'
 import {
   formatIdDocumentType,
   getIdentityVerification,
+  getInitialResubmitWizardStep,
   ID_DOCUMENT_OPTIONS,
   isIdentityVerified,
   isPhoneVerificationComplete,
+  isVerificationDocumentApproved,
+  needsAddressResubmit,
+  needsIdResubmit,
+  needsSelfieResubmit,
   type VerificationWizardStep,
 } from '../../lib/identityVerification'
 import { normalizePhone } from '../../lib/phone'
@@ -74,22 +79,35 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
   }, [user?.phone])
 
   useEffect(() => {
-    if (!user) return
-    const verification = getIdentityVerification(user)
-    if (verification.address && !address) {
-      setAddress(verification.address)
+    if (!user || !verification) return
+    if (verification.status === 'rejected' && isPhoneVerificationComplete(user)) {
+      setStep(getInitialResubmitWizardStep(user))
     }
-    if (verification.addressProofUri && !addressProof) {
+  }, [user, verification?.status])
+
+  useEffect(() => {
+    if (!user) return
+    const stored = getIdentityVerification(user)
+    if (stored.idType && !idType) {
+      setIdType(stored.idType)
+    }
+    if (stored.idPhotoUri && !idPhotoUri) {
+      setIdPhotoUri(stored.idPhotoUri)
+    }
+    if (stored.address && !address) {
+      setAddress(stored.address)
+    }
+    if (stored.addressProofUri && !addressProof) {
       setAddressProof({
-        uri: verification.addressProofUri,
-        mimeType: verification.addressProofMimeType ?? 'image/jpeg',
-        name: verification.addressProofName ?? 'Utility bill',
+        uri: stored.addressProofUri,
+        mimeType: stored.addressProofMimeType ?? 'image/jpeg',
+        name: stored.addressProofName ?? 'Utility bill',
       })
     }
-    if (verification.selfiePhotoUri && !selfiePhotoUri) {
-      setSelfiePhotoUri(verification.selfiePhotoUri)
+    if (stored.selfiePhotoUri && !selfiePhotoUri) {
+      setSelfiePhotoUri(stored.selfiePhotoUri)
     }
-  }, [user, address, addressProof, selfiePhotoUri])
+  }, [user, address, addressProof, idPhotoUri, idType, selfiePhotoUri])
 
   useEffect(() => {
     if (!user) return
@@ -118,9 +136,12 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
   if (!user || !verification) return null
 
   const phoneReady = isValidPhoneNumber(phone)
-  const idReady = !!idType && !!idPhotoUri
-  const selfieReady = !!selfiePhotoUri
-  const addressReady = !isHost || (address.trim().length > 0 && !!addressProof)
+  const idApproved = isVerificationDocumentApproved(user, 'id')
+  const selfieApproved = isVerificationDocumentApproved(user, 'selfie')
+  const addressApproved = isVerificationDocumentApproved(user, 'address')
+  const idReady = idApproved || (!!idType && !!idPhotoUri)
+  const selfieReady = selfieApproved || !!selfiePhotoUri
+  const addressReady = !isHost || addressApproved || (address.trim().length > 0 && !!addressProof)
   const codeReady = /^\d{6}$/.test(codeInput.trim())
   const hasOpenCodeRequest = !!codeRequest
   const canEnterCode = codeRequest?.status === 'code_sent'
@@ -158,13 +179,21 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
 
 
   const handleContinueFromId = () => {
-    if (!idReady) return
-    setStep('selfie')
+    if (needsIdResubmit(user) && !idReady) return
+    if (needsSelfieResubmit(user)) {
+      setStep('selfie')
+      return
+    }
+    if (isHost && needsAddressResubmit(user)) {
+      setStep('address')
+      return
+    }
+    void handleSubmit()
   }
 
   const handleContinueFromSelfie = () => {
-    if (!selfieReady) return
-    if (isHost) {
+    if (needsSelfieResubmit(user) && !selfieReady) return
+    if (isHost && needsAddressResubmit(user)) {
       setStep('address')
       return
     }
@@ -172,21 +201,29 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
   }
 
   const handleSubmit = async () => {
-    if (!phoneReady || !idReady || !idType || !idPhotoUri || !selfiePhotoUri) return
-    if (isHost && !addressReady) return
+    if (!phoneReady) return
+    if (needsIdResubmit(user) && (!idType || !idPhotoUri)) return
+    if (needsSelfieResubmit(user) && !selfiePhotoUri) return
+    if (isHost && needsAddressResubmit(user) && !addressReady) return
+    if (verification.status === 'none') {
+      if (!idType || !idPhotoUri || !selfiePhotoUri) return
+      if (isHost && !addressReady) return
+    }
 
     setSubmitting(true)
     clearAuthError()
     try {
       const ok = await submitIdentityVerification({
         phone: normalizePhone(phone),
-        idType,
-        idPhotoUri,
-        selfiePhotoUri,
-        address: isHost ? address.trim() : undefined,
-        addressProofUri: isHost ? addressProof?.uri : undefined,
-        addressProofMimeType: isHost ? addressProof?.mimeType : undefined,
-        addressProofName: isHost ? addressProof?.name : undefined,
+        idType: (idType ?? verification.idType)!,
+        idPhotoUri: idPhotoUri ?? verification.idPhotoUri,
+        selfiePhotoUri: selfiePhotoUri ?? verification.selfiePhotoUri,
+        address: isHost ? address.trim() || verification.address : undefined,
+        addressProofUri: isHost ? addressProof?.uri ?? verification.addressProofUri : undefined,
+        addressProofMimeType: isHost
+          ? addressProof?.mimeType ?? verification.addressProofMimeType
+          : undefined,
+        addressProofName: isHost ? addressProof?.name ?? verification.addressProofName : undefined,
       })
       if (!ok) setSubmitting(false)
     } catch {

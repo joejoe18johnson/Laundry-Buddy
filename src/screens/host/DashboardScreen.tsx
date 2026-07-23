@@ -3,7 +3,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { sheetsOptionLabel } from '../../types'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
-import { formatDropOffAvailability, formatDropOffHour, formatDropOffHoursWindow, type DropOffHour } from '../../lib/dropOffAvailability'
+import { formatDropOffAvailability, formatDropOffHour, formatDropOffHoursWindow, isWithinDropOffAvailability, resolveEffectiveHostOnline, type DropOffHour } from '../../lib/dropOffAvailability'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
@@ -128,7 +128,13 @@ export function DashboardScreen() {
   const hostProfile = rawHost && hostSettings
     ? applyHostSettings(rawHost, hostSettings)
     : rawHost
-  const isOnline = hostSettings?.isOnline ?? false
+  const isOnline = hostSettings ? resolveEffectiveHostOnline(hostSettings) : false
+  const withinDropOffHours = hostSettings
+    ? isWithinDropOffAvailability(hostSettings.dropOffAvailability)
+    : false
+  const dropOffHoursLabel = hostSettings
+    ? formatDropOffAvailability(hostSettings.dropOffAvailability)
+    : ''
   const [pricingDraft, setPricingDraft] = useState<HostPricing>(() =>
     normalizeHostSettings(hostSettings, rawHost).pricing,
   )
@@ -189,16 +195,27 @@ export function DashboardScreen() {
           <View style={[styles.onlineDot, isOnline && styles.onlineDotLive]} />
           <View>
             <Text style={styles.onlineTitle}>
-              {isOnline ? toTitleCase('Online — visible to guests') : toTitleCase('Offline — hidden from search')}
+              {withinDropOffHours
+                ? toTitleCase('Online — drop-off hours')
+                : isOnline
+                  ? toTitleCase('Online — visible to guests')
+                  : toTitleCase('Offline — hidden from search')}
             </Text>
             <Text style={styles.onlineSub}>
-              {isOnline
-                ? toTitleCase('Tap to go offline when you are done for the day')
-                : toTitleCase('Go online to start receiving bookings')}
+              {withinDropOffHours
+                ? toTitleCase(`Automatic during ${dropOffHoursLabel}. Go offline only outside these hours.`)
+                : isOnline
+                  ? toTitleCase('Tap to go offline when you are done for the day')
+                  : toTitleCase('Go online to start receiving bookings')}
             </Text>
           </View>
         </View>
-        <BrandSwitch accent="green" value={isOnline} onValueChange={toggleOnline} />
+        <BrandSwitch
+          accent="green"
+          value={isOnline}
+          disabled={withinDropOffHours}
+          onValueChange={toggleOnline}
+        />
       </View>
 
       {hostSettings && (

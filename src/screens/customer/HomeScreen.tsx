@@ -331,7 +331,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
       {areaChips.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>
-            {trimmedSearch ? 'Suggestions' : 'Districts'}
+            {trimmedSearch ? 'Suggestions' : 'Favorite Locations'}
           </Text>
           <ScrollView
             horizontal

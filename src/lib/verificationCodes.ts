@@ -40,7 +40,11 @@ export function isSixDigitCode(text: string): boolean {
 export const VERIFICATION_CODE_REQUEST_TITLE = 'Verification code requested'
 export const VERIFICATION_CODE_SENT_TITLE = 'Your verification code'
 export const VERIFICATION_APPROVED_TITLE = "You're verified!"
+export const VERIFICATION_REJECTED_TITLE = 'Verification update needed'
+export const VERIFICATION_DOC_APPROVED_TITLE = 'Verification step approved'
 export const NEW_USER_SIGNUP_TITLE = 'New user signed up'
+
+export type VerificationDocumentKind = 'id' | 'selfie' | 'address'
 
 export function buildAdminVerificationRequestBody(userName: string, phone: string): string {
   return `${userName} requested a 6-digit verification code for ${phone}.`
@@ -86,4 +90,29 @@ export function buildVerificationApprovedBody(role: 'customer' | 'host'): string
     return 'Your ID, selfie, and address are approved. You are verified — hosting is unlocked and you will not need to verify again.'
   }
   return 'Your ID and selfie are approved. You are verified — booking is unlocked and you will not need to verify again.'
+}
+
+export function verificationDocumentLabel(kind: VerificationDocumentKind): string {
+  if (kind === 'id') return 'Government ID'
+  if (kind === 'selfie') return 'Verification selfie'
+  return 'Address proof'
+}
+
+export function buildVerificationRejectedBody(
+  kind: VerificationDocumentKind,
+  role: 'customer' | 'host',
+): string {
+  const label = verificationDocumentLabel(kind)
+  if (kind === 'address') {
+    return `${label} was declined. Open Verification Center to upload a new utility bill — your approved ID and selfie stay on file.`
+  }
+  if (kind === 'selfie') {
+    return `${label} was declined. Retake your selfie in Verification Center — other approved documents stay on file.`
+  }
+  return `${label} was declined. Upload a clearer photo in Verification Center — other approved documents stay on file.`
+}
+
+export function buildVerificationDocApprovedBody(kind: VerificationDocumentKind): string {
+  const label = verificationDocumentLabel(kind)
+  return `${label} approved. We will notify you when the rest of your verification is complete.`
 }

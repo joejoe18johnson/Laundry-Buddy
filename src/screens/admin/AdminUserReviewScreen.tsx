@@ -33,8 +33,16 @@ import {
   verificationStatusLabel,
 } from '../../lib/identityVerification'
 import { deliverVerificationCodeToUser } from '../../lib/adminVerificationDelivery'
-import { buildVerificationApprovedBody, VERIFICATION_APPROVED_TITLE } from '../../lib/verificationCodes'
-import { verificationApprovedLink } from '../../lib/notificationLinks'
+import {
+  buildVerificationApprovedBody,
+  buildVerificationDocApprovedBody,
+  buildVerificationRejectedBody,
+  VERIFICATION_APPROVED_TITLE,
+  VERIFICATION_DOC_APPROVED_TITLE,
+  VERIFICATION_REJECTED_TITLE,
+  type VerificationDocumentKind,
+} from '../../lib/verificationCodes'
+import { identityVerificationLink, verificationApprovedLink } from '../../lib/notificationLinks'
 import { getAssignedCodeForUser } from '../../lib/verificationCodeStorage'
 import { getOpenVerificationCodeRequest } from '../../lib/verificationCodeService'
 import {
@@ -213,9 +221,31 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
     )
   }
 
+  const notifyIfRejected = async (updatedUser: User | null, kind: VerificationDocumentKind) => {
+    if (!updatedUser) return
+    const notifyRole = updatedUser.role === 'host' ? 'host' : 'customer'
+    await push(
+      userId,
+      VERIFICATION_REJECTED_TITLE,
+      buildVerificationRejectedBody(kind, notifyRole),
+      identityVerificationLink(),
+    )
+  }
+
+  const notifyIfDocApproved = async (updatedUser: User | null, kind: VerificationDocumentKind) => {
+    if (!updatedUser || isIdentityVerified(updatedUser)) return
+    await push(
+      userId,
+      VERIFICATION_DOC_APPROVED_TITLE,
+      buildVerificationDocApprovedBody(kind),
+      identityVerificationLink(),
+    )
+  }
+
   const runReviewAction = async (
     action: () => Promise<{ user: User | null; error?: string }>,
     successMessage: string,
+    options?: { rejectDoc?: VerificationDocumentKind; approveDoc?: VerificationDocumentKind },
   ) => {
     setBusy(true)
     setActionError(null)
@@ -228,6 +258,11 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
       )
     } else {
       setActionMessage(successMessage)
+      if (options?.rejectDoc) {
+        await notifyIfRejected(result.user, options.rejectDoc)
+      } else if (options?.approveDoc) {
+        await notifyIfDocApproved(result.user, options.approveDoc)
+      }
       await notifyIfFullyVerified(result.user)
     }
     await reload()
@@ -256,22 +291,34 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
   }
 
   const handleApproveId = () =>
-    void runReviewAction(() => adminApproveUserId(userId), 'Government ID approved.')
+    void runReviewAction(() => adminApproveUserId(userId), 'Government ID approved.', {
+      approveDoc: 'id',
+    })
 
   const handleRejectId = () =>
-    void runReviewAction(() => adminRejectUserId(userId), 'Government ID rejected.')
+    void runReviewAction(() => adminRejectUserId(userId), 'Government ID rejected.', {
+      rejectDoc: 'id',
+    })
 
   const handleApproveAddress = () =>
-    void runReviewAction(() => adminApproveUserAddress(userId), 'Address proof approved.')
+    void runReviewAction(() => adminApproveUserAddress(userId), 'Address proof approved.', {
+      approveDoc: 'address',
+    })
 
   const handleRejectAddress = () =>
-    void runReviewAction(() => adminRejectUserAddress(userId), 'Address proof rejected.')
+    void runReviewAction(() => adminRejectUserAddress(userId), 'Address proof rejected.', {
+      rejectDoc: 'address',
+    })
 
   const handleApproveSelfie = () =>
-    void runReviewAction(() => adminApproveUserSelfie(userId), 'Verification selfie approved.')
+    void runReviewAction(() => adminApproveUserSelfie(userId), 'Verification selfie approved.', {
+      approveDoc: 'selfie',
+    })
 
   const handleRejectSelfie = () =>
-    void runReviewAction(() => adminRejectUserSelfie(userId), 'Verification selfie rejected.')
+    void runReviewAction(() => adminRejectUserSelfie(userId), 'Verification selfie rejected.', {
+      rejectDoc: 'selfie',
+    })
 
   return (
     <Screen>

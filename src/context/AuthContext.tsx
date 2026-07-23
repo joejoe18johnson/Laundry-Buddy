@@ -55,7 +55,16 @@ import { ADMIN_EMAIL, ADMIN_PHONE, ADMIN_SEED_PASSWORD } from '../data/seedData'
 import * as SplashScreen from 'expo-splash-screen'
 import * as Linking from 'expo-linking'
 import type { AppRole, AuthScreen, IdDocumentType, IdentityVerification, LoginMethod, User } from '../types'
-import { emptyIdentityVerification, getIdentityVerification, normalizeUserIdentity, needsIdentityVerification } from '../lib/identityVerification'
+import {
+  buildResubmitVerification,
+  emptyIdentityVerification,
+  getIdentityVerification,
+  needsAddressResubmit,
+  needsIdResubmit,
+  needsSelfieResubmit,
+  normalizeUserIdentity,
+  needsIdentityVerification,
+} from '../lib/identityVerification'
 import {
   approveUserVerification,
   approveUserAddressVerification,
@@ -646,37 +655,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user) return false
 
       const normalizedPhone = normalizePhone(data.phone)
-      const hostAddressProof = user.role === 'host' ? !!data.addressProofUri : false
-      if (!data.selfiePhotoUri) {
+      const existingVerification = getIdentityVerification(user)
+      const isResubmit = existingVerification.status === 'rejected'
+      const idResubmit = !isResubmit || needsIdResubmit(user)
+      const selfieResubmit = !isResubmit || needsSelfieResubmit(user)
+      const addressResubmit =
+        user.role === 'host' && (!isResubmit || needsAddressResubmit(user))
+
+      if (selfieResubmit && !data.selfiePhotoUri && !existingVerification.selfiePhotoUri) {
         setAuthError('A verification selfie is required.')
         return false
       }
-      if (user.role === 'host' && !hostAddressProof) {
+      if (idResubmit && (!data.idType || !data.idPhotoUri) && !existingVerification.idPhotoUri) {
+        setAuthError('A government ID photo is required.')
+        return false
+      }
+      if (
+        addressResubmit &&
+        (!data.addressProofUri || !data.address?.trim()) &&
+        !existingVerification.addressProofUri
+      ) {
         setAuthError('Address proof is required for hosts.')
         return false
       }
 
+      const hostAddressProof = user.role === 'host'
+        ? !!(data.addressProofUri ?? existingVerification.addressProofUri)
+        : false
+
       if (isSupabaseConfigured()) {
         try {
-          const verification: IdentityVerification = {
-            status: 'pending',
-            phoneVerified: getIdentityVerification(user).phoneVerified,
-            verifiedPhone: normalizedPhone,
+          const verification = buildResubmitVerification(user, {
+            phone: normalizedPhone,
             idType: data.idType,
-            idUploaded: true,
-            idPhotoUri: data.idPhotoUri,
-            idReviewStatus: 'pending',
-            selfiePhotoUri: data.selfiePhotoUri,
-            selfieUploaded: true,
-            selfieReviewStatus: 'pending',
-            address: data.address?.trim() ?? '',
-            addressUploaded: hostAddressProof ? true : undefined,
-            addressProofUri: data.addressProofUri,
-            addressProofMimeType: data.addressProofMimeType,
-            addressProofName: data.addressProofName,
-            addressReviewStatus: hostAddressProof ? 'pending' : undefined,
-            submittedAt: new Date().toISOString(),
-          }
+            idPhotoUri: data.idPhotoUri ?? existingVerification.idPhotoUri,
+            selfiePhotoUri: data.selfiePhotoUri ?? existingVerification.selfiePhotoUri,
+            address: data.address?.trim() ?? existingVerification.address,
+            addressProofUri: data.addressProofUri ?? existingVerification.addressProofUri,
+            addressProofMimeType:
+              data.addressProofMimeType ?? existingVerification.addressProofMimeType,
+            addressProofName: data.addressProofName ?? existingVerification.addressProofName,
+          })
           const updated = await supabaseSubmitIdentityVerification(user, verification, normalizedPhone)
           await saveUser(updated)
           setUser(updated)
@@ -698,25 +717,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return false
       }
 
-      const verification: IdentityVerification = {
-        status: 'pending',
-        phoneVerified: getIdentityVerification(user).phoneVerified,
-        verifiedPhone: normalizedPhone,
+      const verification = buildResubmitVerification(user, {
+        phone: normalizedPhone,
         idType: data.idType,
-        idUploaded: true,
-        idPhotoUri: data.idPhotoUri,
-        idReviewStatus: 'pending',
-        selfiePhotoUri: data.selfiePhotoUri,
-        selfieUploaded: true,
-        selfieReviewStatus: 'pending',
-        address: data.address?.trim() ?? '',
-        addressUploaded: hostAddressProof ? true : undefined,
-        addressProofUri: data.addressProofUri,
-        addressProofMimeType: data.addressProofMimeType,
-        addressProofName: data.addressProofName,
-        addressReviewStatus: hostAddressProof ? 'pending' : undefined,
-        submittedAt: new Date().toISOString(),
-      }
+        idPhotoUri: data.idPhotoUri ?? existingVerification.idPhotoUri,
+        selfiePhotoUri: data.selfiePhotoUri ?? existingVerification.selfiePhotoUri,
+        address: data.address?.trim() ?? existingVerification.address,
+        addressProofUri: data.addressProofUri ?? existingVerification.addressProofUri,
+        addressProofMimeType:
+          data.addressProofMimeType ?? existingVerification.addressProofMimeType,
+        addressProofName: data.addressProofName ?? existingVerification.addressProofName,
+      })
 
       const updated: User = {
         ...user,

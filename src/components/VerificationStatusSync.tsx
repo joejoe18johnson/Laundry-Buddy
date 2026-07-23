@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
+import { BrandAlert } from './BrandDialog'
 import { VerificationCelebrationTour } from './VerificationCelebrationTour'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useUserNotifications } from '../context/NotificationContext'
 import { getIdentityVerification } from '../lib/identityVerification'
-import { VERIFICATION_APPROVED_TITLE } from '../lib/verificationCodes'
+import {
+  VERIFICATION_APPROVED_TITLE,
+  VERIFICATION_REJECTED_TITLE,
+} from '../lib/verificationCodes'
 import { hasSeenVerificationTour, markVerificationTourSeen } from '../lib/verificationTourStorage'
 
-/** Keeps the signed-in user in sync after admin approval and shows a verified tour once. */
+/** Keeps verification status in sync and surfaces approval/rejection alerts prominently. */
 export function VerificationStatusSync() {
   const { user, refreshCurrentUser } = useAuth()
   const { navigate } = useApp()
@@ -16,6 +20,7 @@ export function VerificationStatusSync() {
   const previousStatusRef = useRef<string | null>(null)
   const checkingTourRef = useRef(false)
   const [tour, setTour] = useState<{ role: 'customer' | 'host' } | null>(null)
+  const [rejectionAlert, setRejectionAlert] = useState<{ title: string; body: string } | null>(null)
 
   useEffect(() => {
     if (!user || user.role === 'admin') return
@@ -33,7 +38,8 @@ export function VerificationStatusSync() {
 
   useEffect(() => {
     if (!user || user.role === 'admin') return
-    if (getIdentityVerification(user).status !== 'pending') return
+    const status = getIdentityVerification(user).status
+    if (status !== 'pending' && status !== 'rejected') return
 
     void refreshCurrentUser()
     const interval = setInterval(() => {
@@ -46,12 +52,29 @@ export function VerificationStatusSync() {
   useEffect(() => {
     if (!user || user.role === 'admin' || checkingTourRef.current) return
 
-    const showTourIfNeeded = async () => {
+    const syncAlerts = async () => {
       checkingTourRef.current = true
       try {
         const status = getIdentityVerification(user).status
         const previous = previousStatusRef.current
         previousStatusRef.current = status
+
+        const unreadRejected = notifications.find(
+          (entry) => !entry.read && entry.title === VERIFICATION_REJECTED_TITLE,
+        )
+        const justRejected = previous !== null && previous !== 'rejected' && status === 'rejected'
+
+        if (unreadRejected || justRejected) {
+          if (unreadRejected) {
+            await markRead(unreadRejected.id)
+            setRejectionAlert({ title: unreadRejected.title, body: unreadRejected.body })
+          } else {
+            setRejectionAlert({
+              title: VERIFICATION_REJECTED_TITLE,
+              body: 'One of your verification documents was declined. Open Verification Center to resubmit only the declined item.',
+            })
+          }
+        }
 
         if (status !== 'verified') return
         if (await hasSeenVerificationTour(user.id)) return
@@ -73,7 +96,7 @@ export function VerificationStatusSync() {
       }
     }
 
-    void showTourIfNeeded()
+    void syncAlerts()
   }, [markRead, notifications, user])
 
   const finishTour = async (navigateAfter: boolean) => {
@@ -86,14 +109,27 @@ export function VerificationStatusSync() {
     }
   }
 
-  if (!tour) return null
-
   return (
-    <VerificationCelebrationTour
-      visible
-      role={tour.role}
-      onComplete={() => void finishTour(true)}
-      onDismiss={() => void finishTour(false)}
-    />
+    <>
+      <BrandAlert
+        visible={!!rejectionAlert}
+        title={rejectionAlert?.title ?? VERIFICATION_REJECTED_TITLE}
+        message={rejectionAlert?.body}
+        icon="alert-circle"
+        confirmLabel="Open verification center"
+        onClose={() => {
+          setRejectionAlert(null)
+          navigate('identity-verification')
+        }}
+      />
+      {tour ? (
+        <VerificationCelebrationTour
+          visible
+          role={tour.role}
+          onComplete={() => void finishTour(true)}
+          onDismiss={() => void finishTour(false)}
+        />
+      ) : null}
+    </>
   )
 }

@@ -56,6 +56,7 @@ import { AdminVerificationRequestSync } from './src/components/AdminVerification
 import { GuestBookingSync } from './src/components/GuestBookingSync'
 import { HostBookingSync } from './src/components/HostBookingSync'
 import { HostRequestAlertSync } from './src/components/HostRequestAlertSync'
+import { HostOnlineScheduleSync } from './src/components/HostOnlineScheduleSync'
 import { BookingStepAlertSync } from './src/components/BookingStepAlertSync'
 import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
@@ -68,6 +69,7 @@ import {
 } from './src/lib/pushNotifications'
 import { getGreetingName } from './src/lib/displayName'
 import { countDryerTabLoads } from './src/lib/hostLoads'
+import { isHostOnline } from './src/lib/hostSettingsStorage'
 import { linkFromPushData } from './src/lib/notificationLinks'
 import { VERIFICATION_CODE_REQUEST_TITLE } from './src/lib/verificationCodes'
 import type { Screen } from './src/types'
@@ -564,7 +566,7 @@ function AppShell() {
         radiusMiles={searchRadiusMiles}
         onOpenLocationSettings={() => setLocationSettingsOpen(true)}
         hasActiveLoad={hasActiveLoad}
-        isHostOnline={hostSettings?.isOnline}
+        isHostOnline={user && hostSettings ? isHostOnline(user.id, { [user.id]: hostSettings }) : false}
         notificationCount={unreadCount}
         onExplore={isCustomer ? () => navigate('customer-home') : undefined}
         onMyLoad={isCustomer ? () => navigate('customer-tracking') : undefined}
@@ -782,6 +784,7 @@ function AuthenticatedApp() {
               <>
                 <AppProvider>
                   <VerificationStatusSync />
+                  <HostOnlineScheduleSync />
                   <HostRequestAlertSync />
                   <BookingStepAlertSync />
                   <GuestBookingSync />
