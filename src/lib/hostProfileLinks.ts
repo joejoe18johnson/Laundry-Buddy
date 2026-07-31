@@ -125,7 +125,7 @@ export async function shareHostProfile(target: HostProfileShareTarget): Promise<
     await Share.share({
       title: `${formatHostDisplayName(target.hostName)} on Laundry Buddy`,
       message,
-      url: Platform.OS === 'ios' ? (webUrl ?? deepLink) : undefined,
+      url: Platform.OS === 'ios' ? (webUrl ?? deepLink) : deepLink,
     })
     return true
   } catch {

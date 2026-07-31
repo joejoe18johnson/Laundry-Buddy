@@ -1,23 +1,19 @@
-import { saveBookingSnapshot } from './bookingSyncStorage'
 import { isSupabaseConfigured } from './supabase'
 import { upsertBookingToSupabase } from './supabase/bookingService'
+import { saveBookingSnapshot } from './bookingSyncStorage'
 import type { Booking } from '../types'
 
-/** Persist booking locally and to Supabase so other devices see the same order state. */
+/** Persist booking — Supabase when configured, local snapshot otherwise. */
 export async function persistBooking(booking: Booking): Promise<void> {
-  await saveBookingSnapshot(booking)
-
-  if (!isSupabaseConfigured()) return
-
-  try {
+  if (isSupabaseConfigured()) {
     await upsertBookingToSupabase(booking)
-  } catch (error) {
-    console.warn('[bookingSync] Supabase upsert failed:', error)
-    throw error
+    return
   }
+
+  await saveBookingSnapshot(booking)
 }
 
-/** Persist booking locally and to Supabase (fire-and-forget with optional error callback). */
+/** Persist booking (fire-and-forget with optional error callback). */
 export function syncBookingToServer(
   booking: Booking,
   onError?: (message: string) => void,

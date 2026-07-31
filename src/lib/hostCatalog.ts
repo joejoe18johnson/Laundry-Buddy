@@ -48,21 +48,15 @@ export async function refreshDynamicHostCatalog(
 export async function mergeRemoteMarketplaceCatalog(
   localSettingsMap: Record<string, HostSettings>,
 ): Promise<{ settingsMap: Record<string, HostSettings>; hosts: Host[] }> {
-  const localHosts = await refreshDynamicHostCatalog(localSettingsMap)
-
   if (!isSupabaseConfigured()) {
+    const localHosts = await refreshDynamicHostCatalog(localSettingsMap)
     return { settingsMap: localSettingsMap, hosts: localHosts }
   }
 
   const remote = await fetchMarketplaceFromSupabase()
-  const settingsMap = { ...remote.settingsByUserId, ...localSettingsMap }
+  const settingsMap = { ...remote.settingsByUserId }
 
   const merged = new Map<string, Host>()
-  for (const host of localHosts) {
-    const key = host.hostUserId ?? host.id
-    const settings = host.hostUserId ? settingsMap[host.hostUserId] : undefined
-    merged.set(key, applyHostSettings(host, settings))
-  }
   for (const host of remote.hosts) {
     const key = host.hostUserId ?? host.id
     const settings = host.hostUserId ? settingsMap[host.hostUserId] : undefined

@@ -23,6 +23,7 @@ export {
   supabaseUpdateProfile,
 } from './authService'
 export {
+  fetchCompletedBookingsFromSupabase,
   fetchParticipantBookingsFromSupabase,
   filterVisibleGuestBookings,
   subscribeToBookingChanges,

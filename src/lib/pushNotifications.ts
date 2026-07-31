@@ -49,6 +49,13 @@ export async function getPushPermissionStatus(): Promise<PushPermissionStatus> {
   return 'undetermined'
 }
 
+export async function canRequestPushPermissionAgain(): Promise<boolean> {
+  if (Platform.OS === 'web' || !Device.isDevice) return false
+  const settings = await Notifications.getPermissionsAsync()
+  return settings.canAskAgain !== false
+}
+
+/** Show the native Allow / Don't Allow dialog (iOS & Android 13+). */
 export async function requestPushPermissions(): Promise<boolean> {
   if (Platform.OS === 'web' || !Device.isDevice) return false
   await initPushNotifications()
@@ -184,9 +191,10 @@ export async function updateBadgeCount(count: number): Promise<void> {
 export async function registerExpoPushToken(): Promise<string | null> {
   if (Platform.OS === 'web' || !Device.isDevice) return null
 
-  const enabled = await ensurePushNotificationsEnabled()
-  if (enabled !== 'granted') return null
+  const status = await getPushPermissionStatus()
+  if (status !== 'granted') return null
 
+  await initPushNotifications()
   const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined
 
   try {

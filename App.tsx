@@ -63,7 +63,9 @@ import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
 import {
   addNotificationResponseListener,
+  canRequestPushPermissionAgain,
   getPushPermissionStatus,
+  initPushNotifications,
   openNotificationSettings,
   requestPushPermissions,
   type PushPermissionStatus,
@@ -633,45 +635,73 @@ function PushNotificationPromptGate() {
   const [visible, setVisible] = useState(false)
   const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
   const [dismissedForSession, setDismissedForSession] = useState(false)
+  const nativePromptStartedRef = useRef(false)
 
   useEffect(() => {
     setDismissedForSession(false)
     setVisible(false)
+    nativePromptStartedRef.current = false
   }, [authSessionKey])
 
-  const syncPermissionPrompt = useCallback(async () => {
-    if (!user) {
-      setVisible(false)
-      return
-    }
-
-    if (dismissedForSession) return
-
-    const status = await getPushPermissionStatus()
-    setPermission(status)
-
-    if (status === 'granted' || status === 'unsupported') {
-      setVisible(false)
-      return
-    }
-
-    setVisible(true)
-  }, [dismissedForSession, user])
-
   useEffect(() => {
-    void syncPermissionPrompt()
-  }, [authSessionKey, syncPermissionPrompt])
+    if (!user || nativePromptStartedRef.current) return
+
+    nativePromptStartedRef.current = true
+
+    void (async () => {
+      await initPushNotifications()
+
+      // Brief pause so the home screen is visible before the OS dialog appears.
+      await new Promise((resolve) => setTimeout(resolve, 450))
+
+      const status = await getPushPermissionStatus()
+      setPermission(status)
+
+      if (status === 'granted' || status === 'unsupported') {
+        if (status === 'granted') {
+          await registerPushTokenForUser(user)
+        }
+        setVisible(false)
+        return
+      }
+
+      if (status === 'undetermined') {
+        const granted = await requestPushPermissions()
+        const after = await getPushPermissionStatus()
+        setPermission(after)
+        if (granted || after === 'granted') {
+          await registerPushTokenForUser(user)
+          setVisible(false)
+          return
+        }
+        // User tapped Don't Allow on the native dialog — no extra sheet this session.
+        setVisible(false)
+        return
+      }
+
+      if (!dismissedForSession) {
+        setVisible(true)
+      }
+    })()
+  }, [authSessionKey, dismissedForSession, user])
 
   useEffect(() => {
     if (!user) return
 
     const subscription = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return
-      void syncPermissionPrompt()
+      void (async () => {
+        const status = await getPushPermissionStatus()
+        setPermission(status)
+        if (status === 'granted') {
+          setVisible(false)
+          await registerPushTokenForUser(user)
+        }
+      })()
     })
 
     return () => subscription.remove()
-  }, [syncPermissionPrompt, user])
+  }, [user])
 
   if (!user) return null
 
@@ -681,19 +711,17 @@ function PushNotificationPromptGate() {
       permission={permission}
       onEnable={() => {
         void (async () => {
-          if (permission === 'denied') {
-            await openNotificationSettings()
-            return
-          }
-          await requestPushPermissions()
-          const status = await getPushPermissionStatus()
-          setPermission(status)
-          if (status === 'granted' || status === 'unsupported') {
-            setVisible(false)
-            if (status === 'granted') {
+          if (await canRequestPushPermissionAgain()) {
+            const granted = await requestPushPermissions()
+            const status = await getPushPermissionStatus()
+            setPermission(status)
+            if (granted || status === 'granted') {
+              setVisible(false)
               await registerPushTokenForUser(user)
+              return
             }
           }
+          await openNotificationSettings()
         })()
       }}
       onDismiss={() => {

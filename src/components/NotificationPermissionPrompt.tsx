@@ -14,7 +14,7 @@ type Props = {
 }
 
 export function NotificationPermissionPrompt({ visible, permission, onEnable, onDismiss }: Props) {
-  const denied = permission === 'denied'
+  const blockedInSettings = permission === 'denied'
 
   return (
     <Modal
@@ -30,22 +30,21 @@ export function NotificationPermissionPrompt({ visible, permission, onEnable, on
             <View style={styles.iconWrap}>
               <AppIcon name="bell" size={28} color={colors.white} />
             </View>
-            <Text style={styles.title}>{toTitleCase('Stay on time with alerts')}</Text>
+            <Text style={styles.title}>{toTitleCase('Turn on notifications')}</Text>
             <Text style={styles.body}>
               {toTitleCase(
-                denied
-                  ? 'Notifications are off on this phone. Turn them on so you never miss when a host accepts, declines, or marks your load ready.'
-                  : 'Laundry Buddy works best with the bell on. Allow notifications for host responses, ready-for-pickup updates, and drop-off reminders.',
+                blockedInSettings
+                  ? 'Notifications are off for Laundry Buddy. Open your phone settings and allow notifications so you never miss when a host accepts, declines, or marks your load ready.'
+                  : 'Allow notifications so you get host responses, ready-for-pickup updates, and drop-off reminders.',
               )}
             </Text>
             <View style={styles.list}>
-              <Text style={styles.listItem}>• {toTitleCase('Tap the bell in the top bar for your notification inbox')}</Text>
               <Text style={styles.listItem}>• {toTitleCase('Host accepts or declines your request')}</Text>
               <Text style={styles.listItem}>• {toTitleCase('Load is drying or ready for pickup')}</Text>
               <Text style={styles.listItem}>• {toTitleCase('Reminders before drop-off time')}</Text>
             </View>
             <PrimaryButton
-              title={denied ? 'Open phone settings' : 'Turn on notifications'}
+              title={blockedInSettings ? 'Open phone settings' : 'Allow notifications'}
               icon="bell"
               full
               onPress={onEnable}

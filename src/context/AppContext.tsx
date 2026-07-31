@@ -45,9 +45,15 @@ import { isSupabaseConfigured } from '../lib/supabase'
 import { resolveSupabaseProfileId } from '../lib/supabase/profileIds'
 import {
   fetchBookingByIdFromSupabase,
+  fetchCompletedBookingsFromSupabase,
   fetchParticipantBookingsFromSupabase,
   filterVisibleGuestBookings as filterRemoteGuestBookings,
 } from '../lib/supabase/bookingService'
+import {
+  fetchReviewsForHostFromSupabase,
+  hasReviewForBookingInSupabase,
+  insertReviewToSupabase,
+} from '../lib/supabase/reviewService'
 import { splitBookingsForHost } from '../lib/supabase/bookingMappers'
 import { loadStoredBookingDraft, saveStoredBookingDraft } from '../lib/bookingDraftStorage'
 import {
@@ -274,6 +280,14 @@ function persistBookingSnapshot(booking: Booking) {
   syncBookingToServer(booking)
 }
 
+function persistHostOrdersCache(
+  userId: string,
+  orders: { pendingRequests: HostRequest[]; activeLoads: Booking[] },
+) {
+  if (isSupabaseConfigured()) return
+  void saveHostOrders(userId, orders)
+}
+
 function defaultScreen(role: 'customer' | 'host'): Screen {
   return role === 'host' ? 'host-dashboard' : 'customer-home'
 }
@@ -479,26 +493,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     if (remoteFetchOk) {
       const remoteIds = new Set(remoteBookings.map((entry) => entry.id))
-      const snapshots = await loadBookingSnapshotsForCustomer(customerIds)
       await purgeBookingSnapshotsExcept(remoteIds)
 
-      const merged = remoteBookings.map((booking) => {
-        const snapshot = snapshots.find((entry) => entry.id === booking.id)
-        const combined = snapshot ? mergeBookingSnapshot(booking, snapshot) : booking
-        return normalizePickupStage(combined)
-      })
-
-      for (const booking of merged) {
-        if (booking.guestPickupConfirmedAt || booking.hostPickupConfirmedAt) {
-          syncBookingToServer(booking)
-        }
-        if (booking.stage === 'picked-up' && booking.customerId) {
-          void saveCompletedCustomerPayment(booking.customerId, booking)
-        }
-      }
+      const merged = remoteBookings.map((booking) => normalizePickupStage(booking))
 
       const visible = filterVisibleGuestBookings(merged)
-      await saveActiveBookings(user.id, visible)
       setGuestBookings(visible)
       setSelectedBookingId((current) => {
         if (current && findGuestBooking(visible, current)) return current
@@ -534,6 +533,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshHostCompletedLoads = useCallback(async () => {
     if (role !== 'host' || !user) return
+
+    if (isSupabaseConfigured()) {
+      try {
+        const completed = await fetchCompletedBookingsFromSupabase()
+        setHostCompletedLoads(completed)
+        return
+      } catch (error) {
+        console.warn('[bookings] completed fetch failed:', error)
+      }
+    }
+
     const history = await loadHostPaymentHistory(user.id)
     setHostCompletedLoads(history)
   }, [role, user])
@@ -626,13 +636,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (shouldSetInitialScreen && !restoredBooking) {
         if (role === 'customer' && user) {
-          const stored = await loadActiveBookings(user.id)
-          const seed = filterActiveGuestBookings(getCustomerSeedBookings(user.id))
-          if (stored.length > 0 || seed.length > 0) {
-            setScreen('customer-tracking')
+          let hasActiveBooking = false
+          if (isSupabaseConfigured()) {
+            try {
+              const remote = filterRemoteGuestBookings(await fetchParticipantBookingsFromSupabase())
+              hasActiveBooking = filterActiveGuestBookings(remote).length > 0
+            } catch {
+              hasActiveBooking = false
+            }
           } else {
-            setScreen(defaultScreen(role))
+            const stored = await loadActiveBookings(user.id)
+            const seed = filterActiveGuestBookings(getCustomerSeedBookings(user.id))
+            hasActiveBooking = stored.length > 0 || seed.length > 0
           }
+          setScreen(hasActiveBooking ? 'customer-tracking' : defaultScreen(role))
         } else {
           setScreen(defaultScreen(role))
         }
@@ -646,31 +663,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (cancelled) return
 
       if (role === 'host') {
-        const seed = getHostDashboardSeed(user!.id)
-        void getHostOrders(user!.id).then(async (stored) => {
-          let mergedLoads = dedupeActiveLoads(
-            mergeActiveLoads(seed.activeLoads, stored.activeLoads),
-          )
-          mergedLoads = await Promise.all(
-            mergedLoads.map(async (load) => {
-              const snapshot = await loadBookingSnapshot(load.id)
-              return snapshot ? mergeBookingSnapshot(load, snapshot) : load
-            }),
-          )
-          mergedLoads = mergedLoads.filter(
-            (load) => load.stage !== 'picked-up' && !isPickupComplete(load),
-          )
-          const activeLoadIds = mergedLoads.map((load) => load.id)
-          setHostRequests(
-            mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds),
-          )
-          setActiveLoads(mergedLoads)
-          setHostCapacity({
-            maxLoads: seed.maxLoads,
-            accepting: seed.accepting,
-          })
+        if (isSupabaseConfigured()) {
+          void refreshHostOrders()
           void refreshHostCompletedLoads()
-        })
+        } else {
+          const seed = getHostDashboardSeed(user!.id)
+          void getHostOrders(user!.id).then(async (stored) => {
+            let mergedLoads = dedupeActiveLoads(
+              mergeActiveLoads(seed.activeLoads, stored.activeLoads),
+            )
+            mergedLoads = await Promise.all(
+              mergedLoads.map(async (load) => {
+                const snapshot = await loadBookingSnapshot(load.id)
+                return snapshot ? mergeBookingSnapshot(load, snapshot) : load
+              }),
+            )
+            mergedLoads = mergedLoads.filter(
+              (load) => load.stage !== 'picked-up' && !isPickupComplete(load),
+            )
+            const activeLoadIds = mergedLoads.map((load) => load.id)
+            setHostRequests(
+              mergeHostRequests(seed.pendingRequests, stored.pendingRequests, activeLoadIds),
+            )
+            setActiveLoads(mergedLoads)
+            setHostCapacity({
+              maxLoads: seed.maxLoads,
+              accepting: seed.accepting,
+            })
+            void refreshHostCompletedLoads()
+          })
+        }
       } else if (role === 'customer') {
         void applyGuestBookingsFromStorage()
       }
@@ -684,7 +706,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [applyGuestBookingsFromStorage, refreshHostCompletedLoads, role, user!.id])
 
   useEffect(() => {
-    if (role === 'customer' && user) {
+    if (role === 'customer' && user && !isSupabaseConfigured()) {
       void saveActiveBookings(user.id, guestBookings)
     }
   }, [guestBookings, role, user])
@@ -808,7 +830,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const wasOnline = hostSettingsMap[user.id]?.isOnline ?? false
       const mergedMap = { ...hostSettingsMap, [user.id]: settings }
-      await saveHostSettings(user.id, settings)
+      if (!isSupabaseConfigured()) {
+        await saveHostSettings(user.id, settings)
+      }
       setHostSettings(settings)
       setHostSettingsMap(mergedMap)
 
@@ -870,36 +894,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ])
       await purgeBookingSnapshotsExcept(remoteIds)
 
-      let mergedLoads = await Promise.all(
-        remoteActive.map(async (load) => {
-          const snapshot = await loadBookingSnapshot(load.id)
-          const combined = snapshot ? mergeBookingSnapshot(load, snapshot) : load
-          return normalizePickupStage(combined)
-        }),
-      )
-
-      for (const load of mergedLoads) {
-        if (load.guestPickupConfirmedAt || load.hostPickupConfirmedAt) {
-          syncBookingToServer(load)
-        }
-      }
-
-      for (const load of mergedLoads) {
-        if (load.stage !== 'picked-up') continue
-        if (load.customerId) void saveCompletedCustomerPayment(load.customerId, load)
-        void saveCompletedHostPayment(user.id, load)
-        const host = getHostById(load.hostId)
-        if (host?.hostUserId) void removeHostActiveLoad(host.hostUserId, load.id)
-      }
-
+      let mergedLoads = remoteActive.map((load) => normalizePickupStage(load))
       mergedLoads = mergedLoads.filter(
         (load) => load.stage !== 'picked-up' && !isPickupComplete(load),
       )
-
-      await saveHostOrders(user.id, {
-        pendingRequests: remotePending,
-        activeLoads: mergedLoads,
-      })
 
       setHostRequests(remotePending)
       setActiveLoads(mergedLoads)
@@ -938,8 +936,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [refreshHostCompletedLoads, role, user])
 
   const refreshHostData = useCallback(async () => {
-    const map = await getAllHostSettings()
-    const { settingsMap } = await mergeRemoteMarketplaceCatalog(map)
+    const localMap = isSupabaseConfigured() ? {} : await getAllHostSettings()
+    const { settingsMap } = await mergeRemoteMarketplaceCatalog(localMap)
     setHostSettingsMap(settingsMap)
     if (role === 'host' && user) {
       setHostSettings(settingsMap[user.id] ?? { ...DEFAULT_HOST_SETTINGS })
@@ -1205,12 +1203,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [openHostProfileFromLink])
 
   const refreshHostReviews = useCallback(async (hostId: string) => {
+    if (isSupabaseConfigured()) {
+      try {
+        const remote = await fetchReviewsForHostFromSupabase(hostId)
+        setHostReviewsMap((prev) => ({ ...prev, [hostId]: remote }))
+        return
+      } catch (error) {
+        console.warn('[reviews] remote fetch failed:', error)
+      }
+    }
+
     const stored = await loadStoredReviewsForHost(hostId)
     setHostReviewsMap((prev) => ({ ...prev, [hostId]: stored }))
   }, [])
 
   const getReviewsForHost = useCallback(
-    (hostId: string) => mergeHostReviews(hostId, hostReviewsMap[hostId] ?? []),
+    (hostId: string) =>
+      mergeHostReviews(hostId, hostReviewsMap[hostId] ?? [], {
+        includeSeed: !isSupabaseConfigured(),
+      }),
     [hostReviewsMap],
   )
 
@@ -1308,19 +1319,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
       comment: string
     }) => {
       if (!user) return
-      const review: HostReview = {
-        id: `rev-${Date.now()}`,
-        author: user.name,
-        rating,
-        comment,
-        date: new Date().toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        }),
+      const resolvedAuthorId =
+        (await resolveSupabaseProfileId(user)) ?? user.id
+
+      if (bookingId && isSupabaseConfigured()) {
+        const alreadyReviewed = await hasReviewForBookingInSupabase(resolvedAuthorId, bookingId)
+        if (alreadyReviewed) {
+          showToast('You already reviewed this load', { icon: 'info' })
+          return
+        }
       }
-      await saveReviewForHost(hostId, review)
-      if (bookingId) await markBookingReviewed(user.id, bookingId)
+
+      let review: HostReview | null = null
+      if (isSupabaseConfigured()) {
+        review = await insertReviewToSupabase({
+          hostId,
+          authorId: resolvedAuthorId,
+          authorName: user.name,
+          rating,
+          comment,
+          bookingId,
+        })
+        if (!review) {
+          showToast('Could not save review — try again', { icon: 'alert-circle' })
+          return
+        }
+      } else {
+        review = {
+          id: `rev-${Date.now()}`,
+          author: user.name,
+          rating,
+          comment,
+          date: new Date().toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          }),
+        }
+        await saveReviewForHost(hostId, review)
+        if (bookingId) await markBookingReviewed(user.id, bookingId)
+      }
       await refreshHostReviews(hostId)
 
       const host = getHostById(hostId)
@@ -1652,7 +1690,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const nextLoads = upsertActiveLoad(activeLoads, load)
       setActiveLoads(nextLoads)
       setHostRequests(nextRequests)
-      void saveHostOrders(user.id, { pendingRequests: nextRequests, activeLoads: nextLoads })
+      persistHostOrdersCache(user.id, { pendingRequests: nextRequests, activeLoads: nextLoads })
 
       setGuestBookings((prev) =>
         patchGuestBooking(prev, request.id, (current) => ({
@@ -1716,7 +1754,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const nextRequests = hostRequests.filter((r) => r.id !== requestId)
       setHostRequests(nextRequests)
       if (user) {
-        void saveHostOrders(user.id, { pendingRequests: nextRequests, activeLoads })
+        persistHostOrdersCache(user.id, { pendingRequests: nextRequests, activeLoads })
       }
       if (request?.customerId) {
         notifyCustomer(
@@ -1786,7 +1824,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return patched
         })
         if (role === 'host' && user) {
-          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+          persistHostOrdersCache(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
         return next
       })
@@ -1850,7 +1888,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       const persistIfPickedUp = (load: Booking) => {
-        if (stage !== 'picked-up') return
+        if (stage !== 'picked-up' || isSupabaseConfigured()) return
         const completed = patchLoad(load)
         if (completed.customerId) {
           saveCompletedCustomerPayment(completed.customerId, completed)
@@ -1873,8 +1911,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return patched
         })
         const filtered = stage === 'picked-up' ? next.filter((load) => load.id !== loadId) : next
-        if (role === 'host' && user) {
-          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: filtered })
+        if (role === 'host' && user && !isSupabaseConfigured()) {
+          persistHostOrdersCache(user.id, { pendingRequests: hostRequests, activeLoads: filtered })
         }
         return filtered
       })
@@ -1919,7 +1957,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveLoads((prev) => {
         const next = prev.map((entry) => (entry.id === patched.id ? patched : entry))
         if (role === 'host' && user) {
-          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+          persistHostOrdersCache(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
         return next
       })
@@ -2088,7 +2126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveLoads((prev) => {
         const next = prev.map(patch)
         if (role === 'host') {
-          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+          persistHostOrdersCache(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
         const updated = next.find((load) => load.id === loadId)
         if (updated) persistBookingSnapshot(updated)
@@ -2131,7 +2169,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveLoads((prev) => {
         const next = prev.map((load) => (load.id === loadId ? patch(load) : load))
         if (role === 'host' && user) {
-          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+          persistHostOrdersCache(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
         const updated = next.find((load) => load.id === loadId)
         if (updated) persistBookingSnapshot(updated)
@@ -2162,7 +2200,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveLoads((prev) => {
         const next = prev.map((load) => (load.id === loadId ? paid : load))
         if (role === 'host' && user) {
-          void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
+          persistHostOrdersCache(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
         return next
       })

@@ -50,8 +50,13 @@ export async function markBookingReviewed(userId: string, bookingId: string): Pr
   await writeReviewedBookings(map)
 }
 
-export function mergeHostReviews(hostId: string, stored: HostReview[]): HostReview[] {
-  const seed = getHostProfileDetails(hostId).reviews
+export function mergeHostReviews(
+  hostId: string,
+  stored: HostReview[],
+  options?: { includeSeed?: boolean },
+): HostReview[] {
+  const includeSeed = options?.includeSeed ?? true
+  const seed = includeSeed ? getHostProfileDetails(hostId).reviews : []
   const byId = new Map<string, HostReview>()
   for (const review of seed) byId.set(review.id, review)
   for (const review of stored) byId.set(review.id, review)

@@ -42,25 +42,6 @@ function nowLabel() {
   })
 }
 
-function mergeNotificationLists(
-  remote: AppNotification[],
-  local: AppNotification[],
-  activeUserId?: string,
-  localUserId?: string,
-): AppNotification[] {
-  const ownerIds = new Set([activeUserId, localUserId].filter(Boolean) as string[])
-  const merged = new Map<string, AppNotification>()
-  for (const item of remote) {
-    merged.set(item.id, item)
-  }
-  for (const item of local) {
-    if ((ownerIds.size === 0 || ownerIds.has(item.userId)) && !merged.has(item.id)) {
-      merged.set(item.id, item)
-    }
-  }
-  return Array.from(merged.values()).slice(0, 100)
-}
-
 interface NotificationState {
   notifications: AppNotification[]
   unreadCount: number
@@ -109,17 +90,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   }, [remoteSyncEnabled, user])
 
   const reload = useCallback(async () => {
-    const local = await readAllNotifications()
     if (!remoteSyncEnabled || !activeUserId) {
-      setNotifications(local)
+      if (!remoteSyncEnabled) {
+        const local = await readAllNotifications()
+        setNotifications(local)
+      }
       return
     }
 
     const remote = await fetchNotificationsFromSupabase(activeUserId)
-    const next = mergeNotificationLists(remote, local, activeUserId, localUserId)
-    setNotifications(next)
-    await writeAllNotifications(next)
-  }, [activeUserId, localUserId, remoteSyncEnabled])
+    setNotifications(remote.slice(0, 100))
+    await writeAllNotifications(remote.slice(0, 100))
+  }, [activeUserId, remoteSyncEnabled])
 
   useEffect(() => {
     void reload()
@@ -182,15 +164,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const push = useCallback(
     async (userId: string, title: string, body: string, link?: NotificationLink) => {
+      const resolvedTargetId = remoteSyncEnabled ? await resolveNotificationTargetId(userId) : userId
       let item: AppNotification | null = null
 
       if (remoteSyncEnabled) {
         item = await sendNotificationToSupabase(userId, title, body, link)
-      }
-
-      const resolvedTargetId = remoteSyncEnabled ? await resolveNotificationTargetId(userId) : userId
-
-      if (!item) {
+        if (!item) return
+      } else {
         item = {
           id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           userId: resolvedTargetId ?? userId,
@@ -204,7 +184,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
       setNotifications((prev) => {
         const next = [item!, ...prev.filter((entry) => entry.id !== item!.id)].slice(0, 100)
-        void writeAllNotifications(next)
+        if (!remoteSyncEnabled) {
+          void writeAllNotifications(next)
+        }
         return next
       })
 

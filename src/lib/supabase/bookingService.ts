@@ -101,3 +101,15 @@ export function filterVisibleGuestBookings(bookings: Booking[]): Booking[] {
       (booking.stage !== 'picked-up' || !isPickupComplete(booking)),
   )
 }
+
+/** Completed loads for payment/history screens — Supabase participant query + filter. */
+export async function fetchCompletedBookingsFromSupabase(): Promise<Booking[]> {
+  const bookings = await fetchParticipantBookingsFromSupabase()
+  return bookings
+    .filter((booking) => booking.stage === 'picked-up' || !!booking.completedAt)
+    .sort((a, b) => {
+      const aTime = Date.parse(a.completedAt ?? a.createdAt ?? '') || 0
+      const bTime = Date.parse(b.completedAt ?? b.createdAt ?? '') || 0
+      return bTime - aTime
+    })
+}

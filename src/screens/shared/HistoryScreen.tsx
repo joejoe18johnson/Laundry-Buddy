@@ -18,6 +18,8 @@ import {
   loadCustomerPaymentHistory,
   loadHostPaymentHistory,
 } from '../../lib/paymentHistoryStorage'
+import { isSupabaseConfigured } from '../../lib/supabase'
+import { fetchCompletedBookingsFromSupabase } from '../../lib/supabase/bookingService'
 import { radius, spacing } from '../../theme'
 import { formatDropOffHour } from '../../lib/dropOffAvailability'
 import { toTitleCase } from '../../lib/titleCase'
@@ -221,6 +223,14 @@ export function HistoryScreen() {
 
   const reload = useCallback(() => {
     if (!user) return
+
+    if (isSupabaseConfigured()) {
+      void fetchCompletedBookingsFromSupabase()
+        .then(setHistory)
+        .catch(() => setHistory([]))
+      return
+    }
+
     const loader = isCustomer ? loadCustomerPaymentHistory : loadHostPaymentHistory
     loader(user.id).then(setHistory)
   }, [user, isCustomer])

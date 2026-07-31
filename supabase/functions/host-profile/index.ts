@@ -2,6 +2,10 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 
 const PACKAGE = "com.laundrybuddy.app"
 
+function isMobileUserAgent(userAgent: string): boolean {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent)
+}
+
 function buildPage(deepLink: string, pageUrl: string): string {
   const intentPath = deepLink.replace(/^laundrybuddy:\/\//, "")
   const intentUrl =
@@ -64,19 +68,10 @@ function buildPage(deepLink: string, pageUrl: string): string {
         var isAndroid = /Android/i.test(navigator.userAgent);
         function tryOpenApp() {
           if (isAndroid && intentUrl) {
-            window.location.replace(intentUrl);
+            window.location.href = intentUrl;
             return;
           }
-          if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-            var iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = deepLink;
-            document.body.appendChild(iframe);
-            window.setTimeout(function () {
-              try { document.body.removeChild(iframe); } catch (e) {}
-            }, 2000);
-          }
-          window.location.replace(deepLink);
+          window.location.href = deepLink;
         }
         tryOpenApp();
         window.setTimeout(function () {
@@ -116,6 +111,19 @@ Deno.serve((req) => {
   }
 
   const pageUrl = url.toString()
+  const userAgent = req.headers.get("user-agent") ?? ""
+  const forcePage = url.searchParams.get("page") === "1"
+
+  // Mobile tap on shared link → redirect straight into the app (user-initiated navigation).
+  if (isMobileUserAgent(userAgent) && !forcePage) {
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: deepLink,
+        "Cache-Control": "no-store",
+      },
+    })
+  }
 
   return new Response(buildPage(deepLink, pageUrl), {
     headers: {

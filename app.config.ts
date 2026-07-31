@@ -11,6 +11,60 @@ const PHOTOS_PERMISSION =
 
 const EAS_PROJECT_ID = '2bd26f4b-fcfc-43c4-8dd2-da21eef995e6'
 
+function getSupabaseHost(): string | undefined {
+  const raw = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim()
+  if (!raw) return undefined
+  try {
+    return new URL(raw).hostname
+  } catch {
+    return undefined
+  }
+}
+
+const supabaseHost = getSupabaseHost()
+
+const androidIntentFilters: NonNullable<ExpoConfig['android']>['intentFilters'] = [
+  {
+    action: 'VIEW',
+    autoVerify: false,
+    data: [
+      {
+        scheme: 'laundrybuddy',
+        host: 'auth',
+        pathPrefix: '/callback',
+      },
+    ],
+    category: ['BROWSABLE', 'DEFAULT'],
+  },
+  {
+    action: 'VIEW',
+    autoVerify: false,
+    data: [
+      {
+        scheme: 'laundrybuddy',
+        host: 'host',
+        pathPrefix: '/',
+      },
+    ],
+    category: ['BROWSABLE', 'DEFAULT'],
+  },
+]
+
+if (supabaseHost) {
+  androidIntentFilters.push({
+    action: 'VIEW',
+    autoVerify: false,
+    data: [
+      {
+        scheme: 'https',
+        host: supabaseHost,
+        pathPrefix: '/functions/v1/host-profile',
+      },
+    ],
+    category: ['BROWSABLE', 'DEFAULT'],
+  })
+}
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Laundry Buddy',
@@ -46,7 +100,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       monochromeImage: './assets/adaptive-icon.png',
     },
     package: 'com.laundrybuddy.app',
-    versionCode: 3,
+    versionCode: 4,
     permissions: [
       'ACCESS_COARSE_LOCATION',
       'ACCESS_FINE_LOCATION',
@@ -58,32 +112,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'VIBRATE',
     ],
     blockedPermissions: ['RECORD_AUDIO'],
-    intentFilters: [
-      {
-        action: 'VIEW',
-        autoVerify: false,
-        data: [
-          {
-            scheme: 'laundrybuddy',
-            host: 'auth',
-            pathPrefix: '/callback',
-          },
-        ],
-        category: ['BROWSABLE', 'DEFAULT'],
-      },
-      {
-        action: 'VIEW',
-        autoVerify: false,
-        data: [
-          {
-            scheme: 'laundrybuddy',
-            host: 'host',
-            pathPrefix: '/',
-          },
-        ],
-        category: ['BROWSABLE', 'DEFAULT'],
-      },
-    ],
+    intentFilters: androidIntentFilters,
   },
   web: {
     favicon: './assets/favicon.png',
