@@ -22,6 +22,7 @@ import { PaymentProofChip } from '../../components/PaymentProofChip'
 import { BackButton, PrimaryButton, SuccessButton } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '../../context/ToastContext'
 import { formatChatTime, senderRoleLabel, useMessages } from '../../context/MessageContext'
 import { useTheme } from '../../context/ThemeContext'
 import {
@@ -196,6 +197,7 @@ export function ChatThreadPanel({
 }) {
   const { user } = useAuth()
   const { restoreAfterCamera } = useApp()
+  const { showToast } = useToast()
   const { colors, formStyles } = useTheme()
   const { width: screenWidth, height: windowHeight } = useWindowDimensions()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -343,10 +345,15 @@ export function ChatThreadPanel({
       setPendingImageUri(null)
       Keyboard.dismiss()
       await refreshThread(threadId)
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : 'Could not send your message. Try again.',
+        { icon: 'alert-circle' },
+      )
     } finally {
       setSending(false)
     }
-  }, [booking, draft, onPaymentProofSent, pendingImageUri, refreshThread, sendMessage, sending, threadId])
+  }, [booking, draft, onPaymentProofSent, pendingImageUri, refreshThread, sendMessage, sending, showToast, threadId])
 
   if (!user || !threadId) {
     return (

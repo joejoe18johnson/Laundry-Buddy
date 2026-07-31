@@ -143,8 +143,8 @@ export function BookingScreen() {
       ? 'Host Has No Payment Methods'
       : null
 
-  const submitBooking = () =>
-    confirmBooking({
+  const submitBooking = async () => {
+    await confirmBooking({
       dropOffTime,
       loads,
       sheetsOption,
@@ -154,6 +154,7 @@ export function BookingScreen() {
       foldingService: showFolding && foldingService,
       loadPhotoUri: loadPhotoUri ?? undefined,
     })
+  }
 
   return (
     <View style={styles.wrapper}>

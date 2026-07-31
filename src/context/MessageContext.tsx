@@ -205,8 +205,9 @@ export function MessageProvider({ children }: { children: ReactNode }) {
       let next: ChatMessage[]
       try {
         next = await appendThreadMessage(message)
-      } catch {
-        return null
+      } catch (error) {
+        const messageText = error instanceof Error ? error.message : 'Could not send message.'
+        throw new Error(messageText)
       }
       setMessagesByThread((prev) => ({ ...prev, [threadId]: next }))
       await markThreadRead(user.id, threadId)

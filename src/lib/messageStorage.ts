@@ -42,8 +42,11 @@ async function cacheThreadMessages(threadId: string, messages: ChatMessage[]) {
 
 export async function loadAllThreadIds(): Promise<string[]> {
   if (isSupabaseConfigured()) {
-    const remote = await fetchAccessibleThreadIdsFromSupabase()
-    if (remote.length > 0) return remote
+    try {
+      return await fetchAccessibleThreadIdsFromSupabase()
+    } catch {
+      // Fall back to local cache when offline.
+    }
   }
 
   const map = await readMessageMap()
@@ -52,8 +55,11 @@ export async function loadAllThreadIds(): Promise<string[]> {
 
 export async function loadSupportThreadIds(): Promise<string[]> {
   if (isSupabaseConfigured()) {
-    const remote = await fetchSupportThreadIdsFromSupabase()
-    if (remote.length > 0) return remote
+    try {
+      return await fetchSupportThreadIdsFromSupabase()
+    } catch {
+      // Fall back to local cache when offline.
+    }
   }
 
   const map = await readMessageMap()
@@ -66,10 +72,8 @@ export async function loadThreadMessages(threadId: string): Promise<ChatMessage[
   if (isSupabaseConfigured()) {
     try {
       const remote = await fetchThreadMessagesFromSupabase(threadId)
-      if (remote.length > 0) {
-        await cacheThreadMessages(threadId, remote)
-        return remote
-      }
+      await cacheThreadMessages(threadId, remote)
+      return remote
     } catch {
       // Fall back to local cache when offline or RLS blocks read.
     }

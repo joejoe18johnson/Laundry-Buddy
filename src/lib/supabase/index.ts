@@ -23,6 +23,13 @@ export {
   supabaseUpdateProfile,
 } from './authService'
 export {
+  fetchParticipantBookingsFromSupabase,
+  filterVisibleGuestBookings,
+  subscribeToBookingChanges,
+  upsertBookingToSupabase,
+} from './bookingService'
+export { splitBookingsForHost } from './bookingMappers'
+export {
   fetchNotificationsFromSupabase,
   isRemoteNotificationSyncEnabled,
   markAllNotificationsReadInSupabase,

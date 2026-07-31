@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { AppState } from 'react-native'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
+import { subscribeToBookingChanges } from '../lib/supabase/bookingService'
 
 /** Keeps host active loads in sync when the guest confirms pickup on another session. */
 export function HostBookingSync() {
@@ -23,9 +24,14 @@ export function HostBookingSync() {
       void refreshHostOrders()
     }, 5000)
 
+    const unsubscribeBookings = subscribeToBookingChanges(() => {
+      void refreshHostOrders()
+    })
+
     return () => {
       subscription.remove()
       clearInterval(interval)
+      unsubscribeBookings()
     }
   }, [refreshHostOrders, user?.id, user?.role])
 
