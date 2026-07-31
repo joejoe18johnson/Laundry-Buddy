@@ -19,12 +19,14 @@ import { AppIcon } from '../../components/AppIcon'
 import { BrandActionSheet, BrandAlert, type BrandDialogAction } from '../../components/BrandDialog'
 import { ImageLightbox } from '../../components/ImageLightbox'
 import { PaymentProofChip } from '../../components/PaymentProofChip'
+import { TypingIndicator } from '../../components/TypingIndicator'
 import { BackButton, PrimaryButton, SuccessButton } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { formatChatTime, senderRoleLabel, useMessages } from '../../context/MessageContext'
 import { useTheme } from '../../context/ThemeContext'
+import { useChatTyping } from '../../hooks/useChatTyping'
 import {
   getChatThreadSubtitle,
   getChatThreadTitle,
@@ -204,6 +206,7 @@ export function ChatThreadPanel({
   const imagePreviewSize = useMemo(() => chatImagePreviewSize(screenWidth), [screenWidth])
   const insets = useSafeAreaInsets()
   const { getMessages, refreshThread, sendMessage, markRead } = useMessages()
+  const { otherTyping, notifyTyping, stopTyping } = useChatTyping(threadId, user?.id, user?.name ?? '')
   const [draft, setDraft] = useState('')
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null)
   const [lightboxUri, setLightboxUri] = useState<string | null>(null)
@@ -258,6 +261,11 @@ export function ChatThreadPanel({
     if (messages.length === 0) return
     scrollToLatest()
   }, [messages.length, scrollToLatest])
+
+  useEffect(() => {
+    if (!otherTyping) return
+    scrollToLatest()
+  }, [otherTyping, scrollToLatest])
 
   const pickImageAttachment = async (useCamera: boolean) => {
     const result = await pickImage(useCamera ? 'camera' : 'library', {
@@ -338,6 +346,7 @@ export function ChatThreadPanel({
         booking,
         paymentProof: !!pendingImageUri && booking?.paymentMethod === 'bank_transfer',
       })
+      stopTyping()
       if (pendingImageUri && booking?.paymentMethod === 'bank_transfer') {
         onPaymentProofSent?.(pendingImageUri)
       }
@@ -353,7 +362,7 @@ export function ChatThreadPanel({
     } finally {
       setSending(false)
     }
-  }, [booking, draft, onPaymentProofSent, pendingImageUri, refreshThread, sendMessage, sending, showToast, threadId])
+  }, [booking, draft, onPaymentProofSent, pendingImageUri, refreshThread, sendMessage, sending, showToast, stopTyping, threadId])
 
   if (!user || !threadId) {
     return (
@@ -423,6 +432,9 @@ export function ChatThreadPanel({
             paymentConfirmed={paymentConfirmed}
           />
         )}
+        ListFooterComponent={
+          otherTyping ? <TypingIndicator name={otherTyping.userName} /> : <View style={{ height: spacing.xs }} />
+        }
         ListEmptyComponent={
           <View style={styles.emptyThread}>
             <AppIcon name="message-circle" size={28} color={colors.gray400} />
@@ -458,7 +470,12 @@ export function ChatThreadPanel({
               placeholder={toTitleCase('Write a message')}
               placeholderTextColor={formStyles.placeholderColor}
               value={draft}
-              onChangeText={setDraft}
+              onChangeText={(text) => {
+                setDraft(text)
+                if (text.trim()) notifyTyping()
+                else stopTyping()
+              }}
+              onBlur={stopTyping}
               onFocus={scrollToLatest}
               multiline
               scrollEnabled

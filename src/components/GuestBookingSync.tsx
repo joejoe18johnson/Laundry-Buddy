@@ -22,7 +22,7 @@ export function GuestBookingSync() {
 
     const interval = setInterval(() => {
       void refreshGuestBookings()
-    }, 5000)
+    }, 3000)
 
     const unsubscribeBookings = subscribeToBookingChanges(() => {
       void refreshGuestBookings()

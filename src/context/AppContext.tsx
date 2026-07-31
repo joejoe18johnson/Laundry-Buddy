@@ -40,9 +40,11 @@ import {
 } from '../lib/paymentHistoryStorage'
 import { loadActiveBookings, saveActiveBookings } from '../lib/bookingStorage'
 import { createBookingId } from '../lib/bookingIds'
-import { persistBooking, persistBookingFireAndForget } from '../lib/bookingSync'
+import { persistBooking, syncBookingToServer } from '../lib/bookingSync'
 import { isSupabaseConfigured } from '../lib/supabase'
+import { resolveSupabaseProfileId } from '../lib/supabase/profileIds'
 import {
+  fetchBookingByIdFromSupabase,
   fetchParticipantBookingsFromSupabase,
   filterVisibleGuestBookings as filterRemoteGuestBookings,
 } from '../lib/supabase/bookingService'
@@ -265,7 +267,7 @@ function nowTime() {
 }
 
 function persistBookingSnapshot(booking: Booking) {
-  persistBookingFireAndForget(booking)
+  syncBookingToServer(booking)
 }
 
 function defaultScreen(role: 'customer' | 'host'): Screen {
@@ -451,25 +453,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (isSupabaseConfigured()) {
       try {
         remoteBookings = filterRemoteGuestBookings(await fetchParticipantBookingsFromSupabase())
-      } catch {
+      } catch (error) {
+        console.warn('[bookings] remote fetch failed:', error)
         remoteBookings = []
       }
     }
 
+    const resolvedCustomerId = isSupabaseConfigured() ? await resolveSupabaseProfileId(user) : null
+    const customerIds = [user.id, resolvedCustomerId].filter(Boolean) as string[]
+
     const stored = await loadActiveBookings(user.id)
     const seed = filterVisibleGuestBookings(getCustomerSeedBookings(user.id))
-    const snapshots = await loadBookingSnapshotsForCustomer(user.id)
-    const base = remoteBookings.length > 0 ? remoteBookings : stored
-    const merged = mergeGuestBookings(seed, base).map((booking) => {
-      const snapshot = snapshots.find((entry) => entry.id === booking.id)
-      return snapshot ? mergeBookingSnapshot(booking, snapshot) : booking
-    })
-    for (const snapshot of snapshots) {
-      if (!merged.some((entry) => entry.id === snapshot.id)) {
-        merged.push(snapshot)
-      }
+    const snapshots = await loadBookingSnapshotsForCustomer(customerIds)
+
+    const byId = new Map<string, Booking>()
+    const addBooking = (booking: Booking) => {
+      const existing = byId.get(booking.id)
+      byId.set(booking.id, existing ? mergeBookingSnapshot(existing, booking) : booking)
     }
-    const visible = filterVisibleGuestBookings(merged)
+
+    for (const booking of seed) addBooking(booking)
+    for (const booking of stored) addBooking(booking)
+    for (const booking of snapshots) addBooking(booking)
+    for (const booking of remoteBookings) addBooking(booking)
+
+    const visible = filterVisibleGuestBookings(Array.from(byId.values()))
     setGuestBookings(visible)
     setSelectedBookingId((current) => {
       if (current && findGuestBooking(visible, current)) return current
@@ -809,9 +817,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const seed = getHostDashboardSeed(user.id)
     const stored = await getHostOrders(user.id)
-    const pendingSource = remotePending.length > 0 ? remotePending : stored.pendingRequests
-    const activeSource = remoteActive.length > 0 ? remoteActive : stored.activeLoads
-    let mergedLoads = dedupeActiveLoads(mergeActiveLoads(seed.activeLoads, activeSource))
+    const pendingSource = mergeHostRequests(
+      mergeHostRequests(seed.pendingRequests, stored.pendingRequests),
+      remotePending,
+    )
+    let mergedLoads = dedupeActiveLoads(
+      mergeActiveLoads(mergeActiveLoads(seed.activeLoads, stored.activeLoads), remoteActive),
+    )
     mergedLoads = await Promise.all(
       mergedLoads.map(async (load) => {
         const snapshot = await loadBookingSnapshot(load.id)
@@ -1241,9 +1253,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const fromCurrent = findGuestBooking(guestBookingsRef.current, bookingId)
         if (fromCurrent && isActiveGuestBooking(fromCurrent)) return fromCurrent
 
+        if (isSupabaseConfigured()) {
+          try {
+            const remote = await fetchBookingByIdFromSupabase(bookingId)
+            if (remote) return remote
+          } catch {
+            // Fall back to local caches below.
+          }
+        }
+
         const stored = await loadActiveBookings(user.id)
         const fromStored = findGuestBooking(stored, bookingId)
         if (fromStored) return fromStored
+
+        const snapshot = await loadBookingSnapshot(bookingId)
+        if (snapshot) return snapshot
 
         const history = await loadCustomerPaymentHistory(user.id)
         const fromHistory = history.find((entry) => entry.id === bookingId)
@@ -1292,6 +1316,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       if (link.screen === 'customer-tracking') {
+        await refreshGuestBookings()
         const restored = await restoreBookingForGuest(link.bookingId || undefined)
         if (restored) {
           setGuestBookings((prev) => upsertGuestBooking(prev, restored))
@@ -1339,7 +1364,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setScreen('customer-home')
     },
-    [openChat, openLeaveReview, refreshCurrentUser, refreshHostOrders, restoreBookingForGuest, role, showToast, viewHostProfile],
+    [openChat, openLeaveReview, refreshCurrentUser, refreshGuestBookings, refreshHostOrders, restoreBookingForGuest, role, showToast, viewHostProfile],
   )
 
   const openNotificationFromPush = useCallback(
@@ -1383,11 +1408,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         foldingService: details.foldingService,
       })
       const bookingId = createBookingId()
+      let customerId = user.id
+      if (isSupabaseConfigured()) {
+        customerId = (await resolveSupabaseProfileId(user)) ?? user.id
+      }
       const newBooking: Booking = {
         id: bookingId,
         hostId: selectedHost.id,
         hostName: formatHostDisplayName(selectedHost.name),
-        customerId: user.id,
+        customerId,
         customerName: user.name,
         location: selectedHost.location,
         loads: details.loads,
@@ -1517,6 +1546,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         address: hostProfile?.address ?? '',
         gateCode: hostProfile?.gateCode ?? '',
         acceptedAt,
+        createdAt: request.createdAt ?? acceptedAt,
         stageTimes: {},
       }
 
@@ -1525,7 +1555,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setActiveLoads(nextLoads)
       setHostRequests(nextRequests)
       void saveHostOrders(user.id, { pendingRequests: nextRequests, activeLoads: nextLoads })
-      persistBookingSnapshot(load)
 
       setGuestBookings((prev) =>
         patchGuestBooking(prev, request.id, (current) => ({
@@ -1536,39 +1565,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })),
       )
 
-      if (request.customerId) {
-        const hostName = formatHostDisplayName(hostProfile?.name ?? user.name)
-        if (needsTransfer) {
-          void deliverPaymentRequest({
-            load,
-            hostUserId: user.id,
-            hostName,
-            bankDetails: settings.bankDetails,
-            notifyCustomer,
-            timestamp: paymentTimestamp,
-          })
-          void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
-          showToast('Load accepted — guest notified to pay', { icon: 'credit-card' })
-        } else if (needsCash) {
-          notifyCustomer(
-            request.customerId,
-            'Load accepted',
-            `${hostName} accepted your load! Pay ${formatMoney(request.totalAmount ?? 0)} in cash at drop-off — directions and gate code are in the app.`,
-            bookingTrackingLink(load.id),
+      void persistBooking(load)
+        .then(() => {
+          if (!request.customerId) return
+          const hostName = formatHostDisplayName(hostProfile?.name ?? user.name)
+          if (needsTransfer) {
+            void deliverPaymentRequest({
+              load,
+              hostUserId: user.id,
+              hostName,
+              bankDetails: settings.bankDetails,
+              notifyCustomer,
+              timestamp: paymentTimestamp,
+            })
+            void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
+            showToast('Load accepted — guest notified to pay', { icon: 'credit-card' })
+          } else if (needsCash) {
+            notifyCustomer(
+              request.customerId,
+              'Load accepted',
+              `${hostName} accepted your load! Pay ${formatMoney(request.totalAmount ?? 0)} in cash at drop-off — directions and gate code are in the app.`,
+              bookingTrackingLink(load.id),
+            )
+            void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
+            showToast('Load accepted — guest pays at drop-off', { icon: 'dollar-sign' })
+          } else {
+            notifyCustomer(
+              request.customerId,
+              'Load accepted',
+              `${hostName} accepted your load! Open the app for drop-off directions and gate details.`,
+              bookingTrackingLink(load.id),
+            )
+            void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
+            showToast('Guest notified', { icon: 'check-circle' })
+          }
+        })
+        .catch(() => {
+          showToast(
+            'Accepted on this device but the guest may not see it yet. Check your connection.',
+            { icon: 'alert-circle' },
           )
-          void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
-          showToast('Load accepted — guest pays at drop-off', { icon: 'dollar-sign' })
-        } else {
-          notifyCustomer(
-            request.customerId,
-            'Load accepted',
-            `${hostName} accepted your load! Open the app for drop-off directions and gate details.`,
-            bookingTrackingLink(load.id),
-          )
-          void scheduleDropOffReminder(load.id, hostName, request.dropOffTime)
-          showToast('Guest notified', { icon: 'check-circle' })
-        }
-      }
+        })
 
       setScreen('host-dryer')
     },
@@ -1734,7 +1771,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           notifyTarget = load
           persistIfPickedUp(load)
           const patched = patchLoad(load)
-          void saveBookingSnapshot(patched)
+          persistBookingSnapshot(patched)
           return patched
         })
         const filtered = stage === 'picked-up' ? next.filter((load) => load.id !== loadId) : next
@@ -2017,44 +2054,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (loadId: string) => {
       const markPaid = (load: Booking): Booking => ({ ...load, paymentStatus: 'paid' })
 
-      let target: Booking | undefined
+      const source =
+        activeLoadsRef.current.find((load) => load.id === loadId) ??
+        findGuestBooking(guestBookingsRef.current, loadId)
+      if (!source) return
+
+      const paid = markPaid(source)
 
       setActiveLoads((prev) => {
-        const next = prev.map((load) => {
-          if (load.id !== loadId) return load
-          target = load
-          const paid = markPaid(load)
-          persistBookingSnapshot(paid)
-          return paid
-        })
+        const next = prev.map((load) => (load.id === loadId ? paid : load))
         if (role === 'host' && user) {
           void saveHostOrders(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
         return next
       })
 
-      setGuestBookings((prev) => {
-        const existing = findGuestBooking(prev, loadId)
-        if (existing) target = existing
-        const next = patchGuestBooking(prev, loadId, markPaid)
-        const updated = findGuestBooking(next, loadId)
-        if (updated) persistBookingSnapshot(updated)
-        return next
-      })
+      setGuestBookings((prev) => patchGuestBooking(prev, loadId, () => paid))
 
-      if (target?.customerId) {
-        const amount = formatMoney(target.totalAmount ?? 0)
-        const isCash = target.paymentMethod === 'cash'
-        notifyCustomer(
-          target.customerId,
-          isCash ? 'Cash confirmed' : 'Payment verified',
-          isCash
-            ? `${target.hostName} confirmed your ${amount} cash payment at drop-off.`
-            : `${target.hostName} confirmed your bank transfer of ${amount}.`,
-          bookingTrackingLink(target.id),
-        )
-        showToast(isCash ? 'Cash payment confirmed' : 'Payment marked received', { icon: 'check-circle' })
-      }
+      void persistBooking(paid)
+        .then(() => {
+          if (paid.customerId) {
+            const amount = formatMoney(paid.totalAmount ?? 0)
+            const isCash = paid.paymentMethod === 'cash'
+            notifyCustomer(
+              paid.customerId,
+              isCash ? 'Cash confirmed' : 'Payment verified',
+              isCash
+                ? `${paid.hostName} confirmed your ${amount} cash payment at drop-off.`
+                : `${paid.hostName} confirmed your bank transfer of ${amount}.`,
+              bookingTrackingLink(paid.id),
+            )
+          }
+          showToast(
+            paid.paymentMethod === 'cash' ? 'Cash payment confirmed' : 'Payment marked received',
+            { icon: 'check-circle' },
+          )
+        })
+        .catch(() => {
+          showToast(
+            'Payment saved on this device but may not show for the guest yet. Check your connection.',
+            { icon: 'alert-circle' },
+          )
+        })
     },
     [notifyCustomer, role, user, hostRequests, showToast],
   )

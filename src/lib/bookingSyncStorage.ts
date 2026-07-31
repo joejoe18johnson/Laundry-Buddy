@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { isPickupComplete, normalizePickupStage } from './pickupConfirmation'
-import type { Booking, RequestStatus } from '../types'
+import type { Booking } from '../types'
 
 const KEY = 'laundry-buddy-booking-snapshots'
 
@@ -20,7 +20,10 @@ async function writeMap(map: Record<string, Booking>): Promise<void> {
   await AsyncStorage.setItem(KEY, JSON.stringify(map))
 }
 
-function mergeRequestStatus(a?: RequestStatus, b?: RequestStatus): RequestStatus {
+function mergeRequestStatus(
+  a?: Booking['requestStatus'],
+  b?: Booking['requestStatus'],
+): NonNullable<Booking['requestStatus']> {
   if (a === 'accepted' || b === 'accepted') return 'accepted'
   if (a === 'declined' || b === 'declined') return 'declined'
   return a ?? b ?? 'pending'

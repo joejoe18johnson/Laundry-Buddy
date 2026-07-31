@@ -25,22 +25,41 @@ export async function fetchBookingByIdFromSupabase(bookingId: string): Promise<B
   return bookingRowToBooking(data)
 }
 
+/**
+ * Save booking to Supabase. Uses UPDATE first so host changes work — plain upsert fails
+ * host updates because INSERT RLS only allows the guest (customer_id = auth.uid()).
+ */
 export async function upsertBookingToSupabase(booking: Booking): Promise<Booking | null> {
   const supabase = getSupabaseClient()
   if (!supabase) return null
 
   const payload = bookingToInsert(booking)
-  const { data, error } = await supabase
+
+  const { data: updated, error: updateError } = await supabase
     .from('bookings')
-    .upsert(payload, { onConflict: 'id' })
+    .update(payload)
+    .eq('id', booking.id)
+    .select('*')
+
+  if (updateError) {
+    throw new Error(updateError.message)
+  }
+
+  if (updated && updated.length > 0) {
+    return bookingRowToBooking(updated[0])
+  }
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('bookings')
+    .insert(payload)
     .select('*')
     .single()
 
-  if (error || !data) {
-    throw new Error(error?.message ?? 'Could not save booking.')
+  if (insertError || !inserted) {
+    throw new Error(insertError?.message ?? 'Could not save booking.')
   }
 
-  return bookingRowToBooking(data)
+  return bookingRowToBooking(inserted)
 }
 
 export async function deleteBookingFromSupabase(bookingId: string): Promise<void> {
