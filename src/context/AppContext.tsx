@@ -53,6 +53,7 @@ import { loadStoredBookingDraft, saveStoredBookingDraft } from '../lib/bookingDr
 import {
   loadBookingSnapshotsForCustomer,
   mergeBookingSnapshot,
+  purgeBookingSnapshotsExcept,
   removeBookingSnapshot,
   saveBookingSnapshot,
   loadBookingSnapshot,
@@ -450,9 +451,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (role !== 'customer' || !user) return
 
     let remoteBookings: Booking[] = []
+    let remoteFetchOk = false
     if (isSupabaseConfigured()) {
       try {
         remoteBookings = filterRemoteGuestBookings(await fetchParticipantBookingsFromSupabase())
+        remoteFetchOk = true
       } catch (error) {
         console.warn('[bookings] remote fetch failed:', error)
         remoteBookings = []
@@ -461,6 +464,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const resolvedCustomerId = isSupabaseConfigured() ? await resolveSupabaseProfileId(user) : null
     const customerIds = [user.id, resolvedCustomerId].filter(Boolean) as string[]
+
+    if (remoteFetchOk) {
+      const remoteIds = new Set(remoteBookings.map((entry) => entry.id))
+      const snapshots = await loadBookingSnapshotsForCustomer(customerIds)
+      await purgeBookingSnapshotsExcept(remoteIds)
+
+      const merged = remoteBookings.map((booking) => {
+        const snapshot = snapshots.find((entry) => entry.id === booking.id)
+        return snapshot ? mergeBookingSnapshot(booking, snapshot) : booking
+      })
+
+      const visible = filterVisibleGuestBookings(merged)
+      await saveActiveBookings(user.id, visible)
+      setGuestBookings(visible)
+      setSelectedBookingId((current) => {
+        if (current && findGuestBooking(visible, current)) return current
+        const active = filterActiveGuestBookings(visible)
+        return active[0]?.id ?? visible.find((entry) => entry.stage === 'picked-up')?.id ?? null
+      })
+      return
+    }
 
     const stored = await loadActiveBookings(user.id)
     const seed = filterVisibleGuestBookings(getCustomerSeedBookings(user.id))
@@ -803,16 +827,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let remotePending: HostRequest[] = []
     let remoteActive: Booking[] = []
+    let remoteFetchOk = false
     if (isSupabaseConfigured()) {
       try {
         const remote = await fetchParticipantBookingsFromSupabase()
         const split = splitBookingsForHost(remote)
         remotePending = split.pendingRequests
         remoteActive = split.activeLoads
+        remoteFetchOk = true
       } catch {
         remotePending = []
         remoteActive = []
       }
+    }
+
+    if (remoteFetchOk) {
+      const remoteIds = new Set([
+        ...remotePending.map((entry) => entry.id),
+        ...remoteActive.map((entry) => entry.id),
+      ])
+      await purgeBookingSnapshotsExcept(remoteIds)
+
+      let mergedLoads = await Promise.all(
+        remoteActive.map(async (load) => {
+          const snapshot = await loadBookingSnapshot(load.id)
+          return snapshot ? mergeBookingSnapshot(load, snapshot) : load
+        }),
+      )
+      mergedLoads = mergedLoads.filter(
+        (load) => load.stage !== 'picked-up' && !isPickupComplete(load),
+      )
+
+      await saveHostOrders(user.id, {
+        pendingRequests: remotePending,
+        activeLoads: mergedLoads,
+      })
+
+      setHostRequests(remotePending)
+      setActiveLoads(mergedLoads)
+      await refreshHostCompletedLoads()
+      return
     }
 
     const seed = getHostDashboardSeed(user.id)

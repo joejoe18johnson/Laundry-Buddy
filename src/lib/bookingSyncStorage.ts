@@ -84,6 +84,18 @@ export async function loadBookingSnapshot(bookingId: string): Promise<Booking | 
   return snapshot ? normalizePickupStage(snapshot) : null
 }
 
+export async function purgeBookingSnapshotsExcept(keepIds: Set<string>): Promise<void> {
+  const map = await readMap()
+  let changed = false
+  for (const id of Object.keys(map)) {
+    if (!keepIds.has(id)) {
+      delete map[id]
+      changed = true
+    }
+  }
+  if (changed) await writeMap(map)
+}
+
 export async function loadBookingSnapshotsForCustomer(customerIds: string | string[]): Promise<Booking[]> {
   const ids = new Set(Array.isArray(customerIds) ? customerIds : [customerIds])
   const map = await readMap()
