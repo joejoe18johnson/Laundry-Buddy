@@ -46,6 +46,7 @@ import {
   supabaseSubmitIdentityVerification,
   supabaseUpdatePassword,
 } from '../lib/supabase'
+import { normalizeSupabaseError } from '../lib/supabase/authErrors'
 import {
   ensureSupabaseAdminProfile,
   ensureTrainingAdminSupabaseSession,
@@ -59,6 +60,7 @@ import {
   buildResubmitVerification,
   emptyIdentityVerification,
   getIdentityVerification,
+  mergeUserProfiles,
   needsAddressResubmit,
   needsIdResubmit,
   needsSelfieResubmit,
@@ -479,47 +481,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false
     }
 
-    const phoneTaken = isSupabaseConfigured()
+    const phoneCheck = isSupabaseConfigured()
       ? await supabasePhoneInUse(input.phone)
-      : await phoneInUse(input.phone)
-    if (phoneTaken) {
+      : { inUse: await phoneInUse(input.phone), error: null }
+    if (phoneCheck.error) {
+      setAuthError(phoneCheck.error)
+      return false
+    }
+    if (phoneCheck.inUse) {
       setAuthError('This phone number is already registered. Log in instead.')
       return false
     }
 
-    const emailTaken = isSupabaseConfigured()
+    const emailCheck = isSupabaseConfigured()
       ? await supabaseEmailInUse(input.email)
-      : await emailInUse(input.email)
-    if (emailTaken) {
+      : { inUse: await emailInUse(input.email), error: null }
+    if (emailCheck.error) {
+      setAuthError(emailCheck.error)
+      return false
+    }
+    if (emailCheck.inUse) {
       setAuthError('This email is already registered. Log in instead.')
       return false
     }
 
     if (isSupabaseConfigured()) {
-      const { user: created, error, needsEmailConfirmation } = await supabaseSignUp({
-        name: input.name,
-        phone: input.phone,
-        email: input.email,
-        password: input.password,
-        role: input.role,
-      })
-      if (needsEmailConfirmation) {
-        setAuthNotice('Account created. Log in with your email and password.')
+      try {
+        const { user: created, error, needsEmailConfirmation } = await supabaseSignUp({
+          name: input.name,
+          phone: input.phone,
+          email: input.email,
+          password: input.password,
+          role: input.role,
+        })
+        if (needsEmailConfirmation) {
+          setAuthNotice('Account created. Log in with your email and password.')
+          setAuthError(null)
+          navigateAuth('login')
+          return false
+        }
+        if (!created || error) {
+          setAuthError(error ?? 'Sign up failed. Try again.')
+          return false
+        }
+        await saveUser(created)
+        setUser(created)
         setAuthError(null)
-        navigateAuth('login')
-        return false
-      }
-      if (!created || error) {
-        setAuthError(error ?? 'Sign up failed. Try again.')
-        return false
-      }
-      await saveUser(created)
-      setUser(created)
-      setAuthError(null)
-      bumpAuthSession()
-      void notifyAdminsOfNewSignup(created)
+        bumpAuthSession()
+        void notifyAdminsOfNewSignup(created)
 
-      return true
+        return true
+      } catch (err) {
+        setAuthError(normalizeSupabaseError(err))
+        return false
+      }
     }
 
     const newUser: User = {
@@ -802,8 +817,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    if (isSupabaseConfigured()) {
+      try {
+        const sessionUser = await fetchCurrentSupabaseUser()
+        if (sessionUser && sessionUser.id === userId) {
+          const merged = local ? mergeUserProfiles(sessionUser, local) : sessionUser
+          await saveUser(merged)
+          setUser(merged)
+          return
+        }
+      } catch {
+        // Fall back to cached profile resolution below.
+      }
+    }
+
     const updated = await resolveUserById(userId)
-    if (updated) setUser(updated)
+    if (updated) {
+      await saveUser(updated)
+      setUser(updated)
+    }
   }, [])
 
   const syncUserAfterVerification = useCallback(

@@ -1,6 +1,8 @@
 import { getAdminUsers } from './adminUsers'
 import { adminDashboardLink } from './notificationLinks'
 import { pushNotificationForUser } from './notificationStorage'
+import { isSupabaseConfigured } from './supabase'
+import { sendNotificationToSupabase } from './supabase/notificationService'
 import { buildAdminNewSignupBody, NEW_USER_SIGNUP_TITLE } from './verificationCodes'
 import type { User } from '../types'
 
@@ -12,8 +14,17 @@ export async function notifyAdminsOfNewSignup(user: User): Promise<void> {
 
   const body = buildAdminNewSignupBody(user.name, user.phone ?? '—', user.role)
   await Promise.all(
-    admins.map((admin) =>
-      pushNotificationForUser(admin.id, NEW_USER_SIGNUP_TITLE, body, adminDashboardLink(user.id)),
-    ),
+    admins.map(async (admin) => {
+      if (isSupabaseConfigured()) {
+        await sendNotificationToSupabase(
+          admin.id,
+          NEW_USER_SIGNUP_TITLE,
+          body,
+          adminDashboardLink(user.id),
+        )
+        return
+      }
+      await pushNotificationForUser(admin.id, NEW_USER_SIGNUP_TITLE, body, adminDashboardLink(user.id))
+    }),
   )
 }

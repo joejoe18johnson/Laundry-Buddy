@@ -3,6 +3,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as DocumentPicker from 'expo-document-picker'
 import { AppIcon } from './AppIcon'
 import { BrandActionSheet, BrandAlert, type BrandDialogAction } from './BrandDialog'
+import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import { beginCameraSession, endCameraSession } from '../lib/cameraSession'
 import { pickImage } from '../lib/imagePicker'
@@ -28,13 +29,18 @@ interface AddressProofCaptureProps {
 }
 
 export function AddressProofCapture({ file, onFileChange, label }: AddressProofCaptureProps) {
+  const { screen, restoreAfterCamera } = useApp()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [sheetOpen, setSheetOpen] = useState(false)
   const [alert, setAlert] = useState<{ title: string; message: string } | null>(null)
 
   const pickImageFile = async (useCamera: boolean) => {
-    const result = await pickImage(useCamera ? 'camera' : 'library', { quality: 0.7 })
+    const result = await pickImage(useCamera ? 'camera' : 'library', {
+      quality: 0.7,
+      returnScreen: screen,
+    })
+    restoreAfterCamera()
 
     if (result.ok) {
       onFileChange({
@@ -56,7 +62,7 @@ export function AddressProofCapture({ file, onFileChange, label }: AddressProofC
   }
 
   const pickDocument = async () => {
-    beginCameraSession()
+    beginCameraSession(screen)
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'image/*'],
@@ -75,6 +81,7 @@ export function AddressProofCapture({ file, onFileChange, label }: AddressProofC
     } finally {
       endCameraSession()
     }
+    restoreAfterCamera()
   }
 
   const sheetActions: BrandDialogAction[] = [

@@ -274,6 +274,24 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['notifications']['Insert']>
         Relationships: []
       }
+      push_tokens: {
+        Row: {
+          id: string
+          user_id: string
+          expo_push_token: string
+          platform: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          expo_push_token: string
+          platform?: string | null
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['push_tokens']['Insert']>
+        Relationships: []
+      }
       host_reviews: {
         Row: {
           id: string
@@ -329,6 +347,15 @@ export interface Database {
           raw_phone: string
         }
         Returns: boolean
+      }
+      send_app_notification: {
+        Args: {
+          target_user_id: string
+          notification_title: string
+          notification_body: string
+          notification_link?: Json | null
+        }
+        Returns: string
       }
     }
     Enums: {

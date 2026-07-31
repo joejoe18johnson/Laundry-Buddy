@@ -25,6 +25,8 @@ import {
   isIdentityVerified,
   isPhoneVerificationComplete,
   isVerificationDocumentApproved,
+  nextWizardStepAfterId,
+  nextWizardStepAfterSelfie,
   needsAddressResubmit,
   needsIdResubmit,
   needsSelfieResubmit,
@@ -179,25 +181,23 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
 
 
   const handleContinueFromId = () => {
-    if (needsIdResubmit(user) && !idReady) return
-    if (needsSelfieResubmit(user)) {
-      setStep('selfie')
+    if (!idReady) return
+    const next = nextWizardStepAfterId(user)
+    if (next === 'submit') {
+      void handleSubmit()
       return
     }
-    if (isHost && needsAddressResubmit(user)) {
-      setStep('address')
-      return
-    }
-    void handleSubmit()
+    setStep(next)
   }
 
   const handleContinueFromSelfie = () => {
-    if (needsSelfieResubmit(user) && !selfieReady) return
-    if (isHost && needsAddressResubmit(user)) {
-      setStep('address')
+    if (!selfieReady) return
+    const next = nextWizardStepAfterSelfie(user)
+    if (next === 'submit') {
+      void handleSubmit()
       return
     }
-    void handleSubmit()
+    setStep(next)
   }
 
   const handleSubmit = async () => {

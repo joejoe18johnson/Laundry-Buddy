@@ -23,6 +23,15 @@ export {
   supabaseUpdateProfile,
 } from './authService'
 export {
+  fetchNotificationsFromSupabase,
+  isRemoteNotificationSyncEnabled,
+  markAllNotificationsReadInSupabase,
+  markNotificationReadInSupabase,
+  sendNotificationToSupabase,
+  subscribeToNotificationInserts,
+  upsertPushToken,
+} from './notificationService'
+export {
   buildHostListingForSync,
   fetchHostListingFromSupabase,
   fetchMarketplaceFromSupabase,

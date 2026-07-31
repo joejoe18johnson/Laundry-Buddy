@@ -5,7 +5,7 @@ import { emptyIdentityVerification } from '../identityVerification'
 import { normalizePhone } from '../phone'
 import { authEmailFromPhone } from './config'
 import { getSupabaseAuthRedirectUrl } from './authRedirect'
-import { formatSupabaseAuthError } from './authErrors'
+import { normalizeSupabaseError } from './authErrors'
 import { getSupabaseClient } from './client'
 import { identityVerificationToJson, profileRowToUser } from './mappers'
 
@@ -140,38 +140,35 @@ export async function fetchCurrentSupabaseUser(): Promise<User | null> {
   return fetchProfileById(userId)
 }
 
-export async function supabasePhoneInUse(phone: string): Promise<boolean> {
+export async function supabasePhoneInUse(phone: string): Promise<{ inUse: boolean; error: string | null }> {
   const supabase = getSupabaseClient()
-  if (!supabase) return false
+  if (!supabase) return { inUse: false, error: null }
 
   const { data, error } = await supabase.rpc('profile_phone_in_use', { raw_phone: phone })
-  if (!error && typeof data === 'boolean') return data
+  if (!error && typeof data === 'boolean') {
+    return { inUse: data, error: null }
+  }
 
-  const normalized = normalizePhone(phone)
-  const { data: row, error: lookupError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('phone', normalized)
-    .maybeSingle()
-  if (lookupError) throw lookupError
-  return !!row
+  return {
+    inUse: false,
+    error:
+      'Could not verify your phone number. Try again, or contact support if this keeps happening.',
+  }
 }
 
-export async function supabaseEmailInUse(email: string): Promise<boolean> {
+export async function supabaseEmailInUse(email: string): Promise<{ inUse: boolean; error: string | null }> {
   const supabase = getSupabaseClient()
-  if (!supabase) return false
+  if (!supabase) return { inUse: false, error: null }
 
   const { data, error } = await supabase.rpc('profile_email_in_use', { raw_email: email })
-  if (!error && typeof data === 'boolean') return data
+  if (!error && typeof data === 'boolean') {
+    return { inUse: data, error: null }
+  }
 
-  const normalized = email.trim().toLowerCase()
-  const { data: row, error: lookupError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('email', normalized)
-    .maybeSingle()
-  if (lookupError) throw lookupError
-  return !!row
+  return {
+    inUse: false,
+    error: 'Could not verify your email. Try again, or contact support if this keeps happening.',
+  }
 }
 
 export async function supabaseSignIn(
@@ -226,7 +223,7 @@ export async function supabaseSignIn(
     const message =
       method === 'phone'
         ? 'Invalid phone or password. Double-check your details or create an account.'
-        : formatSupabaseAuthError(lastError.message) ||
+        : normalizeSupabaseError(lastError) ||
           'Invalid email or password. Double-check your details or create an account.'
     return { user: null, error: message }
   }
@@ -254,11 +251,20 @@ export async function supabaseSignUp(
     return { user: null, error: 'Phone number is required.' }
   }
 
-  if (await supabasePhoneInUse(input.phone)) {
-    return { user: null, error: 'This phone number is already registered.' }
+  const phoneCheck = await supabasePhoneInUse(input.phone)
+  if (phoneCheck.error) {
+    return { user: null, error: phoneCheck.error }
   }
-  if (await supabaseEmailInUse(authEmail)) {
-    return { user: null, error: 'This email is already registered.' }
+  if (phoneCheck.inUse) {
+    return { user: null, error: 'This phone number is already registered. Log in instead.' }
+  }
+
+  const emailCheck = await supabaseEmailInUse(authEmail)
+  if (emailCheck.error) {
+    return { user: null, error: emailCheck.error }
+  }
+  if (emailCheck.inUse) {
+    return { user: null, error: 'This email is already registered. Log in instead.' }
   }
 
   const normalizedPhone = normalizePhone(input.phone)
@@ -276,7 +282,7 @@ export async function supabaseSignUp(
     },
   })
 
-  if (error) return { user: null, error: formatSupabaseAuthError(error.message) }
+  if (error) return { user: null, error: normalizeSupabaseError(error) }
   if (!data.user) return { user: null, error: 'Sign up failed. Try again.' }
 
   if (!data.session) {
@@ -287,20 +293,32 @@ export async function supabaseSignUp(
     }
   }
 
-  const profilePayload = {
-    id: data.user.id,
-    name: input.name.trim(),
-    phone: normalizedPhone,
-    email: authEmail,
-    role: input.role,
-    identity_verification: identityVerificationToJson(emptyIdentityVerification()),
+  const profile =
+    (await ensureProfileForAuthUser(data.user, normalizedPhone)) ??
+    (await fetchProfileById(data.user.id))
+
+  if (!profile) {
+    const profilePayload = {
+      id: data.user.id,
+      name: input.name.trim(),
+      phone: normalizedPhone,
+      email: authEmail,
+      role: input.role,
+      identity_verification: identityVerificationToJson(emptyIdentityVerification()),
+    }
+
+    const { error: profileError } = await supabase.from('profiles').upsert(profilePayload)
+    if (profileError) {
+      return { user: null, error: normalizeSupabaseError(profileError) }
+    }
+
+    const created = await fetchProfileById(data.user.id)
+    if (!created) {
+      return { user: null, error: 'Account created but profile missing. Contact support.' }
+    }
+    return { user: created, error: null }
   }
 
-  const { error: profileError } = await supabase.from('profiles').upsert(profilePayload)
-  if (profileError) return { user: null, error: profileError.message }
-
-  const profile = await fetchProfileById(data.user.id)
-  if (!profile) return { user: null, error: 'Account created but profile missing. Contact support.' }
   return { user: profile, error: null }
 }
 
@@ -316,7 +334,7 @@ export async function supabaseRequestPasswordReset(email: string): Promise<{ err
   const { error } = await supabase.auth.resetPasswordForEmail(normalized, {
     redirectTo: getSupabaseAuthRedirectUrl('recovery'),
   })
-  if (error) return { error: formatSupabaseAuthError(error.message) }
+  if (error) return { error: normalizeSupabaseError(error) }
   return { error: null }
 }
 
@@ -329,7 +347,7 @@ export async function supabaseUpdatePassword(newPassword: string): Promise<{ err
   }
 
   const { error } = await supabase.auth.updateUser({ password: newPassword })
-  if (error) return { error: formatSupabaseAuthError(error.message) }
+  if (error) return { error: normalizeSupabaseError(error) }
   return { error: null }
 }
 

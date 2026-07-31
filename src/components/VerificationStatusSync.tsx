@@ -39,7 +39,7 @@ export function VerificationStatusSync() {
   useEffect(() => {
     if (!user || user.role === 'admin') return
     const status = getIdentityVerification(user).status
-    if (status !== 'pending' && status !== 'rejected') return
+    if (status === 'verified') return
 
     void refreshCurrentUser()
     const interval = setInterval(() => {

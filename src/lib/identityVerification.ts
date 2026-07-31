@@ -1,6 +1,7 @@
 import type { AppRole, DocumentReviewStatus, IdDocumentType, IdentityVerification, User, VerificationStatus } from '../types'
 import type { VerificationCodeRequest } from './verificationRequestStorage'
 import type { VerificationDocumentKind } from './verificationCodes'
+import { isSupabaseConfigured } from './supabase/config'
 
 export function emptyIdentityVerification(): IdentityVerification {
   return {
@@ -95,10 +96,20 @@ export function mergeIdentityVerification(
 
 /** Merge Supabase profile data with local training cache without losing approval status. */
 export function mergeUserProfiles(supabaseUser: User, localUser: User): User {
-  const verification = mergeIdentityVerification(
-    getIdentityVerification(supabaseUser),
-    getIdentityVerification(localUser),
-  )
+  const remoteVerification = getIdentityVerification(supabaseUser)
+  const localVerification = getIdentityVerification(localUser)
+  let verification = mergeIdentityVerification(remoteVerification, localVerification)
+
+  if (isSupabaseConfigured()) {
+    verification = recomputeOverallVerification(supabaseUser, {
+      ...verification,
+      status: remoteVerification.status,
+      idReviewStatus: remoteVerification.idReviewStatus ?? verification.idReviewStatus,
+      selfieReviewStatus: remoteVerification.selfieReviewStatus ?? verification.selfieReviewStatus,
+      addressReviewStatus: remoteVerification.addressReviewStatus ?? verification.addressReviewStatus,
+      phoneVerified: remoteVerification.phoneVerified || verification.phoneVerified,
+    })
+  }
 
   return normalizeUserIdentity({
     ...localUser,
@@ -192,6 +203,32 @@ export function getInitialResubmitWizardStep(user: User): VerificationWizardStep
   if (needsSelfieResubmit(user)) return 'selfie'
   if (needsAddressResubmit(user)) return 'address'
   return 'id'
+}
+
+export function needsSelfieWizardStep(user: User): boolean {
+  if (needsSelfieResubmit(user)) return true
+  const verification = getIdentityVerification(user)
+  if (verification.status === 'none') return true
+  return !isVerificationDocumentApproved(user, 'selfie')
+}
+
+export function needsAddressWizardStep(user: User): boolean {
+  if (user.role !== 'host') return false
+  if (needsAddressResubmit(user)) return true
+  const verification = getIdentityVerification(user)
+  if (verification.status === 'none') return true
+  return !isVerificationDocumentApproved(user, 'address')
+}
+
+export function nextWizardStepAfterId(user: User): VerificationWizardStep | 'submit' {
+  if (needsSelfieWizardStep(user)) return 'selfie'
+  if (needsAddressWizardStep(user)) return 'address'
+  return 'submit'
+}
+
+export function nextWizardStepAfterSelfie(user: User): VerificationWizardStep | 'submit' {
+  if (needsAddressWizardStep(user)) return 'address'
+  return 'submit'
 }
 
 export function isVerificationDocumentApproved(

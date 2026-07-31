@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import Constants from 'expo-constants'
 import * as Device from 'expo-device'
 import * as Notifications from 'expo-notifications'
 import { Linking, Platform } from 'react-native'
@@ -177,6 +178,24 @@ export async function updateBadgeCount(count: number): Promise<void> {
     await Notifications.setBadgeCountAsync(count)
   } catch {
     // badge not supported on all platforms
+  }
+}
+
+export async function registerExpoPushToken(): Promise<string | null> {
+  if (Platform.OS === 'web' || !Device.isDevice) return null
+
+  const enabled = await ensurePushNotificationsEnabled()
+  if (enabled !== 'granted') return null
+
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined
+
+  try {
+    const token = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    )
+    return token.data || null
+  } catch {
+    return null
   }
 }
 
