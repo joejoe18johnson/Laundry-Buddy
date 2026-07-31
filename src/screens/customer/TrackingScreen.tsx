@@ -230,7 +230,7 @@ export function TrackingScreen() {
   }
 
   return (
-    <Screen>
+    <Screen onRefresh={refreshGuestBookings}>
       <BackButton onPress={() => navigate('customer-home')} label="Home" />
       <NotificationBellReminder compact onPressBell={() => navigate('notifications')} />
 

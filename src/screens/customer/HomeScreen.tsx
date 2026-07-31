@@ -96,7 +96,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   const styles = useMemo(() => createHomeStyles(colors), [colors])
   const { showToast } = useToast()
   const { user } = useAuth()
-  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusMiles, focusSearchOnArea, navigate } = useApp()
+  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, refreshAtHome, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusMiles, focusSearchOnArea, navigate } = useApp()
   const totalHosts = getAvailableHosts().length
   const isHostViewer = user?.role === 'host'
   const visibleOnlineHosts = useMemo(
@@ -225,9 +225,9 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true)
-    await refreshHostData()
+    await refreshAtHome()
     setRefreshing(false)
-  }, [refreshHostData])
+  }, [refreshAtHome])
 
   const onContainerLayout = (e: LayoutChangeEvent) => {
     const h = e.nativeEvent.layout.height

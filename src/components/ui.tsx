@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   Switch,
   Text,
@@ -114,13 +115,33 @@ export function PasswordInput({
   )
 }
 
-export function Screen({ children, style }: { children: ReactNode; style?: ViewStyle }) {
+export function Screen({
+  children,
+  style,
+  onRefresh,
+}: {
+  children: ReactNode
+  style?: ViewStyle
+  /** Pull down to refresh — calls this handler and shows the native refresh spinner. */
+  onRefresh?: () => void | Promise<void>
+}) {
   const insets = useSafeAreaInsets()
-  const { uiStyles: styles } = useTheme()
+  const { uiStyles: styles, colors } = useTheme()
   const scrollRef = useRef<ScrollView>(null)
   const scrollYRef = useRef(0)
   const pendingFieldRef = useRef<RefObject<View | null> | null>(null)
   const [keyboardHeight, setKeyboardHeight] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const handleRefresh = useCallback(async () => {
+    if (!onRefresh) return
+    setRefreshing(true)
+    try {
+      await onRefresh()
+    } finally {
+      setRefreshing(false)
+    }
+  }, [onRefresh])
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow'
@@ -197,6 +218,11 @@ export function Screen({ children, style }: { children: ReactNode; style?: ViewS
           <ScrollView
             ref={scrollRef}
             automaticallyAdjustKeyboardInsets
+            refreshControl={
+              onRefresh ? (
+                <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} tintColor={colors.black} />
+              ) : undefined
+            }
             contentContainerStyle={[
               styles.scroll,
               {

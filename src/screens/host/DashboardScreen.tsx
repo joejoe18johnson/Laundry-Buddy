@@ -122,6 +122,7 @@ export function DashboardScreen() {
     acceptRequest,
     declineRequest,
     openChat,
+    refreshHostOrders,
   } = useApp()
 
   const rawHost = user ? getHostByUserId(user.id) : undefined
@@ -170,7 +171,7 @@ export function DashboardScreen() {
   }
 
   return (
-    <Screen>
+    <Screen onRefresh={refreshHostOrders}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <AppIcon name="wind" size={20} />

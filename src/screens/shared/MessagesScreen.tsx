@@ -269,7 +269,7 @@ export function MessagesScreen() {
   )
 
   return (
-    <Screen>
+    <Screen onRefresh={reload}>
       <View style={styles.titleRow}>
         <AppIcon name="message-circle" size={22} />
         <Text style={styles.title}>{toTitleCase('Messages')}</Text>

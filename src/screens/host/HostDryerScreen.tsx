@@ -162,6 +162,7 @@ export function HostDryerScreen() {
     openChat,
     navigate,
     registerHardwareBackHandler,
+    refreshHostOrders,
   } = useApp()
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -197,7 +198,7 @@ export function HostDryerScreen() {
             : `${preDryerLoads.length} active load${preDryerLoads.length === 1 ? '' : 's'}`
 
   return (
-    <Screen>
+    <Screen onRefresh={refreshHostOrders}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <AppIcon name="wind" size={22} />

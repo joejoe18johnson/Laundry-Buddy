@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { BackButton, OutlineButton, PrimaryButton, Screen } from '../../components/ui'
@@ -114,11 +114,16 @@ function createNotificationsStyles(colors: ReturnType<typeof useTheme>['colors']
 
 export function NotificationsScreen() {
   const { user } = useAuth()
-  const { navigate, openNotification } = useApp()
+  const { navigate, openNotification, refreshAtHome } = useApp()
   const { colors } = useTheme()
   const styles = useMemo(() => createNotificationsStyles(colors), [colors])
-  const { notifications, unreadCount, markRead, markAllRead } = useUserNotifications(user?.id)
+  const { notifications, unreadCount, markRead, markAllRead, reload } = useUserNotifications(user?.id)
   const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
+
+  const onRefresh = useCallback(async () => {
+    await refreshAtHome()
+    await reload()
+  }, [refreshAtHome, reload])
 
   useEffect(() => {
     getPushPermissionStatus().then(setPermission)
@@ -135,7 +140,7 @@ export function NotificationsScreen() {
   }
 
   return (
-    <Screen>
+    <Screen onRefresh={onRefresh}>
       <BackButton onPress={() => navigate(backScreen)} label="Back" />
       <View style={styles.header}>
         <View style={styles.titleBlock}>
