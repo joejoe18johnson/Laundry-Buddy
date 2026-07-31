@@ -10,6 +10,7 @@ import {
 } from 'react'
 import { AppState } from 'react-native'
 import type { AppNotification, NotificationLink } from '../types'
+import { useAuth } from './AuthContext'
 import {
   readAllNotifications,
   writeAllNotifications,
@@ -19,13 +20,14 @@ import {
   isRemoteNotificationSyncEnabled,
   markAllNotificationsReadInSupabase,
   markNotificationReadInSupabase,
+  registerPushTokenForUser,
+  resolveNotificationTargetId,
+  resolveNotificationUserId,
   sendNotificationToSupabase,
   subscribeToNotificationInserts,
-  upsertPushToken,
 } from '../lib/supabase/notificationService'
 import {
   initPushNotifications,
-  registerExpoPushToken,
   showLocalNotification,
   updateBadgeCount,
 } from '../lib/pushNotifications'
@@ -44,13 +46,15 @@ function mergeNotificationLists(
   remote: AppNotification[],
   local: AppNotification[],
   activeUserId?: string,
+  localUserId?: string,
 ): AppNotification[] {
+  const ownerIds = new Set([activeUserId, localUserId].filter(Boolean) as string[])
   const merged = new Map<string, AppNotification>()
   for (const item of remote) {
     merged.set(item.id, item)
   }
   for (const item of local) {
-    if ((!activeUserId || item.userId === activeUserId) && !merged.has(item.id)) {
+    if ((ownerIds.size === 0 || ownerIds.has(item.userId)) && !merged.has(item.id)) {
       merged.set(item.id, item)
     }
   }
@@ -60,24 +64,49 @@ function mergeNotificationLists(
 interface NotificationState {
   notifications: AppNotification[]
   unreadCount: number
+  resolvedActiveUserId?: string
   push: (userId: string, title: string, body: string, link?: NotificationLink) => Promise<void>
   markRead: (id: string) => Promise<void>
   markAllRead: (userId: string) => Promise<void>
   reload: () => Promise<void>
+  refreshPushRegistration: () => Promise<void>
 }
 
 const NotificationContext = createContext<NotificationState | null>(null)
 
-export function NotificationProvider({
-  children,
-  activeUserId,
-}: {
-  children: ReactNode
-  activeUserId?: string
-}) {
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
+  const localUserId = user?.id
+  const [resolvedActiveUserId, setResolvedActiveUserId] = useState<string | undefined>()
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   const deliveredPhoneAlertsRef = useRef<Set<string>>(new Set())
   const remoteSyncEnabled = isRemoteNotificationSyncEnabled()
+
+  useEffect(() => {
+    if (!user) {
+      setResolvedActiveUserId(undefined)
+      return
+    }
+
+    let cancelled = false
+    void (async () => {
+      const resolved = await resolveNotificationUserId(user)
+      if (!cancelled) {
+        setResolvedActiveUserId(resolved ?? undefined)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, user?.phone, user?.email])
+
+  const activeUserId = resolvedActiveUserId ?? localUserId
+
+  const refreshPushRegistration = useCallback(async () => {
+    if (!user || !remoteSyncEnabled) return
+    await registerPushTokenForUser(user)
+  }, [remoteSyncEnabled, user])
 
   const reload = useCallback(async () => {
     const local = await readAllNotifications()
@@ -87,10 +116,10 @@ export function NotificationProvider({
     }
 
     const remote = await fetchNotificationsFromSupabase(activeUserId)
-    const next = mergeNotificationLists(remote, local, activeUserId)
+    const next = mergeNotificationLists(remote, local, activeUserId, localUserId)
     setNotifications(next)
     await writeAllNotifications(next)
-  }, [activeUserId, remoteSyncEnabled])
+  }, [activeUserId, localUserId, remoteSyncEnabled])
 
   useEffect(() => {
     void reload()
@@ -99,11 +128,12 @@ export function NotificationProvider({
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         void reload()
+        void refreshPushRegistration()
       }
     })
 
     return () => subscription.remove()
-  }, [reload])
+  }, [reload, refreshPushRegistration])
 
   useEffect(() => {
     if (!remoteSyncEnabled || !activeUserId) return
@@ -128,20 +158,15 @@ export function NotificationProvider({
   }, [activeUserId, remoteSyncEnabled])
 
   useEffect(() => {
-    if (!activeUserId) return
-    void (async () => {
-      const token = await registerExpoPushToken()
-      if (token) {
-        await upsertPushToken(activeUserId, token)
-      }
-    })()
-  }, [activeUserId])
+    if (!user) return
+    void refreshPushRegistration()
+  }, [refreshPushRegistration, user?.id])
 
   useEffect(() => {
     if (!activeUserId) return
     const urgent = notifications.find(
       (item) =>
-        item.userId === activeUserId &&
+        (item.userId === activeUserId || item.userId === localUserId) &&
         !item.read &&
         !deliveredPhoneAlertsRef.current.has(item.id) &&
         shouldDeliverPhoneAlert(item.title, item.body),
@@ -153,7 +178,7 @@ export function NotificationProvider({
       urgent.body,
       urgent.link ? linkToPushData(urgent.link) : undefined,
     )
-  }, [activeUserId, notifications])
+  }, [activeUserId, localUserId, notifications])
 
   const push = useCallback(
     async (userId: string, title: string, body: string, link?: NotificationLink) => {
@@ -163,10 +188,12 @@ export function NotificationProvider({
         item = await sendNotificationToSupabase(userId, title, body, link)
       }
 
+      const resolvedTargetId = remoteSyncEnabled ? await resolveNotificationTargetId(userId) : userId
+
       if (!item) {
         item = {
           id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          userId,
+          userId: resolvedTargetId ?? userId,
           title,
           body,
           time: nowLabel(),
@@ -181,12 +208,17 @@ export function NotificationProvider({
         return next
       })
 
-      if (userId === activeUserId && shouldDeliverPhoneAlert(title, body)) {
+      const isForMe =
+        userId === localUserId ||
+        userId === activeUserId ||
+        resolvedTargetId === activeUserId
+
+      if (isForMe && shouldDeliverPhoneAlert(title, body)) {
         deliveredPhoneAlertsRef.current.add(item.id)
         await showLocalNotification(title, body, link ? linkToPushData(link) : undefined)
       }
     },
-    [activeUserId, remoteSyncEnabled],
+    [activeUserId, localUserId, remoteSyncEnabled],
   )
 
   const markRead = useCallback(
@@ -205,11 +237,15 @@ export function NotificationProvider({
 
   const markAllRead = useCallback(
     async (userId: string) => {
-      if (remoteSyncEnabled) {
-        await markAllNotificationsReadInSupabase(userId)
+      const resolved = remoteSyncEnabled ? await resolveNotificationTargetId(userId) : userId
+      const targetId = resolved ?? userId
+      if (remoteSyncEnabled && targetId) {
+        await markAllNotificationsReadInSupabase(targetId)
       }
       setNotifications((prev) => {
-        const next = prev.map((n) => (n.userId === userId ? { ...n, read: true } : n))
+        const next = prev.map((n) =>
+          n.userId === targetId || n.userId === userId ? { ...n, read: true } : n,
+        )
         void writeAllNotifications(next)
         return next
       })
@@ -223,14 +259,34 @@ export function NotificationProvider({
   )
 
   useEffect(() => {
-    if (!activeUserId) return
-    const mineUnread = notifications.filter((n) => n.userId === activeUserId && !n.read).length
+    if (!activeUserId && !localUserId) return
+    const mineUnread = notifications.filter(
+      (n) => (n.userId === activeUserId || n.userId === localUserId) && !n.read,
+    ).length
     void updateBadgeCount(mineUnread)
-  }, [notifications, activeUserId])
+  }, [notifications, activeUserId, localUserId])
 
   const value = useMemo(
-    () => ({ notifications, unreadCount, push, markRead, markAllRead, reload }),
-    [notifications, unreadCount, push, markRead, markAllRead, reload],
+    () => ({
+      notifications,
+      unreadCount,
+      resolvedActiveUserId: activeUserId,
+      push,
+      markRead,
+      markAllRead,
+      reload,
+      refreshPushRegistration,
+    }),
+    [
+      notifications,
+      unreadCount,
+      activeUserId,
+      push,
+      markRead,
+      markAllRead,
+      reload,
+      refreshPushRegistration,
+    ],
   )
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>
@@ -243,11 +299,12 @@ export function useNotifications() {
 }
 
 export function useUserNotifications(userId: string | undefined) {
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications()
-  const mine = useMemo(
-    () => (userId ? notifications.filter((n) => n.userId === userId) : []),
-    [notifications, userId],
-  )
+  const { notifications, markRead, markAllRead, reload, resolvedActiveUserId } = useNotifications()
+  const mine = useMemo(() => {
+    if (!userId) return []
+    const ownerIds = new Set([userId, resolvedActiveUserId].filter(Boolean) as string[])
+    return notifications.filter((n) => ownerIds.has(n.userId))
+  }, [notifications, resolvedActiveUserId, userId])
   const unread = useMemo(() => mine.filter((n) => !n.read).length, [mine])
-  return { notifications: mine, unreadCount: unread, markRead, markAllRead }
+  return { notifications: mine, unreadCount: unread, markRead, markAllRead, reload }
 }

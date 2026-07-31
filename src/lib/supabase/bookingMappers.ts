@@ -57,6 +57,8 @@ export function bookingRowToBooking(row: BookingRow): Booking {
     clothesList: parseClothesList(row.clothes_list),
     acceptedAt: row.accepted_at ?? undefined,
     createdAt: row.created_at,
+    guestPickupConfirmedAt: row.guest_pickup_confirmed_at ?? undefined,
+    hostPickupConfirmedAt: row.host_pickup_confirmed_at ?? undefined,
   }
 }
 
@@ -95,6 +97,8 @@ export function bookingToInsert(booking: Booking): BookingInsert {
     clothes_list: (booking.clothesList ?? []) as unknown as BookingInsert['clothes_list'],
     accepted_at: booking.acceptedAt ?? null,
     created_at: booking.createdAt,
+    guest_pickup_confirmed_at: booking.guestPickupConfirmedAt ?? null,
+    host_pickup_confirmed_at: booking.hostPickupConfirmedAt ?? null,
   }
 }
 

@@ -168,6 +168,8 @@ export interface Database {
           accepted_at: string | null
           created_at: string
           updated_at: string
+          guest_pickup_confirmed_at: string | null
+          host_pickup_confirmed_at: string | null
         }
         Insert: {
           id?: string
@@ -204,6 +206,8 @@ export interface Database {
           accepted_at?: string | null
           created_at?: string
           updated_at?: string
+          guest_pickup_confirmed_at?: string | null
+          host_pickup_confirmed_at?: string | null
         }
         Update: Partial<Database['public']['Tables']['bookings']['Insert']>
         Relationships: []

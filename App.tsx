@@ -8,6 +8,7 @@ import { BottomNav, type NavTab } from './src/components/BottomNav'
 import { AppProvider, useApp } from './src/context/AppContext'
 import { AuthProvider, useAuth } from './src/context/AuthContext'
 import { NotificationProvider, useUserNotifications } from './src/context/NotificationContext'
+import { registerPushTokenForUser } from './src/lib/supabase/notificationService'
 import { MessageProvider, useMessages } from './src/context/MessageContext'
 import { HomeScreen } from './src/screens/customer/HomeScreen'
 import { BookingScreen } from './src/screens/customer/BookingScreen'
@@ -689,6 +690,9 @@ function PushNotificationPromptGate() {
           setPermission(status)
           if (status === 'granted' || status === 'unsupported') {
             setVisible(false)
+            if (status === 'granted') {
+              await registerPushTokenForUser(user)
+            }
           }
         })()
       }}
@@ -775,7 +779,7 @@ function AuthenticatedApp() {
 
   return (
     <>
-      <NotificationProvider activeUserId={user!.id}>
+      <NotificationProvider>
         <MessageProvider>
           <ToastProvider>
             {user!.role === 'admin' ? (

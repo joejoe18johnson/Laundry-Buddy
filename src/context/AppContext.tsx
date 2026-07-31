@@ -129,6 +129,7 @@ import {
   canGuestConfirmPickup,
   canHostConfirmPickup,
   isPickupComplete,
+  normalizePickupStage,
   patchPickupConfirmation,
 } from '../lib/pickupConfirmation'
 import { shouldSuppressHardwareBack, consumePendingCameraFlowRestore, peekCameraReturnScreen } from '../lib/cameraSession'
@@ -472,8 +473,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const merged = remoteBookings.map((booking) => {
         const snapshot = snapshots.find((entry) => entry.id === booking.id)
-        return snapshot ? mergeBookingSnapshot(booking, snapshot) : booking
+        const combined = snapshot ? mergeBookingSnapshot(booking, snapshot) : booking
+        return normalizePickupStage(combined)
       })
+
+      for (const booking of merged) {
+        if (booking.guestPickupConfirmedAt || booking.hostPickupConfirmedAt) {
+          syncBookingToServer(booking)
+        }
+        if (booking.stage === 'picked-up' && booking.customerId) {
+          void saveCompletedCustomerPayment(booking.customerId, booking)
+        }
+      }
 
       const visible = filterVisibleGuestBookings(merged)
       await saveActiveBookings(user.id, visible)
@@ -851,9 +862,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let mergedLoads = await Promise.all(
         remoteActive.map(async (load) => {
           const snapshot = await loadBookingSnapshot(load.id)
-          return snapshot ? mergeBookingSnapshot(load, snapshot) : load
+          const combined = snapshot ? mergeBookingSnapshot(load, snapshot) : load
+          return normalizePickupStage(combined)
         }),
       )
+
+      for (const load of mergedLoads) {
+        if (load.guestPickupConfirmedAt || load.hostPickupConfirmedAt) {
+          syncBookingToServer(load)
+        }
+      }
+
+      for (const load of mergedLoads) {
+        if (load.stage !== 'picked-up') continue
+        if (load.customerId) void saveCompletedCustomerPayment(load.customerId, load)
+        void saveCompletedHostPayment(user.id, load)
+        const host = getHostById(load.hostId)
+        if (host?.hostUserId) void removeHostActiveLoad(host.hostUserId, load.id)
+      }
+
       mergedLoads = mergedLoads.filter(
         (load) => load.stage !== 'picked-up' && !isPickupComplete(load),
       )
@@ -881,9 +908,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     mergedLoads = await Promise.all(
       mergedLoads.map(async (load) => {
         const snapshot = await loadBookingSnapshot(load.id)
-        return snapshot ? mergeBookingSnapshot(load, snapshot) : load
+        const combined = snapshot ? mergeBookingSnapshot(load, snapshot) : load
+        return normalizePickupStage(combined)
       }),
     )
+    for (const load of mergedLoads) {
+      if (load.guestPickupConfirmedAt || load.hostPickupConfirmedAt) {
+        syncBookingToServer(load)
+      }
+    }
     mergedLoads = mergedLoads.filter(
       (load) => load.stage !== 'picked-up' && !isPickupComplete(load),
     )
@@ -1869,7 +1902,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const persistPickupPatch = useCallback(
     (load: Booking, patch: (booking: Booking) => Booking) => {
-      const patched = patch(load)
+      const patched = normalizePickupStage(patch(load))
       const host = getHostById(patched.hostId)
 
       setActiveLoads((prev) => {
@@ -1881,7 +1914,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })
 
       setGuestBookings((prev) => patchGuestBooking(prev, patched.id, () => patched))
-      persistBookingSnapshot(patched)
+      syncBookingToServer(patched)
 
       if (host?.hostUserId) {
         void patchHostActiveLoad(host.hostUserId, patched.id, () => patched)

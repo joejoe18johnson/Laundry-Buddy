@@ -1,5 +1,6 @@
 import type { Booking } from '../../types'
-import { isPickupComplete } from '../pickupConfirmation'
+import { isPickupComplete, normalizePickupStage } from '../pickupConfirmation'
+import { mergeBookingSnapshot } from '../bookingSyncStorage'
 import { getSupabaseClient } from './client'
 import { bookingRowToBooking, bookingToInsert } from './bookingMappers'
 
@@ -33,7 +34,11 @@ export async function upsertBookingToSupabase(booking: Booking): Promise<Booking
   const supabase = getSupabaseClient()
   if (!supabase) return null
 
-  const payload = bookingToInsert(booking)
+  const existing = await fetchBookingByIdFromSupabase(booking.id)
+  const merged = normalizePickupStage(
+    existing ? mergeBookingSnapshot(existing, booking) : booking,
+  )
+  const payload = bookingToInsert(merged)
 
   const { data: updated, error: updateError } = await supabase
     .from('bookings')
