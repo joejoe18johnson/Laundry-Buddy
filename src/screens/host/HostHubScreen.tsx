@@ -14,8 +14,9 @@ import { VerificationPromptBanner } from '../../components/VerificationPromptBan
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
-import { getHostByUserId, getHostProfileDetails } from '../../data/mockData'
+import { getHostByUserId } from '../../data/mockData'
 import { HostPricingSection } from '../../components/host/HostPricingSection'
+import { HostBusinessSnapshot } from '../../components/host/HostBusinessSnapshot'
 import { getHostPaymentMethods, normalizeHostSettings, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import { DropOffHourGrid } from '../../components/DropOffHourGrid'
 import { parseListingInt } from '../../lib/hostListing'
@@ -171,6 +172,7 @@ export function HostHubScreen() {
     hostSettings,
     updateHostSettings,
     hostStats,
+    hostBusinessStats,
     hostRequests,
     activeLoads,
   } = useApp()
@@ -193,7 +195,6 @@ export function HostHubScreen() {
 
   if (!user) return null
 
-  const profile = host ? getHostProfileDetails(host.id) : null
   const verification = getIdentityVerification(user)
   const pricing = draft.pricing
   const listing = draft.listing
@@ -407,12 +408,19 @@ export function HostHubScreen() {
         </View>
       </View>
 
-      {host && profile ? (
-        <Section title="Stats">
+      {hostBusinessStats ? (
+        <HostBusinessSnapshot
+          stats={hostBusinessStats}
+          onPressHistory={() => navigate('history')}
+        />
+      ) : null}
+
+      {host ? (
+        <Section title="Reputation">
           <Row
             icon="shield"
             label="Rating"
-            value={`${host.rating > 0 ? host.rating.toFixed(1) : 'New'} · ${hostStats.loadsHosted} loads hosted`}
+            value={host.rating > 0 ? `${host.rating.toFixed(1)} / 5` : 'New host — no reviews yet'}
           />
         </Section>
       ) : null}

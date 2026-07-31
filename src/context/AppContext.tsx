@@ -125,6 +125,7 @@ import {
   countHostLoadsToday,
   getHostLoadsHostedSeedBaseline,
 } from '../lib/hostLoadStats'
+import { computeHostBusinessStats, type HostBusinessStats } from '../lib/hostBusinessStats'
 import {
   canGuestConfirmPickup,
   canHostConfirmPickup,
@@ -172,6 +173,7 @@ interface AppState {
   hostRequests: HostRequest[]
   activeLoads: Booking[]
   hostStats: { loadsToday: number; loadsHosted: number; maxLoads: number; accepting: boolean }
+  hostBusinessStats: HostBusinessStats | null
   hostSettings: HostSettings | null
   hostSettingsMap: Record<string, HostSettings>
   onlineHosts: Host[]
@@ -368,6 +370,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       accepting: hostCapacity.accepting,
     }
   }, [activeLoads, hostCapacity, hostCompletedLoads, role, user])
+
+  const hostBusinessStats = useMemo(() => {
+    if (role !== 'host') return null
+    return computeHostBusinessStats(
+      hostCompletedLoads,
+      hostStats.loadsHosted,
+      hostStats.loadsToday,
+    )
+  }, [hostCompletedLoads, hostStats.loadsHosted, hostStats.loadsToday, role])
 
   const booking = useMemo(() => {
     if (selectedBookingId) {
@@ -2201,6 +2212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostRequests,
       activeLoads,
       hostStats,
+      hostBusinessStats,
       hostSettings,
       hostSettingsMap,
       onlineHosts,
@@ -2277,6 +2289,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hostRequests,
       activeLoads,
       hostStats,
+      hostBusinessStats,
       hostSettings,
       hostSettingsMap,
       onlineHosts,

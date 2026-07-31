@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext'
 import { getHostByUserId } from '../../data/mockData'
 import { applyHostSettings } from '../../lib/hostListing'
 import { HostPricingSection } from '../../components/host/HostPricingSection'
+import { HostBusinessSnapshot } from '../../components/host/HostBusinessSnapshot'
 import { normalizeHostSettings } from '../../lib/hostSettingsStorage'
 import { formatDryTimeInline } from '../../lib/turnaroundTime'
 import { formatMoney } from '../../lib/bookingPayments'
@@ -116,6 +117,7 @@ export function DashboardScreen() {
     hostRequests,
     activeLoads,
     hostStats,
+    hostBusinessStats,
     hostSettings,
     updateHostSettings,
     navigate,
@@ -248,20 +250,14 @@ export function DashboardScreen() {
       )}
 
       <View style={styles.statsRow}>
-        <View style={styles.statChip}>
-          <Text style={styles.statNum}>{hostStats.loadsToday}</Text>
-          <Text style={styles.statLabel}>{toTitleCase('loads today')}</Text>
-        </View>
-        <View style={[styles.pill, hostStats.accepting ? styles.pillLive : null]}>
-          <AppIcon
-            name={hostStats.accepting ? 'check-circle' : 'x-circle'}
-            size={12}
-            color={hostStats.accepting ? colors.green : colors.gray600}
+        {hostBusinessStats ? (
+          <HostBusinessSnapshot
+            stats={hostBusinessStats}
+            accepting={hostStats.accepting}
+            showStatus
+            onPressHistory={() => navigate('history')}
           />
-          <Text style={[styles.pillText, hostStats.accepting ? styles.pillLiveText : null]}>
-            {hostStats.accepting ? toTitleCase('Accepting loads') : toTitleCase('Full today')}
-          </Text>
-        </View>
+        ) : null}
       </View>
 
       {hostProfile && (
@@ -450,31 +446,7 @@ function createDashboardStyles(colors: ReturnType<typeof useTheme>['colors']) {
     marginTop: spacing.sm,
   },
   availabilityEditText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
-  statsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  statChip: {
-    borderWidth: 1,
-    borderColor: colors.black,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-  },
-  statNum: { fontSize: 18, fontWeight: '700' },
-  statLabel: { fontSize: 11, color: colors.gray500, fontWeight: '600' },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.gray50,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.gray100,
-  },
-  pillLive: { backgroundColor: colors.greenBg, borderColor: colors.green },
-  pillText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
-  pillLiveText: { color: colors.green },
+  statsRow: { marginBottom: spacing.sm },
   listingMeta: { fontSize: 14, color: colors.gray500, marginBottom: spacing.lg, lineHeight: 20 },
   sectionHeader: {
     flexDirection: 'row',
