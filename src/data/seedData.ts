@@ -4,7 +4,7 @@ import { GENERATED_SEED_HOSTS } from './generatedHosts'
 import { getRuntimeDynamicHosts } from '../lib/dynamicHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes. */
-export const SEED_DATA_VERSION = '31'
+export const SEED_DATA_VERSION = '32'
 
 /** Bootstrap password for sample accounts (also used for Supabase admin auto-provisioning). */
 export const ADMIN_SEED_PASSWORD = 'demo1234'
@@ -27,8 +27,12 @@ const VERIFIED_GUEST: IdentityVerification = {
   status: 'verified',
   phoneVerified: true,
   verifiedPhone: SAMPLE_GUEST_PHONE,
+  codeRequestStatus: 'completed',
   idType: 'passport',
   idUploaded: true,
+  idReviewStatus: 'approved',
+  selfieUploaded: true,
+  selfieReviewStatus: 'approved',
   submittedAt: '2026-06-01T10:00:00.000Z',
 }
 

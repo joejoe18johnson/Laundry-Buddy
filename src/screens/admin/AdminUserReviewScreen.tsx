@@ -32,6 +32,7 @@ import {
   isPhoneVerificationComplete,
   verificationStatusLabel,
 } from '../../lib/identityVerification'
+import { usersStuckPendingVerification } from '../../lib/adminUsers'
 import { deliverVerificationCodeToUser } from '../../lib/adminVerificationDelivery'
 import {
   buildVerificationApprovedBody,
@@ -154,6 +155,7 @@ function DocumentReviewActions({
 
 export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserReviewScreenProps) {
   const {
+    adminApproveUser,
     adminApproveUserId,
     adminRejectUserId,
     adminApproveUserSelfie,
@@ -209,6 +211,7 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
   const reviewSelfie = canAdminReviewSelfie(user)
   const reviewAddress = canAdminReviewAddress(user)
   const canSendCode = codeRequest?.status === 'pending'
+  const needsFinalize = usersStuckPendingVerification([user]).length > 0
 
   const notifyIfFullyVerified = async (updatedUser: User | null) => {
     if (!updatedUser || !isIdentityVerified(updatedUser)) return
@@ -512,7 +515,32 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
           </View>
         ) : null}
 
+        {needsFinalize ? (
+          <View style={styles.section}>
+            <View style={styles.card}>
+              <Text style={styles.reviewHint}>
+                {toTitleCase(
+                  'All documents are approved but verification is still marked pending. Tap below to finalize.',
+                )}
+              </Text>
+              <SuccessButton
+                title={busy ? 'Finalizing…' : 'Mark as verified'}
+                icon="check-circle"
+                full
+                disabled={busy}
+                onPress={() =>
+                  void runReviewAction(
+                    () => adminApproveUser(userId),
+                    'User verification finalized.',
+                  )
+                }
+              />
+            </View>
+          </View>
+        ) : null}
+
         {verification.status === 'pending' &&
+        !needsFinalize &&
         (idReviewStatus === 'approved' ||
           selfieReviewStatus === 'approved' ||
           addressReviewStatus === 'approved') ? (

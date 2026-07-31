@@ -24,7 +24,8 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
   const { push } = useNotifications()
   const { colors } = useTheme()
   const styles = useMemo(() => createAdminStyles(colors), [colors])
-  const { loading, codeRequests, idReviewUsers, queueCount, reload } = useAdminDashboardData(refreshKey)
+  const { loading, codeRequests, idReviewUsers, stuckVerificationUsers, queueCount, reload } =
+    useAdminDashboardData(refreshKey)
   const [busyUserId, setBusyUserId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [errorAlert, setErrorAlert] = useState<string | null>(null)
@@ -118,6 +119,28 @@ export function AdminVerificationQueueScreen({ highlightUserId, refreshKey, onRe
                 <OutlineButton
                   title={entry.role === 'host' ? 'Review host verification' : 'Review & approve ID'}
                   icon="eye"
+                  onPress={() => onReviewUser(entry.id)}
+                />
+              </View>
+            ))}
+            {stuckVerificationUsers.map((entry) => (
+              <View
+                key={`stuck-${entry.id}`}
+                style={[styles.card, highlightUserId === entry.id && styles.cardHighlighted]}
+              >
+                <Text style={styles.queueType}>{toTitleCase('Ready to finalize')}</Text>
+                <View style={styles.cardTop}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cardName}>{entry.name}</Text>
+                    <Text style={styles.cardMeta}>
+                      {entry.role === 'host' ? 'Host' : 'Guest'} ·{' '}
+                      {toTitleCase('All documents approved — verification needs to be finalized')}
+                    </Text>
+                  </View>
+                </View>
+                <OutlineButton
+                  title="Review & finalize"
+                  icon="check-circle"
                   onPress={() => onReviewUser(entry.id)}
                 />
               </View>

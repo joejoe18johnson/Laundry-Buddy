@@ -1,10 +1,10 @@
 import type { IdentityVerification, User } from '../../types'
-import { emptyIdentityVerification, getIdentityVerification, normalizeUserIdentity } from '../identityVerification'
+import { emptyIdentityVerification, normalizeUserIdentity } from '../identityVerification'
 import type { Database } from './database.types'
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row']
 
-function parseIdentityVerification(raw: unknown): IdentityVerification {
+export function parseIdentityVerification(raw: unknown): IdentityVerification {
   if (!raw || typeof raw !== 'object') return emptyIdentityVerification()
   const value = raw as Partial<IdentityVerification>
   return {

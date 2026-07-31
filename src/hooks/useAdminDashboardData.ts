@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { usersPendingIdReview } from '../lib/adminUsers'
+import { usersPendingIdReview, usersStuckPendingVerification } from '../lib/adminUsers'
 import { getIdentityVerification } from '../lib/identityVerification'
 import {
   countCodesByStatus,
@@ -39,6 +39,7 @@ export function useAdminDashboardData(refreshKey = 0) {
   }, [reload, refreshKey])
 
   const idReviewUsers = useMemo(() => usersPendingIdReview(users), [users])
+  const stuckVerificationUsers = useMemo(() => usersStuckPendingVerification(users), [users])
   const pendingUsers = useMemo(
     () =>
       users.filter((entry) => getIdentityVerification(entry).status === 'pending'),
@@ -48,7 +49,7 @@ export function useAdminDashboardData(refreshKey = 0) {
     () => users.filter((entry) => getIdentityVerification(entry).status === 'verified').length,
     [users],
   )
-  const queueCount = codeRequests.length + idReviewUsers.length
+  const queueCount = codeRequests.length + idReviewUsers.length + stuckVerificationUsers.length
 
   return {
     users,
@@ -58,6 +59,7 @@ export function useAdminDashboardData(refreshKey = 0) {
     loading,
     reload,
     idReviewUsers,
+    stuckVerificationUsers,
     pendingUsers,
     verifiedCount,
     queueCount,

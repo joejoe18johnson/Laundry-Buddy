@@ -1,17 +1,51 @@
 import type { IdentityVerification, User } from '../../types'
+import { normalizeIdentityVerification, normalizeUserIdentity } from '../identityVerification'
 import { prepareSupabaseAdminSession } from './adminAccess'
 import { getSupabaseClient } from './client'
-import { identityVerificationToJson, profileRowToUser } from './mappers'
+import { identityVerificationToJson, parseIdentityVerification, profileRowToUser } from './mappers'
+import { isSupabaseProfileId } from './profileIds'
 
 export type AdminPatchResult =
   | { ok: true; verification: IdentityVerification }
   | { ok: false; error: string }
+
+/** Persist corrected verification when Supabase still has pending but all docs are approved. */
+export async function syncRepairedVerificationIfNeeded(
+  userId: string,
+  rawVerification: IdentityVerification,
+  user: Pick<User, 'role' | 'phone'>,
+): Promise<IdentityVerification | null> {
+  if (!isSupabaseProfileId(userId)) return null
+
+  const normalized = normalizeIdentityVerification(user, rawVerification)
+  if (rawVerification.status !== 'pending' || normalized.status !== 'verified') {
+    return null
+  }
+
+  const supabase = getSupabaseClient()
+  if (!supabase) return normalized
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ identity_verification: identityVerificationToJson(normalized) })
+    .eq('id', userId)
+
+  return error ? null : normalized
+}
 
 export async function adminPatchIdentityVerification(
   userId: string,
   patch: Partial<IdentityVerification>,
   actingUser?: User | null,
 ): Promise<AdminPatchResult> {
+  if (!isSupabaseProfileId(userId)) {
+    return {
+      ok: false,
+      error:
+        'This training account is not linked to Supabase. Find the same user by phone in the admin list.',
+    }
+  }
+
   const supabase = getSupabaseClient()
   if (!supabase) return { ok: false, error: 'Supabase is not configured.' }
 

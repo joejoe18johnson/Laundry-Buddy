@@ -1,13 +1,15 @@
 import type { AppRole, IdentityVerification, LoginMethod, User } from '../../types'
 import { ADMIN_EMAIL, ADMIN_PHONE } from '../../data/seedData'
 import { isValidEmail } from '../email'
-import { emptyIdentityVerification } from '../identityVerification'
+import { emptyIdentityVerification, normalizeUserIdentity } from '../identityVerification'
 import { normalizePhone } from '../phone'
 import { authEmailFromPhone } from './config'
 import { getSupabaseAuthRedirectUrl } from './authRedirect'
 import { normalizeSupabaseError } from './authErrors'
 import { getSupabaseClient } from './client'
-import { identityVerificationToJson, profileRowToUser } from './mappers'
+import { identityVerificationToJson, parseIdentityVerification, profileRowToUser } from './mappers'
+import { isSupabaseProfileId, resolveSupabaseProfileId } from './profileIds'
+import { syncRepairedVerificationIfNeeded } from './verificationService'
 
 export type SupabaseSignupInput = {
   name: string
@@ -115,7 +117,24 @@ export async function fetchProfileById(userId: string): Promise<User | null> {
   const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
   if (error) throw error
   if (!data) return null
-  return profileRowToUser(data)
+
+  const rawVerification = parseIdentityVerification(data.identity_verification)
+  const synced = await syncRepairedVerificationIfNeeded(userId, rawVerification, {
+    role: data.role,
+    phone: data.phone ?? undefined,
+  })
+
+  const user: User = {
+    id: data.id,
+    name: data.name,
+    phone: data.phone ?? undefined,
+    email: data.email ?? undefined,
+    password: '',
+    role: data.role,
+    createdAt: data.created_at,
+    identityVerification: synced ?? rawVerification,
+  }
+  return normalizeUserIdentity(user)
 }
 
 export async function fetchProfileByPhone(phone: string): Promise<User | null> {
@@ -361,6 +380,11 @@ export async function supabaseUpdateProfile(user: User): Promise<User> {
   const supabase = getSupabaseClient()
   if (!supabase) throw new Error('Supabase is not configured.')
 
+  const profileId = (await resolveSupabaseProfileId(user)) ?? user.id
+  if (!isSupabaseProfileId(profileId)) {
+    throw new Error('This account is not linked to Supabase yet.')
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .update({
@@ -372,7 +396,7 @@ export async function supabaseUpdateProfile(user: User): Promise<User> {
         user.identityVerification ?? emptyIdentityVerification(),
       ),
     })
-    .eq('id', user.id)
+    .eq('id', profileId)
     .select('*')
     .single()
 

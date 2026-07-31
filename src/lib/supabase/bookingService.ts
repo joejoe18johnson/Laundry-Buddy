@@ -16,6 +16,15 @@ export async function fetchParticipantBookingsFromSupabase(): Promise<Booking[]>
   return data.map(bookingRowToBooking)
 }
 
+export async function fetchBookingByIdFromSupabase(bookingId: string): Promise<Booking | null> {
+  const supabase = getSupabaseClient()
+  if (!supabase) return null
+
+  const { data, error } = await supabase.from('bookings').select('*').eq('id', bookingId).maybeSingle()
+  if (error || !data) return null
+  return bookingRowToBooking(data)
+}
+
 export async function upsertBookingToSupabase(booking: Booking): Promise<Booking | null> {
   const supabase = getSupabaseClient()
   if (!supabase) return null

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { isPickupComplete, normalizePickupStage } from './pickupConfirmation'
-import type { Booking } from '../types'
+import type { Booking, RequestStatus } from '../types'
 
 const KEY = 'laundry-buddy-booking-snapshots'
 
@@ -20,52 +20,46 @@ async function writeMap(map: Record<string, Booking>): Promise<void> {
   await AsyncStorage.setItem(KEY, JSON.stringify(map))
 }
 
-/** Merge host-side updates into a guest booking — remote wins when further along. */
-export function mergeBookingSnapshot(local: Booking, snapshot: Booking): Booking {
-  const localStageIdx = STAGE_ORDER.indexOf(local.stage)
-  const snapshotStageIdx = STAGE_ORDER.indexOf(snapshot.stage)
-  const snapshotAhead = snapshotStageIdx > localStageIdx
-  const snapshotAccepted =
-    local.requestStatus === 'pending' && snapshot.requestStatus === 'accepted'
-  const snapshotPaid =
-    snapshot.paymentStatus === 'paid' && local.paymentStatus !== 'paid'
-  const snapshotProofSent =
-    !!snapshot.paymentProofSentAt && !local.paymentProofSentAt
-  const snapshotPaymentRequested =
-    !!snapshot.paymentRequestedAt && !local.paymentRequestedAt
-  const snapshotGuestPickup =
-    !!snapshot.guestPickupConfirmedAt && !local.guestPickupConfirmedAt
-  const snapshotHostPickup =
-    !!snapshot.hostPickupConfirmedAt && !local.hostPickupConfirmedAt
-  const snapshotPickupComplete =
-    isPickupComplete(snapshot) && !isPickupComplete(local)
+function mergeRequestStatus(a?: RequestStatus, b?: RequestStatus): RequestStatus {
+  if (a === 'accepted' || b === 'accepted') return 'accepted'
+  if (a === 'declined' || b === 'declined') return 'declined'
+  return a ?? b ?? 'pending'
+}
 
-  if (
-    !snapshotAhead &&
-    !snapshotAccepted &&
-    !snapshotPaid &&
-    !snapshotProofSent &&
-    !snapshotPaymentRequested &&
-    !snapshotGuestPickup &&
-    !snapshotHostPickup &&
-    !snapshotPickupComplete &&
-    snapshot.requestStatus === local.requestStatus
-  ) {
-    return local
-  }
+function latestIso(a?: string, b?: string): string | undefined {
+  if (!a) return b
+  if (!b) return a
+  return Date.parse(a) >= Date.parse(b) ? a : b
+}
 
-  const merged = normalizePickupStage({
-    ...local,
-    ...snapshot,
-    customerId: local.customerId ?? snapshot.customerId,
-    customerName: local.customerName ?? snapshot.customerName,
-    stageTimes: { ...local.stageTimes, ...snapshot.stageTimes },
-    guestPickupConfirmedAt: snapshot.guestPickupConfirmedAt ?? local.guestPickupConfirmedAt,
-    hostPickupConfirmedAt: snapshot.hostPickupConfirmedAt ?? local.hostPickupConfirmedAt,
-    stage: snapshotStageIdx >= localStageIdx ? snapshot.stage : local.stage,
+/** Merge booking state from two sources — never regress accepted → pending. */
+export function mergeBookingSnapshot(a: Booking, b: Booking): Booking {
+  const stageIdx = Math.max(STAGE_ORDER.indexOf(a.stage), STAGE_ORDER.indexOf(b.stage))
+  const stage = STAGE_ORDER[Math.max(0, stageIdx)] ?? a.stage
+
+  return normalizePickupStage({
+    ...a,
+    ...b,
+    requestStatus: mergeRequestStatus(a.requestStatus, b.requestStatus),
+    stage,
+    customerId: a.customerId ?? b.customerId,
+    customerName: a.customerName ?? b.customerName,
+    acceptedAt: latestIso(a.acceptedAt, b.acceptedAt),
+    completedAt: latestIso(a.completedAt, b.completedAt),
+    paymentProofSentAt: latestIso(a.paymentProofSentAt, b.paymentProofSentAt),
+    paymentRequestedAt: latestIso(a.paymentRequestedAt, b.paymentRequestedAt),
+    guestPickupConfirmedAt: latestIso(a.guestPickupConfirmedAt, b.guestPickupConfirmedAt),
+    hostPickupConfirmedAt: latestIso(a.hostPickupConfirmedAt, b.hostPickupConfirmedAt),
+    paymentStatus:
+      a.paymentStatus === 'paid' || b.paymentStatus === 'paid'
+        ? 'paid'
+        : a.paymentStatus ?? b.paymentStatus,
+    stageTimes: { ...a.stageTimes, ...b.stageTimes },
+    loadPhotoUri: b.loadPhotoUri ?? a.loadPhotoUri,
+    dryPhotoUri: b.dryPhotoUri ?? a.dryPhotoUri,
+    clothesList: b.clothesList ?? a.clothesList,
+    createdAt: a.createdAt ?? b.createdAt,
   })
-
-  return normalizePickupStage(merged)
 }
 
 export async function saveBookingSnapshot(booking: Booking): Promise<void> {
@@ -87,9 +81,10 @@ export async function loadBookingSnapshot(bookingId: string): Promise<Booking | 
   return snapshot ? normalizePickupStage(snapshot) : null
 }
 
-export async function loadBookingSnapshotsForCustomer(customerId: string): Promise<Booking[]> {
+export async function loadBookingSnapshotsForCustomer(customerIds: string | string[]): Promise<Booking[]> {
+  const ids = new Set(Array.isArray(customerIds) ? customerIds : [customerIds])
   const map = await readMap()
   return Object.values(map)
-    .filter((booking) => booking.customerId === customerId)
+    .filter((booking) => booking.customerId && ids.has(booking.customerId))
     .map(normalizePickupStage)
 }

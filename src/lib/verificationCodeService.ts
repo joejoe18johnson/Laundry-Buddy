@@ -5,6 +5,7 @@ import { getIdentityVerification, normalizeUserIdentity } from './identityVerifi
 import { normalizePhone } from './phone'
 import { isSupabaseConfigured } from './supabase'
 import { supabaseUpdateProfile } from './supabase/authService'
+import { resolveSupabaseProfileId } from './supabase/profileIds'
 import { adminPatchIdentityVerification } from './supabase/verificationService'
 import {
   assignVerificationCode,
@@ -95,8 +96,13 @@ export async function adminSendVerificationCodeToUser(
   await markVerificationCodeSent(userId, code)
 
   if (isSupabaseConfigured()) {
+    const supabaseUserId = await resolveSupabaseProfileId(user)
+    if (!supabaseUserId) {
+      return { ok: false, error: 'This account is not linked to Supabase. Find the user by phone in the list.' }
+    }
+
     const patchResult = await adminPatchIdentityVerification(
-      userId,
+      supabaseUserId,
       {
         ...getIdentityVerification(user),
         codeRequestStatus: 'code_sent',

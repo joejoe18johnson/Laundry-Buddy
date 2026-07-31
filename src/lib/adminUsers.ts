@@ -6,17 +6,24 @@ import {
   getIdReviewStatus,
   getSelfieReviewStatus,
   hasAddressProof,
+  hasCompletedPhoneVerification,
   hasIdDocument,
   hasSelfie,
   mergeUserProfiles,
+  normalizeIdentityVerification,
   normalizeUserIdentity,
   recomputeOverallVerification,
 } from './identityVerification'
 import { isSupabaseConfigured } from './supabase'
 import { fetchProfileById } from './supabase/authService'
 import { getSupabaseClient } from './supabase/client'
-import { adminPatchIdentityVerification, fetchProfileVerificationAfterPatch } from './supabase/verificationService'
-import { identityVerificationToJson, profileRowToUser } from './supabase/mappers'
+import { isSupabaseProfileId, resolveSupabaseProfileId } from './supabase/profileIds'
+import {
+  adminPatchIdentityVerification,
+  fetchProfileVerificationAfterPatch,
+  syncRepairedVerificationIfNeeded,
+} from './supabase/verificationService'
+import { identityVerificationToJson, parseIdentityVerification, profileRowToUser } from './supabase/mappers'
 
 export type AdminUserActionResult = {
   user: User | null
@@ -64,6 +71,36 @@ async function cacheResolvedUser(user: User, local: User | null): Promise<User> 
   return user
 }
 
+export function isVerificationStuck(
+  user: Pick<User, 'role' | 'phone' | 'identityVerification'>,
+  rawVerification: IdentityVerification,
+): boolean {
+  const normalized = normalizeIdentityVerification(user, rawVerification)
+  return rawVerification.status === 'pending' && normalized.status === 'verified'
+}
+
+/** When admin approved each document but overall status stayed pending, persist the fix. */
+export async function repairStuckVerificationIfNeeded(
+  user: User,
+  rawVerification: IdentityVerification,
+): Promise<User> {
+  const supabaseUserId = (await resolveSupabaseProfileId(user)) ?? user.id
+  const synced = await syncRepairedVerificationIfNeeded(supabaseUserId, rawVerification, user)
+  if (!synced) {
+    return normalizeUserIdentity({ ...user, identityVerification: rawVerification })
+  }
+  return normalizeUserIdentity({ ...user, id: supabaseUserId, identityVerification: synced })
+}
+
+async function resolveSupabaseUser(user: User): Promise<{ user: User; supabaseUserId: string | null }> {
+  const supabaseUserId = isSupabaseConfigured() ? await resolveSupabaseProfileId(user) : null
+  const canonicalId = supabaseUserId ?? user.id
+  return {
+    user: canonicalId === user.id ? user : { ...user, id: canonicalId },
+    supabaseUserId,
+  }
+}
+
 /** Resolve a user from local cache and Supabase, preferring the latest verification state. */
 export async function resolveUserById(userId: string): Promise<User | null> {
   const local = await getUserById(userId)
@@ -72,15 +109,22 @@ export async function resolveUserById(userId: string): Promise<User | null> {
     return local
   }
 
+  const lookupUser = local ?? ({ id: userId } as User)
+  const supabaseUserId = await resolveSupabaseProfileId(lookupUser)
+  const remoteId = supabaseUserId ?? (isSupabaseProfileId(userId) ? userId : null)
+
   let remote: User | null = null
-  try {
-    remote = await fetchProfileById(userId)
-  } catch {
-    remote = null
+  if (remoteId) {
+    try {
+      remote = await fetchProfileById(remoteId)
+    } catch {
+      remote = null
+    }
   }
 
   if (local && remote) {
-    return cacheResolvedUser(mergeUserProfiles(remote, local), local)
+    const merged = mergeUserProfiles(remote, { ...local, id: remote.id })
+    return cacheResolvedUser(merged, local)
   }
 
   if (remote) {
@@ -113,12 +157,28 @@ export async function listAllUsers(): Promise<User[]> {
   }
 
   const merged = new Map<string, User>()
-  for (const entry of data.map(profileRowToUser)) {
-    merged.set(entry.id, entry)
+  for (const row of data) {
+    const rawVerification = parseIdentityVerification(row.identity_verification)
+    const baseUser = profileRowToUser(row)
+    const repaired = await repairStuckVerificationIfNeeded(baseUser, rawVerification)
+    merged.set(repaired.id, repaired)
   }
   for (const entry of localUsers) {
-    const remote = merged.get(entry.id)
-    merged.set(entry.id, remote ? mergeUserProfiles(remote, entry) : entry)
+    if (isSupabaseProfileId(entry.id)) {
+      const remote = merged.get(entry.id)
+      merged.set(entry.id, remote ? mergeUserProfiles(remote, entry) : entry)
+      continue
+    }
+
+    const resolvedId = await resolveSupabaseProfileId(entry)
+    if (resolvedId && merged.has(resolvedId)) {
+      merged.set(resolvedId, mergeUserProfiles(merged.get(resolvedId)!, entry))
+      continue
+    }
+
+    if (!merged.has(entry.id)) {
+      merged.set(entry.id, entry)
+    }
   }
 
   return sortUsersNewestFirst(Array.from(merged.values()))
@@ -132,7 +192,7 @@ export function usersPendingIdReview(users: User[]): User[] {
   return sortUsersNewestFirst(
     users.filter((entry) => {
       const verification = getIdentityVerification(entry)
-      if (!verification.phoneVerified) return false
+      if (!hasCompletedPhoneVerification(verification)) return false
 
       const idNeedsReview = hasIdDocument(verification) && getIdReviewStatus(verification) === 'pending'
       const selfieNeedsReview = hasSelfie(verification) && getSelfieReviewStatus(verification) === 'pending'
@@ -146,24 +206,53 @@ export function usersPendingIdReview(users: User[]): User[] {
   )
 }
 
+/** Users approved doc-by-doc but Supabase overall status still pending. */
+export function usersStuckPendingVerification(
+  users: User[],
+  rawVerificationByUserId?: Map<string, IdentityVerification>,
+): User[] {
+  return sortUsersNewestFirst(
+    users.filter((entry) => {
+      const raw = rawVerificationByUserId?.get(entry.id)
+      if (raw) {
+        return isVerificationStuck(entry, raw)
+      }
+
+      const verification = getIdentityVerification(entry)
+      if (verification.status !== 'pending') return false
+      if (!hasCompletedPhoneVerification(verification)) return false
+
+      const idOk = !hasIdDocument(verification) || getIdReviewStatus(verification) === 'approved'
+      const selfieOk = !hasSelfie(verification) || getSelfieReviewStatus(verification) === 'approved'
+      const addressOk =
+        entry.role !== 'host' ||
+        !hasAddressProof(verification) ||
+        getAddressReviewStatus(verification) === 'approved'
+
+      return idOk && selfieOk && addressOk
+    }),
+  )
+}
+
 export async function markPhoneVerifiedForUser(userId: string, phone?: string): Promise<User | null> {
   const user = await resolveUserById(userId)
   if (!user) return null
 
-  const current = getIdentityVerification(user)
+  const { user: canonicalUser, supabaseUserId } = await resolveSupabaseUser(user)
+  const current = getIdentityVerification(canonicalUser)
   const verification = {
     ...current,
     phoneVerified: true,
-    verifiedPhone: phone ?? current.verifiedPhone ?? user.phone,
+    verifiedPhone: phone ?? current.verifiedPhone ?? canonicalUser.phone,
   }
 
   const updated: User = normalizeUserIdentity({
-    ...user,
-    phone: phone ?? user.phone,
+    ...canonicalUser,
+    phone: phone ?? canonicalUser.phone,
     identityVerification: verification,
   })
 
-  if (isSupabaseConfigured()) {
+  if (isSupabaseConfigured() && supabaseUserId) {
     const supabase = getSupabaseClient()
     if (supabase) {
       const { error } = await supabase
@@ -172,7 +261,7 @@ export async function markPhoneVerifiedForUser(userId: string, phone?: string): 
           phone: updated.phone ?? null,
           identity_verification: identityVerificationToJson(verification),
         })
-        .eq('id', userId)
+        .eq('id', supabaseUserId)
       if (error) throw error
     }
   }
@@ -189,24 +278,53 @@ export async function patchUserIdentityVerification(
   const user = await resolveUserById(userId)
   if (!user) return { user: null, error: 'User not found.' }
 
-  const verification = recomputeOverallVerification(user, {
-    ...getIdentityVerification(user),
+  const { user: canonicalUser, supabaseUserId } = await resolveSupabaseUser(user)
+  const verification = recomputeOverallVerification(canonicalUser, {
+    ...getIdentityVerification(canonicalUser),
     ...patch,
   })
 
   const updated: User = normalizeUserIdentity({
-    ...user,
+    ...canonicalUser,
     identityVerification: verification,
   })
 
   if (isSupabaseConfigured()) {
-    const patchResult = await adminPatchIdentityVerification(userId, verification, actingUser)
+    if (!supabaseUserId) {
+      await saveUser(updated)
+      return {
+        user: updated,
+        error:
+          'This training account is not linked to Supabase. Find the same person by phone in the user list, or ask them to sign up on a device with Supabase connected.',
+      }
+    }
+
+    const patchResult = await adminPatchIdentityVerification(supabaseUserId, verification, actingUser)
     if (!patchResult.ok) {
       return { user: null, error: patchResult.error }
     }
 
-    const serverUser = await fetchProfileVerificationAfterPatch(userId)
+    let serverUser = await fetchProfileVerificationAfterPatch(supabaseUserId)
     if (serverUser) {
+      const normalized = normalizeUserIdentity(serverUser)
+      const serverStatus = getIdentityVerification(serverUser).status
+      const normalizedStatus = getIdentityVerification(normalized).status
+
+      if (normalizedStatus !== serverStatus) {
+        const syncResult = await adminPatchIdentityVerification(
+          supabaseUserId,
+          getIdentityVerification(normalized),
+          actingUser,
+        )
+        if (syncResult.ok) {
+          serverUser = (await fetchProfileVerificationAfterPatch(supabaseUserId)) ?? normalized
+        } else {
+          serverUser = normalized
+        }
+      } else if (normalizedStatus !== getIdentityVerification(serverUser).status) {
+        serverUser = normalized
+      }
+
       await saveUser(serverUser)
       return { user: serverUser }
     }

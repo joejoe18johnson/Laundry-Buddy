@@ -32,7 +32,7 @@ export function getIdentityVerification(user: User): IdentityVerification {
 }
 
 export function normalizeUserIdentity(user: User): User {
-  const verification = getIdentityVerification(user)
+  const verification = normalizeIdentityVerification(user, getIdentityVerification(user))
   const { hostVerification: _legacy, ...rest } = user
   return { ...rest, identityVerification: verification }
 }
@@ -101,13 +101,13 @@ export function mergeUserProfiles(supabaseUser: User, localUser: User): User {
   let verification = mergeIdentityVerification(remoteVerification, localVerification)
 
   if (isSupabaseConfigured()) {
-    verification = recomputeOverallVerification(supabaseUser, {
+    verification = normalizeIdentityVerification(supabaseUser, {
       ...verification,
-      status: remoteVerification.status,
       idReviewStatus: remoteVerification.idReviewStatus ?? verification.idReviewStatus,
       selfieReviewStatus: remoteVerification.selfieReviewStatus ?? verification.selfieReviewStatus,
       addressReviewStatus: remoteVerification.addressReviewStatus ?? verification.addressReviewStatus,
-      phoneVerified: remoteVerification.phoneVerified || verification.phoneVerified,
+      verifiedPhone: remoteVerification.verifiedPhone ?? verification.verifiedPhone,
+      codeRequestStatus: remoteVerification.codeRequestStatus ?? verification.codeRequestStatus,
     })
   }
 
@@ -142,7 +142,36 @@ export function verificationCodeRequestFromUser(user: User): VerificationCodeReq
 }
 
 export function isPhoneVerificationComplete(user: User): boolean {
-  return getIdentityVerification(user).phoneVerified
+  return hasCompletedPhoneVerification(getIdentityVerification(user))
+}
+
+/** Phone step is done when the code was accepted or documents were submitted after verify. */
+export function hasCompletedPhoneVerification(verification: IdentityVerification): boolean {
+  if (verification.phoneVerified) return true
+  if (verification.codeRequestStatus === 'completed') return true
+  if (
+    verification.verifiedPhone &&
+    (verification.idUploaded ||
+      !!verification.idPhotoUri ||
+      verification.selfieUploaded ||
+      !!verification.selfiePhotoUri)
+  ) {
+    return true
+  }
+  return false
+}
+
+/** Recompute overall status and fix stale pending/phone flags from Supabase JSON. */
+export function normalizeIdentityVerification(
+  user: Pick<User, 'role' | 'phone'>,
+  verification: IdentityVerification,
+): IdentityVerification {
+  const phoneComplete = hasCompletedPhoneVerification(verification)
+  return recomputeOverallVerification(user, {
+    ...verification,
+    phoneVerified: phoneComplete || verification.phoneVerified,
+    verifiedPhone: verification.verifiedPhone ?? user.phone,
+  })
 }
 
 export function marketplaceLockMessage(role: AppRole, status: VerificationStatus = 'none'): string {
@@ -366,7 +395,10 @@ export function canAdminReviewAddress(user: User): boolean {
 }
 
 /** Derive overall verification status from phone, ID, selfie, and address review states. */
-export function recomputeOverallVerification(user: User, verification: IdentityVerification): IdentityVerification {
+export function recomputeOverallVerification(
+  user: Pick<User, 'role'>,
+  verification: IdentityVerification,
+): IdentityVerification {
   const idStatus = getIdReviewStatus(verification)
   const selfieStatus = getSelfieReviewStatus(verification)
   const addressStatus = getAddressReviewStatus(verification)
@@ -378,8 +410,9 @@ export function recomputeOverallVerification(user: User, verification: IdentityV
   const idOk = idStatus === 'approved'
   const selfieOk = selfieStatus === 'approved'
   const addressOk = user.role !== 'host' || addressStatus === 'approved'
+  const phoneOk = hasCompletedPhoneVerification(verification)
 
-  if (verification.phoneVerified && idOk && selfieOk && addressOk) {
+  if (phoneOk && idOk && selfieOk && addressOk) {
     return { ...verification, status: 'verified', phoneVerified: true }
   }
 
