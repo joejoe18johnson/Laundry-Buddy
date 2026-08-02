@@ -270,9 +270,7 @@ export function HostHubScreen() {
   const dropOffHoursLabel = formatDropOffAvailability(draft.dropOffAvailability)
 
   const handleOnlineToggle = async (online: boolean) => {
-    const next = { ...draft, isOnline: online }
-    setDraft(next)
-    await updateHostSettings(next)
+    await updateHostSettings({ ...draft, isOnline: online })
   }
 
   const handleSave = async () => {
@@ -378,15 +376,14 @@ export function HostHubScreen() {
             </Text>
             <Text style={styles.onlineSub}>
               {withinDropOffHours
-                ? toTitleCase(`Automatic during ${dropOffHoursLabel}. Toggle offline only outside these hours.`)
-                : effectivelyOnline
+                ? toTitleCase(`Automatic during ${dropOffHoursLabel}. You're visible now — turn off to stay offline after hours.`)
+                : draft.isOnline
                   ? toTitleCase('Guests can find and book your dryer right now.')
                   : toTitleCase('Go online when you are ready to accept loads.')}
             </Text>
           </View>
           <BrandSwitch
-            value={effectivelyOnline}
-            disabled={withinDropOffHours}
+            value={draft.isOnline}
             onValueChange={handleOnlineToggle}
             accent="green"
           />

@@ -12,7 +12,7 @@
     "lint": "expo lint",
     "generate-assets": "node scripts/generate-assets.mjs",
     "sync-app-icons": "node scripts/sync-app-icons.mjs",
-    "prebuild": "expo prebuild",
+    "prebuild": "npm run sync-app-icons && expo prebuild",
     "prebuild:clean": "expo prebuild --clean",
     "build:preview": "eas build --profile preview --platform android",
     "build:preview:all": "eas build --profile preview --platform all",

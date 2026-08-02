@@ -99,14 +99,26 @@ npm run prebuild:clean
 
 EAS cloud builds use the committed `ios/` and `android/` projects; run prebuild before pushing when native config changes.
 
-### App icons
+### App icons & branding
 
-Brand artwork lives in `assets/`:
+**Launcher / store icons** — all in `assets/AppIcons/` (see that folder’s README):
 
-- `logo-icon.png` — main logo (in-app UI, splash, and launcher generation)
-- `lb-mascot.png` — mascot (animated splash)
+- Edit **`assets/AppIcons/appstore.png`** (1024×1024 launcher master)
+- Edit **`assets/AppIcons/status-icon.png`** for push notifications and the Android status bar (white silhouette on transparent)
+- Then run:
 
-Regenerate launcher, favicon, and notification sizes from the logo with:
+```bash
+npm run sync-app-icons
+```
+
+This updates Play/App Store assets, Android mipmaps, iOS catalog, and native `ios/` + `android/` projects. It also runs automatically before `npm run prebuild`.
+
+**In-app branding** (separate from launcher icons):
+
+- `assets/logo-icon.png` — wordmark (splash + UI)
+- `assets/lb-mascot.png` — mascot (animated splash)
+
+Regenerate native splash drawables from the wordmark:
 
 ```bash
 npm run generate-assets

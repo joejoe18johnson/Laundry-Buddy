@@ -31,6 +31,7 @@ import {
 import { listAllUsers } from '../lib/adminUsers'
 import { chatLink } from '../lib/notificationLinks'
 import { isSupabaseConfigured } from '../lib/supabase'
+import { resolveSupabaseProfileId } from '../lib/supabase/profileIds'
 import { subscribeToChatInserts } from '../lib/supabase/messageService'
 import type { AppRole, Booking, ChatMessage } from '../types'
 
@@ -53,6 +54,7 @@ interface MessageState {
   unreadCount: (threadId: string) => number
   totalUnreadCount: number
   openSupportChat: () => string
+  messagingUserId: string | null
 }
 
 const MessageContext = createContext<MessageState | null>(null)
@@ -68,14 +70,29 @@ export function MessageProvider({ children }: { children: ReactNode }) {
   const { push } = useNotifications()
   const [messagesByThread, setMessagesByThread] = useState<Record<string, ChatMessage[]>>({})
   const [unreadByThread, setUnreadByThread] = useState<Record<string, number>>({})
+  const [messagingUserId, setMessagingUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!user) {
+      setMessagingUserId(null)
+      return
+    }
+    void (async () => {
+      const resolved = isSupabaseConfigured()
+        ? ((await resolveSupabaseProfileId(user)) ?? user.id)
+        : user.id
+      setMessagingUserId(resolved)
+    })()
+  }, [user])
 
   const refreshUnread = useCallback(
     async (threadId: string, messages: ChatMessage[]) => {
       if (!user) return
-      const count = await countUnreadInThread(user.id, threadId, messages)
+      const readerId = messagingUserId ?? user.id
+      const count = await countUnreadInThread(readerId, threadId, messages)
       setUnreadByThread((prev) => ({ ...prev, [threadId]: count }))
     },
-    [user],
+    [messagingUserId, user],
   )
 
   const refreshThread = useCallback(
@@ -146,16 +163,18 @@ export function MessageProvider({ children }: { children: ReactNode }) {
   const markRead = useCallback(
     async (threadId: string) => {
       if (!user) return
-      await markThreadRead(user.id, threadId)
+      const readerId = messagingUserId ?? user.id
+      await markThreadRead(readerId, threadId)
       setUnreadByThread((prev) => ({ ...prev, [threadId]: 0 }))
     },
-    [user],
+    [messagingUserId, user],
   )
 
   const markAllRead = useCallback(
     async (threadIds: string[]) => {
       if (!user || threadIds.length === 0) return
-      await markAllThreadsRead(user.id, threadIds)
+      const readerId = messagingUserId ?? user.id
+      await markAllThreadsRead(readerId, threadIds)
       setUnreadByThread((prev) => {
         const next = { ...prev }
         for (const threadId of threadIds) {
@@ -164,7 +183,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         return next
       })
     },
-    [user],
+    [messagingUserId, user],
   )
 
   const sendMessage = useCallback(
@@ -180,10 +199,14 @@ export function MessageProvider({ children }: { children: ReactNode }) {
       const trimmed = text?.trim()
       if (!trimmed && !imageUri) return null
 
+      const senderId = isSupabaseConfigured()
+        ? ((await resolveSupabaseProfileId(user)) ?? user.id)
+        : user.id
+
       const message: ChatMessage = {
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         threadId,
-        senderId: user.id,
+        senderId,
         senderName: user.name,
         senderRole: user.role,
         text: trimmed || undefined,
@@ -200,7 +223,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         throw new Error(messageText)
       }
       setMessagesByThread((prev) => ({ ...prev, [threadId]: next }))
-      await markThreadRead(user.id, threadId)
+      await markThreadRead(senderId, threadId)
       setUnreadByThread((prev) => ({ ...prev, [threadId]: 0 }))
 
       if (isSupportThread(threadId)) {
@@ -299,8 +322,9 @@ export function MessageProvider({ children }: { children: ReactNode }) {
       unreadCount,
       totalUnreadCount,
       openSupportChat,
+      messagingUserId,
     }),
-    [getMessages, markAllRead, markRead, openSupportChat, refreshThread, refreshThreads, sendMessage, totalUnreadCount, unreadCount],
+    [getMessages, markAllRead, markRead, messagingUserId, openSupportChat, refreshThread, refreshThreads, sendMessage, totalUnreadCount, unreadCount],
   )
 
   return <MessageContext.Provider value={value}>{children}</MessageContext.Provider>

@@ -131,6 +131,7 @@ export function DashboardScreen() {
     ? applyHostSettings(rawHost, hostSettings)
     : rawHost
   const isOnline = hostSettings ? resolveEffectiveHostOnline(hostSettings) : false
+  const manualOnline = hostSettings?.isOnline ?? false
   const withinDropOffHours = hostSettings
     ? isWithinDropOffAvailability(hostSettings.dropOffAvailability)
     : false
@@ -205,8 +206,8 @@ export function DashboardScreen() {
             </Text>
             <Text style={styles.onlineSub}>
               {withinDropOffHours
-                ? toTitleCase(`Automatic during ${dropOffHoursLabel}. Go offline only outside these hours.`)
-                : isOnline
+                ? toTitleCase(`Automatic during ${dropOffHoursLabel}. Turn off below to stay offline after hours.`)
+                : manualOnline
                   ? toTitleCase('Tap to go offline when you are done for the day')
                   : toTitleCase('Go online to start receiving bookings')}
             </Text>
@@ -214,8 +215,7 @@ export function DashboardScreen() {
         </View>
         <BrandSwitch
           accent="green"
-          value={isOnline}
-          disabled={withinDropOffHours}
+          value={manualOnline}
           onValueChange={toggleOnline}
         />
       </View>

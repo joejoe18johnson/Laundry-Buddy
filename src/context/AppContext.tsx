@@ -20,6 +20,7 @@ import {
   getAvailableHosts,
 } from '../data/mockData'
 import { getAllUsers } from '../lib/authStorage'
+import { resolveUserById } from '../lib/adminUsers'
 import { calculateBookingTotal, applyHostPricing, getHostPricing } from '../lib/hostPricing'
 import { hasOpenHostLoad } from '../lib/hostLoads'
 import { formatMoney, getBookingAmount } from '../lib/bookingPayments'
@@ -220,7 +221,7 @@ interface AppState {
   openHostInquiryChat: (host: Host) => void
   setShowMap: (show: boolean) => void
   getSettingsForHost: (hostUserId?: string) => HostSettings
-  updateHostSettings: (settings: HostSettings) => Promise<void>
+  updateHostSettings: (settings: HostSettings) => Promise<boolean>
   confirmBooking: (details: {
     dropOffTime: DropOffHour
     loads: number
@@ -812,25 +813,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 
   const updateHostSettings = useCallback(
-    async (settings: HostSettings) => {
-      if (role !== 'host' || !user) return
+    async (settings: HostSettings): Promise<boolean> => {
+      if (role !== 'host' || !user) return false
       if (settings.isOnline && !isIdentityVerified(user)) {
         showToast(marketplaceLockMessage('host', getIdentityVerification(user).status), { icon: 'shield' })
         setScreen('identity-verification')
-        return
+        return false
       }
       if (
         !settings.isOnline &&
         isWithinDropOffAvailability(settings.dropOffAvailability)
       ) {
         showToast('You stay online automatically during your drop-off hours.', { icon: 'clock' })
-        return
+        return false
       }
       const wasOnline = hostSettingsMap[user.id]?.isOnline ?? false
       const mergedMap = { ...hostSettingsMap, [user.id]: settings }
-      if (!isSupabaseConfigured()) {
-        await saveHostSettings(user.id, settings)
-      }
+
+      await saveHostSettings(user.id, settings)
       setHostSettings(settings)
       setHostSettingsMap(mergedMap)
 
@@ -844,6 +844,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const { settingsMap } = await mergeRemoteMarketplaceCatalog(mergedMap)
       setHostSettingsMap(settingsMap)
+      setHostSettings(settingsMap[user.id] ?? settings)
       setDynamicHostsVersion((version) => version + 1)
       showToast('Settings saved', { icon: 'check' })
 
@@ -862,6 +863,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           )
         }
       }
+
+      return true
     },
     [role, user, hostSettingsMap, push, showToast],
   )
@@ -934,7 +937,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [refreshHostCompletedLoads, role, user])
 
   const refreshHostData = useCallback(async () => {
-    const localMap = isSupabaseConfigured() ? {} : await getAllHostSettings()
+    const localMap = await getAllHostSettings()
     const { settingsMap } = await mergeRemoteMarketplaceCatalog(localMap)
     setHostSettingsMap(settingsMap)
     if (role === 'host' && user) {
@@ -1271,7 +1274,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         showToast('This host is not available for messaging right now.', { icon: 'info' })
         return
       }
-      openChat(inquiryThreadId(user.id, host.hostUserId))
+
+      void (async () => {
+        const guestId =
+          isSupabaseConfigured() ? ((await resolveSupabaseProfileId(user)) ?? user.id) : user.id
+        let hostUserId = host.hostUserId!
+        if (isSupabaseConfigured()) {
+          const hostProfile = await resolveUserById(hostUserId)
+          if (hostProfile) {
+            hostUserId = (await resolveSupabaseProfileId(hostProfile)) ?? hostUserId
+          }
+        }
+        openChat(inquiryThreadId(guestId, hostUserId))
+      })()
     },
     [openChat, role, showToast, user],
   )
@@ -2399,4 +2414,9 @@ export function useApp() {
   const ctx = useContext(AppContext)
   if (!ctx) throw new Error('useApp must be used within AppProvider')
   return ctx
+}
+
+/** Safe for screens (e.g. admin support chat) rendered outside AppProvider. */
+export function useOptionalApp() {
+  return useContext(AppContext)
 }

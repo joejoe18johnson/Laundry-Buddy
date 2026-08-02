@@ -72,8 +72,10 @@ export async function loadThreadMessages(threadId: string): Promise<ChatMessage[
   if (isSupabaseConfigured()) {
     try {
       const remote = await fetchThreadMessagesFromSupabase(threadId)
-      await cacheThreadMessages(threadId, remote)
-      return remote
+      if (remote.length > 0) {
+        await cacheThreadMessages(threadId, remote)
+        return remote
+      }
     } catch {
       // Fall back to local cache when offline or RLS blocks read.
     }
@@ -85,9 +87,13 @@ export async function loadThreadMessages(threadId: string): Promise<ChatMessage[
 
 export async function appendThreadMessage(message: ChatMessage): Promise<ChatMessage[]> {
   if (isSupabaseConfigured()) {
-    const list = await insertChatMessageToSupabase(message)
-    await cacheThreadMessages(message.threadId, list)
-    return list
+    try {
+      const list = await insertChatMessageToSupabase(message)
+      await cacheThreadMessages(message.threadId, list)
+      return list
+    } catch (error) {
+      console.warn('[chat] remote insert failed, saving locally:', error)
+    }
   }
 
   const map = await readMessageMap()

@@ -6,11 +6,13 @@ import sharp from 'sharp'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
 const appIconsDir = path.join(root, 'assets', 'AppIcons')
-const assetsDir = path.join(root, 'assets')
 const androidRes = path.join(root, 'android', 'app', 'src', 'main', 'res')
 const iosIconDir = path.join(root, 'ios', 'LaundryBuddy', 'Images.xcassets', 'AppIcon.appiconset')
 
+/** Master 1024×1024 launcher icon — edit this, then run npm run sync-app-icons */
 const APP_ICON = path.join(appIconsDir, 'appstore.png')
+/** Notification / status-bar icon — edit this directly; used by Expo + Android native */
+const STATUS_ICON = path.join(appIconsDir, 'status-icon.png')
 const ANDROID_DENSITIES = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']
 const ICON_BACKGROUND = '#0f1118'
 /** Scale factor for the logo inside the icon canvas (0.7 = 30% smaller). */
@@ -22,6 +24,14 @@ const ANDROID_LAUNCHER_SIZES = {
   xhdpi: 96,
   xxhdpi: 144,
   xxxhdpi: 192,
+}
+
+const ANDROID_NOTIFICATION_SIZES = {
+  mdpi: 24,
+  hdpi: 36,
+  xhdpi: 48,
+  xxhdpi: 72,
+  xxxhdpi: 96,
 }
 
 function parseHexColor(hex) {
@@ -64,36 +74,27 @@ async function writeWebpFromPaddedIcon(sourcePath, dest, size, options) {
   await (await buildPaddedIcon(sourcePath, size, options)).webp({ quality: 95 }).toFile(dest)
 }
 
-async function notificationIconFromAppIcon(sourcePath, size) {
-  const padded = await buildPaddedIcon(sourcePath, size, { scale: ICON_SCALE })
-  const { data, info } = await padded.ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-
-  const out = Buffer.alloc(info.width * info.height * 4)
-  for (let i = 0; i < info.width * info.height; i += 1) {
-    const src = i * info.channels
-    const dst = i * 4
-    const r = data[src]
-    const g = data[src + 1]
-    const b = data[src + 2]
-    const lum = (r + g + b) / 3
-    if (lum > 160) {
-      out[dst] = 255
-      out[dst + 1] = 255
-      out[dst + 2] = 255
-      out[dst + 3] = 255
-    }
-  }
-
-  return sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } })
+async function writeNotificationDrawable(sourcePath, dest, size) {
+  await fs.mkdir(path.dirname(dest), { recursive: true })
+  await sharp(sourcePath)
+    .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toFile(dest)
 }
 
-async function syncExpoAssets() {
-  await writePng(APP_ICON, path.join(assetsDir, 'icon.png'), 1024, {})
-  await writePng(APP_ICON, path.join(assetsDir, 'adaptive-icon.png'), 1024, { transparent: true })
-  await writePng(APP_ICON, path.join(assetsDir, 'favicon.png'), 96, {})
-  await (await notificationIconFromAppIcon(APP_ICON, 96))
-    .png()
-    .toFile(path.join(assetsDir, 'notification-icon.png'))
+async function syncAppIconsCatalog() {
+  const catalogIcon = path.join(appIconsDir, 'Assets.xcassets', 'AppIcon.appiconset', '1024.png')
+  await writePng(APP_ICON, catalogIcon, 1024, {})
+  await writePng(APP_ICON, path.join(appIconsDir, 'playstore.png'), 512, {})
+  await writePng(APP_ICON, path.join(appIconsDir, 'android', 'adaptive-foreground.png'), 1024, {
+    transparent: true,
+  })
+
+  for (const density of ANDROID_DENSITIES) {
+    const size = ANDROID_LAUNCHER_SIZES[density]
+    const mipmapDir = path.join(appIconsDir, 'android', `mipmap-${density}`)
+    await writePng(APP_ICON, path.join(mipmapDir, 'ic_launcher.png'), size, {})
+  }
 }
 
 async function syncIos() {
@@ -114,10 +115,12 @@ async function syncAndroid() {
       { transparent: true },
     )
 
-    const notificationSize = Math.round(24 * { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 }[density])
-    await (await notificationIconFromAppIcon(APP_ICON, notificationSize))
-      .png()
-      .toFile(path.join(androidRes, `drawable-${density}`, 'notification_icon.png'))
+    const notificationSize = ANDROID_NOTIFICATION_SIZES[density]
+    await writeNotificationDrawable(
+      STATUS_ICON,
+      path.join(androidRes, `drawable-${density}`, 'notification_icon.png'),
+      notificationSize,
+    )
   }
 
   const colorsPath = path.join(androidRes, 'values', 'colors.xml')
@@ -129,26 +132,14 @@ async function syncAndroid() {
   await fs.writeFile(colorsPath, colors)
 }
 
-async function syncSourceCatalog() {
-  const catalogIcon = path.join(appIconsDir, 'Assets.xcassets', 'AppIcon.appiconset', '1024.png')
-  await writePng(APP_ICON, catalogIcon, 1024, {})
-  await writePng(APP_ICON, path.join(appIconsDir, 'playstore.png'), 512, {})
-
-  for (const density of ANDROID_DENSITIES) {
-    const size = ANDROID_LAUNCHER_SIZES[density]
-    const mipmapDir = path.join(appIconsDir, 'android', `mipmap-${density}`)
-    await writePng(APP_ICON, path.join(mipmapDir, 'ic_launcher.png'), size, {})
-  }
-}
-
 async function main() {
   await fs.access(APP_ICON)
-  await syncSourceCatalog()
-  await syncExpoAssets()
+  await fs.access(STATUS_ICON)
+  await syncAppIconsCatalog()
   await syncIos()
   await syncAndroid()
   console.log(
-    `Synced app icons at ${Math.round(ICON_SCALE * 100)}% scale (30% smaller) from assets/AppIcons/appstore.png`,
+    'Synced launcher icons from appstore.png and notification icons from status-icon.png into native projects',
   )
 }
 

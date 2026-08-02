@@ -10,9 +10,7 @@ const androidRes = path.join(root, 'android', 'app', 'src', 'main', 'res')
 const iosDir = path.join(root, 'ios', 'LaundryBuddy', 'Images.xcassets')
 
 const LOGO_SOURCE = path.join(assetsDir, 'logo-icon.png')
-const BG_MAX_CHANNEL = 12
 const BRAND_WHITE = { r: 255, g: 255, b: 255, alpha: 1 }
-const BRAND_BLACK = { r: 0, g: 0, b: 0, alpha: 1 }
 /** Android 12+ masks splash icons to a 192dp circle on a 288dp canvas. */
 const ANDROID_SPLASH_CANVAS_DP = 288
 const ANDROID_SPLASH_IMAGE_WIDTH_DP = 168
@@ -25,73 +23,16 @@ const DENSITIES = [
   { folder: 'xxxhdpi', scale: 4 },
 ]
 
-/** Strip pure-black background while keeping dark line art and green accents. */
-async function buildTransparentLogo(sourcePath) {
-  const { data, info } = await sharp(sourcePath).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-  const out = Buffer.alloc(data.length)
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i]
-    const g = data[i + 1]
-    const b = data[i + 2]
-    const isGreen = g > r + 18 && g > b + 18 && g > 45
-    const isBackground = !isGreen && r <= BG_MAX_CHANNEL && g <= BG_MAX_CHANNEL && b <= BG_MAX_CHANNEL
-
-    if (isBackground) {
-      out[i] = 0
-      out[i + 1] = 0
-      out[i + 2] = 0
-      out[i + 3] = 0
-    } else {
-      out[i] = r
-      out[i + 1] = g
-      out[i + 2] = b
-      out[i + 3] = 255
-    }
-  }
-
-  const trimmed = await sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } })
-    .trim()
-    .png()
-    .toBuffer()
-
-  return sharp(trimmed)
-}
-
-async function renderLogo(logoPipeline, size) {
-  return logoPipeline
-    .clone()
-    .resize(Math.round(size), Math.round(size), { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-}
-
 async function writePng(pipeline, filePath) {
   await fs.mkdir(path.dirname(filePath), { recursive: true })
   await pipeline.png().toFile(filePath)
 }
 
-async function writeWebp(pipeline, filePath) {
-  await fs.mkdir(path.dirname(filePath), { recursive: true })
-  await pipeline.webp({ quality: 95 }).toFile(filePath)
-}
-
-/** Store / launcher icon: transparent mark on dark square. */
-async function launcherIcon(logoPipeline, size) {
-  const logoBuffer = await (await renderLogo(logoPipeline, Math.round(size * 0.92))).png().toBuffer()
-  return sharp({
-    create: { width: size, height: size, channels: 4, background: BRAND_BLACK },
-  }).composite([{ input: logoBuffer, gravity: 'center' }])
-}
-
-async function adaptiveForeground(logoPipeline, size) {
-  const logoBuffer = await (await renderLogo(logoPipeline, Math.round(size * 0.72))).png().toBuffer()
-  return sharp({
-    create: {
-      width: size,
-      height: size,
-      channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    },
-  }).composite([{ input: logoBuffer, gravity: 'center' }])
+async function renderLogo(sourcePath, size) {
+  return sharp(sourcePath).resize(Math.round(size), Math.round(size), {
+    fit: 'contain',
+    background: { r: 0, g: 0, b: 0, alpha: 0 },
+  })
 }
 
 /** Full wordmark centered on Android's 288dp splash canvas (fits inside the 192dp circle mask). */
@@ -112,60 +53,19 @@ async function androidSplashIcon(wordmarkPath, multiplier) {
   }).composite([{ input: logoBuffer, gravity: 'center' }])
 }
 
-async function notificationIcon(logoPipeline, size) {
-  const { data, info } = await logoPipeline
-    .clone()
-    .resize(Math.round(size), Math.round(size), { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true })
-
-  const out = Buffer.alloc(info.width * info.height * 4)
-  for (let i = 0; i < info.width * info.height; i += 1) {
-    const src = i * info.channels
-    const dst = i * 4
-    const alpha = info.channels === 4 ? data[src + 3] : 255
-    if (alpha > 24) {
-      out[dst] = 255
-      out[dst + 1] = 255
-      out[dst + 2] = 255
-      out[dst + 3] = 255
-    }
-  }
-
-  return sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } })
-}
-
 async function main() {
   await fs.access(LOGO_SOURCE)
-  const logoPipeline = await buildTransparentLogo(LOGO_SOURCE)
 
-  await writePng(await launcherIcon(logoPipeline, 1024), path.join(assetsDir, 'icon.png'))
-  await writePng(await adaptiveForeground(logoPipeline, 1024), path.join(assetsDir, 'adaptive-icon.png'))
-  await writePng(await renderLogo(logoPipeline, 96), path.join(assetsDir, 'favicon.png'))
-  await writePng(await notificationIcon(logoPipeline, 96), path.join(assetsDir, 'notification-icon.png'))
-
-  await writePng(await launcherIcon(logoPipeline, 1024), path.join(iosDir, 'AppIcon.appiconset', 'App-Icon-1024x1024@1x.png'))
-  await writePng(await renderLogo(logoPipeline, 200), path.join(iosDir, 'SplashScreenLogo.imageset', 'image.png'))
-  await writePng(await renderLogo(logoPipeline, 400), path.join(iosDir, 'SplashScreenLogo.imageset', 'image@2x.png'))
-  await writePng(await renderLogo(logoPipeline, 600), path.join(iosDir, 'SplashScreenLogo.imageset', 'image@3x.png'))
+  await writePng(await renderLogo(LOGO_SOURCE, 200), path.join(iosDir, 'SplashScreenLogo.imageset', 'image.png'))
+  await writePng(await renderLogo(LOGO_SOURCE, 400), path.join(iosDir, 'SplashScreenLogo.imageset', 'image@2x.png'))
+  await writePng(await renderLogo(LOGO_SOURCE, 600), path.join(iosDir, 'SplashScreenLogo.imageset', 'image@3x.png'))
 
   for (const { folder, scale } of DENSITIES) {
-    const launcherSize = Math.round(48 * scale)
-    const foregroundSize = Math.round(108 * scale)
-    const notificationSize = Math.round(24 * scale)
-
-    const mipmapDir = path.join(androidRes, `mipmap-${folder}`)
     const drawableDir = path.join(androidRes, `drawable-${folder}`)
-
-    await writeWebp(await launcherIcon(logoPipeline, launcherSize), path.join(mipmapDir, 'ic_launcher.webp'))
-    await writeWebp(await launcherIcon(logoPipeline, launcherSize), path.join(mipmapDir, 'ic_launcher_round.webp'))
-    await writeWebp(await adaptiveForeground(logoPipeline, foregroundSize), path.join(mipmapDir, 'ic_launcher_foreground.webp'))
     await writePng(await androidSplashIcon(LOGO_SOURCE, scale), path.join(drawableDir, 'splashscreen_logo.png'))
-    await writePng(await notificationIcon(logoPipeline, notificationSize), path.join(drawableDir, 'notification_icon.png'))
   }
 
-  console.log('Generated launcher/splash/notification assets from assets/logo-icon.png')
+  console.log('Generated splash drawables from assets/logo-icon.png (launcher icons live in assets/AppIcons/)')
 }
 
 main().catch((error) => {

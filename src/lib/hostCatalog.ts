@@ -54,7 +54,8 @@ export async function mergeRemoteMarketplaceCatalog(
   }
 
   const remote = await fetchMarketplaceFromSupabase()
-  const settingsMap = { ...remote.settingsByUserId }
+  // Local settings win so host toggles and unsaved prefs are not wiped by marketplace fetch.
+  const settingsMap = { ...remote.settingsByUserId, ...localSettingsMap }
 
   const merged = new Map<string, Host>()
   for (const host of remote.hosts) {

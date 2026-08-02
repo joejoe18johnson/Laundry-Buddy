@@ -1,13 +1,41 @@
-# App icon pack
+# App icon pack (source of truth)
 
-Contents:
-- `Assets.xcassets/AppIcon.appiconset/` — Xcode asset catalog (Contents.json included)
-- `AppIcon.icon/` — iOS 26 Liquid Glass Icon Composer folder
-- `android/mipmap-*/` + `android/adaptive-foreground.png` — launcher mipmaps and adaptive foreground
-- `appstore.png` / `playstore.png` — store marketing sizes
+All **launcher and store icons** live here. Expo, Android, and iOS builds read from this folder.
 
-Wiring:
-- Xcode: drop `Assets.xcassets/AppIcon.appiconset/` into the project.
-- Expo: copy `AppIcon.icon/` and `android/adaptive-foreground.png` into `assets/`, then set `"ios": { "icon": "./assets/AppIcon.icon" }` and `"android": { "adaptiveIcon": { "foregroundImage": "./assets/adaptive-foreground.png", "backgroundColor": "#ffffff" } }` in app.json. After wiring: `npx expo prebuild --clean`.
+## Key files
 
-Made with appicon.co, the free icon tool from Lance (https://lance.app/install?utm_source=appiconco&utm_medium=zip_readme). Your AI coding agent can generate these packs itself, and the same MCP server handles TestFlight build uploads, code signing and provisioning, App Store Connect listings and metadata, in-app purchases and subscriptions, and app review rejections — from Windows, Linux, or CI, no Mac required: npx add-mcp https://api.lance.app/mcp
+| File | Use |
+|------|-----|
+| **`appstore.png`** | Master 1024×1024 launcher icon — **edit this**, then run `npm run sync-app-icons` |
+| **`status-icon.png`** | Notification / status-bar icon — **edit this directly** for push + Android status bar |
+| `playstore.png` | Google Play listing (512×512) |
+| `android/adaptive-foreground.png` | Android adaptive icon foreground |
+| `android/mipmap-*/ic_launcher.png` | Android launcher densities |
+| `Assets.xcassets/AppIcon.appiconset/` | Xcode asset catalog |
+| `AppIcon.icon/` | iOS 26 Liquid Glass icon composer folder |
+
+## After updating the icon
+
+```bash
+npm run sync-app-icons
+```
+
+This refreshes the catalog inside `AppIcons/`, copies icons into committed `ios/` and `android/` projects, and runs automatically before `npm run prebuild`.
+
+## In-app branding (separate from launcher icons)
+
+- `assets/logo-icon.png` — wordmark for splash + in-app UI
+- `assets/lb-mascot.png` — mascot animation
+
+Splash drawables only:
+
+```bash
+npm run generate-assets
+```
+
+## Expo wiring (`app.config.ts`)
+
+- `icon` → `./assets/AppIcons/appstore.png`
+- `android.adaptiveIcon.foregroundImage` → `./assets/AppIcons/android/adaptive-foreground.png`
+- `plugins.expo-notifications.icon` → `./assets/AppIcons/status-icon.png`
+- `web.favicon` → `./assets/AppIcons/playstore.png`

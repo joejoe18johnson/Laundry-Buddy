@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
@@ -21,7 +22,7 @@ import { ImageLightbox } from '../../components/ImageLightbox'
 import { PaymentProofChip } from '../../components/PaymentProofChip'
 import { TypingIndicator } from '../../components/TypingIndicator'
 import { BackButton, PrimaryButton, SuccessButton } from '../../components/ui'
-import { useApp } from '../../context/AppContext'
+import { useOptionalApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { formatChatTime, senderRoleLabel, useMessages } from '../../context/MessageContext'
@@ -253,14 +254,15 @@ export function ChatThreadPanel({
   subtitleOverride?: string
 }) {
   const { user } = useAuth()
-  const { restoreAfterCamera } = useApp()
+  const app = useOptionalApp()
+  const restoreAfterCamera = app?.restoreAfterCamera ?? (() => {})
   const { showToast } = useToast()
   const { colors, formStyles } = useTheme()
   const { width: screenWidth, height: windowHeight } = useWindowDimensions()
   const styles = useMemo(() => createStyles(colors), [colors])
   const imagePreviewSize = useMemo(() => chatImagePreviewSize(screenWidth), [screenWidth])
   const insets = useSafeAreaInsets()
-  const { getMessages, refreshThread, sendMessage, markRead } = useMessages()
+  const { getMessages, refreshThread, sendMessage, markRead, messagingUserId } = useMessages()
   const { otherTyping, notifyTyping, stopTyping } = useChatTyping(threadId, user?.id, user?.name ?? '')
   const [draft, setDraft] = useState('')
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null)
@@ -273,7 +275,7 @@ export function ChatThreadPanel({
 
   const messages = getMessages(threadId)
   const listItems = useMemo(() => buildChatListItems(messages), [messages])
-  const title = titleOverride ?? getChatThreadTitle(threadId, user!, booking)
+  const title = titleOverride ?? (user ? getChatThreadTitle(threadId, user, booking) : toTitleCase('Messages'))
   const subtitle = subtitleOverride ?? getChatThreadSubtitle(threadId, booking)
   const isSupport = isSupportThread(threadId)
   const isBankTransfer = booking?.paymentMethod === 'bank_transfer'
@@ -409,7 +411,6 @@ export function ChatThreadPanel({
       setDraft('')
       setPendingImageUri(null)
       Keyboard.dismiss()
-      await refreshThread(threadId)
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : 'Could not send your message. Try again.',
@@ -418,7 +419,7 @@ export function ChatThreadPanel({
     } finally {
       setSending(false)
     }
-  }, [booking, draft, onPaymentProofSent, pendingImageUri, refreshThread, sendMessage, sending, showToast, stopTyping, threadId])
+  }, [booking, draft, onPaymentProofSent, pendingImageUri, sendMessage, sending, showToast, stopTyping, threadId])
 
   if (!user || !threadId) {
     return (
@@ -483,7 +484,7 @@ export function ChatThreadPanel({
           ) : (
             <MessageBubble
               message={item.message}
-              isOwn={item.message.senderId === user.id}
+              isOwn={item.message.senderId === (messagingUserId ?? user.id)}
               colors={colors}
               styles={styles}
               imagePreviewSize={imagePreviewSize}
@@ -546,9 +547,16 @@ export function ChatThreadPanel({
           <Pressable
             onPress={() => void handleSend()}
             disabled={sending || (!draft.trim() && !pendingImageUri)}
-            style={[styles.sendBtn, (!draft.trim() && !pendingImageUri) && styles.sendBtnDisabled]}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Send message"
+            style={[styles.sendBtn, (sending || (!draft.trim() && !pendingImageUri)) && styles.sendBtnDisabled]}
           >
-            <AppIcon name="send" size={18} color={colors.white} />
+            {sending ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <AppIcon name="send" size={18} color={colors.white} />
+            )}
           </Pressable>
         </View>
       </View>

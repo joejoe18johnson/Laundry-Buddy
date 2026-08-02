@@ -31,6 +31,12 @@
           <string>com.laundrybuddy.app</string>
         </array>
       </dict>
+      <dict>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>exp+laundry-buddy</string>
+        </array>
+      </dict>
     </array>
     <key>CFBundleVersion</key>
     <string>1</string>
@@ -48,7 +54,9 @@
       <true/>
     </dict>
     <key>NSCameraUsageDescription</key>
-    <string>Allow Laundry Buddy to use your camera to photograph your load for the host.</string>
+    <string>Allow Laundry Buddy to use your camera for load photos and verification selfies.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Allow Laundry Buddy to use Face ID or fingerprint so you can sign in quickly.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your location</string>
     <key>NSLocationAlwaysUsageDescription</key>
@@ -62,7 +70,7 @@
     <key>NSPhotoLibraryUsageDescription</key>
     <string>Allow Laundry Buddy to access your photos so you can share a picture of your load with the host.</string>
     <key>RCTNewArchEnabled</key>
-    <true/>
+    <false/>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>
