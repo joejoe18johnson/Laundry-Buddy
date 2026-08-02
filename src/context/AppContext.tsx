@@ -387,11 +387,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const hostBusinessStats = useMemo(() => {
     if (role !== 'host') return null
     return computeHostBusinessStats(
+      activeLoads,
       hostCompletedLoads,
       hostStats.loadsHosted,
       hostStats.loadsToday,
     )
-  }, [hostCompletedLoads, hostStats.loadsHosted, hostStats.loadsToday, role])
+  }, [activeLoads, hostCompletedLoads, hostStats.loadsHosted, hostStats.loadsToday, role])
 
   const booking = useMemo(() => {
     if (selectedBookingId) {
@@ -2181,24 +2182,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
         paymentProofUri: proofUri ?? load.paymentProofUri,
       })
 
+      let updatedLoad: Booking | undefined
+
       setActiveLoads((prev) => {
-        const next = prev.map((load) => (load.id === loadId ? patch(load) : load))
+        const next = prev.map((load) => {
+          if (load.id !== loadId) return load
+          updatedLoad = patch(load)
+          persistBookingSnapshot(updatedLoad)
+          return updatedLoad
+        })
         if (role === 'host' && user) {
           persistHostOrdersCache(user.id, { pendingRequests: hostRequests, activeLoads: next })
         }
-        const updated = next.find((load) => load.id === loadId)
-        if (updated) persistBookingSnapshot(updated)
         return next
       })
 
       setGuestBookings((prev) => {
         const next = patchGuestBooking(prev, loadId, patch)
         const updated = findGuestBooking(next, loadId)
-        if (updated) persistBookingSnapshot(updated)
+        if (updated) {
+          updatedLoad = updated
+          persistBookingSnapshot(updated)
+        }
         return next
       })
+
+      if (updatedLoad && role === 'customer') {
+        const host = getHostById(updatedLoad.hostId)
+        if (host?.hostUserId) {
+          void notifyHost(
+            host.hostUserId,
+            'Payment proof sent',
+            `${updatedLoad.customerName} sent bank transfer proof — review and confirm payment.`,
+            hostDashboardLink(loadId),
+            'update',
+          )
+        }
+      }
     },
-    [hostRequests, role, user],
+    [hostRequests, notifyHost, role, user],
   )
 
   const confirmTransferPayment = useCallback(

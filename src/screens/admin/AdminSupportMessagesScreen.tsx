@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Pressable, ScrollView, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { Screen } from '../../components/ui'
 import { useTheme } from '../../context/ThemeContext'
@@ -20,26 +20,25 @@ export function AdminSupportMessagesScreen({ refreshKey, onOpenThread }: Props) 
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <Text style={styles.subtitle}>
-          {toTitleCase('In-app support conversations from guests and hosts — reply here.')}
-        </Text>
+      <Text style={styles.subtitle}>
+        {toTitleCase('In-app support conversations from guests and hosts — reply here.')}
+      </Text>
 
-        {loading ? (
-          <Text style={styles.cardMeta}>{toTitleCase('Loading…')}</Text>
-        ) : threads.length === 0 ? (
-          <View style={styles.card}>
-            <View style={{ alignItems: 'center', gap: 8, paddingVertical: 12 }}>
-              <AppIcon name="message-circle" size={28} color={colors.gray400} />
-              <Text style={styles.cardName}>{toTitleCase('No support messages yet')}</Text>
-              <Text style={[styles.cardMeta, { textAlign: 'center' }]}>
-                {toTitleCase('When someone contacts support from the app, their thread appears here.')}
-              </Text>
-            </View>
+      {loading ? (
+        <Text style={styles.cardMeta}>{toTitleCase('Loading…')}</Text>
+      ) : threads.length === 0 ? (
+        <View style={styles.card}>
+          <View style={{ alignItems: 'center', gap: 8, paddingVertical: 12 }}>
+            <AppIcon name="message-circle" size={28} color={colors.gray400} />
+            <Text style={styles.cardName}>{toTitleCase('No support messages yet')}</Text>
+            <Text style={[styles.cardMeta, { textAlign: 'center' }]}>
+              {toTitleCase('When someone contacts support from the app, their thread appears here.')}
+            </Text>
           </View>
-        ) : (
-          <View style={{ gap: spacing.sm }}>
-            {threads.map((row) => {
+        </View>
+      ) : (
+        <View style={{ gap: spacing.sm }}>
+          {threads.map((row) => {
             const title = row.user?.name ?? 'Support request'
             const subtitle = formatUserLabel(row.user)
 
@@ -76,9 +75,8 @@ export function AdminSupportMessagesScreen({ refreshKey, onOpenThread }: Props) 
               </Pressable>
             )
           })}
-          </View>
-        )}
-      </ScrollView>
+        </View>
+      )}
     </Screen>
   )
 }

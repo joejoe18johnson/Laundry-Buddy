@@ -4,7 +4,12 @@ import { AppIcon } from '../AppIcon'
 import { PrimaryButton } from '../ui'
 import { useTheme } from '../../context/ThemeContext'
 import { formatHostPrice } from '../../lib/hostFilters'
-import { DRYER_SHEETS_GUEST_HINT, parsePriceInput } from '../../lib/hostPricing'
+import {
+  buildHostPricingHints,
+  computeMarketPricingSnapshot,
+  DRYER_SHEETS_GUEST_HINT,
+  parsePriceInput,
+} from '../../lib/hostPricing'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import type { HostPricing } from '../../types'
@@ -17,6 +22,9 @@ export type HostPricingSectionProps = {
   onSave?: () => void
   saved?: boolean
   onEditInSettings?: () => void
+  hostId?: string
+  rating?: number
+  reviewCount?: number
 }
 
 export function HostPricingSection({
@@ -27,10 +35,22 @@ export function HostPricingSection({
   onSave,
   saved = true,
   onEditInSettings,
+  hostId,
+  rating,
+  reviewCount,
 }: HostPricingSectionProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
   const isCard = variant === 'card'
+  const market = useMemo(() => computeMarketPricingSnapshot(hostId), [hostId])
+  const pricingHints = useMemo(() => {
+    if (!market) return []
+    return buildHostPricingHints(
+      pricing,
+      market,
+      rating != null && reviewCount != null ? { rating, reviewCount } : undefined,
+    )
+  }, [market, pricing, rating, reviewCount])
 
   const content = (
     <>
@@ -39,6 +59,25 @@ export function HostPricingSection({
           'You control what you charge. Guests see these rates on the map, your profile, and when booking. Set folding to $0 to hide that service.',
         )}
       </Text>
+      {market ? (
+        <View style={styles.marketCard}>
+          <View style={styles.marketHeader}>
+            <AppIcon name="trending-up" size={14} color={colors.gray600} />
+            <Text style={styles.marketTitle}>{toTitleCase('Local market')}</Text>
+          </View>
+          <Text style={styles.marketAverage}>
+            {toTitleCase('Average dry price')}: {formatHostPrice(market.avgDryPrice)}
+            {market.avgFoldingPrice != null
+              ? ` · ${toTitleCase('Folding')} ${formatHostPrice(market.avgFoldingPrice)}`
+              : ''}
+          </Text>
+          {pricingHints.map((hint) => (
+            <Text key={hint} style={styles.marketHint}>
+              {toTitleCase(hint)}
+            </Text>
+          ))}
+        </View>
+      ) : null}
       <View style={styles.priceField}>
         <Text style={styles.priceLabel}>{toTitleCase('Drying (per load)')}</Text>
         <TextInput
@@ -109,6 +148,18 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
     cardTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600 },
     sectionHint: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
+    marketCard: {
+      backgroundColor: colors.white,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.gray100,
+      padding: spacing.sm,
+      gap: 6,
+    },
+    marketHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    marketTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600 },
+    marketAverage: { fontSize: 13, fontWeight: '600', color: colors.black, lineHeight: 18 },
+    marketHint: { fontSize: 12, color: colors.gray500, lineHeight: 17 },
     priceField: { gap: spacing.sm },
     priceLabel: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
     input: {

@@ -1,3 +1,5 @@
+import type { ChatMessage } from '../types'
+
 /** WhatsApp-style chat date/time formatting. */
 
 export function formatChatTime(iso: string): string {
@@ -46,8 +48,6 @@ export function formatChatDateDivider(iso: string): string {
   })
 }
 
-import type { ChatMessage } from '../types'
-
 export type ChatListItem =
   | { kind: 'date'; id: string; label: string }
   | { kind: 'message'; id: string; message: ChatMessage }
@@ -59,7 +59,7 @@ export function buildChatListItems(messages: ChatMessage[]): ChatListItem[] {
   for (const message of messages) {
     const dayKey = formatChatDateDivider(message.createdAt)
     if (dayKey && dayKey !== lastDay) {
-      items.push({ kind: 'date', id: `date-${message.createdAt}`, label: dayKey })
+      items.push({ kind: 'date', id: `date-${items.length}-${message.createdAt}`, label: dayKey })
       lastDay = dayKey
     }
     items.push({ kind: 'message', id: message.id, message })

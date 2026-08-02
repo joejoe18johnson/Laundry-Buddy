@@ -1,4 +1,5 @@
 import type { ChatMessage, ChatMessageKind } from '../../types'
+import { normalizeChatMessage } from '../chatMessages'
 import { getSupabaseClient } from './client'
 import type { Database } from './database.types'
 
@@ -6,17 +7,17 @@ type ChatMessageRow = Database['public']['Tables']['chat_messages']['Row']
 type ChatMessageInsert = Database['public']['Tables']['chat_messages']['Insert']
 
 function rowToMessage(row: ChatMessageRow): ChatMessage {
-  return {
+  return normalizeChatMessage({
     id: row.id,
     threadId: row.thread_id,
     senderId: row.sender_id,
-    senderName: row.sender_name,
+    senderName: row.sender_name ?? 'Unknown',
     senderRole: row.sender_role as ChatMessage['senderRole'],
     text: row.text ?? undefined,
     imageUri: row.image_uri ?? undefined,
     kind: row.kind,
     createdAt: row.created_at,
-  }
+  })
 }
 
 function messageToInsert(message: ChatMessage): ChatMessageInsert {
@@ -146,7 +147,11 @@ export function subscribeToChatInserts(onInsert: (message: ChatMessage) => void)
         table: 'chat_messages',
       },
       (payload) => {
-        onInsert(rowToMessage(payload.new as ChatMessageRow))
+        try {
+          onInsert(rowToMessage(payload.new as ChatMessageRow))
+        } catch {
+          // Ignore malformed realtime payloads.
+        }
       },
     )
     .subscribe()

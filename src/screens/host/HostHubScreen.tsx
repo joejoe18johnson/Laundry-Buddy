@@ -550,7 +550,13 @@ export function HostHubScreen() {
       </Section>
 
       <Section title="Your prices">
-        <HostPricingSection pricing={pricing} onPricingChange={patchPricing} />
+        <HostPricingSection
+          pricing={pricing}
+          onPricingChange={patchPricing}
+          hostId={host?.id}
+          rating={host?.rating}
+          reviewCount={host?.reviewCount}
+        />
       </Section>
 
       <Section title="Payments">

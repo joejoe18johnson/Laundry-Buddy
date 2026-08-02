@@ -35,6 +35,7 @@ import { radius, spacing } from '../theme'
 type ScreenScrollContextValue = {
   scrollToEnd: () => void
   scrollFieldIntoView: (fieldRef: RefObject<View | null>) => void
+  scrollToAnchor: (anchorRef: RefObject<View | null>, offset?: number) => void
 }
 
 const ScreenScrollContext = createContext<ScreenScrollContextValue | null>(null)
@@ -205,6 +206,19 @@ export function Screen({
     }
   }, [keyboardHeight, scrollFieldIntoView])
 
+  const scrollToAnchor = useCallback(
+    (anchorRef: RefObject<View | null>, offset = spacing.xl) => {
+      const anchor = anchorRef.current
+      if (!anchor || !scrollRef.current) return
+
+      anchor.measureInWindow((_x, y) => {
+        const targetY = scrollYRef.current + y - insets.top - offset
+        scrollRef.current?.scrollTo({ y: Math.max(0, targetY), animated: true })
+      })
+    },
+    [insets.top],
+  )
+
   const keyboardPadding = keyboardHeight > 0 ? keyboardHeight + spacing.md : 0
 
   return (
@@ -214,7 +228,7 @@ export function Screen({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
-        <ScreenScrollContext.Provider value={{ scrollToEnd, scrollFieldIntoView }}>
+        <ScreenScrollContext.Provider value={{ scrollToEnd, scrollFieldIntoView, scrollToAnchor }}>
           <ScrollView
             ref={scrollRef}
             automaticallyAdjustKeyboardInsets

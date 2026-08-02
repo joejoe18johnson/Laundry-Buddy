@@ -1,12 +1,13 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
+import { HostReviewsList } from '../../components/host/HostReviewsList'
 import { TopRatedHostBadge } from '../../components/TopRatedHostBadge'
 import { priceFooterShellStyle, SimpleBookFooterBar } from '../../components/PriceFooterBar'
-import { BackButton, PrimaryButton, Screen } from '../../components/ui'
+import { BackButton, PrimaryButton, Screen, useScreenScroll } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
@@ -28,7 +29,6 @@ import {
 } from '../../lib/geo'
 import { toTitleCase } from '../../lib/titleCase'
 import { coverColors, radius, spacing } from '../../theme'
-import type { HostReview } from '../../types'
 
 function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
@@ -81,8 +81,19 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
       borderRadius: radius.pill,
     },
     heroDistanceText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.95)' },
-    heroRating: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
+    heroRatingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap', justifyContent: 'center' },
+    heroRatingPressable: {
+      alignItems: 'center',
+      gap: 4,
+      marginTop: spacing.md,
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: radius.pill,
+      backgroundColor: 'rgba(255,255,255,0.12)',
+    },
+    heroRatingPressed: { backgroundColor: 'rgba(255,255,255,0.22)' },
     heroRatingText: { fontSize: 14, fontWeight: '600', color: colors.white },
+    heroRatingHint: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.8)' },
     heroMessageBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -221,32 +232,6 @@ function Stat({
   )
 }
 
-function ReviewCard({
-  review,
-  styles,
-  colors,
-}: {
-  review: HostReview
-  styles: ReturnType<typeof createHostProfileStyles>
-  colors: ReturnType<typeof useTheme>['colors']
-}) {
-  return (
-    <View style={styles.reviewCard}>
-      <View style={styles.reviewHeader}>
-        <View style={styles.reviewAvatar}>
-          <Text style={styles.reviewInitial}>{review.author[0]}</Text>
-        </View>
-        <View style={styles.reviewMeta}>
-          <Text style={styles.reviewAuthor}>{review.author}</Text>
-          <Text style={styles.reviewDate}>{review.date}</Text>
-        </View>
-        <Stars rating={review.rating} size={12} styles={styles} colors={colors} />
-      </View>
-      <Text style={styles.reviewComment}>{review.comment}</Text>
-    </View>
-  )
-}
-
 function InfoSection({
   title,
   icon,
@@ -286,6 +271,8 @@ export function HostProfileScreen() {
   const styles = useMemo(() => createHostProfileStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const footerBottomPad = bottomSafePadding(insets.bottom)
+  const reviewsSectionRef = useRef<View>(null)
+  const screenScroll = useScreenScroll()
 
   useEffect(() => {
     if (!selectedHost) return
@@ -324,6 +311,10 @@ export function HostProfileScreen() {
   const activeLoadCount = activeGuestBookings.length
   const foldingPrice = pricing.foldingPrice
 
+  const scrollToReviews = () => {
+    screenScroll?.scrollToAnchor(reviewsSectionRef)
+  }
+
   return (
     <View style={styles.wrapper}>
       <Screen style={styles.scroll}>
@@ -360,24 +351,33 @@ export function HostProfileScreen() {
               </Text>
             </View>
           ) : null}
-          <View style={styles.heroRating}>
-            <Stars
-              rating={ratingSummary.rating || host.rating || 5}
-              size={16}
-              filledColor={colors.white}
-              emptyColor="rgba(255,255,255,0.35)"
-              styles={styles}
-              colors={colors}
-            />
-            <Text style={styles.heroRatingText}>
-              {(ratingSummary.rating || host.rating) > 0
-                ? (ratingSummary.rating || host.rating).toFixed(1)
-                : 'New'}
-              {ratingSummary.reviewCount || host.reviewCount
-                ? ` · ${ratingSummary.reviewCount || host.reviewCount} reviews`
-                : ''}
-            </Text>
-          </View>
+          <Pressable
+            style={({ pressed }) => [styles.heroRatingPressable, pressed && styles.heroRatingPressed]}
+            onPress={scrollToReviews}
+            accessibilityRole="button"
+            accessibilityLabel={toTitleCase('Jump to reviews')}
+          >
+            <View style={styles.heroRatingRow}>
+              <Stars
+                rating={ratingSummary.rating || host.rating || 5}
+                size={16}
+                filledColor={colors.white}
+                emptyColor="rgba(255,255,255,0.35)"
+                styles={styles}
+                colors={colors}
+              />
+              <Text style={styles.heroRatingText}>
+                {(ratingSummary.rating || host.rating) > 0
+                  ? (ratingSummary.rating || host.rating).toFixed(1)
+                  : 'New'}
+                {ratingSummary.reviewCount || host.reviewCount
+                  ? ` · ${ratingSummary.reviewCount || host.reviewCount} reviews`
+                  : ''}
+              </Text>
+              <AppIcon name="chevron-down" size={14} color="rgba(255,255,255,0.85)" />
+            </View>
+            <Text style={styles.heroRatingHint}>{toTitleCase('Tap to jump to reviews')}</Text>
+          </Pressable>
           {!browseOnly ? (
             <Pressable
               style={({ pressed }) => [styles.heroMessageBtn, pressed && styles.heroMessageBtnPressed]}
@@ -457,9 +457,9 @@ export function HostProfileScreen() {
           ))}
         </InfoSection>
 
-        <View style={styles.section}>
+        <View ref={reviewsSectionRef} style={styles.section}>
           <View style={styles.sectionHeader}>
-            <AppIcon name="message-circle" size={18} />
+            <AppIcon name="star" size={18} color={colors.accent} />
             <Text style={styles.sectionTitle}>
               {toTitleCase('Reviews')}{reviews.length ? ` (${reviews.length})` : ''}
             </Text>
@@ -471,7 +471,7 @@ export function HostProfileScreen() {
               )}
             </Text>
           ) : (
-            reviews.map((review) => <ReviewCard key={review.id} review={review} styles={styles} colors={colors} />)
+            <HostReviewsList reviews={reviews} />
           )}
         </View>
 

@@ -11,6 +11,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "generate-assets": "node scripts/generate-assets.mjs",
+    "optimize-brand-assets": "node scripts/optimize-brand-assets.mjs",
     "sync-app-icons": "node scripts/sync-app-icons.mjs",
     "prebuild": "npm run sync-app-icons && expo prebuild",
     "prebuild:clean": "expo prebuild --clean",

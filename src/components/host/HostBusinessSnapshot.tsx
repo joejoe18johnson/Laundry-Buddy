@@ -138,7 +138,7 @@ export function HostBusinessSnapshot({
           styles={styles}
         />
         <StatTile
-          label={toTitleCase('Today')}
+          label={toTitleCase('Loads today')}
           value={String(stats.loadsToday)}
           styles={styles}
         />

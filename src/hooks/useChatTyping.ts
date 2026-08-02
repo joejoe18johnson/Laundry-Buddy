@@ -73,7 +73,11 @@ export function useChatTyping(
       }
     })
 
-    void channel.subscribe()
+    void channel.subscribe((status) => {
+      if (status === 'CHANNEL_ERROR') {
+        setOtherTyping(null)
+      }
+    })
     channelRef.current = channel
 
     return () => {

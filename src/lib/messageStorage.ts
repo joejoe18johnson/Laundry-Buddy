@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { ChatMessage } from '../types'
+import { normalizeChatMessage } from './chatMessages'
 import { isSupabaseConfigured } from './supabase'
 import {
   fetchAccessibleThreadIdsFromSupabase,
@@ -97,7 +98,7 @@ export async function appendThreadMessage(message: ChatMessage): Promise<ChatMes
   }
 
   const map = await readMessageMap()
-  const list = [...(map[message.threadId] ?? []), message]
+  const list = [...(map[message.threadId] ?? []), normalizeChatMessage(message)]
   map[message.threadId] = list
   await writeMessageMap(map)
   return list

@@ -1,7 +1,13 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { Animated, StyleSheet, Text, View } from 'react-native'
 import { useTheme } from '../context/ThemeContext'
 import { radius, spacing } from '../theme'
+
+const dotStyle = {
+  width: 7,
+  height: 7,
+  borderRadius: 4,
+}
 
 type TypingIndicatorProps = {
   name?: string
@@ -23,12 +29,12 @@ function AnimatedDot({ delay, color }: { delay: number; color: string }) {
     return () => animation.stop()
   }, [delay, opacity])
 
-  return <Animated.View style={[styles.dot, { backgroundColor: color, opacity }]} />
+  return <Animated.View style={[dotStyle, { backgroundColor: color, opacity }]} />
 }
 
 export function TypingIndicator({ name }: TypingIndicatorProps) {
   const { colors } = useTheme()
-  const label = useMemo(() => (name ? `${name} is typing` : 'Typing'), [name])
+  const label = name ? `${name} is typing` : 'Typing'
 
   return (
     <View style={styles.row} accessibilityLabel={label}>
@@ -60,11 +66,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     minHeight: 10,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
   },
   name: {
     fontSize: 12,

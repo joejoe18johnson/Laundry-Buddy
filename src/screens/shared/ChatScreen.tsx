@@ -14,6 +14,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { pickImage } from '../../lib/imagePicker'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
@@ -26,7 +27,8 @@ import { useOptionalApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { formatChatTime, senderRoleLabel, useMessages } from '../../context/MessageContext'
-import { buildChatListItems } from '../../lib/chatTimestamps'
+import { buildChatListItems, type ChatListItem } from '../../lib/chatTimestamps'
+import { normalizeChatMessages } from '../../lib/chatMessages'
 import { useTheme } from '../../context/ThemeContext'
 import { useChatTyping } from '../../hooks/useChatTyping'
 import {
@@ -68,6 +70,16 @@ function ChatMessageImage({
   previewStyle: ReturnType<typeof createStyles>['imagePreview']
   onPress: (uri: string) => void
 }) {
+  const [failed, setFailed] = useState(false)
+
+  if (failed || !uri.trim()) {
+    return (
+      <View style={[previewStyle, { width: size, height: size, alignItems: 'center', justifyContent: 'center' }]}>
+        <AppIcon name="image" size={24} color="#999" />
+      </View>
+    )
+  }
+
   return (
     <Pressable
       onPress={() => onPress(uri)}
@@ -75,7 +87,12 @@ function ChatMessageImage({
       accessibilityLabel="View full image"
     >
       <View style={[previewStyle, { width: size, height: size }]}>
-        <Image source={{ uri }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+        <Image
+          source={{ uri }}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+          onError={() => setFailed(true)}
+        />
       </View>
     </Pressable>
   )
@@ -271,9 +288,12 @@ export function ChatThreadPanel({
   const [keyboardInset, setKeyboardInset] = useState(0)
   const [attachSheetOpen, setAttachSheetOpen] = useState(false)
   const [permissionAlert, setPermissionAlert] = useState<{ title: string; message: string } | null>(null)
-  const listRef = useRef<FlatList<ChatMessage>>(null)
+  const listRef = useRef<FlatList<ChatListItem>>(null)
 
-  const messages = getMessages(threadId)
+  const messages = useMemo(
+    () => normalizeChatMessages(getMessages(threadId)),
+    [getMessages, threadId],
+  )
   const listItems = useMemo(() => buildChatListItems(messages), [messages])
   const title = titleOverride ?? (user ? getChatThreadTitle(threadId, user, booking) : toTitleCase('Messages'))
   const subtitle = subtitleOverride ?? getChatThreadSubtitle(threadId, booking)
@@ -289,7 +309,9 @@ export function ChatThreadPanel({
 
   useEffect(() => {
     if (!threadId) return
-    void refreshThread(threadId).then(() => markRead(threadId))
+    void refreshThread(threadId)
+      .then(() => markRead(threadId))
+      .catch(() => {})
   }, [threadId, refreshThread, markRead])
 
   useEffect(() => {
@@ -312,7 +334,13 @@ export function ChatThreadPanel({
   }, [windowHeight])
 
   const scrollToLatest = useCallback(() => {
-    listRef.current?.scrollToEnd({ animated: true })
+    requestAnimationFrame(() => {
+      try {
+        listRef.current?.scrollToEnd({ animated: true })
+      } catch {
+        // FlatList may not be ready yet on first layout.
+      }
+    })
   }, [])
 
   useEffect(() => {
@@ -434,8 +462,9 @@ export function ChatThreadPanel({
   const androidKeyboardLift = Platform.OS === 'android' && keyboardInset > 0 ? keyboardInset : 0
 
   return (
+    <SafeAreaView style={styles.wrap} edges={['bottom']}>
     <KeyboardAvoidingView
-      style={styles.wrap}
+      style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       enabled={Platform.OS === 'ios'}
@@ -478,10 +507,12 @@ export function ChatThreadPanel({
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         onContentSizeChange={scrollToLatest}
         onLayout={scrollToLatest}
-        renderItem={({ item }) =>
-          item.kind === 'date' ? (
-            <DateDivider label={item.label} styles={styles} />
-          ) : (
+        renderItem={({ item }) => {
+          if (item.kind === 'date') {
+            return <DateDivider label={item.label} styles={styles} />
+          }
+          if (item.kind !== 'message' || !item.message) return null
+          return (
             <MessageBubble
               message={item.message}
               isOwn={item.message.senderId === (messagingUserId ?? user.id)}
@@ -492,7 +523,7 @@ export function ChatThreadPanel({
               paymentConfirmed={paymentConfirmed}
             />
           )
-        }
+        }}
         ListFooterComponent={
           otherTyping ? <TypingIndicator name={otherTyping.userName} /> : <View style={{ height: spacing.xs }} />
         }
@@ -584,13 +615,41 @@ export function ChatThreadPanel({
         onClose={() => setPermissionAlert(null)}
       />
     </KeyboardAvoidingView>
+    </SafeAreaView>
   )
 }
 
+export function useActiveChatRoute() {
+  const app = useOptionalApp()
+  const threadId = app?.chatThreadId ?? null
+
+  return useMemo(() => {
+    if (!threadId || !app) return null
+
+    const liveBooking =
+      !isSupportThread(threadId) && !isInquiryThread(threadId)
+        ? app.findBookingForChat(threadId) ?? app.chatBooking
+        : isInquiryThread(threadId)
+          ? null
+          : app.chatBooking
+
+    return {
+      threadId,
+      booking: liveBooking,
+      onBack: app.closeChat,
+      onConfirmPayment: liveBooking
+        ? () => app.confirmTransferPayment(liveBooking.id)
+        : undefined,
+      onPaymentProofSent: liveBooking
+        ? (proofUri: string) => app.markPaymentProofSent(liveBooking.id, proofUri)
+        : undefined,
+    }
+  }, [app, threadId])
+}
+
 export function ChatScreen() {
-  const { chatThreadId, chatBooking, closeChat, confirmTransferPayment, markPaymentProofSent, findBookingForChat } =
-    useApp()
-  if (!chatThreadId) {
+  const route = useActiveChatRoute()
+  if (!route) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Text>{toTitleCase('No conversation selected')}</Text>
@@ -598,26 +657,7 @@ export function ChatScreen() {
     )
   }
 
-  const liveBooking =
-    chatThreadId && !isSupportThread(chatThreadId) && !isInquiryThread(chatThreadId)
-      ? findBookingForChat(chatThreadId) ?? chatBooking
-      : isInquiryThread(chatThreadId ?? '')
-        ? null
-        : chatBooking
-
-  return (
-    <ChatThreadPanel
-      threadId={chatThreadId}
-      booking={liveBooking}
-      onBack={closeChat}
-      onConfirmPayment={
-        liveBooking ? () => confirmTransferPayment(liveBooking.id) : undefined
-      }
-      onPaymentProofSent={
-        liveBooking ? (proofUri) => markPaymentProofSent(liveBooking.id, proofUri) : undefined
-      }
-    />
-  )
+  return <ChatThreadPanel {...route} />
 }
 
 function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
@@ -655,7 +695,6 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       paddingHorizontal: spacing.screen,
       paddingVertical: spacing.md,
       flexGrow: 1,
-      gap: spacing.sm,
     },
     row: { flexDirection: 'row', marginBottom: spacing.md },
     rowOwn: { justifyContent: 'flex-end' },

@@ -1,4 +1,5 @@
 import type { Host, HostPricing, HostSettings } from '../types'
+import { getAvailableHosts } from '../data/mockData'
 
 /** Shown on booking and host profile — guests supply their own sheets. */
 export const DRYER_SHEETS_GUEST_HINT =
@@ -130,3 +131,84 @@ export function parsePriceInput(value: string): number {
   const n = parseInt(value.replace(/[^0-9]/g, ''), 10)
   return Number.isFinite(n) ? Math.max(0, n) : 0
 }
+
+export interface MarketPricingSnapshot {
+  avgDryPrice: number
+  avgFoldingPrice: number | null
+  hostCount: number
+}
+
+function averageRounded(values: number[]): number {
+  if (values.length === 0) return 0
+  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+}
+
+/** Average rates across other active hosts on the marketplace (excludes current host). */
+export function computeMarketPricingSnapshot(excludeHostId?: string): MarketPricingSnapshot | null {
+  const hosts = getAvailableHosts().filter(
+    (host) => host.slotsLeft > 0 && host.id !== excludeHostId,
+  )
+  if (hosts.length === 0) return null
+
+  const foldingPrices = hosts
+    .map((host) => host.foldingPrice ?? 0)
+    .filter((price) => price > 0)
+
+  return {
+    avgDryPrice: averageRounded(hosts.map((host) => host.price)),
+    avgFoldingPrice: foldingPrices.length > 0 ? averageRounded(foldingPrices) : null,
+    hostCount: hosts.length,
+  }
+}
+
+export function buildHostPricingHints(
+  pricing: HostPricing,
+  market: MarketPricingSnapshot,
+  reputation?: { rating: number; reviewCount: number },
+): string[] {
+  const hints: string[] = []
+  const dryDelta = pricing.dryPrice - market.avgDryPrice
+
+  hints.push(
+    `Hosts in your area average ${formatServicePrice(market.avgDryPrice)} per load (${market.hostCount} hosts online).`,
+  )
+
+  if (dryDelta <= -1) {
+    hints.push(
+      'Your dry price is below average — great for attracting first-time guests. Keep service quality high so reviews stay strong.',
+    )
+  } else if (dryDelta >= 1) {
+    hints.push(
+      'Your dry price is above average. Guests often choose lower prices, but strong reviews and ratings help you stand out.',
+    )
+  } else {
+    hints.push(
+      'Your dry price is near the local average. Competitive rates help fill slots; great reviews help guests pick you over similar prices.',
+    )
+  }
+
+  if (reputation) {
+    if (reputation.reviewCount === 0) {
+      hints.push(
+        'You have no reviews yet — a fair price and great service on early loads will build the rating guests trust most.',
+      )
+    } else if (reputation.rating >= 4.5) {
+      hints.push(
+        `Your ${reputation.rating.toFixed(1)}-star rating is a real advantage — guests will pay a bit more for a trusted host.`,
+      )
+    } else if (reputation.rating < 4) {
+      hints.push(
+        'Reviews matter as much as price — every smooth load helps your rating and brings repeat guests.',
+      )
+    }
+  }
+
+  if (market.avgFoldingPrice != null && pricing.foldingPrice === 0) {
+    hints.push(
+      `Many hosts charge around ${formatServicePrice(market.avgFoldingPrice)} for folding — optional add-ons can boost earnings without raising your base dry rate.`,
+    )
+  }
+
+  return hints
+}
+

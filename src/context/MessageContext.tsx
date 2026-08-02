@@ -28,6 +28,7 @@ import {
   resolveInquiryChatRecipient,
   supportThreadId,
 } from '../lib/chatThreads'
+import { normalizeChatMessage, normalizeChatMessages } from '../lib/chatMessages'
 import { listAllUsers } from '../lib/adminUsers'
 import { chatLink } from '../lib/notificationLinks'
 import { isSupabaseConfigured } from '../lib/supabase'
@@ -97,7 +98,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
 
   const refreshThread = useCallback(
     async (threadId: string) => {
-      const messages = await loadThreadMessages(threadId)
+      const messages = normalizeChatMessages(await loadThreadMessages(threadId))
       setMessagesByThread((prev) => ({ ...prev, [threadId]: messages }))
       await refreshUnread(threadId, messages)
       return messages
@@ -203,7 +204,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         ? ((await resolveSupabaseProfileId(user)) ?? user.id)
         : user.id
 
-      const message: ChatMessage = {
+      const message: ChatMessage = normalizeChatMessage({
         id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         threadId,
         senderId,
@@ -213,7 +214,7 @@ export function MessageProvider({ children }: { children: ReactNode }) {
         imageUri: imageUri || undefined,
         kind: kind ?? defaultMessageKind(imageUri, paymentProof),
         createdAt: nowIso(),
-      }
+      })
 
       let next: ChatMessage[]
       try {

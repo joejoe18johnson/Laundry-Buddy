@@ -17,7 +17,7 @@ function parseTimestamp(value: string | undefined): Date | null {
 }
 
 /** Resolve when a load counts as "hosted today" (acceptance or completion). */
-function getLoadActivityDate(load: Booking): Date | null {
+export function getLoadActivityDate(load: Booking): Date | null {
   const accepted = parseTimestamp(load.acceptedAt)
   if (accepted) return accepted
 

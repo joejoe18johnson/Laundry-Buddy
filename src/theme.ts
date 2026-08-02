@@ -71,6 +71,7 @@ export function getThemeColors(scheme: ColorScheme): ThemeColors {
 }
 
 export const spacing = {
+  xs: 6,
   screen: 24,
   sm: 10,
   md: 18,

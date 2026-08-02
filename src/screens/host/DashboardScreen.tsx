@@ -245,6 +245,9 @@ export function DashboardScreen() {
           saved={pricingSaved}
           onSave={() => void handleSavePricing()}
           onEditInSettings={() => navigate('account')}
+          hostId={rawHost?.id}
+          rating={rawHost?.rating}
+          reviewCount={rawHost?.reviewCount}
         />
       )}
 

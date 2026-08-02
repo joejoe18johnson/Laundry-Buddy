@@ -76,3 +76,9 @@ export function summarizeRatings(reviews: HostReview[]): { rating: number; revie
     reviewCount: reviews.length,
   }
 }
+
+export const REVIEWS_PAGE_SIZE = 10
+
+export function sliceReviewsPage(reviews: HostReview[], visibleCount: number): HostReview[] {
+  return reviews.slice(0, visibleCount)
+}

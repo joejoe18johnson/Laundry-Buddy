@@ -47,7 +47,7 @@ import { AdminVerificationQueueScreen } from './src/screens/admin/AdminVerificat
 import { AdminSupportMessagesScreen } from './src/screens/admin/AdminSupportMessagesScreen'
 import { useAdminDashboardData } from './src/hooks/useAdminDashboardData'
 import { useAdminSupportMessages } from './src/hooks/useAdminSupportMessages'
-import { ChatScreen, ChatThreadPanel } from './src/screens/shared/ChatScreen'
+import { ChatScreen, ChatThreadPanel, useActiveChatRoute } from './src/screens/shared/ChatScreen'
 import { colors, spacing } from './src/theme'
 import { ThemeProvider, useTheme } from './src/context/ThemeContext'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
@@ -321,7 +321,8 @@ function AdminAppShell() {
             threadId={supportThreadId}
             titleOverride={supportThreadTitle}
             subtitleOverride="In-app support"
-            onBack={() => navigateAdmin(adminTab)}
+            showBackButton
+            onBack={goBackAdmin}
           />
         ) : screen === 'notifications' ? (
           <AdminNotificationsScreen
@@ -424,6 +425,7 @@ function AppShell() {
     openNotificationFromPush,
     openSupportChat,
   } = useApp()
+  const activeChat = useActiveChatRoute()
   const { unreadCount } = useUserNotifications(user!.id)
   const { totalUnreadCount } = useMessages()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -614,7 +616,11 @@ function AppShell() {
         {screen === 'terms' && <TermsScreen />}
         {screen === 'privacy' && <PrivacyScreen />}
         {screen === 'notifications' && <NotificationsScreen />}
-        {screen === 'chat' && <ChatScreen />}
+        {screen === 'chat' && activeChat ? (
+          <ChatThreadPanel {...activeChat} />
+        ) : screen === 'chat' ? (
+          <ChatScreen />
+        ) : null}
         {screen === 'identity-verification' && (
           <IdentityVerificationScreen
             onBrowse={() => navigate('customer-home')}

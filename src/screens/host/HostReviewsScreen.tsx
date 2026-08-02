@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
+import { HostReviewsList } from '../../components/host/HostReviewsList'
 import { BackButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -9,7 +10,6 @@ import { getHostByUserId } from '../../data/mockData'
 import { summarizeRatings } from '../../lib/reviewStorage'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
-import type { HostReview } from '../../types'
 
 function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
@@ -29,28 +29,6 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     summaryRating: { fontSize: 36, fontWeight: '700', color: colors.black },
     summaryMeta: { fontSize: 14, color: colors.gray500, fontWeight: '500' },
     stars: { flexDirection: 'row', gap: 2 },
-    reviewCard: {
-      borderWidth: 1,
-      borderColor: colors.gray100,
-      borderRadius: radius.lg,
-      padding: spacing.lg,
-      marginBottom: spacing.md,
-      gap: spacing.sm,
-    },
-    reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-    reviewAvatar: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: colors.gray100,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    reviewInitial: { fontSize: 14, fontWeight: '700', color: colors.black },
-    reviewMeta: { flex: 1, gap: 2 },
-    reviewAuthor: { fontSize: 14, fontWeight: '600', color: colors.black },
-    reviewDate: { fontSize: 12, color: colors.gray500 },
-    reviewComment: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
     empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
     emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.black },
     emptySub: {
@@ -82,32 +60,6 @@ function Stars({
           color={n <= Math.round(rating) ? colors.accent : colors.gray200}
         />
       ))}
-    </View>
-  )
-}
-
-function ReviewCard({
-  review,
-  styles,
-  colors,
-}: {
-  review: HostReview
-  styles: ReturnType<typeof createStyles>
-  colors: ReturnType<typeof useTheme>['colors']
-}) {
-  return (
-    <View style={styles.reviewCard}>
-      <View style={styles.reviewHeader}>
-        <View style={styles.reviewAvatar}>
-          <Text style={styles.reviewInitial}>{review.author[0]}</Text>
-        </View>
-        <View style={styles.reviewMeta}>
-          <Text style={styles.reviewAuthor}>{review.author}</Text>
-          <Text style={styles.reviewDate}>{review.date}</Text>
-        </View>
-        <Stars rating={review.rating} colors={colors} styles={styles} />
-      </View>
-      <Text style={styles.reviewComment}>{review.comment}</Text>
     </View>
   )
 }
@@ -151,9 +103,7 @@ export function HostReviewsScreen() {
               {ratingSummary.reviewCount} review{ratingSummary.reviewCount !== 1 ? 's' : ''}
             </Text>
           </View>
-          {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} styles={styles} colors={colors} />
-          ))}
+          <HostReviewsList reviews={reviews} />
         </>
       ) : (
         <View style={styles.empty}>

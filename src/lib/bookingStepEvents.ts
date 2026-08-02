@@ -1,6 +1,7 @@
 import type { IconName } from '../components/AppIcon'
 import { formatMoney } from './bookingPayments'
-import type { Booking, BookingStage } from '../types'
+import { bookingTrackingLink, hostDashboardLink, hostReviewLink } from './notificationLinks'
+import type { Booking, BookingStage, NotificationLink } from '../types'
 
 export type BookingStepEventKind =
   | 'request-sent'
@@ -473,4 +474,18 @@ export function detectHostStepEvents(
   }
 
   return events
+}
+
+export function linkForBookingStepEvent(
+  event: BookingStepEvent,
+  role: 'customer' | 'host',
+): NotificationLink {
+  if (role === 'customer') {
+    if (event.kind === 'request-declined') return { screen: 'customer-home' }
+    if (event.kind === 'picked-up') return hostReviewLink(event.hostId, event.bookingId)
+    return bookingTrackingLink(event.bookingId)
+  }
+
+  if (event.kind === 'picked-up') return hostDashboardLink()
+  return hostDashboardLink(event.bookingId)
 }

@@ -124,6 +124,12 @@ Regenerate native splash drawables from the wordmark:
 npm run generate-assets
 ```
 
+Shrink in-app brand PNGs (included in the JS bundle):
+
+```bash
+npm run optimize-brand-assets
+```
+
 ## Admin login
 
 Use the normal **Log in** screen with your phone number and password.
