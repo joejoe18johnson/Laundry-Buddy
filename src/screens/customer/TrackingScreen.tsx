@@ -719,7 +719,7 @@ function createTrackingStyles(colors: ReturnType<typeof useTheme>['colors']) {
     borderRadius: radius.md,
     marginBottom: spacing.lg,
   },
-  paidText: { fontSize: 14, fontWeight: '600', color: colors.green },
+  paidText: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
   proofWaitingCard: {
     backgroundColor: colors.gray50,
     borderWidth: 1,
@@ -799,7 +799,7 @@ function createTrackingStyles(colors: ReturnType<typeof useTheme>['colors']) {
     borderWidth: 1,
     borderColor: 'rgba(5,148,79,0.25)',
   },
-  dropOffLiveBadgeText: { fontSize: 11, fontWeight: '700', color: colors.green },
+  dropOffLiveBadgeText: { fontSize: 11, fontWeight: '700', color: colors.gray600 },
   pendingDirectionsHint: { fontSize: 14, color: colors.gray500, lineHeight: 20 },
   lockedPhase: { opacity: 0.42 },
   pickupField: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },

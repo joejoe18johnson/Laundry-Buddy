@@ -90,6 +90,6 @@ const styles = StyleSheet.create({
   subMeta: { fontSize: 12, color: colors.gray500, marginTop: 2 },
   right: { alignItems: 'flex-end', gap: 2 },
   price: { fontSize: 16, fontWeight: '700', color: colors.black },
-  priceFree: { color: colors.green },
+  priceFree: { color: colors.gray600 },
   eta: { fontSize: 12, fontWeight: '600', color: colors.gray500 },
 })

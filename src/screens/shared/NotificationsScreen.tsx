@@ -231,7 +231,7 @@ export function NotificationsScreen() {
                         styles.cardTitle,
                         item.title === VERIFICATION_REJECTED_TITLE && { color: colors.danger },
                         (item.title === VERIFICATION_APPROVED_TITLE ||
-                          item.title === VERIFICATION_DOC_APPROVED_TITLE) && { color: colors.green },
+                          item.title === VERIFICATION_DOC_APPROVED_TITLE) && { color: colors.gray600 },
                       ]}
                     >
                       {toTitleCase(item.title)}

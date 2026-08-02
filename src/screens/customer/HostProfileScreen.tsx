@@ -17,7 +17,7 @@ import { formatHostPrice, hostPriceLabel } from '../../lib/hostFilters'
 import { isTopRatedHost } from '../../lib/hostReputation'
 import { formatDryTimeStat, formatDryTimeInline } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
-import { formatDryerSheetsRate, formatServicePrice, getHostPricing } from '../../lib/hostPricing'
+import { formatServicePrice, getHostPricing, DRYER_SHEETS_GUEST_HINT } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import { canBookOrHost } from '../../lib/identityVerification'
@@ -422,9 +422,7 @@ export function HostProfileScreen() {
           )}
           <View style={styles.detailChip}>
             <AppIcon name="tag" size={16} />
-            <Text style={styles.detailText}>
-              {toTitleCase('Dryer Sheets')} — {formatDryerSheetsRate(pricing.sheetsPrice)} {toTitleCase('If Guest Buys')}
-            </Text>
+            <Text style={styles.detailText}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
           </View>
           <View style={styles.detailChip}>
             <AppIcon name="wind" size={16} />

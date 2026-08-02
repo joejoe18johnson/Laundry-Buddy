@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   highlightText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.green,
+    color: colors.gray600,
   },
   title: {
     fontSize: 26,

@@ -4,11 +4,7 @@ import { AppIcon } from '../AppIcon'
 import { PrimaryButton } from '../ui'
 import { useTheme } from '../../context/ThemeContext'
 import { formatHostPrice } from '../../lib/hostFilters'
-import {
-  formatDryerSheetsPerLoadCharge,
-  formatDryerSheetsRate,
-  parsePriceInput,
-} from '../../lib/hostPricing'
+import { DRYER_SHEETS_GUEST_HINT, parsePriceInput } from '../../lib/hostPricing'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import type { HostPricing } from '../../types'
@@ -61,18 +57,11 @@ export function HostPricingSection({
           onChangeText={(v) => onPricingChange({ foldingPrice: parsePriceInput(v) })}
         />
       </View>
-      <View style={styles.priceField}>
-        <Text style={styles.priceLabel}>{toTitleCase('Dryer sheets (if guest buys)')}</Text>
-        <Text style={styles.sectionHint}>
-          {formatDryerSheetsRate()} · {formatDryerSheetsPerLoadCharge()}
-        </Text>
-      </View>
       <Text style={styles.guestSummary}>
         {toTitleCase('Guests see')}: Dry {formatHostPrice(pricing.dryPrice)}
         {pricing.foldingPrice > 0 ? ` · Folding ${formatHostPrice(pricing.foldingPrice)}` : ''}
-        {' · Sheets '}
-        {formatDryerSheetsRate()}
       </Text>
+      <Text style={styles.sheetsNote}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
       {showSaveButton && onSave ? (
         <PrimaryButton
           title={saved ? toTitleCase('Prices saved') : toTitleCase('Save prices')}
@@ -117,7 +106,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       gap: spacing.sm,
     },
     plain: { gap: spacing.sm },
-    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.xs },
+    cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
     cardTitle: { fontSize: 12, fontWeight: '700', color: colors.gray600 },
     sectionHint: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
     priceField: { gap: spacing.sm },
@@ -132,7 +121,8 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       color: colors.black,
       backgroundColor: colors.white,
     },
-    guestSummary: { fontSize: 13, color: colors.green, fontWeight: '600', lineHeight: 18 },
+    guestSummary: { fontSize: 13, color: colors.gray600, fontWeight: '600', lineHeight: 18 },
+    sheetsNote: { fontSize: 12, color: colors.gray500, lineHeight: 17 },
     editLink: {
       flexDirection: 'row',
       alignItems: 'center',

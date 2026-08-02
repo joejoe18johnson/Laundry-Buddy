@@ -1,7 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
-import { sheetsOptionLabel } from '../../types'
 import { LoadListBreakdown } from '../../components/LoadListBreakdown'
 import { formatDropOffAvailability, formatDropOffHour, formatDropOffHoursWindow, isWithinDropOffAvailability, resolveEffectiveHostOnline, type DropOffHour } from '../../lib/dropOffAvailability'
 import { useApp } from '../../context/AppContext'
@@ -349,7 +348,6 @@ export function DashboardScreen() {
               styles={styles}
             />
             <View style={styles.tags}>
-              <Text style={styles.tag}>{sheetsOptionLabel(request.sheetsOption)}</Text>
               {request.foldingService && <Text style={styles.tag}>{toTitleCase('Folding requested')}</Text>}
             </View>
             <View style={styles.actions}>
@@ -616,7 +614,7 @@ function createDashboardStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
   actionBtn: { flex: 1 },
-  done: { color: colors.green, fontWeight: '600', fontSize: 15, lineHeight: 22 },
+  done: { color: colors.gray600, fontWeight: '600', fontSize: 15, lineHeight: 22 },
   pickupBlock: { gap: spacing.md, marginTop: spacing.sm },
   pickupHint: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
   transferHint: { fontSize: 13, color: colors.gray600, lineHeight: 18 },

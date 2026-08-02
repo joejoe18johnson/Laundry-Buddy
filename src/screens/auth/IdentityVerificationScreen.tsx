@@ -565,7 +565,7 @@ function createIdentityVerificationStyles(colors: ReturnType<typeof useTheme>['c
       borderRadius: radius.md,
       backgroundColor: colors.greenBg,
     },
-    verifiedNoteText: { flex: 1, fontSize: 14, color: colors.green, lineHeight: 20, fontWeight: '600' },
+    verifiedNoteText: { flex: 1, fontSize: 14, color: colors.gray600, lineHeight: 20, fontWeight: '600' },
     error: {
       color: colors.danger,
       backgroundColor: colors.gray50,

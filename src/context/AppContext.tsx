@@ -20,7 +20,7 @@ import {
   getAvailableHosts,
 } from '../data/mockData'
 import { getAllUsers } from '../lib/authStorage'
-import { calculateBookingTotal, applyHostPricing, getHostPricing, DRYER_SHEETS_PRICE } from '../lib/hostPricing'
+import { calculateBookingTotal, applyHostPricing, getHostPricing } from '../lib/hostPricing'
 import { hasOpenHostLoad } from '../lib/hostLoads'
 import { formatMoney, getBookingAmount } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
@@ -159,7 +159,6 @@ import {
   type ClothesListItem,
   type PaymentMethod,
   type Screen,
-  type SheetsOption,
   type AppNotification,
   type NotificationLink,
   type HostReview,
@@ -225,7 +224,6 @@ interface AppState {
   confirmBooking: (details: {
     dropOffTime: DropOffHour
     loads: number
-    sheetsOption: SheetsOption
     notes: string
     clothesList: ClothesListItem[]
     paymentMethod: PaymentMethod
@@ -1010,7 +1008,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           location: request.location,
           loads: request.loads,
           dropOffTime: request.dropOffTime,
-          sheetsOption: request.sheetsOption,
+          sheetsOption: 'own',
           notes: request.notes ?? '',
           stage: 'got-bag',
           address: hostProfile.address,
@@ -1524,7 +1522,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (details: {
       dropOffTime: DropOffHour
       loads: number
-      sheetsOption: SheetsOption
       notes: string
       clothesList: ClothesListItem[]
       paymentMethod: PaymentMethod
@@ -1544,8 +1541,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         loads: details.loads,
         dryPrice: pricing.dryPrice,
         foldingPrice: pricing.foldingPrice,
-        sheetsPrice: pricing.sheetsPrice,
-        sheetsOption: details.sheetsOption,
         foldingService: details.foldingService,
       })
       const bookingId = createBookingId()
@@ -1562,13 +1557,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         location: selectedHost.location,
         loads: details.loads,
         dropOffTime: details.dropOffTime,
-        sheetsOption: details.sheetsOption,
+        sheetsOption: 'own',
         notes: details.notes,
         paymentMethod: details.paymentMethod,
         pricePerLoad: pricing.dryPrice,
         dryPrice: pricing.dryPrice,
         foldingPrice: pricing.foldingPrice,
-        sheetsPrice: pricing.sheetsPrice,
+        sheetsPrice: 0,
         foldingService: details.foldingService,
         totalAmount,
         paymentStatus: totalAmount <= 0 ? 'paid' : 'pending',
@@ -1602,7 +1597,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           location: selectedHost.location,
           loads: details.loads,
           dropOffTime: details.dropOffTime,
-          sheetsOption: details.sheetsOption,
+          sheetsOption: 'own',
           notes: details.notes,
           paymentMethod: details.paymentMethod,
           foldingService: details.foldingService,
@@ -1652,7 +1647,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const hostProfile = hostRaw ? applyHostSettings(hostRaw, settings) : undefined
       const pricing = hostProfile
         ? getHostPricing(hostProfile, settings)
-        : { dryPrice: 0, foldingPrice: 0, sheetsPrice: DRYER_SHEETS_PRICE }
+        : { dryPrice: 0, foldingPrice: 0, sheetsPrice: 0 }
 
       const needsTransfer =
         request.paymentMethod === 'bank_transfer' && (request.totalAmount ?? 0) > 0
@@ -1669,7 +1664,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         location: request.location,
         loads: request.loads,
         dropOffTime: request.dropOffTime,
-        sheetsOption: request.sheetsOption,
+        sheetsOption: 'own',
         notes: request.notes ?? '',
         paymentMethod: request.paymentMethod,
         foldingService: request.foldingService,
@@ -1679,7 +1674,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         pricePerLoad: pricing.dryPrice,
         dryPrice: pricing.dryPrice,
         foldingPrice: pricing.foldingPrice,
-        sheetsPrice: pricing.sheetsPrice,
+        sheetsPrice: 0,
         paymentStatus: (request.totalAmount ?? 0) <= 0 ? 'paid' : 'pending',
         paymentRequestedAt: needsTransfer ? paymentTimestamp : undefined,
         requestStatus: 'accepted',

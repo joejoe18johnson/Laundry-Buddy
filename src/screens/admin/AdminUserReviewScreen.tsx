@@ -637,7 +637,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       backgroundColor: colors.greenBg,
       borderColor: colors.green,
     },
-    approvedText: { fontSize: 14, fontWeight: '600', color: colors.green, flex: 1 },
+    approvedText: { fontSize: 14, fontWeight: '600', color: colors.gray600, flex: 1 },
     banner: {
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -649,7 +649,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     bannerError: { backgroundColor: colors.gray50, borderWidth: 1, borderColor: colors.danger },
     bannerErrorText: { flex: 1, fontSize: 13, color: colors.danger, lineHeight: 18 },
     bannerSuccess: { backgroundColor: colors.greenBg, borderWidth: 1, borderColor: colors.green },
-    bannerSuccessText: { flex: 1, fontSize: 13, color: colors.green, lineHeight: 18, fontWeight: '600' },
+    bannerSuccessText: { flex: 1, fontSize: 13, color: colors.gray600, lineHeight: 18, fontWeight: '600' },
     detailRow: { gap: 2 },
     detailLabel: { fontSize: 11, fontWeight: '700', color: colors.gray500, letterSpacing: 0.3 },
     detailValue: { fontSize: 14, color: colors.black, lineHeight: 20 },

@@ -61,17 +61,7 @@ function nowIso() {
   return new Date().toISOString()
 }
 
-function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  })
-}
-
-export function formatChatTime(iso: string) {
-  return formatTime(iso)
-}
+export { formatChatTime } from '../lib/chatTimestamps'
 
 export function MessageProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()

@@ -80,7 +80,7 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
     name: { fontSize: 18, fontWeight: '700', color: colors.black },
     role: { fontSize: 13, color: colors.gray500, marginTop: 2 },
     onlineStatus: { fontSize: 12, color: colors.gray400, marginTop: 4, fontWeight: '600' },
-    onlineLive: { color: colors.green },
+    onlineLive: { color: colors.gray600 },
     closeBtn: { padding: spacing.sm },
     menu: { flex: 1, paddingVertical: 8 },
     section: { paddingBottom: 8 },
@@ -112,7 +112,7 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
       borderWidth: 1,
       borderColor: colors.green,
     },
-    badgeText: { fontSize: 10, fontWeight: '700', color: colors.green },
+    badgeText: { fontSize: 10, fontWeight: '700', color: colors.gray600 },
     alertBadge: {
       minWidth: 22,
       height: 22,

@@ -161,7 +161,7 @@ function statusPillStyle(status: VerificationStatus, colors: ReturnType<typeof u
 }
 
 function statusPillTextColor(status: VerificationStatus, colors: ReturnType<typeof useTheme>['colors']) {
-  if (status === 'verified') return colors.green
+  if (status === 'verified') return colors.gray600
   if (status === 'rejected') return colors.danger
   return colors.gray600
 }

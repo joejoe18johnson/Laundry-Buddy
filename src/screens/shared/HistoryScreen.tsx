@@ -15,7 +15,6 @@ import {
   bookingExtrasSummary,
 } from '../../lib/bookingPayments'
 import { formatDisplayDateTime } from '../../lib/formatDateTime'
-import { DRYER_SHEETS_PRICE, formatDryerSheetsPerLoadCharge } from '../../lib/hostPricing'
 import {
   loadCustomerPaymentHistory,
   loadHostPaymentHistory,
@@ -78,7 +77,7 @@ function createHistoryStyles(colors: ReturnType<typeof useTheme>['colors']) {
     cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
     cardTitle: { fontSize: 16, fontWeight: '600', flex: 1, color: colors.black },
     amount: { fontSize: 18, fontWeight: '700', color: colors.black },
-    amountFree: { color: colors.green },
+    amountFree: { color: colors.gray600 },
     cardSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     metaText: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
@@ -87,7 +86,7 @@ function createHistoryStyles(colors: ReturnType<typeof useTheme>['colors']) {
     statusPaid: { backgroundColor: colors.greenBg, borderColor: colors.green },
     statusPending: { backgroundColor: colors.gray50, borderColor: colors.gray200 },
     statusText: { fontSize: 11, fontWeight: '700' },
-    statusTextPaid: { color: colors.green },
+    statusTextPaid: { color: colors.gray600 },
     statusTextPending: { color: colors.gray600 },
     breakdown: { fontSize: 12, color: colors.gray400 },
     empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
@@ -162,9 +161,6 @@ function HistoryCard({
       {item.pricePerLoad != null && item.loads > 1 && (
         <Text style={styles.breakdown}>
           {formatMoney(item.pricePerLoad)} dry × {item.loads}
-          {item.sheetsOption === 'buy'
-            ? ` · sheets ${formatDryerSheetsPerLoadCharge(item.sheetsPrice ?? DRYER_SHEETS_PRICE)} × ${item.loads}`
-            : ''}
           {item.foldingService ? ` · folding ${formatMoney(item.foldingPrice ?? 0)} × ${item.loads}` : ''}
         </Text>
       )}

@@ -83,7 +83,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     },
     pillLive: { backgroundColor: colors.greenBg, borderColor: colors.green },
     pillText: { fontSize: 12, fontWeight: '600', color: colors.gray600 },
-    pillLiveText: { color: colors.green },
+    pillLiveText: { color: colors.gray600 },
   })
 }
 

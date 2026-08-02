@@ -34,7 +34,7 @@ function createLoginStyles(colors: ReturnType<typeof useTheme>['colors']) {
       borderWidth: 1,
       borderColor: colors.green,
     },
-    infoText: { flex: 1, fontSize: 14, color: colors.green, lineHeight: 20, fontWeight: '600' },
+    infoText: { flex: 1, fontSize: 14, color: colors.gray600, lineHeight: 20, fontWeight: '600' },
     linkRow: { alignItems: 'flex-end', marginTop: spacing.sm, marginBottom: spacing.md },
     forgotLink: { fontSize: 13, fontWeight: '600', color: colors.gray600, textDecorationLine: 'underline' },
     switch: { marginTop: spacing.xl, alignItems: 'center', paddingVertical: spacing.sm },

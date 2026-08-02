@@ -25,6 +25,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { formatChatTime, senderRoleLabel, useMessages } from '../../context/MessageContext'
+import { buildChatListItems } from '../../lib/chatTimestamps'
 import { useTheme } from '../../context/ThemeContext'
 import { useChatTyping } from '../../hooks/useChatTyping'
 import {
@@ -101,6 +102,52 @@ function renderPaymentProofContent(
   ) : null
 }
 
+function MessageFooter({
+  time,
+  isOwn,
+  styles,
+}: {
+  time: string
+  isOwn: boolean
+  styles: ReturnType<typeof createStyles>
+}) {
+  return (
+    <View style={styles.metaRow}>
+      <Text style={[styles.time, isOwn && styles.timeOwn]}>{time}</Text>
+      {isOwn ? <AppIcon name="check" size={12} color="rgba(255,255,255,0.75)" /> : null}
+    </View>
+  )
+}
+
+function MessageTextBlock({
+  text,
+  time,
+  isOwn,
+  styles,
+}: {
+  text: string
+  time: string
+  isOwn: boolean
+  styles: ReturnType<typeof createStyles>
+}) {
+  return (
+    <View style={styles.inlineBody}>
+      <Text style={[styles.body, isOwn && styles.bodyOwn]}>{text}</Text>
+      <MessageFooter time={time} isOwn={isOwn} styles={styles} />
+    </View>
+  )
+}
+
+function DateDivider({ label, styles }: { label: string; styles: ReturnType<typeof createStyles> }) {
+  return (
+    <View style={styles.dateDividerWrap}>
+      <View style={styles.dateDividerPill}>
+        <Text style={styles.dateDividerText}>{label}</Text>
+      </View>
+    </View>
+  )
+}
+
 function MessageBubble({
   message,
   isOwn,
@@ -119,6 +166,7 @@ function MessageBubble({
   paymentConfirmed?: boolean
 }) {
   const isSystem = message.kind === 'system' || message.senderRole === 'support'
+  const timeLabel = formatChatTime(message.createdAt)
 
   if (isSystem && !isOwn) {
     return (
@@ -140,7 +188,7 @@ function MessageBubble({
                   onPress={onImagePress}
                 />
               ) : null}
-          <Text style={styles.systemTime}>{formatChatTime(message.createdAt)}</Text>
+          <Text style={styles.systemTime}>{timeLabel}</Text>
         </View>
       </View>
     )
@@ -158,21 +206,28 @@ function MessageBubble({
           <Text style={styles.proofLabel}>{toTitleCase('Payment proof')}</Text>
         ) : null}
         {message.kind === 'payment_proof' ? (
-          renderPaymentProofContent(message, isOwn, styles, onImagePress, paymentConfirmed)
+          <>
+            {renderPaymentProofContent(message, isOwn, styles, onImagePress, paymentConfirmed)}
+            <MessageFooter time={timeLabel} isOwn={isOwn} styles={styles} />
+          </>
         ) : (
           <>
-            {message.text ? <Text style={[styles.body, isOwn && styles.bodyOwn]}>{message.text}</Text> : null}
+            {message.text ? (
+              <MessageTextBlock text={message.text} time={timeLabel} isOwn={isOwn} styles={styles} />
+            ) : null}
             {message.imageUri ? (
-              <ChatMessageImage
-                uri={message.imageUri}
-                size={imagePreviewSize}
-                previewStyle={styles.imagePreview}
-                onPress={onImagePress}
-              />
+              <>
+                <ChatMessageImage
+                  uri={message.imageUri}
+                  size={imagePreviewSize}
+                  previewStyle={styles.imagePreview}
+                  onPress={onImagePress}
+                />
+                {!message.text ? <MessageFooter time={timeLabel} isOwn={isOwn} styles={styles} /> : null}
+              </>
             ) : null}
           </>
         )}
-        <Text style={[styles.time, isOwn && styles.timeOwn]}>{formatChatTime(message.createdAt)}</Text>
       </View>
     </View>
   )
@@ -217,6 +272,7 @@ export function ChatThreadPanel({
   const listRef = useRef<FlatList<ChatMessage>>(null)
 
   const messages = getMessages(threadId)
+  const listItems = useMemo(() => buildChatListItems(messages), [messages])
   const title = titleOverride ?? getChatThreadTitle(threadId, user!, booking)
   const subtitle = subtitleOverride ?? getChatThreadSubtitle(threadId, booking)
   const isSupport = isSupportThread(threadId)
@@ -413,7 +469,7 @@ export function ChatThreadPanel({
       <FlatList
         ref={listRef}
         style={styles.flex}
-        data={messages}
+        data={listItems}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
@@ -421,17 +477,21 @@ export function ChatThreadPanel({
         automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         onContentSizeChange={scrollToLatest}
         onLayout={scrollToLatest}
-        renderItem={({ item }) => (
-          <MessageBubble
-            message={item}
-            isOwn={item.senderId === user.id}
-            colors={colors}
-            styles={styles}
-            imagePreviewSize={imagePreviewSize}
-            onImagePress={setLightboxUri}
-            paymentConfirmed={paymentConfirmed}
-          />
-        )}
+        renderItem={({ item }) =>
+          item.kind === 'date' ? (
+            <DateDivider label={item.label} styles={styles} />
+          ) : (
+            <MessageBubble
+              message={item.message}
+              isOwn={item.message.senderId === user.id}
+              colors={colors}
+              styles={styles}
+              imagePreviewSize={imagePreviewSize}
+              onImagePress={setLightboxUri}
+              paymentConfirmed={paymentConfirmed}
+            />
+          )
+        }
         ListFooterComponent={
           otherTyping ? <TypingIndicator name={otherTyping.userName} /> : <View style={{ height: spacing.xs }} />
         }
@@ -595,22 +655,51 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     bubble: {
       maxWidth: '82%',
       borderRadius: radius.lg,
-      padding: spacing.md,
-      gap: spacing.sm,
+      paddingHorizontal: spacing.sm + 2,
+      paddingVertical: spacing.sm,
+      gap: 4,
     },
     bubbleOwn: { backgroundColor: colors.black },
     bubbleOther: { backgroundColor: colors.gray50, borderWidth: 1, borderColor: colors.gray100 },
-    sender: { fontSize: 11, fontWeight: '600', color: colors.gray500 },
+    sender: { fontSize: 11, fontWeight: '600', color: colors.gray500, marginBottom: 2 },
     proofLabel: { fontSize: 11, fontWeight: '700', color: colors.gray500, letterSpacing: 0.4 },
-    body: { fontSize: 15, lineHeight: 21, color: colors.black },
+    inlineBody: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'flex-end',
+      justifyContent: 'flex-end',
+      columnGap: 6,
+      rowGap: 2,
+    },
+    body: { fontSize: 15, lineHeight: 21, color: colors.black, flexShrink: 1 },
     bodyOwn: { color: colors.white },
     imagePreview: {
       borderRadius: radius.md,
       overflow: 'hidden',
       backgroundColor: colors.gray100,
     },
-    time: { fontSize: 11, color: colors.gray500, alignSelf: 'flex-end' },
-    timeOwn: { color: 'rgba(255,255,255,0.75)' },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+      marginLeft: 'auto',
+      paddingBottom: 1,
+    },
+    time: { fontSize: 11, color: colors.gray500, lineHeight: 14 },
+    timeOwn: { color: 'rgba(255,255,255,0.72)' },
+    dateDividerWrap: { alignItems: 'center', marginVertical: spacing.sm },
+    dateDividerPill: {
+      backgroundColor: colors.gray100,
+      borderRadius: radius.pill,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+    },
+    dateDividerText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.gray600,
+      letterSpacing: 0.1,
+    },
     systemWrap: { alignItems: 'center', marginVertical: spacing.sm },
     systemBubble: {
       maxWidth: '92%',

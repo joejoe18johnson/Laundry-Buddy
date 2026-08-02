@@ -17,8 +17,7 @@ import { BackButton, AppTextInput, OptionRow, PrimaryButton, Screen, StepIndicat
 import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import {
   calculateBookingTotal,
-  formatDryerSheetsPerLoadCharge,
-  formatDryerSheetsRate,
+  DRYER_SHEETS_GUEST_HINT,
   formatFooterAddonAmount,
   formatServicePrice,
   getHostPricing,
@@ -34,7 +33,7 @@ import { getPushPermissionStatus } from '../../lib/pushNotifications'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
-import type { ClothesListItem, PaymentMethod, SheetsOption } from '../../types'
+import type { ClothesListItem, PaymentMethod } from '../../types'
 
 export function BookingScreen() {
   const {
@@ -88,7 +87,6 @@ export function BookingScreen() {
     wizardStep,
     dropOffTime,
     loads,
-    sheetsOption,
     foldingService,
     notes,
     clothesList,
@@ -100,25 +98,12 @@ export function BookingScreen() {
   const pricing = getHostPricing(selectedHost, hostSettings)
   const dryPrice = pricing.dryPrice
   const foldingPrice = pricing.foldingPrice
-  const sheetsPrice = pricing.sheetsPrice
   const showFolding = offersFoldingService(pricing)
-
-  const sheets: { value: SheetsOption; label: string; sub?: string }[] = [
-    { value: 'own', label: "I'll Bring My Own" },
-    {
-      value: 'buy',
-      label: 'Buy From Host',
-      sub: `${formatDryerSheetsRate(sheetsPrice)} (${formatDryerSheetsPerLoadCharge(sheetsPrice)})`,
-    },
-    { value: 'none', label: 'No Sheets' },
-  ]
 
   const priceInput = {
     loads,
     dryPrice,
     foldingPrice,
-    sheetsPrice,
-    sheetsOption,
     foldingService: showFolding && foldingService,
   }
 
@@ -127,13 +112,6 @@ export function BookingScreen() {
   const receiptLines = bookingReceiptLines(priceInput)
   const footerAddonLines = bookingFooterAddonLines(priceInput)
   const drySubtotal = dryPrice * loads
-
-  const sheetsReviewLabel =
-    sheetsOption === 'buy'
-      ? toTitleCase('Buy from host')
-      : sheetsOption === 'none'
-        ? toTitleCase('No sheets')
-        : toTitleCase('Bring my own')
 
   const canConfirm = paymentMethods.length > 0 && availableTimes.length > 0
   const essentialsReady = canConfirm && loads >= 1
@@ -147,7 +125,6 @@ export function BookingScreen() {
     await confirmBooking({
       dropOffTime,
       loads,
-      sheetsOption,
       notes,
       clothesList,
       paymentMethod,
@@ -182,6 +159,7 @@ export function BookingScreen() {
               {showFolding && (
                 <Text style={styles.rateLine}>{toTitleCase('Folding')} — {formatServicePrice(foldingPrice)}</Text>
               )}
+              <Text style={styles.rateHint}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
             </View>
 
             <Text style={styles.section}>{toTitleCase('Drop Off Time')}</Text>
@@ -259,16 +237,10 @@ export function BookingScreen() {
               {toTitleCase('Optional — you can add more details later in chat.')}
             </Text>
 
-            <Text style={styles.section}>{toTitleCase('Dryer Sheets')}</Text>
-            {sheets.map((s) => (
-              <OptionRow
-                key={s.value}
-                label={s.label}
-                sub={s.sub}
-                selected={sheetsOption === s.value}
-                onPress={() => patchBookingDraft({ sheetsOption: s.value })}
-              />
-            ))}
+            <View style={styles.sheetsHint}>
+              <AppIcon name="info" size={16} color={colors.gray600} />
+              <Text style={styles.sheetsHintText}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
+            </View>
 
             {showFolding && (
               <>
@@ -316,7 +288,6 @@ export function BookingScreen() {
                   label={toTitleCase('Loads')}
                   value={`${loads} · ${PAYMENT_METHOD_LABELS[paymentMethod]}`}
                 />
-                <ReviewMetaRow icon="layers" label={toTitleCase('Sheets')} value={sheetsReviewLabel} />
                 {showFolding ? (
                   <ReviewMetaRow
                     icon="wind"
@@ -346,6 +317,8 @@ export function BookingScreen() {
                   <Text style={styles.receiptTotalAmount}>{formatMoney(totalPrice)}</Text>
                 </View>
               </View>
+
+              <Text style={styles.reviewSheetsNote}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
             </View>
 
             <SendStepNotificationHint onPressBell={() => navigate('notifications')} />
@@ -519,6 +492,19 @@ function createBookingStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   rateTitle: { fontSize: 12, fontWeight: '700', color: colors.gray500, marginBottom: 4 },
   rateLine: { fontSize: 14, color: colors.gray600, fontWeight: '500' },
+  rateHint: { fontSize: 12, color: colors.gray500, lineHeight: 17, marginTop: 4 },
+  sheetsHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray100,
+    borderRadius: radius.lg,
+    backgroundColor: colors.gray50,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  sheetsHintText: { flex: 1, fontSize: 13, color: colors.gray600, lineHeight: 18 },
   reviewCard: {
     borderWidth: 1,
     borderColor: colors.gray200,
@@ -535,6 +521,7 @@ function createBookingStyles(colors: ReturnType<typeof useTheme>['colors']) {
     paddingTop: spacing.sm,
     gap: 2,
   },
+  reviewSheetsNote: { fontSize: 12, color: colors.gray500, lineHeight: 17 },
   receiptBlock: {
     borderTopWidth: 1,
     borderTopColor: colors.gray100,

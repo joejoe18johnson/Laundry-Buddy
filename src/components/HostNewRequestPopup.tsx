@@ -8,7 +8,7 @@ import { formatMoney, CASH_PAY_AT_DROP_OFF } from '../lib/bookingPayments'
 import { toTitleCase } from '../lib/titleCase'
 import { useTheme } from '../context/ThemeContext'
 import { radius, spacing } from '../theme'
-import { sheetsOptionLabel, type HostRequest } from '../types'
+import type { HostRequest } from '../types'
 
 type Props = {
   visible: boolean
@@ -62,7 +62,6 @@ export function HostNewRequestPopup({
             <DetailChip icon="map-pin" label={request.location} styles={styles} />
             <DetailChip icon="credit-card" label={paymentLabel} styles={styles} />
             <DetailChip icon="dollar-sign" label={totalLabel} styles={styles} />
-            <DetailChip icon="tag" label={sheetsOptionLabel(request.sheetsOption)} styles={styles} />
             {request.foldingService ? (
               <DetailChip icon="layers" label={toTitleCase('Folding requested')} styles={styles} />
             ) : null}

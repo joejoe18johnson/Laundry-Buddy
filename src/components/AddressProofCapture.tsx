@@ -200,6 +200,6 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     preview: { width: '100%', height: 180, borderRadius: radius.sm },
     pdfPreview: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
     pdfName: { fontSize: 14, fontWeight: '600', color: colors.black, textAlign: 'center' },
-    pdfHint: { fontSize: 12, color: colors.green, fontWeight: '600' },
+    pdfHint: { fontSize: 12, color: colors.gray600, fontWeight: '600' },
   })
 }

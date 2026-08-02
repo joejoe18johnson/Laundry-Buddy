@@ -751,7 +751,7 @@ const styles = StyleSheet.create({
   },
   gpsBtnPressed: { backgroundColor: colors.gray50 },
   gpsBtnText: { fontSize: 14, fontWeight: '600', color: colors.black },
-  gpsHint: { fontSize: 12, color: colors.green, fontWeight: '600', lineHeight: 18 },
+  gpsHint: { fontSize: 12, color: colors.gray600, fontWeight: '600', lineHeight: 18 },
   row: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   rowText: { flex: 1, gap: 2 },
   rowLabel: { fontSize: 12, color: colors.gray500, fontWeight: '500' },
@@ -820,7 +820,7 @@ const styles = StyleSheet.create({
   },
   priceField: { gap: spacing.sm },
   priceLabel: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
-  paymentSummary: { fontSize: 13, color: colors.green, fontWeight: '600' },
+  paymentSummary: { fontSize: 13, color: colors.gray600, fontWeight: '600' },
   paymentWarning: { fontSize: 13, color: colors.danger, fontWeight: '500' },
   availabilityNote: { fontSize: 13, color: colors.gray500, fontStyle: 'italic', marginTop: spacing.sm },
   reputationCard: {

@@ -180,7 +180,7 @@ export function createUiStyles(colors: ThemeColors, formStyles: FormStyles) {
     saveFooterSavedText: {
       fontSize: 13,
       fontWeight: '600',
-      color: colors.green,
+      color: colors.gray600,
     },
     stickySaveBar: {
       flexDirection: 'row',
@@ -210,11 +210,11 @@ export function createUiStyles(colors: ThemeColors, formStyles: FormStyles) {
     status_pending: { backgroundColor: colors.gray50, borderColor: colors.gray200 },
     statusText_pending: { color: colors.gray600 },
     status_accepted: { backgroundColor: colors.greenBg, borderColor: 'rgba(5,148,79,0.25)' },
-    statusText_accepted: { color: colors.green },
+    statusText_accepted: { color: colors.gray600 },
     status_declined: { backgroundColor: colors.gray50, borderColor: 'rgba(193,53,21,0.2)' },
     statusText_declined: { color: colors.danger },
     status_paid: { backgroundColor: colors.greenBg, borderColor: 'rgba(5,148,79,0.25)' },
-    statusText_paid: { color: colors.green },
+    statusText_paid: { color: colors.gray600 },
     status_awaiting: { backgroundColor: colors.gray50, borderColor: colors.gray200 },
     statusText_awaiting: { color: colors.gray600 },
     status_drying: { backgroundColor: colors.gray50, borderColor: colors.black },

@@ -1,41 +1,25 @@
-import type { Host, HostPricing, HostSettings, SheetsOption } from '../types'
+import type { Host, HostPricing, HostSettings } from '../types'
 
-/** Dryer sheets included when a guest buys from the host. */
-export const DRYER_SHEETS_PER_LOAD = 2
-
-/** Price for {@link DRYER_SHEETS_PER_LOAD} dryer sheets when the guest buys from the host. */
-export const DRYER_SHEETS_PRICE = 1
-
-export function sheetsPurchaseTotalPerLoad(price = DRYER_SHEETS_PRICE): number {
-  return Math.max(0, price)
-}
-
-export function formatDryerSheetsRate(price = DRYER_SHEETS_PRICE): string {
-  if (price <= 0) return 'Free'
-  return `$${price} for ${DRYER_SHEETS_PER_LOAD} sheets`
-}
-
-export function formatDryerSheetsPerLoadCharge(price = DRYER_SHEETS_PRICE): string {
-  if (price <= 0) return 'Free'
-  return `$${price} per load`
-}
+/** Shown on booking and host profile — guests supply their own sheets. */
+export const DRYER_SHEETS_GUEST_HINT =
+  'Bring your own dryer sheets if you want them — hosts do not supply sheets.'
 
 export const DEFAULT_HOST_PRICING: HostPricing = {
   dryPrice: 3,
   foldingPrice: 0,
-  sheetsPrice: DRYER_SHEETS_PRICE,
+  sheetsPrice: 0,
 }
 
 export function getHostPricing(host: Host, settings?: HostSettings): HostPricing {
   const base = settings?.pricing ?? {
     dryPrice: host.price,
     foldingPrice: host.foldingPrice ?? 0,
-    sheetsPrice: host.sheetsPrice ?? DRYER_SHEETS_PRICE,
+    sheetsPrice: host.sheetsPrice ?? 0,
   }
   return {
     dryPrice: base.dryPrice,
     foldingPrice: base.foldingPrice,
-    sheetsPrice: base.sheetsPrice ?? DRYER_SHEETS_PRICE,
+    sheetsPrice: 0,
   }
 }
 
@@ -45,7 +29,7 @@ export function applyHostPricing(host: Host, settings?: HostSettings): Host {
     ...host,
     price: pricing.dryPrice,
     foldingPrice: pricing.foldingPrice,
-    sheetsPrice: pricing.sheetsPrice,
+    sheetsPrice: 0,
   }
 }
 
@@ -62,7 +46,6 @@ export function describeHostPricing(pricing: HostPricing): string {
   if (pricing.foldingPrice > 0) {
     parts.push(`Folding ${formatServicePrice(pricing.foldingPrice)}`)
   }
-  parts.push(`Sheets ${formatDryerSheetsRate(pricing.sheetsPrice)}`)
   return parts.join(' · ')
 }
 
@@ -70,15 +53,12 @@ export interface BookingPriceInput {
   loads: number
   dryPrice: number
   foldingPrice: number
-  sheetsPrice: number
-  sheetsOption: SheetsOption
   foldingService: boolean
 }
 
 export function calculateBookingTotal(input: BookingPriceInput): number {
-  const { loads, dryPrice, foldingPrice, sheetsPrice, sheetsOption, foldingService } = input
+  const { loads, dryPrice, foldingPrice, foldingService } = input
   let total = dryPrice * loads
-  if (sheetsOption === 'buy') total += sheetsPurchaseTotalPerLoad(sheetsPrice) * loads
   if (foldingService && foldingPrice > 0) total += foldingPrice * loads
   return total
 }
@@ -86,11 +66,6 @@ export function calculateBookingTotal(input: BookingPriceInput): number {
 export function bookingTotalLabel(input: BookingPriceInput): string {
   const parts: string[] = []
   parts.push(`${formatServicePrice(input.dryPrice)} dry × ${input.loads}`)
-  if (input.sheetsOption === 'buy') {
-    parts.push(
-      `${formatDryerSheetsPerLoadCharge(input.sheetsPrice)} (${formatDryerSheetsRate(input.sheetsPrice)}) × ${input.loads}`,
-    )
-  }
   if (input.foldingService && input.foldingPrice > 0) {
     parts.push(`${formatServicePrice(input.foldingPrice)} folding × ${input.loads}`)
   }
@@ -109,12 +84,6 @@ export function bookingFooterAddonLines(input: BookingPriceInput): BookingFooter
     lines.push({
       label: 'Folding',
       amount: input.foldingPrice * input.loads,
-    })
-  }
-  if (input.sheetsOption === 'buy') {
-    lines.push({
-      label: 'Dryer Sheets',
-      amount: sheetsPurchaseTotalPerLoad(input.sheetsPrice) * input.loads,
     })
   }
   return lines
@@ -140,14 +109,6 @@ export function bookingReceiptLines(input: BookingPriceInput): BookingReceiptLin
       amount: input.dryPrice * input.loads,
     },
   ]
-
-  if (input.sheetsOption === 'buy') {
-    lines.push({
-      label: 'Dryer sheets',
-      detail: loadLabel,
-      amount: sheetsPurchaseTotalPerLoad(input.sheetsPrice) * input.loads,
-    })
-  }
 
   if (input.foldingService && input.foldingPrice > 0) {
     lines.push({

@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 12, color: colors.gray500 },
   rowRight: { alignItems: 'flex-end', gap: 4 },
   rowPrice: { fontSize: 15, fontWeight: '700', color: colors.black },
-  rowPriceFree: { color: colors.green },
+  rowPriceFree: { color: colors.gray600 },
   placeIcon: {
     width: 40,
     height: 40,
