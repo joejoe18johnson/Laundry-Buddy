@@ -18,6 +18,7 @@ import { LeaveReviewScreen } from './src/screens/customer/LeaveReviewScreen'
 import { DashboardScreen } from './src/screens/host/DashboardScreen'
 import { HostDryerScreen } from './src/screens/host/HostDryerScreen'
 import { HostHubScreen } from './src/screens/host/HostHubScreen'
+import { HostReviewsScreen } from './src/screens/host/HostReviewsScreen'
 import { MarkDryScreen } from './src/screens/host/MarkDryScreen'
 import { WelcomeScreen } from './src/screens/auth/WelcomeScreen'
 import { IntroOnboardingScreen } from './src/screens/auth/IntroOnboardingScreen'
@@ -605,6 +606,7 @@ function AppShell() {
         {screen === 'host-dashboard' && <DashboardScreen />}
         {screen === 'host-dryer' && <HostDryerScreen />}
         {screen === 'host-mark-dry' && <MarkDryScreen />}
+        {screen === 'host-reviews' && <HostReviewsScreen />}
         {screen === 'history' && <HistoryScreen />}
         {screen === 'messages' && <MessagesScreen />}
         {screen === 'account' && (isCustomer ? <AccountScreen /> : <HostHubScreen />)}

@@ -285,7 +285,7 @@ export function PrimaryButton({
       ]}
     >
       <View style={[styles.btnContent, full && styles.btnContentFull]}>
-        {icon && <AppIcon name={icon} size={compact ? 16 : 18} color={colors.white} />}
+        {icon && <AppIcon name={icon} size={compact ? 16 : 18} color={colors.black} />}
         <Text
           style={[styles.btnPrimaryText, compact && styles.btnPrimaryTextCompact]}
           numberOfLines={1}

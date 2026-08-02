@@ -16,6 +16,10 @@ export function hostProfileLink(hostId: string): NotificationLink {
   return { screen: 'customer-host-profile', hostId }
 }
 
+export function hostReviewsLink(): NotificationLink {
+  return { screen: 'host-reviews' }
+}
+
 export function chatLink(threadId: string, bookingId?: string): NotificationLink {
   return { screen: 'chat', threadId, bookingId }
 }
@@ -48,6 +52,9 @@ export function linkFromPushData(data: Record<string, unknown>): NotificationLin
   }
   if (screen === 'customer-host-profile' && typeof data.hostId === 'string') {
     return { screen, hostId: data.hostId }
+  }
+  if (screen === 'host-reviews') {
+    return { screen: 'host-reviews' }
   }
   if (screen === 'host-dashboard') {
     return {
@@ -107,12 +114,20 @@ export function inferNotificationLink(title: string, role: AppRole): Notificatio
     return role === 'host' ? { screen: 'host-dashboard' } : { screen: 'customer-home' }
   }
 
-  if (role === 'host') {
-    return { screen: 'host-dashboard' }
+  if (
+    title === 'New Review' ||
+    lower.includes('new review') ||
+    (lower.includes('left a') && lower.includes('review'))
+  ) {
+    if (role === 'host') return { screen: 'host-reviews' }
   }
 
   if (lower.includes('review')) {
     return { screen: 'customer-leave-review', hostId: '' }
+  }
+
+  if (role === 'host') {
+    return { screen: 'host-dashboard' }
   }
 
   if (

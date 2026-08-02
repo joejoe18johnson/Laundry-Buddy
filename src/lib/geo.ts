@@ -29,6 +29,26 @@ export function distanceKm(a: Coordinates, b: Coordinates): number {
   return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h))
 }
 
+export function formatDistanceLabel(km: number): string {
+  const rounded = Math.round(km * 10) / 10
+  if (rounded < 1) return `${Math.max(100, Math.round(rounded * 1000))} m`
+  return `${rounded} km`
+}
+
+/** Rough drive-time estimate at ~25 km/h (typical in-town). */
+export function estimateTravelMinutes(km: number): number {
+  const avgSpeedKmh = 25
+  return Math.max(1, Math.round((km / avgSpeedKmh) * 60))
+}
+
+export function formatTravelTimeEstimate(km: number): string {
+  const mins = estimateTravelMinutes(km)
+  if (mins < 60) return `${mins} min drive`
+  const hours = Math.floor(mins / 60)
+  const remainder = mins % 60
+  return remainder > 0 ? `${hours} hr ${remainder} min drive` : `${hours} hr drive`
+}
+
 export function enrichHostsWithDistance(hosts: Host[], origin: Coordinates): Host[] {
   return hosts.map((host) => ({
     ...host,

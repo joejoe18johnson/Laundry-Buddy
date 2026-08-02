@@ -18,41 +18,49 @@ export type ThemeColors = {
   mapBg: string
 }
 
+/** Brand palette — Turquoise, Lime, Dark Navy, Off White. */
+export const brandColors = {
+  turquoise: '#00CBA9',
+  lime: '#9BE15D',
+  navy: '#1F2933',
+  offWhite: '#FDFDFD',
+} as const
+
 export const lightColors: ThemeColors = {
-  black: '#000000',
-  white: '#ffffff',
-  gray50: '#f6f6f6',
-  gray75: '#eeeeee',
-  gray100: '#e8e8e8',
-  gray200: '#d1d1d1',
-  gray400: '#a3a3a3',
-  gray500: '#6b6b6b',
-  gray600: '#424242',
-  accent: '#000000',
-  blue: '#276ef1',
-  green: '#05944f',
-  greenBg: '#ecfdf3',
+  black: brandColors.navy,
+  white: brandColors.offWhite,
+  gray50: '#F4F6F8',
+  gray75: '#E8ECF0',
+  gray100: '#DDE3EA',
+  gray200: '#C5CED8',
+  gray400: '#8B9AAB',
+  gray500: '#5C6B7A',
+  gray600: '#3D4F5F',
+  accent: brandColors.turquoise,
+  blue: brandColors.turquoise,
+  green: brandColors.lime,
+  greenBg: '#EEF9E3',
   danger: '#c13515',
-  mapBg: '#f2f2f2',
+  mapBg: '#EEF2F5',
 }
 
 /** Inverted semantic tokens — `black` is primary text, `white` is screen background. */
 export const darkColors: ThemeColors = {
-  black: '#f2f2f2',
-  white: '#121212',
-  gray50: '#1a1a1a',
-  gray75: '#222222',
-  gray100: '#2c2c2c',
-  gray200: '#3d3d3d',
-  gray400: '#8a8a8a',
-  gray500: '#a8a8a8',
-  gray600: '#c8c8c8',
-  accent: '#f2f2f2',
-  blue: '#5b9cf5',
-  green: '#34d399',
-  greenBg: '#0f2a1f',
+  black: brandColors.offWhite,
+  white: '#141C24',
+  gray50: '#1A2430',
+  gray75: '#222E3C',
+  gray100: '#2A3848',
+  gray200: '#3A4A5C',
+  gray400: '#8B9AAB',
+  gray500: '#A8B4C0',
+  gray600: '#C8D0D8',
+  accent: brandColors.turquoise,
+  blue: brandColors.turquoise,
+  green: brandColors.lime,
+  greenBg: '#1A2E14',
   danger: '#f87171',
-  mapBg: '#1a1a1a',
+  mapBg: '#1A2430',
 }
 
 /** @deprecated Use useTheme().colors — static light palette for legacy imports. */
@@ -133,23 +141,23 @@ export const formStyles = getFormStyles(lightColors)
 
 /** Shared brand marks — laundry basket icon (app icon, splash, loading). */
 export const brand = {
-  ink: '#242C34',
-  green: '#1B833E',
-  iconBg: '#000000',
+  ink: brandColors.navy,
+  green: brandColors.lime,
+  iconBg: brandColors.turquoise,
 } as const
 
 export const coverColors: Record<string, [string, string]> = {
-  maria: ['#1a1a1a', '#404040'],
-  lopez: ['#2d2d2d', '#525252'],
-  castillo: ['#333333', '#666666'],
-  rupert: ['#262626', '#595959'],
-  sandra: ['#3d3d3d', '#707070'],
-  elena: ['#1f1f1f', '#4a4a4a'],
-  marcus: ['#292929', '#5c5c5c'],
-  carmen: ['#2a2a2a', '#555555'],
-  pedro: ['#303030', '#5a5a5a'],
-  lucia: ['#353535', '#606060'],
-  miguel: ['#282828', '#525252'],
+  maria: [brandColors.navy, '#007A68'],
+  lopez: ['#1A3340', brandColors.turquoise],
+  castillo: ['#243040', '#00A892'],
+  rupert: [brandColors.navy, '#2A4050'],
+  sandra: ['#1E2E3A', brandColors.turquoise],
+  elena: ['#152028', '#008F78'],
+  marcus: [brandColors.navy, '#3A5060'],
+  carmen: ['#1C2834', brandColors.turquoise],
+  pedro: ['#243038', '#00B89A'],
+  lucia: [brandColors.navy, '#4A6070'],
+  miguel: ['#1A2832', brandColors.turquoise],
 }
 
 export const typography = {

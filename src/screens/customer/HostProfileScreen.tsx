@@ -21,6 +21,11 @@ import { formatDryerSheetsRate, formatServicePrice, getHostPricing } from '../..
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import { canBookOrHost } from '../../lib/identityVerification'
+import {
+  distanceKm,
+  formatDistanceLabel,
+  formatTravelTimeEstimate,
+} from '../../lib/geo'
 import { toTitleCase } from '../../lib/titleCase'
 import { coverColors, radius, spacing } from '../../theme'
 import type { HostReview } from '../../types'
@@ -58,13 +63,24 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
       paddingVertical: 5,
       borderRadius: radius.pill,
     },
-    onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#7CFC7C' },
+    onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.green },
     onlineText: { fontSize: 12, fontWeight: '700', color: colors.white },
     offlineBadge: { backgroundColor: 'rgba(255,255,255,0.15)' },
     offlineDot: { backgroundColor: colors.gray400 },
     offlineText: { color: 'rgba(255,255,255,0.75)' },
     heroLocation: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.sm },
     heroLocationText: { fontSize: 14, color: 'rgba(255,255,255,0.9)' },
+    heroDistance: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: spacing.sm,
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: radius.pill,
+    },
+    heroDistanceText: { fontSize: 13, fontWeight: '600', color: 'rgba(255,255,255,0.95)' },
     heroRating: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
     heroRatingText: { fontSize: 14, fontWeight: '600', color: colors.white },
     heroMessageBtn: {
@@ -190,7 +206,7 @@ function Stat({
   styles,
   colors,
 }: {
-  icon: 'package' | 'wind' | 'calendar'
+  icon: 'package' | 'wind' | 'calendar' | 'navigation'
   label: string
   value: string
   styles: ReturnType<typeof createHostProfileStyles>
@@ -254,8 +270,17 @@ function InfoSection({
 }
 
 export function HostProfileScreen() {
-  const { selectedHost, navigate, selectHost, openHostInquiryChat, getSettingsForHost, getReviewsForHost, refreshHostReviews, activeGuestBookings } =
-    useApp()
+  const {
+    selectedHost,
+    navigate,
+    selectHost,
+    openHostInquiryChat,
+    getSettingsForHost,
+    getReviewsForHost,
+    refreshHostReviews,
+    activeGuestBookings,
+    userLocation,
+  } = useApp()
   const { user } = useAuth()
   const { colors } = useTheme()
   const styles = useMemo(() => createHostProfileStyles(colors), [colors])
@@ -266,6 +291,15 @@ export function HostProfileScreen() {
     if (!selectedHost) return
     void refreshHostReviews(selectedHost.id)
   }, [selectedHost?.id, refreshHostReviews])
+
+  const hostDistanceKm = useMemo(() => {
+    if (!selectedHost) return null
+    if (selectedHost.distanceKm != null) return selectedHost.distanceKm
+    if (selectedHost.latitude != null && selectedHost.longitude != null) {
+      return Math.round(distanceKm(userLocation, selectedHost) * 10) / 10
+    }
+    return null
+  }, [selectedHost, userLocation])
 
   if (!selectedHost) return null
 
@@ -285,7 +319,7 @@ export function HostProfileScreen() {
       ? 'Bank transfer'
       : null,
   ].filter(Boolean)
-  const gradient = coverColors[host.id] ?? ['#667eea', '#764ba2']
+  const gradient = coverColors[host.id] ?? [colors.black, colors.accent]
   const verified = user ? canBookOrHost(user) : false
   const activeLoadCount = activeGuestBookings.length
   const foldingPrice = pricing.foldingPrice
@@ -318,6 +352,14 @@ export function HostProfileScreen() {
             <AppIcon name="map-pin" size={14} color="rgba(255,255,255,0.9)" />
             <Text style={styles.heroLocationText}>{host.location}{host.district ? ` · ${host.district}` : ''}</Text>
           </View>
+          {!browseOnly && hostDistanceKm != null ? (
+            <View style={styles.heroDistance}>
+              <AppIcon name="navigation" size={14} color="rgba(255,255,255,0.95)" />
+              <Text style={styles.heroDistanceText}>
+                {formatDistanceLabel(hostDistanceKm)} · {formatTravelTimeEstimate(hostDistanceKm)}
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.heroRating}>
             <Stars
               rating={ratingSummary.rating || host.rating || 5}

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Animated, Easing, StyleSheet, View } from 'react-native'
-import { BrandWasherIcon, LB_LOGO_ASPECT } from './BrandWasherIcon'
+import { BrandMascot, LB_MASCOT_ASPECT } from './BrandMascot'
 
 const LOGO_HEIGHT = 88
 
@@ -44,12 +44,12 @@ export function SplashWasherAnimation() {
 
   const scale = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] })
 
-  const width = Math.round(LOGO_HEIGHT * LB_LOGO_ASPECT)
+  const width = Math.round(LOGO_HEIGHT * LB_MASCOT_ASPECT)
 
   return (
     <View style={[styles.wrap, { width, height: LOGO_HEIGHT }]}>
       <Animated.View style={{ opacity: fade, transform: [{ scale }] }}>
-        <BrandWasherIcon size={LOGO_HEIGHT} variant="light" />
+        <BrandMascot size={LOGO_HEIGHT} />
       </Animated.View>
     </View>
   )

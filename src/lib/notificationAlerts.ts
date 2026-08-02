@@ -22,13 +22,14 @@ export function shouldDeliverPhoneAlert(title: string, body = ''): boolean {
     title === VERIFICATION_APPROVED_TITLE ||
     title === VERIFICATION_REJECTED_TITLE ||
     title === VERIFICATION_DOC_APPROVED_TITLE ||
-    isNewBookingNotification(title)
+    isNewBookingNotification(title) ||
+    title === 'New Review'
   ) {
     return true
   }
 
   return (
-    /pay now|payment request|request sent|load accepted|declined|ready for pickup|marked your load|drying|picked up|drop-off reminder|pay at drop-off|bank transfer|verification code|you're verified|you are verified|new message|message from|transfer proof|host is online|awaiting host|proof sent|confirmed your/i.test(
+    /pay now|payment request|request sent|load accepted|declined|ready for pickup|marked your load|drying|picked up|drop-off reminder|pay at drop-off|bank transfer|verification code|you're verified|you are verified|new message|message from|transfer proof|host is online|awaiting host|proof sent|confirmed your|new review|left a .* review|leave a review/i.test(
       haystack,
     )
   )

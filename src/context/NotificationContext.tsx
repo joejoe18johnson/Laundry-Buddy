@@ -165,11 +165,21 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const push = useCallback(
     async (userId: string, title: string, body: string, link?: NotificationLink) => {
       const resolvedTargetId = remoteSyncEnabled ? await resolveNotificationTargetId(userId) : userId
+      const isForMe =
+        userId === localUserId ||
+        userId === activeUserId ||
+        resolvedTargetId === activeUserId
+
       let item: AppNotification | null = null
 
       if (remoteSyncEnabled) {
         item = await sendNotificationToSupabase(userId, title, body, link)
-        if (!item) return
+        if (!item) {
+          if (__DEV__) {
+            console.warn('[notifications] remote send failed — recipient may not receive alert')
+          }
+          return
+        }
       } else {
         item = {
           id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -182,18 +192,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      setNotifications((prev) => {
-        const next = [item!, ...prev.filter((entry) => entry.id !== item!.id)].slice(0, 100)
-        if (!remoteSyncEnabled) {
-          void writeAllNotifications(next)
-        }
-        return next
-      })
-
-      const isForMe =
-        userId === localUserId ||
-        userId === activeUserId ||
-        resolvedTargetId === activeUserId
+      if (isForMe) {
+        setNotifications((prev) => {
+          const next = [item!, ...prev.filter((entry) => entry.id !== item!.id)].slice(0, 100)
+          if (!remoteSyncEnabled) {
+            void writeAllNotifications(next)
+          }
+          return next
+        })
+      }
 
       if (isForMe && shouldDeliverPhoneAlert(title, body)) {
         deliveredPhoneAlertsRef.current.add(item.id)

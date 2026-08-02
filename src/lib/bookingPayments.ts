@@ -5,6 +5,12 @@ export function formatMoney(amount: number): string {
   return amount <= 0 ? 'Free' : `$${amount}`
 }
 
+/** Always shows a dollar amount — use for earnings/spending totals, not guest-facing prices. */
+export function formatCurrency(amount: number): string {
+  if (amount <= 0) return '$0'
+  return Number.isInteger(amount) ? `$${amount}` : `$${amount.toFixed(2)}`
+}
+
 export function getBookingPriceInput(booking: Booking): BookingPriceInput {
   return {
     loads: booking.loads,

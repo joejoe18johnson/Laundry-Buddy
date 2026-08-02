@@ -50,10 +50,10 @@ function createLoadProgressStyles(colors: ReturnType<typeof useTheme>['colors'])
       paddingHorizontal: 10,
       paddingVertical: 8,
       borderRadius: radius.pill,
-      backgroundColor: colors.black,
+      backgroundColor: colors.accent,
       alignItems: 'center',
     },
-    percentValue: { fontSize: 14, fontWeight: '700', color: colors.white },
+    percentValue: { fontSize: 14, fontWeight: '700', color: colors.black },
     progressTrack: {
       height: 6,
       borderRadius: radius.pill,
@@ -63,7 +63,7 @@ function createLoadProgressStyles(colors: ReturnType<typeof useTheme>['colors'])
     progressFill: {
       height: '100%',
       borderRadius: radius.pill,
-      backgroundColor: colors.black,
+      backgroundColor: colors.accent,
     },
     stepperRow: {
       flexDirection: 'row',

@@ -422,6 +422,13 @@ export function HostHubScreen() {
             label="Rating"
             value={host.rating > 0 ? `${host.rating.toFixed(1)} / 5` : 'New host — no reviews yet'}
           />
+          <Pressable
+            style={({ pressed }) => [styles.gpsBtn, pressed && styles.gpsBtnPressed, { marginTop: spacing.sm }]}
+            onPress={() => navigate('host-reviews')}
+          >
+            <AppIcon name="star" size={16} color={colors.black} />
+            <Text style={styles.gpsBtnText}>{toTitleCase('View all reviews')}</Text>
+          </Pressable>
         </Section>
       ) : null}
 

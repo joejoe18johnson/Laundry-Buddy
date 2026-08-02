@@ -84,7 +84,7 @@ import {
 import {
   bookingTrackingLink,
   hostDashboardLink,
-  hostProfileLink,
+  hostReviewsLink,
   hostReviewLink,
   linkFromPushData,
   resolveNotificationLink,
@@ -1369,8 +1369,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           host.hostUserId,
           'New Review',
           `${user.name} left a ${rating}/5 review: "${preview}"`,
-          hostProfileLink(hostId),
-          'update',
+          hostReviewsLink(),
+          'request',
         )
       }
 
@@ -1485,6 +1485,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (link.screen === 'host-dashboard') {
         setScreen('host-dashboard')
+        return
+      }
+
+      if (link.screen === 'host-reviews') {
+        setScreen('host-reviews')
         return
       }
 

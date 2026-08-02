@@ -28,13 +28,13 @@ export function createUiStyles(colors: ThemeColors, formStyles: FormStyles) {
     },
     btnContentFull: { width: '100%' },
     btnPrimary: {
-      backgroundColor: colors.black,
+      backgroundColor: colors.accent,
       paddingVertical: 16,
       paddingHorizontal: 24,
       borderRadius: radius.pill,
       alignItems: 'center',
     },
-    btnPrimaryText: { color: colors.white, fontSize: 16, fontWeight: '600', flexShrink: 0 },
+    btnPrimaryText: { color: colors.black, fontSize: 16, fontWeight: '600', flexShrink: 0 },
     btnPrimaryCompact: {
       paddingVertical: 14,
       paddingHorizontal: 18,

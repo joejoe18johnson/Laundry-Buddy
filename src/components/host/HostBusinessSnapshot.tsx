@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../AppIcon'
 import { useTheme } from '../../context/ThemeContext'
-import { formatMoney } from '../../lib/bookingPayments'
+import { formatCurrency } from '../../lib/bookingPayments'
 import type { HostBusinessStats } from '../../lib/hostBusinessStats'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
@@ -122,7 +122,7 @@ export function HostBusinessSnapshot({
       <View style={styles.hero}>
         <Text style={styles.heroLabel}>{toTitleCase('Total earned')}</Text>
         <Text style={[styles.heroAmount, !hasEarnings && styles.heroAmountMuted]}>
-          {formatMoney(stats.totalEarned)}
+          {formatCurrency(stats.totalEarned)}
         </Text>
       </View>
 
@@ -134,7 +134,7 @@ export function HostBusinessSnapshot({
         />
         <StatTile
           label={toTitleCase('Earned today')}
-          value={formatMoney(stats.earnedToday)}
+          value={formatCurrency(stats.earnedToday)}
           styles={styles}
         />
         <StatTile

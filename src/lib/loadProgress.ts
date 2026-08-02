@@ -1,5 +1,6 @@
 import type { IconName } from '../components/AppIcon'
 import { CASH_PAY_AT_DROP_OFF, cashPaymentGuestHint, cashPaymentHostHint } from './bookingPayments'
+import { formatDisplayDateTime } from './formatDateTime'
 import { isPickupComplete } from './pickupConfirmation'
 import type { Booking, BookingStage } from '../types'
 
@@ -163,14 +164,10 @@ export function getHostProgressStep(load: Booking): HostProgressStep {
   return HOST_LOAD_STEPS[index]
 }
 
-function formatShortTime(iso: string) {
-  const parsed = Date.parse(iso)
-  if (Number.isNaN(parsed)) return undefined
-  return new Date(parsed).toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  })
+function formatStepTime(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const formatted = formatDisplayDateTime(value)
+  return formatted === '—' ? undefined : formatted
 }
 
 export function getStepTimestamp(booking: Booking, step: GuestProgressStep): string | undefined {
@@ -180,25 +177,19 @@ export function getStepTimestamp(booking: Booking, step: GuestProgressStep): str
 
   switch (step.key) {
     case 'request':
-      return booking.acceptedAt
-        ? formatShortTime(booking.acceptedAt) ?? booking.acceptedAt
-        : booking.createdAt
-          ? formatShortTime(booking.createdAt)
-          : undefined
+      return formatStepTime(booking.acceptedAt) ?? formatStepTime(booking.createdAt)
     case 'payment-sent':
-      return booking.paymentProofSentAt
-        ? formatShortTime(booking.paymentProofSentAt)
-        : booking.paymentRequestedAt
-          ? formatShortTime(booking.paymentRequestedAt)
-          : undefined
+      return formatStepTime(booking.paymentProofSentAt) ?? formatStepTime(booking.paymentRequestedAt)
     case 'payment-confirmed':
-      return booking.paymentStatus === 'paid' ? booking.stageTimes.drying ?? booking.acceptedAt : undefined
+      return booking.paymentStatus === 'paid'
+        ? formatStepTime(booking.stageTimes.drying) ?? formatStepTime(booking.acceptedAt)
+        : undefined
     case 'drying':
-      return booking.stageTimes.drying
+      return formatStepTime(booking.stageTimes.drying)
     case 'ready':
-      return booking.stageTimes.ready
+      return formatStepTime(booking.stageTimes.ready)
     case 'picked-up':
-      return booking.completedAt
+      return formatStepTime(booking.completedAt)
     default:
       return undefined
   }

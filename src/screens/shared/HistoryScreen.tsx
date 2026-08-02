@@ -7,12 +7,14 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import {
+  formatCurrency,
   formatMoney,
   formatPaymentMethod,
   getBookingAmount,
   sumBookingAmounts,
   bookingExtrasSummary,
 } from '../../lib/bookingPayments'
+import { formatDisplayDateTime } from '../../lib/formatDateTime'
 import { DRYER_SHEETS_PRICE, formatDryerSheetsPerLoadCharge } from '../../lib/hostPricing'
 import {
   loadCustomerPaymentHistory,
@@ -181,7 +183,7 @@ function HistoryCard({
       {item.completedAt ? (
         <View style={styles.metaRow}>
           <AppIcon name="calendar" size={14} color={colors.gray500} />
-          <Text style={styles.metaText}>{item.completedAt}</Text>
+          <Text style={styles.metaText}>{formatDisplayDateTime(item.completedAt)}</Text>
         </View>
       ) : null}
     </View>
@@ -201,7 +203,7 @@ function PaymentLedgerRow({
       <View style={styles.ledgerLeft}>
         <Text style={styles.ledgerTitle}>{item.hostName}</Text>
         <Text style={styles.ledgerSub}>
-          {item.completedAt ?? '—'} · {formatPaymentMethod(item.paymentMethod)}
+          {formatDisplayDateTime(item.completedAt)} · {formatPaymentMethod(item.paymentMethod)}
         </Text>
       </View>
       <Text style={[styles.ledgerAmount, amount <= 0 && styles.amountFree]}>
@@ -265,7 +267,7 @@ export function HistoryScreen() {
               {toTitleCase(isCustomer ? 'Total spent' : 'Total earned')}
             </Text>
             <Text style={[styles.summaryAmount, total <= 0 && styles.amountFree]}>
-              {formatMoney(total)}
+              {formatCurrency(total)}
             </Text>
           </View>
           <View style={styles.summaryMeta}>

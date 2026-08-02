@@ -101,7 +101,12 @@ EAS cloud builds use the committed `ios/` and `android/` projects; run prebuild 
 
 ### App icons
 
-Source artwork: `assets/icon-source.png` (your laundry basket PNG). The build script strips the black background into `logo-mark.png` and generates launcher/splash sizes. Regenerate with:
+Brand artwork lives in `assets/`:
+
+- `logo-icon.png` — main logo (in-app UI, splash, and launcher generation)
+- `lb-mascot.png` — mascot (animated splash)
+
+Regenerate launcher, favicon, and notification sizes from the logo with:
 
 ```bash
 npm run generate-assets
