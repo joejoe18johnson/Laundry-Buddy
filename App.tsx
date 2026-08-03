@@ -60,6 +60,7 @@ import { HostBookingSync } from './src/components/HostBookingSync'
 import { HostRequestAlertSync } from './src/components/HostRequestAlertSync'
 import { HostOnlineScheduleSync } from './src/components/HostOnlineScheduleSync'
 import { BookingStepAlertSync } from './src/components/BookingStepAlertSync'
+import { ReviewReminderSync } from './src/components/ReviewReminderSync'
 import { VerificationStatusSync } from './src/components/VerificationStatusSync'
 import { ToastProvider } from './src/context/ToastContext'
 import {
@@ -827,6 +828,7 @@ function AuthenticatedApp() {
                   <HostOnlineScheduleSync />
                   <HostRequestAlertSync />
                   <BookingStepAlertSync />
+                  <ReviewReminderSync />
                   <GuestBookingSync />
                   <HostBookingSync />
                   <AppShell />

@@ -7,7 +7,9 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { getHostById } from '../../data/mockData'
 import { formatHostDisplayName } from '../../lib/displayName'
-import { hasReviewedBooking } from '../../lib/reviewStorage'
+import { hasReviewForBooking } from '../../lib/reviewEligibility'
+import { resolveSupabaseProfileId } from '../../lib/supabase/profileIds'
+import { isSupabaseConfigured } from '../../lib/supabase/config'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 
@@ -129,13 +131,23 @@ export function LeaveReviewScreen() {
     }
 
     if (reviewBookingId) {
-      void hasReviewedBooking(user.id, reviewBookingId).then((reviewed) => {
+      void (async () => {
+        const resolvedAuthorId = isSupabaseConfigured()
+          ? ((await resolveSupabaseProfileId(user)) ?? user.id)
+          : user.id
+        const reviewed = await hasReviewForBooking(
+          user.id,
+          reviewBookingId,
+          resolvedAuthorId,
+        )
         if (!cancelled) {
           setAlreadyReviewed(reviewed)
           setChecking(false)
         }
-      })
-      return
+      })()
+      return () => {
+        cancelled = true
+      }
     }
 
     const existing = getReviewsForHost(reviewHostId)
@@ -165,13 +177,16 @@ export function LeaveReviewScreen() {
     if (!canSubmit) return
     setSubmitting(true)
     try {
-      await submitHostReview({
+      const saved = await submitHostReview({
         hostId: host.id,
         bookingId: reviewBookingId,
         rating,
         comment: comment.trim(),
       })
-      viewHostProfile(host)
+      if (saved) {
+        setAlreadyReviewed(true)
+        viewHostProfile(host)
+      }
     } finally {
       setSubmitting(false)
     }

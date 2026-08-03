@@ -15,6 +15,9 @@ import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { NotificationBellReminder } from '../../components/NotificationBellReminder'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { getGuestProgressStep, getGuestStepDescription } from '../../lib/loadProgress'
+import { hasReviewForBooking } from '../../lib/reviewEligibility'
+import { resolveSupabaseProfileId } from '../../lib/supabase/profileIds'
+import { isSupabaseConfigured } from '../../lib/supabase/config'
 import {
   canGuestCancelPendingRequest,
   formatCancelCountdown,
@@ -63,6 +66,7 @@ export function TrackingScreen() {
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
   const [cancelTick, setCancelTick] = useState(0)
+  const [reviewSubmitted, setReviewSubmitted] = useState(false)
   const pulse = useRef(new Animated.Value(1)).current
   const { colors } = useTheme()
   const styles = useMemo(() => createTrackingStyles(colors), [colors])
@@ -102,6 +106,32 @@ export function TrackingScreen() {
     const id = setInterval(() => setCancelTick((value) => value + 1), 30_000)
     return () => clearInterval(id)
   }, [booking?.id, booking?.requestStatus])
+
+  useEffect(() => {
+    if (!booking?.id || !user) {
+      setReviewSubmitted(false)
+      return
+    }
+
+    const complete = booking.stage === 'picked-up' || isPickupComplete(booking)
+    if (!complete) {
+      setReviewSubmitted(false)
+      return
+    }
+
+    let cancelled = false
+    void (async () => {
+      const resolvedAuthorId = isSupabaseConfigured()
+        ? ((await resolveSupabaseProfileId(user)) ?? user.id)
+        : user.id
+      const reviewed = await hasReviewForBooking(user.id, booking.id, resolvedAuthorId)
+      if (!cancelled) setReviewSubmitted(reviewed)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [booking, user])
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -149,6 +179,7 @@ export function TrackingScreen() {
   const dropOffUnlocked =
     isAccepted &&
     (amount <= 0 || isCash || (isBankTransfer && booking.paymentStatus === 'paid'))
+  const isLoadComplete = booking.stage === 'picked-up' || isPickupComplete(booking)
   const showDropOffCard = !isDeclined && !isLoadComplete
   const phaseLocked = !dropOffUnlocked && !isDeclined
   const dropOffAddress = booking.address.trim() || host?.address?.trim() || ''
@@ -166,7 +197,6 @@ export function TrackingScreen() {
       : ''
 
   const isReadyForPickup = isAccepted && booking.stage === 'ready' && !isPickupComplete(booking)
-  const isLoadComplete = booking.stage === 'picked-up' || isPickupComplete(booking)
   const canConfirmGuestPickup = canGuestConfirmPickup(booking)
   const awaitingHostPickupConfirm = isAwaitingHostPickupConfirmation(booking)
   const canCancelPending = isPending && canGuestCancelPendingRequest(booking)
@@ -522,7 +552,7 @@ export function TrackingScreen() {
       )}
       </View>
 
-      {isLoadComplete && (
+      {isLoadComplete && !reviewSubmitted && (
         <View style={styles.reviewCard}>
           <View style={styles.reviewHeader}>
             <AppIcon name="check-circle" size={18} color={colors.green} />
@@ -540,6 +570,19 @@ export function TrackingScreen() {
             full
             onPress={() => openLeaveReview(booking.hostId, booking.id)}
           />
+          <OutlineButton title="Back to home" icon="home" full onPress={() => { clearBooking(); navigate('customer-home') }} />
+        </View>
+      )}
+
+      {isLoadComplete && reviewSubmitted && (
+        <View style={styles.reviewCard}>
+          <View style={styles.reviewHeader}>
+            <AppIcon name="star" size={18} color={colors.green} />
+            <Text style={styles.reviewTitle}>{toTitleCase('Review submitted')}</Text>
+          </View>
+          <Text style={styles.reviewSub}>
+            {toTitleCase('Thanks for sharing feedback on this load.')}
+          </Text>
           <OutlineButton title="Back to home" icon="home" full onPress={() => { clearBooking(); navigate('customer-home') }} />
         </View>
       )}

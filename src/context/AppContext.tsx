@@ -52,7 +52,6 @@ import {
 } from '../lib/supabase/bookingService'
 import {
   fetchReviewsForHostFromSupabase,
-  hasReviewForBookingInSupabase,
   insertReviewToSupabase,
 } from '../lib/supabase/reviewService'
 import { splitBookingsForHost } from '../lib/supabase/bookingMappers'
@@ -78,10 +77,14 @@ import {
 } from '../lib/guestBookings'
 import {
   loadStoredReviewsForHost,
-  markBookingReviewed,
   mergeHostReviews,
   saveReviewForHost,
 } from '../lib/reviewStorage'
+import { hasReviewForBooking, recordBookingReviewed } from '../lib/reviewEligibility'
+import {
+  clearPendingReviewReminder,
+  registerPendingReviewReminder,
+} from '../lib/reviewReminderStorage'
 import {
   bookingTrackingLink,
   hostDashboardLink,
@@ -212,7 +215,7 @@ interface AppState {
     bookingId?: string | null
     rating: number
     comment: string
-  }) => Promise<void>
+  }) => Promise<boolean>
   getReviewsForHost: (hostId: string) => HostReview[]
   refreshHostReviews: (hostId: string) => Promise<void>
   reviewHostId: string | null
@@ -1229,12 +1232,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const openLeaveReview = useCallback(
     (hostId: string, bookingId?: string) => {
-      setReviewHostId(hostId)
-      setReviewBookingId(bookingId ?? null)
-      void refreshHostReviews(hostId)
-      setScreen('customer-leave-review')
+      void (async () => {
+        if (!user || role !== 'customer') return
+
+        if (bookingId) {
+          const resolvedAuthorId =
+            (await resolveSupabaseProfileId(user)) ?? user.id
+          const reviewed = await hasReviewForBooking(user.id, bookingId, resolvedAuthorId)
+          if (reviewed) {
+            showToast('You already reviewed this load', { icon: 'info' })
+            await clearPendingReviewReminder(user.id, bookingId)
+            return
+          }
+        }
+
+        setReviewHostId(hostId)
+        setReviewBookingId(bookingId ?? null)
+        void refreshHostReviews(hostId)
+        setScreen('customer-leave-review')
+      })()
     },
-    [refreshHostReviews],
+    [refreshHostReviews, role, showToast, user],
   )
 
   const selectHost = useCallback(
@@ -1331,22 +1349,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       bookingId?: string | null
       rating: number
       comment: string
-    }) => {
-      if (!user) return
+    }): Promise<boolean> => {
+      if (!user) return false
       const resolvedAuthorId =
         (await resolveSupabaseProfileId(user)) ?? user.id
 
-      if (bookingId && isSupabaseConfigured()) {
-        const alreadyReviewed = await hasReviewForBookingInSupabase(resolvedAuthorId, bookingId)
+      if (bookingId) {
+        const alreadyReviewed = await hasReviewForBooking(
+          user.id,
+          bookingId,
+          resolvedAuthorId,
+        )
         if (alreadyReviewed) {
           showToast('You already reviewed this load', { icon: 'info' })
-          return
+          await clearPendingReviewReminder(user.id, bookingId)
+          return false
         }
       }
 
-      let review: HostReview | null = null
       if (isSupabaseConfigured()) {
-        review = await insertReviewToSupabase({
+        const { review, duplicate } = await insertReviewToSupabase({
           hostId,
           authorId: resolvedAuthorId,
           authorName: user.name,
@@ -1354,12 +1376,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           comment,
           bookingId,
         })
+        if (duplicate) {
+          if (bookingId) await recordBookingReviewed(user.id, bookingId)
+          await clearPendingReviewReminder(user.id, bookingId!)
+          showToast('You already reviewed this load', { icon: 'info' })
+          return false
+        }
         if (!review) {
           showToast('Could not save review — try again', { icon: 'alert-circle' })
-          return
+          return false
         }
       } else {
-        review = {
+        await saveReviewForHost(hostId, {
           id: `rev-${Date.now()}`,
           author: user.name,
           rating,
@@ -1369,10 +1397,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             day: 'numeric',
             year: 'numeric',
           }),
-        }
-        await saveReviewForHost(hostId, review)
-        if (bookingId) await markBookingReviewed(user.id, bookingId)
+        })
       }
+
+      if (bookingId) {
+        await recordBookingReviewed(user.id, bookingId)
+        await clearPendingReviewReminder(user.id, bookingId)
+      }
+
       await refreshHostReviews(hostId)
 
       const host = getHostById(hostId)
@@ -1391,6 +1423,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setReviewHostId(null)
       setReviewBookingId(null)
       showToast('Review submitted', { icon: 'star' })
+      return true
     },
     [notifyHost, refreshHostReviews, showToast, user],
   )
@@ -2021,6 +2054,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         advanceStage(loadId, 'picked-up')
 
         if (patched.customerId) {
+          void registerPendingReviewReminder(patched.customerId, {
+            bookingId: patched.id,
+            hostId: patched.hostId,
+            hostName: patched.hostName,
+          })
           void notifyCustomer(
             patched.customerId,
             'Leave A Review',
