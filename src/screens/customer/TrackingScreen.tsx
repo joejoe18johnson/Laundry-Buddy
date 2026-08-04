@@ -15,7 +15,7 @@ import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { NotificationBellReminder } from '../../components/NotificationBellReminder'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { getGuestProgressStep, getGuestStepDescription } from '../../lib/loadProgress'
-import { hasReviewForBooking } from '../../lib/reviewEligibility'
+import { canLeaveReviewForBooking, hasReviewForBooking } from '../../lib/reviewEligibility'
 import { resolveSupabaseProfileId } from '../../lib/supabase/profileIds'
 import { isSupabaseConfigured } from '../../lib/supabase/config'
 import {
@@ -182,6 +182,7 @@ export function TrackingScreen() {
     isAccepted &&
     (amount <= 0 || isCash || (isBankTransfer && booking.paymentStatus === 'paid'))
   const isLoadComplete = booking.stage === 'picked-up' || isPickupComplete(booking)
+  const canLeaveReview = canLeaveReviewForBooking(booking)
   const showDropOffCard = !isDeclined && !isLoadComplete
   const phaseLocked = !dropOffUnlocked && !isDeclined
   const dropOffAddress = booking.address.trim() || host?.address?.trim() || ''
@@ -581,7 +582,7 @@ export function TrackingScreen() {
       )}
       </View>
 
-      {isLoadComplete && !reviewSubmitted && (
+      {isLoadComplete && canLeaveReview && !reviewSubmitted && (
         <View style={styles.reviewCard}>
           <View style={styles.reviewHeader}>
             <AppIcon name="check-circle" size={18} color={colors.green} />
@@ -603,7 +604,7 @@ export function TrackingScreen() {
         </View>
       )}
 
-      {isLoadComplete && reviewSubmitted && (
+      {isLoadComplete && canLeaveReview && reviewSubmitted && (
         <View style={styles.reviewCard}>
           <View style={styles.reviewHeader}>
             <AppIcon name="star" size={18} color={colors.green} />

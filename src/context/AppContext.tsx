@@ -85,7 +85,7 @@ import {
   mergeHostReviews,
   saveReviewForHost,
 } from '../lib/reviewStorage'
-import { hasReviewForBooking, recordBookingReviewed } from '../lib/reviewEligibility'
+import { hasReviewForBooking, recordBookingReviewed, canLeaveReviewForBooking, resolveBookingReviewEligibility } from '../lib/reviewEligibility'
 import {
   clearPendingReviewReminder,
   registerPendingReviewReminder,
@@ -1272,6 +1272,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (!user || role !== 'customer') return
 
         if (bookingId) {
+          const { eligible } = await resolveBookingReviewEligibility(
+            bookingId,
+            guestBookingsRef.current,
+          )
+          if (!eligible) {
+            showToast('Reviews are only available for completed loads', { icon: 'info' })
+            await clearPendingReviewReminder(user.id, bookingId)
+            return
+          }
+
           const resolvedAuthorId =
             (await resolveSupabaseProfileId(user)) ?? user.id
           const reviewed = await hasReviewForBooking(user.id, bookingId, resolvedAuthorId)
@@ -1391,6 +1401,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
         (await resolveSupabaseProfileId(user)) ?? user.id
 
       if (bookingId) {
+        const { eligible } = await resolveBookingReviewEligibility(
+          bookingId,
+          guestBookingsRef.current,
+        )
+        if (!eligible) {
+          showToast('Reviews are only available for completed loads', { icon: 'info' })
+          await clearPendingReviewReminder(user.id, bookingId)
+          return false
+        }
+
         const alreadyReviewed = await hasReviewForBooking(
           user.id,
           bookingId,
@@ -1842,6 +1862,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         persistHostOrdersCache(user.id, { pendingRequests: nextRequests, activeLoads })
       }
       if (request?.customerId) {
+        void clearPendingReviewReminder(request.customerId, requestId)
         notifyCustomer(
           request.customerId,
           'Request declined',
@@ -1884,6 +1905,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       setGuestBookings((prev) => removeGuestBooking(prev, bookingId))
+      void clearPendingReviewReminder(user.id, bookingId)
       setScreen('customer-home')
       showToast('Request cancelled', { icon: 'x-circle' })
     },
@@ -2089,7 +2111,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (isPickupComplete(patched)) {
         advanceStage(loadId, 'picked-up')
 
-        if (patched.customerId) {
+        if (canLeaveReviewForBooking(patched) && patched.customerId) {
           void registerPendingReviewReminder(patched.customerId, {
             bookingId: patched.id,
             hostId: patched.hostId,
@@ -2104,7 +2126,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         const host = getHostById(patched.hostId)
-        if (host?.hostUserId) {
+        if (canLeaveReviewForBooking(patched) && host?.hostUserId) {
           void notifyHost(
             host.hostUserId,
             'Ask For A Review',
@@ -2114,11 +2136,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           )
         }
 
-        if (role === 'customer') {
+        if (role === 'customer' && canLeaveReviewForBooking(patched)) {
           openLeaveReview(patched.hostId, patched.id)
           showToast('Pickup complete — leave a review for your host', { icon: 'star' })
-        } else {
+        } else if (role === 'host' && canLeaveReviewForBooking(patched)) {
           showToast('Pickup complete — ask your guest for a review', { icon: 'star' })
+        } else {
+          showToast('Pickup complete', { icon: 'check-circle' })
         }
         return
       }

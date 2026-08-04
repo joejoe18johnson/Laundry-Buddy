@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { getHostById } from '../../data/mockData'
 import { formatHostDisplayName } from '../../lib/displayName'
-import { hasReviewForBooking } from '../../lib/reviewEligibility'
+import { hasReviewForBooking, resolveBookingReviewEligibility } from '../../lib/reviewEligibility'
 import { resolveSupabaseProfileId } from '../../lib/supabase/profileIds'
 import { isSupabaseConfigured } from '../../lib/supabase/config'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
@@ -75,6 +75,7 @@ export function LeaveReviewScreen() {
     submitHostReview,
     viewHostProfile,
     getReviewsForHost,
+    guestBookings,
   } = useApp()
   const { colors } = useTheme()
   const styles = useMemo(() => createLeaveReviewStyles(colors), [colors])
@@ -84,6 +85,7 @@ export function LeaveReviewScreen() {
   const [submitting, setSubmitting] = useState(false)
   const [alreadyReviewed, setAlreadyReviewed] = useState(false)
   const [checking, setChecking] = useState(true)
+  const [reviewUnavailable, setReviewUnavailable] = useState(false)
   const screenScroll = useScreenScroll()
 
   const host = reviewHostId ? getHostById(reviewHostId) : undefined
@@ -94,6 +96,7 @@ export function LeaveReviewScreen() {
     setRating(0)
     setComment('')
     setAlreadyReviewed(false)
+    setReviewUnavailable(false)
 
     if (!user || !reviewHostId) {
       setChecking(false)
@@ -102,6 +105,15 @@ export function LeaveReviewScreen() {
 
     if (reviewBookingId) {
       void (async () => {
+        const { eligible } = await resolveBookingReviewEligibility(reviewBookingId, guestBookings)
+        if (!eligible) {
+          if (!cancelled) {
+            setReviewUnavailable(true)
+            setChecking(false)
+          }
+          return
+        }
+
         const resolvedAuthorId = isSupabaseConfigured()
           ? ((await resolveSupabaseProfileId(user)) ?? user.id)
           : user.id
@@ -129,13 +141,25 @@ export function LeaveReviewScreen() {
     return () => {
       cancelled = true
     }
-  }, [reviewHostId, reviewBookingId, user, getReviewsForHost])
+  }, [reviewHostId, reviewBookingId, user, getReviewsForHost, guestBookings])
 
   if (!reviewHostId || !host) {
     return (
       <Screen style={styles.centered}>
         <Text style={styles.emptyTitle}>{toTitleCase('Review unavailable')}</Text>
         <Text style={styles.emptySub}>{toTitleCase('We could not find this host.')}</Text>
+        <PrimaryButton title="Go home" icon="home" onPress={() => navigate('customer-home')} full />
+      </Screen>
+    )
+  }
+
+  if (reviewUnavailable) {
+    return (
+      <Screen style={styles.centered}>
+        <Text style={styles.emptyTitle}>{toTitleCase('Review unavailable')}</Text>
+        <Text style={styles.emptySub}>
+          {toTitleCase('Reviews are only available for completed loads that were not cancelled or declined.')}
+        </Text>
         <PrimaryButton title="Go home" icon="home" onPress={() => navigate('customer-home')} full />
       </Screen>
     )

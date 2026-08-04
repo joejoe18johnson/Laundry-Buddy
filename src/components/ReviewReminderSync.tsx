@@ -4,8 +4,7 @@ import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useNotifications } from '../context/NotificationContext'
 import { hostReviewLink } from '../lib/notificationLinks'
-import { hasReviewForBooking } from '../lib/reviewEligibility'
-import { isPickupComplete } from '../lib/pickupConfirmation'
+import { canLeaveReviewForBooking, hasReviewForBooking } from '../lib/reviewEligibility'
 import {
   clearPendingReviewReminder,
   loadPendingReviewReminders,
@@ -36,8 +35,12 @@ export function ReviewReminderSync() {
           : user.id
 
         for (const booking of guestBookings) {
-          const complete = booking.stage === 'picked-up' || isPickupComplete(booking)
-          if (!complete || !booking.customerId) continue
+          if (!canLeaveReviewForBooking(booking) || !booking.customerId) {
+            if (booking.id) {
+              await clearPendingReviewReminder(user.id, booking.id)
+            }
+            continue
+          }
 
           const reviewed = await hasReviewForBooking(user.id, booking.id, resolvedAuthorId)
           if (reviewed) {
@@ -54,6 +57,12 @@ export function ReviewReminderSync() {
 
         const pending = await loadPendingReviewReminders(user.id)
         for (const entry of pending) {
+          const booking = guestBookings.find((item) => item.id === entry.bookingId)
+          if (booking && !canLeaveReviewForBooking(booking)) {
+            await clearPendingReviewReminder(user.id, entry.bookingId)
+            continue
+          }
+
           const reviewed = await hasReviewForBooking(user.id, entry.bookingId, resolvedAuthorId)
           if (reviewed) {
             await clearPendingReviewReminder(user.id, entry.bookingId)
