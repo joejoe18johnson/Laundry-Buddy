@@ -46,7 +46,7 @@ import { AdminVerificationCodesScreen } from './src/screens/admin/AdminVerificat
 import { AdminVerificationQueueScreen } from './src/screens/admin/AdminVerificationQueueScreen'
 import { AdminSupportMessagesScreen } from './src/screens/admin/AdminSupportMessagesScreen'
 import { useAdminDashboardData } from './src/hooks/useAdminDashboardData'
-import { useAdminSupportMessages } from './src/hooks/useAdminSupportMessages'
+import { useAdminSupportMessages, AdminSupportMessagesProvider } from './src/hooks/useAdminSupportMessages'
 import { ChatScreen, ChatThreadPanel, useActiveChatRoute } from './src/screens/shared/ChatScreen'
 import { colors, spacing } from './src/theme'
 import { ThemeProvider, useTheme } from './src/context/ThemeContext'
@@ -94,10 +94,17 @@ const HIDE_BOTTOM_NAV: Screen[] = [
   'identity-verification',
 ]
 
-function AdminAppShell() {
+function AdminAppShellInner({
+  dashboardRefreshKey,
+  onDashboardRefresh,
+}: {
+  dashboardRefreshKey: number
+  onDashboardRefresh: () => void
+}) {
   const { user, logout, refreshCurrentUser } = useAuth()
   const { colors } = useTheme()
   const { unreadCount } = useUserNotifications(user!.id)
+  const { totalUnread: supportUnreadCount, reload: reloadSupportMessages } = useAdminSupportMessages()
   const adminHistoryRef = useRef<
     ('overview' | 'queue' | 'users' | 'codes' | 'support' | 'support-chat' | 'notifications' | 'user-review')[]
   >([])
@@ -108,9 +115,7 @@ function AdminAppShell() {
   const [reviewUserId, setReviewUserId] = useState<string | null>(null)
   const [supportThreadId, setSupportThreadId] = useState<string | null>(null)
   const [supportThreadTitle, setSupportThreadTitle] = useState('')
-  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
   const { queueCount } = useAdminDashboardData(dashboardRefreshKey)
-  const { totalUnread: supportUnreadCount } = useAdminSupportMessages(dashboardRefreshKey)
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return
@@ -150,7 +155,7 @@ function AdminAppShell() {
   }
 
   const handleReviewUpdated = () => {
-    setDashboardRefreshKey((key) => key + 1)
+    onDashboardRefresh()
   }
 
   const goBackAdmin = useCallback(() => {
@@ -160,6 +165,7 @@ function AdminAppShell() {
       return true
     }
     if (screen === 'support-chat') {
+      void reloadSupportMessages()
       setScreen('support')
       return true
     }
@@ -169,12 +175,12 @@ function AdminAppShell() {
       return true
     }
     if (screen === 'overview') {
-      setDashboardRefreshKey((key) => key + 1)
+      onDashboardRefresh()
       return true
     }
     setScreen('overview')
     return true
-  }, [screen])
+  }, [onDashboardRefresh, reloadSupportMessages, screen])
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', goBackAdmin)
@@ -262,7 +268,7 @@ function AdminAppShell() {
   return (
     <SafeAreaView style={shellStyles.app} edges={['top']}>
       <StatusBar style="dark" />
-      <AdminVerificationRequestSync onNewRequest={() => setDashboardRefreshKey((key) => key + 1)} />
+      <AdminVerificationRequestSync onNewRequest={onDashboardRefresh} />
       {screen !== 'user-review' && screen !== 'support-chat' ? (
         <View style={shellStyles.header}>
           <Text style={shellStyles.title}>{headerTitle}</Text>
@@ -289,7 +295,6 @@ function AdminAppShell() {
         {screen === 'overview' ? (
           <AdminOverviewScreen
             refreshKey={dashboardRefreshKey}
-            supportUnreadCount={supportUnreadCount}
             onNavigate={(section) => {
               if (section === 'support') {
                 navigateAdmin('support')
@@ -313,10 +318,7 @@ function AdminAppShell() {
         ) : screen === 'codes' ? (
           <AdminVerificationCodesScreen refreshKey={dashboardRefreshKey} />
         ) : screen === 'support' ? (
-          <AdminSupportMessagesScreen
-            refreshKey={dashboardRefreshKey}
-            onOpenThread={openSupportThread}
-          />
+          <AdminSupportMessagesScreen onOpenThread={openSupportThread} />
         ) : screen === 'support-chat' && supportThreadId ? (
           <ChatThreadPanel
             threadId={supportThreadId}
@@ -354,6 +356,19 @@ function AdminAppShell() {
         </SafeAreaView>
       ) : null}
     </SafeAreaView>
+  )
+}
+
+function AdminAppShell() {
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0)
+
+  return (
+    <AdminSupportMessagesProvider refreshKey={dashboardRefreshKey}>
+      <AdminAppShellInner
+        dashboardRefreshKey={dashboardRefreshKey}
+        onDashboardRefresh={() => setDashboardRefreshKey((key) => key + 1)}
+      />
+    </AdminSupportMessagesProvider>
   )
 }
 

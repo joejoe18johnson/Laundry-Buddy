@@ -119,18 +119,53 @@ export async function fetchThreadLastReadFromSupabase(
   userId: string,
   threadId: string,
 ): Promise<string | null> {
+  const reads = await fetchThreadLastReadsFromSupabase(userId, [threadId])
+  return reads[threadId] ?? null
+}
+
+export async function fetchThreadLastReadsFromSupabase(
+  userId: string,
+  threadIds: string[],
+): Promise<Record<string, string>> {
   const supabase = getSupabaseClient()
-  if (!supabase) return null
+  if (!supabase || threadIds.length === 0) return {}
 
   const { data, error } = await supabase
     .from('chat_read_receipts')
-    .select('read_at')
+    .select('thread_id, read_at')
     .eq('user_id', userId)
-    .eq('thread_id', threadId)
-    .maybeSingle()
+    .in('thread_id', threadIds)
 
-  if (error || !data) return null
-  return data.read_at
+  if (error || !data) return {}
+
+  const reads: Record<string, string> = {}
+  for (const row of data) {
+    if (row.thread_id && row.read_at) reads[row.thread_id] = row.read_at
+  }
+  return reads
+}
+
+export async function fetchSupportMessagesFromSupabase(): Promise<Map<string, ChatMessage[]>> {
+  const supabase = getSupabaseClient()
+  const grouped = new Map<string, ChatMessage[]>()
+  if (!supabase) return grouped
+
+  const { data, error } = await supabase
+    .from('chat_messages')
+    .select('*')
+    .like('thread_id', 'support:%')
+    .order('created_at', { ascending: true })
+
+  if (error || !data) return grouped
+
+  for (const row of data) {
+    const message = rowToMessage(row)
+    const list = grouped.get(message.threadId) ?? []
+    list.push(message)
+    grouped.set(message.threadId, list)
+  }
+
+  return grouped
 }
 
 export function subscribeToChatInserts(onInsert: (message: ChatMessage) => void): () => void {

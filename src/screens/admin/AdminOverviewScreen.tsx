@@ -15,15 +15,14 @@ export type AdminSectionId = AdminTabId | 'support'
 type Props = {
   refreshKey?: number
   onNavigate: (section: AdminSectionId) => void
-  supportUnreadCount?: number
 }
 
-export function AdminOverviewScreen({ refreshKey, onNavigate, supportUnreadCount = 0 }: Props) {
+export function AdminOverviewScreen({ refreshKey, onNavigate }: Props) {
   const { colors } = useTheme()
   const styles = useMemo(() => createAdminStyles(colors), [colors])
   const { loading, queueCount, pendingUsers, verifiedCount, users, codeCounts } =
     useAdminDashboardData(refreshKey)
-  const { threads: supportThreads } = useAdminSupportMessages(refreshKey)
+  const { threads: supportThreads, totalUnread: supportUnreadCount } = useAdminSupportMessages()
 
   const supportSubtitle =
     supportUnreadCount > 0

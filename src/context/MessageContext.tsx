@@ -14,6 +14,7 @@ import {
   appendThreadMessage,
   countUnreadInThread,
   loadAllThreadIds,
+  loadSupportThreadIds,
   loadThreadMessages,
   markAllThreadsRead,
   markThreadRead,
@@ -29,7 +30,6 @@ import {
   supportThreadId,
 } from '../lib/chatThreads'
 import { normalizeChatMessage, normalizeChatMessages } from '../lib/chatMessages'
-import { listAllUsers } from '../lib/adminUsers'
 import { chatLink } from '../lib/notificationLinks'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { resolveSupabaseProfileId } from '../lib/supabase/profileIds'
@@ -122,12 +122,9 @@ export function MessageProvider({ children }: { children: ReactNode }) {
 
       let threadIds: string[]
       if (user.role === 'admin') {
-        const users = await listAllUsers()
+        const supportIds = await loadSupportThreadIds()
         threadIds = Array.from(
-          new Set([
-            ...users.map((entry) => supportThreadId(entry.id)),
-            ...storedIds.filter((id) => isSupportThread(id)),
-          ]),
+          new Set([...supportIds, ...storedIds.filter((id) => isSupportThread(id))]),
         )
       } else {
         threadIds = Array.from(new Set([supportId, ...storedIds]))
