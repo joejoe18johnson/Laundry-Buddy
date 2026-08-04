@@ -168,12 +168,17 @@ export async function fetchSupportMessagesFromSupabase(): Promise<Map<string, Ch
   return grouped
 }
 
+let chatInsertChannelSeq = 0
+
 export function subscribeToChatInserts(onInsert: (message: ChatMessage) => void): () => void {
   const supabase = getSupabaseClient()
   if (!supabase) return () => {}
 
+  chatInsertChannelSeq += 1
+  const channelName = `chat-messages-sync-${chatInsertChannelSeq}-${Date.now()}`
+
   const channel = supabase
-    .channel('chat-messages-sync')
+    .channel(channelName)
     .on(
       'postgres_changes',
       {

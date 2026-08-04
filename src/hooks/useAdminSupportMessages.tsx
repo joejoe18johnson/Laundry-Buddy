@@ -71,29 +71,32 @@ export function AdminSupportMessagesProvider({
     void reload()
   }, [reload, refreshKey])
 
+  const reloadRef = useRef(reload)
+  reloadRef.current = reload
+
   useEffect(() => {
     if (!user || user.role !== 'admin') return
 
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void reload()
+      if (state === 'active') void reloadRef.current()
     })
-
-    const unsubscribeRealtime = isSupabaseConfigured()
-      ? subscribeToChatInserts((message) => {
-          if (!isSupportThread(message.threadId)) return
-          if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)
-          reloadTimerRef.current = setTimeout(() => {
-            void reload()
-          }, 350)
-        })
-      : () => {}
 
     return () => {
       subscription.remove()
-      unsubscribeRealtime()
-      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)
     }
-  }, [reload, user])
+  }, [user?.id, user?.role])
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin' || !isSupabaseConfigured()) return
+
+    return subscribeToChatInserts((message) => {
+      if (!isSupportThread(message.threadId)) return
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)
+      reloadTimerRef.current = setTimeout(() => {
+        void reloadRef.current()
+      }, 350)
+    })
+  }, [user?.id, user?.role])
 
   const totalUnread = useMemo(() => threads.reduce((sum, row) => sum + row.unread, 0), [threads])
 

@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -96,6 +97,9 @@ export function MessageProvider({ children }: { children: ReactNode }) {
     [messagingUserId, user],
   )
 
+  const refreshUnreadRef = useRef(refreshUnread)
+  refreshUnreadRef.current = refreshUnread
+
   const refreshThread = useCallback(
     async (threadId: string) => {
       const messages = normalizeChatMessages(await loadThreadMessages(threadId))
@@ -138,20 +142,21 @@ export function MessageProvider({ children }: { children: ReactNode }) {
       if (state === 'active') void refreshKnownThreads()
     })
 
-    const unsubscribeRealtime = isSupabaseConfigured()
-      ? subscribeToChatInserts((message) => {
-          void mergeRemoteMessage(message).then((messages) => {
-            setMessagesByThread((prev) => ({ ...prev, [message.threadId]: messages }))
-            void refreshUnread(message.threadId, messages)
-          })
-        })
-      : () => {}
-
     return () => {
       subscription.remove()
-      unsubscribeRealtime()
     }
-  }, [refreshThreads, refreshUnread, user])
+  }, [refreshThreads, user])
+
+  useEffect(() => {
+    if (!user || !isSupabaseConfigured()) return
+
+    return subscribeToChatInserts((message) => {
+      void mergeRemoteMessage(message).then((messages) => {
+        setMessagesByThread((prev) => ({ ...prev, [message.threadId]: messages }))
+        void refreshUnreadRef.current(message.threadId, messages)
+      })
+    })
+  }, [user?.id])
 
   const getMessages = useCallback(
     (threadId: string) => messagesByThread[threadId] ?? [],
