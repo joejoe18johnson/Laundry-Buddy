@@ -3,26 +3,23 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { PrimaryButton, OutlineButton } from './ui'
 import { toTitleCase } from '../lib/titleCase'
-import type { PushPermissionStatus } from '../lib/pushNotifications'
 import { colors, radius, spacing } from '../theme'
 
 type Props = {
   visible: boolean
-  permission: PushPermissionStatus
-  onEnable: () => void
+  onOpenSettings: () => void
   onDismiss: () => void
 }
 
-export function NotificationPermissionPrompt({ visible, permission, onEnable, onDismiss }: Props) {
-  const blockedInSettings = permission === 'denied'
-
+/** Shown only when the OS will no longer display the native Allow dialog. */
+export function NotificationPermissionPrompt({ visible, onOpenSettings, onDismiss }: Props) {
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
       presentationStyle="overFullScreen"
-      onRequestClose={() => {}}
+      onRequestClose={onDismiss}
     >
       <View style={styles.overlay}>
         <SafeAreaView style={styles.sheetWrap} edges={['bottom']}>
@@ -30,25 +27,18 @@ export function NotificationPermissionPrompt({ visible, permission, onEnable, on
             <View style={styles.iconWrap}>
               <AppIcon name="bell" size={28} color={colors.white} />
             </View>
-            <Text style={styles.title}>{toTitleCase('Turn on notifications')}</Text>
+            <Text style={styles.title}>{toTitleCase('Notifications are turned off')}</Text>
             <Text style={styles.body}>
               {toTitleCase(
-                blockedInSettings
-                  ? 'Notifications are off for Laundry Buddy. Open your phone settings and allow notifications so you never miss when a host accepts, declines, or marks your load ready.'
-                  : 'Allow notifications so you get host responses, ready-for-pickup updates, and drop-off reminders.',
+                'Laundry Buddy needs phone alerts for booking updates, verification results, and messages. Open your phone settings and turn notifications on for Laundry Buddy.',
               )}
             </Text>
             <View style={styles.list}>
-              <Text style={styles.listItem}>• {toTitleCase('Host accepts or declines your request')}</Text>
-              <Text style={styles.listItem}>• {toTitleCase('Load is drying or ready for pickup')}</Text>
-              <Text style={styles.listItem}>• {toTitleCase('Reminders before drop-off time')}</Text>
+              <Text style={styles.listItem}>• {toTitleCase('Host accepts, declines, or updates your load')}</Text>
+              <Text style={styles.listItem}>• {toTitleCase('Verification approved or needs resubmit')}</Text>
+              <Text style={styles.listItem}>• {toTitleCase('New messages from your host or guest')}</Text>
             </View>
-            <PrimaryButton
-              title={blockedInSettings ? 'Open phone settings' : 'Allow notifications'}
-              icon="bell"
-              full
-              onPress={onEnable}
-            />
+            <PrimaryButton title="Open phone settings" icon="settings" full onPress={onOpenSettings} />
             <OutlineButton title="Not now" full onPress={onDismiss} />
           </View>
         </SafeAreaView>

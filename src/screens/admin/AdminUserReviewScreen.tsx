@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { ImageLightbox } from '../../components/ImageLightbox'
@@ -19,7 +19,6 @@ import {
   canAdminReviewAddress,
   canAdminReviewId,
   canAdminReviewSelfie,
-  documentReviewStatusLabel,
   formatIdDocumentType,
   getAddressReviewStatus,
   getIdentityVerification,
@@ -52,7 +51,34 @@ import {
 import { formatPhoneDisplay } from '../../lib/whatsapp'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
-import type { User } from '../../types'
+import type { DocumentReviewStatus, User } from '../../types'
+
+type AdminStepState = 'complete' | 'action_needed' | 'missing' | 'rejected'
+
+function documentStepState(
+  hasDocument: boolean,
+  status: DocumentReviewStatus | 'none',
+): AdminStepState {
+  if (status === 'approved') return 'complete'
+  if (status === 'rejected') return 'rejected'
+  if (!hasDocument) return 'missing'
+  if (status === 'pending') return 'action_needed'
+  return 'missing'
+}
+
+function phoneStepState(phoneVerified: boolean, codeRequest: VerificationCodeRequest | null): AdminStepState {
+  if (phoneVerified) return 'complete'
+  if (codeRequest?.status === 'code_sent') return 'action_needed'
+  if (codeRequest) return 'action_needed'
+  return 'missing'
+}
+
+function stepStateLabel(state: AdminStepState): string {
+  if (state === 'complete') return 'Complete'
+  if (state === 'rejected') return 'Rejected'
+  if (state === 'action_needed') return 'Action needed'
+  return 'Not done'
+}
 
 type AdminUserReviewScreenProps = {
   userId: string
@@ -90,12 +116,84 @@ function DetailRow({
   )
 }
 
-function ReviewStatusBadge({ label }: { label: string }) {
+function ReviewStatusBadge({
+  label,
+  state,
+}: {
+  label: string
+  state?: AdminStepState
+}) {
   const { colors } = useTheme()
   const styles = useMemo(() => createStyles(colors), [colors])
+  const tone =
+    state === 'complete'
+      ? styles.badgeComplete
+      : state === 'rejected' || state === 'missing'
+        ? styles.badgeAttention
+        : state === 'action_needed'
+          ? styles.badgePending
+          : styles.reviewStatusBadge
+  const textTone =
+    state === 'complete'
+      ? styles.badgeCompleteText
+      : state === 'rejected' || state === 'missing'
+        ? styles.badgeAttentionText
+        : state === 'action_needed'
+          ? styles.badgePendingText
+          : styles.reviewStatusBadgeText
+
   return (
-    <View style={styles.reviewStatusBadge}>
-      <Text style={styles.reviewStatusBadgeText}>{label}</Text>
+    <View style={[styles.reviewStatusBadge, tone]}>
+      <Text style={[styles.reviewStatusBadgeText, textTone]}>{label}</Text>
+    </View>
+  )
+}
+
+function StepStatusMessage({
+  state,
+  children,
+}: {
+  state: AdminStepState
+  children: string
+}) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+  const style =
+    state === 'complete'
+      ? styles.completeText
+      : state === 'rejected' || state === 'missing'
+        ? styles.attentionText
+        : state === 'action_needed'
+          ? styles.pendingText
+          : styles.emptyText
+
+  return <Text style={style}>{toTitleCase(children)}</Text>
+}
+
+function VerificationStepSection({
+  title,
+  state,
+  children,
+}: {
+  title: string
+  state: AdminStepState
+  children: ReactNode
+}) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
+  const needsAttention = state !== 'complete'
+
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionTitleRow}>
+        <Text style={[styles.sectionTitle, needsAttention && styles.sectionTitleAttention]}>
+          {toTitleCase(title)}
+        </Text>
+        <ReviewStatusBadge label={stepStateLabel(state)} state={state} />
+      </View>
+      <View style={[styles.card, needsAttention ? styles.cardAttention : state === 'complete' ? styles.cardComplete : null]}>
+        {children}
+      </View>
     </View>
   )
 }
@@ -124,7 +222,13 @@ function DocumentReviewActions({
 
   if (!canReview) {
     if (waitingLabel) {
-      return <Text style={styles.emptyText}>{toTitleCase(waitingLabel)}</Text>
+      const lower = waitingLabel.toLowerCase()
+      const style = lower.includes('approved')
+        ? styles.completeText
+        : lower.includes('rejected') || lower.includes('uploaded')
+          ? styles.pendingText
+          : styles.attentionText
+      return <Text style={style}>{toTitleCase(waitingLabel)}</Text>
     }
     return null
   }
@@ -132,7 +236,7 @@ function DocumentReviewActions({
   return (
     <>
       {!phoneVerified ? (
-        <Text style={styles.emptyText}>
+        <Text style={styles.attentionText}>
           {toTitleCase('Phone must be verified with a support code before you can approve documents.')}
         </Text>
       ) : null}
@@ -212,6 +316,18 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
   const reviewAddress = canAdminReviewAddress(user)
   const canSendCode = codeRequest?.status === 'pending'
   const needsFinalize = usersStuckPendingVerification([user]).length > 0
+  const phoneState = phoneStepState(phoneVerified, codeRequest)
+  const idState = documentStepState(hasIdDocument(verification), idReviewStatus)
+  const selfieState = documentStepState(hasSelfie(verification), selfieReviewStatus)
+  const addressState = documentStepState(hasAddressProof(verification), addressReviewStatus)
+  const isHost = user.role === 'host'
+  const openSteps: AdminStepState[] = [
+    phoneState,
+    idState,
+    selfieState,
+    ...(isHost ? [addressState] : []),
+  ]
+  const incompleteCount = openSteps.filter((state) => state !== 'complete').length
 
   const notifyIfFullyVerified = async (updatedUser: User | null) => {
     if (!updatedUser || !isIdentityVerified(updatedUser)) return
@@ -351,6 +467,18 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
             <Text style={styles.bannerSuccessText}>{actionMessage}</Text>
           </View>
         ) : null}
+
+        {incompleteCount > 0 && verification.status !== 'verified' ? (
+          <View style={[styles.banner, styles.bannerAttention]}>
+            <AppIcon name="alert-circle" size={16} color={colors.danger} />
+            <Text style={styles.bannerAttentionText}>
+              {toTitleCase(
+                `${incompleteCount} step${incompleteCount === 1 ? '' : 's'} still need attention — highlighted in red below.`,
+              )}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{toTitleCase('Account details')}</Text>
           <View style={styles.card}>
@@ -360,9 +488,7 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{toTitleCase('Phone verification')}</Text>
-          <View style={styles.card}>
+        <VerificationStepSection title="Phone verification" state={phoneState}>
             <DetailRow
               label="Phone verified"
               value={phoneVerified ? 'Yes — code entered in app' : 'Waiting for verification code'}
@@ -384,25 +510,17 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
                     onPress={() => void handleSendCode()}
                   />
                 ) : codeRequest.status === 'code_sent' ? (
-                  <Text style={styles.reviewHint}>
-                    {toTitleCase('Code sent — waiting for the host to enter it in the app.')}
-                  </Text>
+                  <StepStatusMessage state="action_needed">
+                    Code sent — waiting for the user to enter it in the app.
+                  </StepStatusMessage>
                 ) : null}
               </>
             ) : (
-              <Text style={styles.emptyText}>{toTitleCase('No open phone code request.')}</Text>
+              <StepStatusMessage state="missing">No open phone code request.</StepStatusMessage>
             )}
-          </View>
-        </View>
+        </VerificationStepSection>
 
-        <View style={styles.section}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>{toTitleCase('ID verification')}</Text>
-            {hasIdDocument(verification) ? (
-              <ReviewStatusBadge label={documentReviewStatusLabel(idReviewStatus)} />
-            ) : null}
-          </View>
-          <View style={styles.card}>
+        <VerificationStepSection title="ID verification" state={idState}>
             <DetailRow
               label="Document type"
               value={verification.idType ? formatIdDocumentType(verification.idType) : 'Not selected'}
@@ -413,8 +531,12 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
                 label="Government ID"
                 onViewImage={setLightboxUri}
               />
+            ) : idReviewStatus === 'approved' ? (
+              <StepStatusMessage state="complete">
+                Government ID approved — photo not available in this admin view.
+              </StepStatusMessage>
             ) : (
-              <Text style={styles.emptyText}>{toTitleCase('No ID document uploaded yet.')}</Text>
+              <StepStatusMessage state={idState}>No ID document uploaded yet.</StepStatusMessage>
             )}
             <DocumentReviewActions
               approveLabel="Approve ID"
@@ -425,24 +547,18 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
               onApprove={handleApproveId}
               onReject={handleRejectId}
               waitingLabel={
-                hasIdDocument(verification) && idReviewStatus === 'approved'
+                idReviewStatus === 'approved'
                   ? 'Government ID approved.'
-                  : hasIdDocument(verification) && idReviewStatus === 'rejected'
-                    ? 'Government ID rejected.'
-                    : undefined
+                  : idReviewStatus === 'rejected'
+                    ? 'Government ID rejected — user must resubmit.'
+                    : hasIdDocument(verification)
+                      ? 'Government ID uploaded — approve or reject.'
+                      : undefined
               }
             />
-          </View>
-        </View>
+        </VerificationStepSection>
 
-        <View style={styles.section}>
-          <View style={styles.sectionTitleRow}>
-            <Text style={styles.sectionTitle}>{toTitleCase('Selfie verification')}</Text>
-            {hasSelfie(verification) ? (
-              <ReviewStatusBadge label={documentReviewStatusLabel(selfieReviewStatus)} />
-            ) : null}
-          </View>
-          <View style={styles.card}>
+        <VerificationStepSection title="Selfie verification" state={selfieState}>
             <Text style={styles.reviewHint}>
               {toTitleCase('Compare this live selfie with the photo on the government ID above.')}
             </Text>
@@ -452,8 +568,12 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
                 label="Verification selfie"
                 onViewImage={setLightboxUri}
               />
+            ) : selfieReviewStatus === 'approved' ? (
+              <StepStatusMessage state="complete">
+                Verification selfie approved — photo not available in this admin view.
+              </StepStatusMessage>
             ) : (
-              <Text style={styles.emptyText}>{toTitleCase('No verification selfie uploaded yet.')}</Text>
+              <StepStatusMessage state={selfieState}>No verification selfie uploaded yet.</StepStatusMessage>
             )}
             <DocumentReviewActions
               approveLabel="Approve selfie"
@@ -464,25 +584,19 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
               onApprove={handleApproveSelfie}
               onReject={handleRejectSelfie}
               waitingLabel={
-                hasSelfie(verification) && selfieReviewStatus === 'approved'
+                selfieReviewStatus === 'approved'
                   ? 'Verification selfie approved.'
-                  : hasSelfie(verification) && selfieReviewStatus === 'rejected'
-                    ? 'Verification selfie rejected.'
-                    : undefined
+                  : selfieReviewStatus === 'rejected'
+                    ? 'Verification selfie rejected — user must resubmit.'
+                    : hasSelfie(verification)
+                      ? 'Selfie uploaded — approve or reject.'
+                      : undefined
               }
             />
-          </View>
-        </View>
+        </VerificationStepSection>
 
-        {user.role === 'host' ? (
-          <View style={styles.section}>
-            <View style={styles.sectionTitleRow}>
-              <Text style={styles.sectionTitle}>{toTitleCase('Address verification')}</Text>
-              {hasAddressProof(verification) ? (
-                <ReviewStatusBadge label={documentReviewStatusLabel(addressReviewStatus)} />
-              ) : null}
-            </View>
-            <View style={styles.card}>
+        {isHost ? (
+          <VerificationStepSection title="Address verification" state={addressState}>
               {verification.address ? <DetailRow label="Listed address" value={verification.address} /> : null}
               {verification.addressProofUri ? (
                 <VerificationDocumentPreview
@@ -492,8 +606,12 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
                   label="Utility bill or lease"
                   onViewImage={setLightboxUri}
                 />
+              ) : addressReviewStatus === 'approved' ? (
+                <StepStatusMessage state="complete">
+                  Address proof approved — file not available in this admin view.
+                </StepStatusMessage>
               ) : (
-                <Text style={styles.emptyText}>{toTitleCase('No address proof uploaded yet.')}</Text>
+                <StepStatusMessage state={addressState}>No address proof uploaded yet.</StepStatusMessage>
               )}
               <DocumentReviewActions
                 approveLabel="Approve address"
@@ -504,21 +622,22 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
                 onApprove={handleApproveAddress}
                 onReject={handleRejectAddress}
                 waitingLabel={
-                  hasAddressProof(verification) && addressReviewStatus === 'approved'
+                  addressReviewStatus === 'approved'
                     ? 'Address proof approved.'
-                    : hasAddressProof(verification) && addressReviewStatus === 'rejected'
-                      ? 'Address proof rejected.'
-                      : undefined
+                    : addressReviewStatus === 'rejected'
+                      ? 'Address proof rejected — user must resubmit.'
+                      : hasAddressProof(verification)
+                        ? 'Address proof uploaded — approve or reject.'
+                        : undefined
                 }
               />
-            </View>
-          </View>
+          </VerificationStepSection>
         ) : null}
 
         {needsFinalize ? (
           <View style={styles.section}>
-            <View style={styles.card}>
-              <Text style={styles.reviewHint}>
+            <View style={[styles.card, styles.cardAttention]}>
+              <Text style={styles.pendingText}>
                 {toTitleCase(
                   'All documents are approved but verification is still marked pending. Tap below to finalize.',
                 )}
@@ -545,10 +664,10 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
           selfieReviewStatus === 'approved' ||
           addressReviewStatus === 'approved') ? (
           <View style={styles.section}>
-            <View style={styles.card}>
-              <Text style={styles.reviewHint}>
+            <View style={[styles.card, styles.cardAttention]}>
+              <Text style={styles.pendingText}>
                 {toTitleCase(
-                  user.role === 'host'
+                  isHost
                     ? 'Some documents are approved — finish reviewing ID, selfie, and address to fully verify this host.'
                     : 'Some documents are approved — finish reviewing ID and selfie to fully verify this guest.',
                 )}
@@ -566,8 +685,8 @@ export function AdminUserReviewScreen({ userId, onBack, onUpdated }: AdminUserRe
           </View>
         ) : verification.status === 'rejected' ? (
           <View style={styles.section}>
-            <View style={styles.card}>
-              <Text style={styles.emptyText}>
+            <View style={[styles.card, styles.cardAttention]}>
+              <Text style={styles.attentionText}>
                 {toTitleCase('Verification was rejected. User can resubmit from Verification Center.')}
               </Text>
             </View>
@@ -615,6 +734,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       letterSpacing: 0.4,
       flex: 1,
     },
+    sectionTitleAttention: { color: colors.danger },
     reviewStatusBadge: {
       paddingHorizontal: 8,
       paddingVertical: 4,
@@ -622,6 +742,12 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       backgroundColor: colors.gray100,
     },
     reviewStatusBadgeText: { fontSize: 10, fontWeight: '700', color: colors.gray600 },
+    badgeComplete: { backgroundColor: colors.greenBg, borderWidth: 1, borderColor: colors.green },
+    badgeCompleteText: { color: colors.green },
+    badgeAttention: { backgroundColor: colors.gray50, borderWidth: 1, borderColor: colors.danger },
+    badgeAttentionText: { color: colors.danger },
+    badgePending: { backgroundColor: colors.gray50, borderWidth: 1, borderColor: colors.danger },
+    badgePendingText: { color: colors.danger },
     card: {
       borderWidth: 1,
       borderColor: colors.gray100,
@@ -629,6 +755,14 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       padding: spacing.md,
       backgroundColor: colors.white,
       gap: spacing.sm,
+    },
+    cardAttention: {
+      borderColor: colors.danger,
+      backgroundColor: colors.gray50,
+    },
+    cardComplete: {
+      borderColor: colors.green,
+      backgroundColor: colors.greenBg,
     },
     approvedCard: {
       flexDirection: 'row',
@@ -650,11 +784,16 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     bannerErrorText: { flex: 1, fontSize: 13, color: colors.danger, lineHeight: 18 },
     bannerSuccess: { backgroundColor: colors.greenBg, borderWidth: 1, borderColor: colors.green },
     bannerSuccessText: { flex: 1, fontSize: 13, color: colors.gray600, lineHeight: 18, fontWeight: '600' },
+    bannerAttention: { backgroundColor: colors.gray50, borderWidth: 1, borderColor: colors.danger },
+    bannerAttentionText: { flex: 1, fontSize: 13, color: colors.danger, lineHeight: 18, fontWeight: '600' },
     detailRow: { gap: 2 },
     detailLabel: { fontSize: 11, fontWeight: '700', color: colors.gray500, letterSpacing: 0.3 },
     detailValue: { fontSize: 14, color: colors.black, lineHeight: 20 },
     detailMono: { fontFamily: 'Menlo', letterSpacing: 1 },
     emptyText: { fontSize: 13, color: colors.gray500, lineHeight: 18 },
+    attentionText: { fontSize: 13, color: colors.danger, lineHeight: 18, fontWeight: '600' },
+    pendingText: { fontSize: 13, color: colors.danger, lineHeight: 18, fontWeight: '600' },
+    completeText: { fontSize: 13, color: colors.green, lineHeight: 18, fontWeight: '600' },
     reviewHint: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
     actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   })

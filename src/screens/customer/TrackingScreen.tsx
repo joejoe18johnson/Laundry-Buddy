@@ -13,6 +13,7 @@ import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { loadPaymentProofDraft, savePaymentProofDraft } from '../../lib/paymentProofDraftStorage'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { NotificationBellReminder } from '../../components/NotificationBellReminder'
+import { useCriticalNotificationPrompt } from '../../hooks/useCriticalNotificationPrompt'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { getGuestProgressStep, getGuestStepDescription } from '../../lib/loadProgress'
 import { hasReviewForBooking } from '../../lib/reviewEligibility'
@@ -63,6 +64,7 @@ export function TrackingScreen() {
   const { user } = useAuth()
   const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, clearBooking, cancelPendingRequest, openChat, markPaymentProofSent, refreshGuestBookings, openLeaveReview } = useApp()
   const { sendMessage } = useMessages()
+  useCriticalNotificationPrompt('tracking')
   const [bannerVisible, setBannerVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
   const [cancelTick, setCancelTick] = useState(0)
@@ -262,7 +264,7 @@ export function TrackingScreen() {
   return (
     <Screen onRefresh={refreshGuestBookings}>
       <BackButton onPress={() => navigate('customer-home')} label="Home" />
-      <NotificationBellReminder compact onPressBell={() => navigate('notifications')} />
+      <NotificationBellReminder compact />
 
       {activeGuestBookings.length > 1 && (
         <View style={styles.loadSwitcher}>

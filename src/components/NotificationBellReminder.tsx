@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from './AppIcon'
 import { useTheme } from '../context/ThemeContext'
+import { useAuth } from '../context/AuthContext'
+import { registerPushTokenForUser } from '../lib/supabase/notificationService'
 import {
+  canRequestPushPermissionAgain,
   getPushPermissionStatus,
   openNotificationSettings,
-  requestPushPermissions,
+  promptForPushNotifications,
   type PushPermissionStatus,
 } from '../lib/pushNotifications'
 import { toTitleCase } from '../lib/titleCase'
@@ -13,52 +16,71 @@ import { colors, radius, spacing } from '../theme'
 
 type Props = {
   compact?: boolean
-  onPressBell?: () => void
 }
 
-export function NotificationBellReminder({ compact, onPressBell }: Props) {
+export function NotificationBellReminder({ compact }: Props) {
+  const { user } = useAuth()
   const { colors: themeColors } = useTheme()
   const styles = useMemo(() => createStyles(themeColors), [themeColors])
   const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
 
-  useEffect(() => {
-    void getPushPermissionStatus().then(setPermission)
+  const refreshPermission = useCallback(async () => {
+    setPermission(await getPushPermissionStatus())
   }, [])
+
+  useEffect(() => {
+    void refreshPermission()
+  }, [refreshPermission])
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void refreshPermission()
+      }
+    })
+    return () => subscription.remove()
+  }, [refreshPermission])
 
   if (permission === 'granted' || permission === 'unsupported') return null
 
-  const denied = permission === 'denied'
+  const blockedInSettings = permission === 'denied'
 
   const handleEnable = async () => {
-    if (denied) {
+    if (blockedInSettings && !(await canRequestPushPermissionAgain())) {
       await openNotificationSettings()
       return
     }
-    await requestPushPermissions()
-    setPermission(await getPushPermissionStatus())
+
+    const status = await promptForPushNotifications()
+    setPermission(status)
+    if (status === 'granted' && user) {
+      await registerPushTokenForUser(user)
+    }
+    if (status === 'denied' && !(await canRequestPushPermissionAgain())) {
+      await openNotificationSettings()
+    }
   }
 
   return (
-    <Pressable
-      style={[styles.card, compact && styles.cardCompact]}
-      onPress={onPressBell ?? handleEnable}
-    >
+    <Pressable style={[styles.card, compact && styles.cardCompact]} onPress={handleEnable}>
       <View style={styles.iconWrap}>
         <AppIcon name="bell" size={compact ? 16 : 18} color={themeColors.black} />
       </View>
       <View style={styles.body}>
         <Text style={[styles.title, compact && styles.titleCompact]}>
-          {toTitleCase('Turn on bell notifications')}
+          {toTitleCase('Turn on notifications')}
         </Text>
         <Text style={[styles.sub, compact && styles.subCompact]}>
           {toTitleCase(
-            denied
-              ? 'Phone alerts are off — open settings so you never miss when a host accepts, declines, or updates your load.'
-              : 'Allow alerts for host responses, ready-for-pickup updates, and drop-off reminders.',
+            blockedInSettings
+              ? 'Phone alerts are off. Tap to open settings so you never miss booking updates, verification results, or new messages.'
+              : 'Tap Allow on the next screen for booking updates, verification alerts, and new messages.',
           )}
         </Text>
       </View>
-      <Text style={styles.action}>{denied ? toTitleCase('Settings') : toTitleCase('Enable')}</Text>
+      <Text style={styles.action}>
+        {blockedInSettings ? toTitleCase('Settings') : toTitleCase('Allow')}
+      </Text>
     </Pressable>
   )
 }

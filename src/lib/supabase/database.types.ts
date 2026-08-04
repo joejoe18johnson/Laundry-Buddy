@@ -25,6 +25,10 @@ export interface Database {
           email: string | null
           role: AppRole
           identity_verification: Json
+          search_radius_miles: number
+          search_location_lat: number | null
+          search_location_lng: number | null
+          search_location_label: string | null
           created_at: string
           updated_at: string
         }
@@ -35,6 +39,10 @@ export interface Database {
           email?: string | null
           role?: AppRole
           identity_verification?: Json
+          search_radius_miles?: number
+          search_location_lat?: number | null
+          search_location_lng?: number | null
+          search_location_label?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -45,6 +53,10 @@ export interface Database {
           email?: string | null
           role?: AppRole
           identity_verification?: Json
+          search_radius_miles?: number
+          search_location_lat?: number | null
+          search_location_lng?: number | null
+          search_location_label?: string | null
           created_at?: string
           updated_at?: string
         }

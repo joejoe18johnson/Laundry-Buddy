@@ -18,7 +18,8 @@ import { AppIcon } from '../../components/AppIcon'
 import { HostCard } from '../../components/HostCard'
 import { HostFilterSheet } from '../../components/HostFilterSheet'
 import { HostMap } from '../../components/HostMap'
-import { CloseToMeButton } from '../../components/CloseToMeButton'
+import { LocationActionRow } from '../../components/LocationActionRow'
+import { SearchRadiusSheet } from '../../components/SearchRadiusSheet'
 import { HostSearchBar } from '../../components/HostSearchBar'
 import { HostSearchOverlay } from '../../components/HostSearchOverlay'
 import { ChoiceChip } from '../../components/ui'
@@ -96,7 +97,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   const styles = useMemo(() => createHomeStyles(colors), [colors])
   const { showToast } = useToast()
   const { user } = useAuth()
-  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, refreshAtHome, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusMiles, focusSearchOnArea, navigate } = useApp()
+  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, refreshAtHome, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusMiles, setSearchRadiusMiles, focusSearchOnArea, navigate } = useApp()
   const totalHosts = getAvailableHosts().length
   const isHostViewer = user?.role === 'host'
   const visibleOnlineHosts = useMemo(
@@ -112,6 +113,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [radiusSheetOpen, setRadiusSheetOpen] = useState(false)
   const [containerHeight, setContainerHeight] = useState(0)
   const [snap, setSnap] = useState<SnapPoint>('half')
   const [refreshing, setRefreshing] = useState(false)
@@ -496,10 +498,11 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
             />
           </View>
         </Pressable>
-        <CloseToMeButton
-          onPress={handleCloseToMe}
-          loading={locationLoading}
-          locationLabel={userLocationLabel}
+        <LocationActionRow
+          onCloseToMe={handleCloseToMe}
+          closeToMeLoading={locationLoading}
+          radiusMiles={searchRadiusMiles}
+          onOpenRadius={() => setRadiusSheetOpen(true)}
         />
 
         <FlatList
@@ -528,6 +531,13 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
         locations={locations}
         onSave={handleFiltersChange}
         onClose={() => setFiltersOpen(false)}
+      />
+
+      <SearchRadiusSheet
+        visible={radiusSheetOpen}
+        selectedMiles={searchRadiusMiles}
+        onClose={() => setRadiusSheetOpen(false)}
+        onSelect={setSearchRadiusMiles}
       />
 
       <HostSearchOverlay

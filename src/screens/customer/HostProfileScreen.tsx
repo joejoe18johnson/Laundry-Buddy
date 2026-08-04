@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon } from '../../components/AppIcon'
 import { HostReviewsList } from '../../components/host/HostReviewsList'
+import { StarRating } from '../../components/StarRating'
 import { TopRatedHostBadge } from '../../components/TopRatedHostBadge'
 import { priceFooterShellStyle, SimpleBookFooterBar } from '../../components/PriceFooterBar'
 import { BackButton, PrimaryButton, Screen, useScreenScroll } from '../../components/ui'
@@ -110,7 +111,6 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
     },
     heroMessageBtnPressed: { backgroundColor: 'rgba(255,255,255,0.22)' },
     heroMessageBtnText: { fontSize: 15, fontWeight: '700', color: colors.white },
-    stars: { flexDirection: 'row', gap: 2 },
     statsRow: {
       flexDirection: 'row',
       borderWidth: 1,
@@ -177,37 +177,6 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
       lineHeight: 17,
     },
   })
-}
-
-function Stars({
-  rating,
-  size = 14,
-  filledColor,
-  emptyColor,
-  styles,
-  colors,
-}: {
-  rating: number
-  size?: number
-  filledColor?: string
-  emptyColor?: string
-  styles: ReturnType<typeof createHostProfileStyles>
-  colors: ReturnType<typeof useTheme>['colors']
-}) {
-  const filled = filledColor ?? colors.black
-  const empty = emptyColor ?? colors.gray200
-  return (
-    <View style={styles.stars}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <AppIcon
-          key={n}
-          name="star"
-          size={size}
-          color={n <= Math.round(rating) ? filled : empty}
-        />
-      ))}
-    </View>
-  )
 }
 
 function Stat({
@@ -310,6 +279,7 @@ export function HostProfileScreen() {
   const verified = user ? canBookOrHost(user) : false
   const activeLoadCount = activeGuestBookings.length
   const foldingPrice = pricing.foldingPrice
+  const displayRating = ratingSummary.reviewCount > 0 ? ratingSummary.rating : 0
 
   const scrollToReviews = () => {
     screenScroll?.scrollToAnchor(reviewsSectionRef)
@@ -358,18 +328,14 @@ export function HostProfileScreen() {
             accessibilityLabel={toTitleCase('Jump to reviews')}
           >
             <View style={styles.heroRatingRow}>
-              <Stars
-                rating={ratingSummary.rating || host.rating || 5}
+              <StarRating
+                rating={displayRating}
                 size={16}
                 filledColor={colors.white}
                 emptyColor="rgba(255,255,255,0.35)"
-                styles={styles}
-                colors={colors}
               />
               <Text style={styles.heroRatingText}>
-                {(ratingSummary.rating || host.rating) > 0
-                  ? (ratingSummary.rating || host.rating).toFixed(1)
-                  : 'New'}
+                {displayRating > 0 ? displayRating.toFixed(1) : 'New'}
                 {ratingSummary.reviewCount || host.reviewCount
                   ? ` · ${ratingSummary.reviewCount || host.reviewCount} reviews`
                   : ''}
@@ -457,7 +423,7 @@ export function HostProfileScreen() {
           ))}
         </InfoSection>
 
-        <View ref={reviewsSectionRef} style={styles.section}>
+        <View ref={reviewsSectionRef} collapsable={false} style={styles.section}>
           <View style={styles.sectionHeader}>
             <AppIcon name="star" size={18} color={colors.accent} />
             <Text style={styles.sectionTitle}>

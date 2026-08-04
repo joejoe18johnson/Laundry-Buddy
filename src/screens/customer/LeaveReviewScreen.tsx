@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
+import { StarRating } from '../../components/StarRating'
 import { AppTextInput, BackButton, PrimaryButton, Screen, useScreenScroll } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -47,7 +48,7 @@ function createLeaveReviewStyles(colors: ReturnType<typeof useTheme>['colors']) 
       color: colors.gray500,
       letterSpacing: 0.4,
     },
-    starsRow: { flexDirection: 'row', justifyContent: 'center', gap: spacing.sm },
+    ratingWrap: { alignItems: 'center', gap: spacing.sm },
     ratingHint: { fontSize: 14, color: colors.gray600, textAlign: 'center' },
     commentInput: { minHeight: 120, textAlignVertical: 'top' },
     charHint: { fontSize: 12, color: colors.gray500 },
@@ -63,37 +64,6 @@ function createLeaveReviewStyles(colors: ReturnType<typeof useTheme>['colors']) 
     doneTitle: { fontSize: 16, fontWeight: '700', color: colors.black },
     doneSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
   })
-}
-
-function StarPicker({
-  value,
-  onChange,
-  colors,
-  styles,
-}: {
-  value: number
-  onChange: (rating: number) => void
-  colors: ReturnType<typeof useTheme>['colors']
-  styles: ReturnType<typeof createLeaveReviewStyles>
-}) {
-  return (
-    <View style={styles.starsRow}>
-      {[1, 2, 3, 4, 5].map((star) => {
-        const filled = star <= value
-        return (
-          <Pressable
-            key={star}
-            onPress={() => onChange(star)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={`Rate ${star} stars`}
-          >
-            <AppIcon name="star" size={40} color={filled ? colors.black : colors.gray200} />
-          </Pressable>
-        )
-      })}
-    </View>
-  )
 }
 
 export function LeaveReviewScreen() {
@@ -227,7 +197,16 @@ export function LeaveReviewScreen() {
         <>
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>{toTitleCase('Your rating')}</Text>
-            <StarPicker value={rating} onChange={setRating} colors={colors} styles={styles} />
+            <View style={styles.ratingWrap}>
+              <StarRating
+                rating={rating}
+                size={40}
+                filledColor={colors.black}
+                emptyColor={colors.gray200}
+                interactive
+                onChange={setRating}
+              />
+            </View>
             <Text style={styles.ratingHint}>
               {rating === 0 ? toTitleCase('Tap a star to rate') : `${rating} out of 5`}
             </Text>

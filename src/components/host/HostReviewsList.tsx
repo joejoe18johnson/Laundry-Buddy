@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../AppIcon'
+import { StarRating } from '../StarRating'
 import { useTheme } from '../../context/ThemeContext'
 import { REVIEWS_PAGE_SIZE, sliceReviewsPage } from '../../lib/reviewStorage'
 import { toTitleCase } from '../../lib/titleCase'
@@ -31,7 +32,6 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     reviewAuthor: { fontSize: 14, fontWeight: '600', color: colors.black },
     reviewDate: { fontSize: 12, color: colors.gray400, marginTop: 2 },
     reviewComment: { fontSize: 14, color: colors.gray600, lineHeight: 22 },
-    stars: { flexDirection: 'row', gap: 2 },
     seeMoreBtn: {
       alignSelf: 'center',
       flexDirection: 'row',
@@ -43,31 +43,6 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     },
     seeMoreText: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
   })
-}
-
-function Stars({
-  rating,
-  size = 12,
-  styles,
-  colors,
-}: {
-  rating: number
-  size?: number
-  styles: ReturnType<typeof createStyles>
-  colors: ReturnType<typeof useTheme>['colors']
-}) {
-  return (
-    <View style={styles.stars}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <AppIcon
-          key={n}
-          name="star"
-          size={size}
-          color={n <= Math.round(rating) ? colors.accent : colors.gray200}
-        />
-      ))}
-    </View>
-  )
 }
 
 function ReviewCard({
@@ -89,7 +64,7 @@ function ReviewCard({
           <Text style={styles.reviewAuthor}>{review.author}</Text>
           <Text style={styles.reviewDate}>{review.date}</Text>
         </View>
-        <Stars rating={review.rating} styles={styles} colors={colors} />
+        <StarRating rating={review.rating} size={12} filledColor={colors.accent} />
       </View>
       <Text style={styles.reviewComment}>{review.comment}</Text>
     </View>

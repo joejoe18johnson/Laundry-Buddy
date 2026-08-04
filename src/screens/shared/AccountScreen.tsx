@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
+import { ContactSupportSection } from '../../components/ContactSupportSection'
 import { BackButton, Screen } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useApp } from '../../context/AppContext'
@@ -173,10 +174,12 @@ export function AccountScreen() {
         ) : null}
       </View>
 
+      <ContactSupportSection />
+
       <Text style={styles.note}>
         {isCustomer
-          ? 'Need To Update Your Details? Contact Support From The Help Menu.'
-          : 'Update your bio, house rules, and prices in Host Profile from the menu.'}
+          ? toTitleCase('Update your verification details anytime from Verification Center.')
+          : toTitleCase('Update your bio, house rules, and prices in Host Profile from the menu.')}
       </Text>
     </Screen>
   )

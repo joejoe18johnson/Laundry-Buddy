@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { HostReviewsList } from '../../components/host/HostReviewsList'
+import { StarRating } from '../../components/StarRating'
 import { BackButton, Screen } from '../../components/ui'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -28,7 +29,6 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     },
     summaryRating: { fontSize: 36, fontWeight: '700', color: colors.black },
     summaryMeta: { fontSize: 14, color: colors.gray500, fontWeight: '500' },
-    stars: { flexDirection: 'row', gap: 2 },
     empty: { alignItems: 'center', paddingVertical: spacing.xxl, gap: spacing.sm },
     emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.black },
     emptySub: {
@@ -39,29 +39,6 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       paddingHorizontal: spacing.lg,
     },
   })
-}
-
-function Stars({
-  rating,
-  colors,
-  styles,
-}: {
-  rating: number
-  colors: ReturnType<typeof useTheme>['colors']
-  styles: ReturnType<typeof createStyles>
-}) {
-  return (
-    <View style={styles.stars}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <AppIcon
-          key={n}
-          name="star"
-          size={12}
-          color={n <= Math.round(rating) ? colors.accent : colors.gray200}
-        />
-      ))}
-    </View>
-  )
 }
 
 export function HostReviewsScreen() {
@@ -98,7 +75,7 @@ export function HostReviewsScreen() {
             <Text style={styles.summaryRating}>
               {ratingSummary.rating > 0 ? ratingSummary.rating.toFixed(1) : 'New'}
             </Text>
-            <Stars rating={ratingSummary.rating || 5} colors={colors} styles={styles} />
+            <StarRating rating={ratingSummary.rating} size={16} filledColor={colors.accent} />
             <Text style={styles.summaryMeta}>
               {ratingSummary.reviewCount} review{ratingSummary.reviewCount !== 1 ? 's' : ''}
             </Text>

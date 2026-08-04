@@ -12,7 +12,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { HostAvatar } from './HostAvatar'
-import { CloseToMeButton } from './CloseToMeButton'
+import { LocationActionRow } from './LocationActionRow'
+import { SearchRadiusSheet } from './SearchRadiusSheet'
 import { HostSearchBar } from './HostSearchBar'
 import { ChoiceChip } from './ui'
 import { TopRatedHostBadge } from './TopRatedHostBadge'
@@ -125,10 +126,11 @@ function SuggestionRow({
 }
 
 export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, onQueryChange }: Props) {
-  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, userLocationLabel, focusSearchOnArea, searchRadiusMiles, getReviewsForHost } =
+  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, focusSearchOnArea, searchRadiusMiles, setSearchRadiusMiles, getReviewsForHost } =
     useApp()
   const { user } = useAuth()
   const [query, setQuery] = useState(initialQuery)
+  const [radiusSheetOpen, setRadiusSheetOpen] = useState(false)
 
   useEffect(() => {
     if (visible) setQuery(initialQuery)
@@ -282,12 +284,20 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
             placeholder="Name, town, or area"
             autoFocus
           />
-          <CloseToMeButton
-            onPress={handleCloseToMe}
-            loading={locationLoading}
-            locationLabel={userLocationLabel}
+          <LocationActionRow
+            onCloseToMe={handleCloseToMe}
+            closeToMeLoading={locationLoading}
+            radiusMiles={searchRadiusMiles}
+            onOpenRadius={() => setRadiusSheetOpen(true)}
           />
         </View>
+
+        <SearchRadiusSheet
+          visible={radiusSheetOpen}
+          selectedMiles={searchRadiusMiles}
+          onClose={() => setRadiusSheetOpen(false)}
+          onSelect={setSearchRadiusMiles}
+        />
 
         <FlatList
           data={results}

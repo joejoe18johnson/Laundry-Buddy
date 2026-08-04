@@ -209,14 +209,24 @@ export function Screen({
   const scrollToAnchor = useCallback(
     (anchorRef: RefObject<View | null>, offset = spacing.xl) => {
       const anchor = anchorRef.current
-      if (!anchor || !scrollRef.current) return
+      const scrollView = scrollRef.current
+      if (!anchor || !scrollView) return
 
-      anchor.measureInWindow((_x, y) => {
-        const targetY = scrollYRef.current + y - insets.top - offset
-        scrollRef.current?.scrollTo({ y: Math.max(0, targetY), animated: true })
-      })
+      const run = () => {
+        scrollView.measureInWindow((_scrollX, scrollWindowY) => {
+          anchor.measureInWindow((_anchorX, anchorWindowY) => {
+            const relativeY = anchorWindowY - scrollWindowY + scrollYRef.current
+            scrollView.scrollTo({
+              y: Math.max(0, relativeY - offset),
+              animated: true,
+            })
+          })
+        })
+      }
+
+      requestAnimationFrame(run)
     },
-    [insets.top],
+    [],
   )
 
   const keyboardPadding = keyboardHeight > 0 ? keyboardHeight + spacing.md : 0

@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
+import { ContactSupportSection } from '../../components/ContactSupportSection'
 import { BrandActionSheet, type BrandDialogAction } from '../../components/BrandDialog'
 import { BackButton, BrandSwitch, PrimaryButton, Screen, StickySaveBar, ChoiceChip } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
@@ -643,6 +644,8 @@ export function HostHubScreen() {
           <Row icon="map-pin" label="Verified address" value={verification.address} />
         ) : null}
       </Section>
+
+      <ContactSupportSection />
 
       <Pressable style={styles.reputationCard} onPress={() => navigate('help')}>
         <AppIcon name="award" size={18} />

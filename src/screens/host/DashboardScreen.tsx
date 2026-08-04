@@ -17,6 +17,7 @@ import { countDryerTabLoads, hasOpenHostLoad } from '../../lib/hostLoads'
 import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
+import { useCriticalNotificationPrompt } from '../../hooks/useCriticalNotificationPrompt'
 import { useTheme } from '../../context/ThemeContext'
 import { radius, spacing } from '../../theme'
 import type { HostPricing } from '../../types'
@@ -125,6 +126,7 @@ export function DashboardScreen() {
     openChat,
     refreshHostOrders,
   } = useApp()
+  useCriticalNotificationPrompt('host-dashboard')
 
   const rawHost = user ? getHostByUserId(user.id) : undefined
   const hostProfile = rawHost && hostSettings

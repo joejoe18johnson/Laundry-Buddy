@@ -6,10 +6,9 @@ import { colors, radius, spacing } from '../theme'
 type Props = {
   onPress: () => void
   loading?: boolean
-  locationLabel?: string
 }
 
-export function CloseToMeButton({ onPress, loading = false, locationLabel }: Props) {
+export function CloseToMeButton({ onPress, loading = false }: Props) {
   return (
     <Pressable
       onPress={onPress}
@@ -26,28 +25,23 @@ export function CloseToMeButton({ onPress, loading = false, locationLabel }: Pro
         )}
       </View>
       <Text style={styles.label}>{toTitleCase('Close to Me')}</Text>
-      {locationLabel ? (
-        <Text style={styles.hint} numberOfLines={1}>
-          · {locationLabel}
-        </Text>
-      ) : null}
     </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
   wrap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: spacing.sm,
     backgroundColor: colors.gray50,
     borderRadius: radius.pill,
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.gray100,
+    minWidth: 0,
   },
   pressed: { opacity: 0.85 },
   iconWrap: {
@@ -57,5 +51,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   label: { fontSize: 14, fontWeight: '600', color: colors.black },
-  hint: { flexShrink: 1, fontSize: 13, fontWeight: '500', color: colors.gray500 },
 })

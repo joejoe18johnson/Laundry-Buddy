@@ -55,15 +55,37 @@ export async function canRequestPushPermissionAgain(): Promise<boolean> {
   return settings.canAskAgain !== false
 }
 
+function isPermissionGranted(
+  settings: Notifications.NotificationPermissionsStatus,
+): boolean {
+  return (
+    settings.granted ||
+    settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL
+  )
+}
+
 /** Show the native Allow / Don't Allow dialog (iOS & Android 13+). */
 export async function requestPushPermissions(): Promise<boolean> {
-  if (Platform.OS === 'web' || !Device.isDevice) return false
+  const status = await promptForPushNotifications()
+  return status === 'granted'
+}
+
+/**
+ * Native OS permission prompt (Facebook / YouTube style).
+ * Shows the system Allow dialog when possible; only returns denied when the OS
+ * will no longer show the prompt (user must open Settings).
+ */
+export async function promptForPushNotifications(): Promise<PushPermissionStatus> {
+  if (Platform.OS === 'web' || !Device.isDevice) return 'unsupported'
   await initPushNotifications()
 
-  const current = await Notifications.getPermissionsAsync()
-  let settings = current
+  let settings = await Notifications.getPermissionsAsync()
+  if (isPermissionGranted(settings)) {
+    await markPermissionPrompted()
+    return 'granted'
+  }
 
-  if (!current.granted) {
+  if (settings.canAskAgain !== false) {
     settings = await Notifications.requestPermissionsAsync({
       ios: {
         allowAlert: true,
@@ -71,13 +93,12 @@ export async function requestPushPermissions(): Promise<boolean> {
         allowSound: true,
       },
     })
+    await markPermissionPrompted()
   }
 
-  await markPermissionPrompted()
-  return (
-    settings.granted ||
-    settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL
-  )
+  if (isPermissionGranted(settings)) return 'granted'
+  if (settings.canAskAgain === false) return 'denied'
+  return 'undetermined'
 }
 
 export async function shouldShowPermissionPrompt(): Promise<boolean> {
@@ -93,19 +114,7 @@ export async function shouldPromptForPushAfterAuth(): Promise<boolean> {
 
 /** Request OS permission when possible; fall back to settings when permanently denied. */
 export async function ensurePushNotificationsEnabled(): Promise<PushPermissionStatus> {
-  if (Platform.OS === 'web' || !Device.isDevice) return 'unsupported'
-
-  await initPushNotifications()
-  let status = await getPushPermissionStatus()
-  if (status === 'granted') return 'granted'
-
-  if (status === 'undetermined') {
-    await requestPushPermissions()
-    status = await getPushPermissionStatus()
-    if (status === 'granted') return 'granted'
-  }
-
-  return status
+  return promptForPushNotifications()
 }
 
 export async function openNotificationSettings(): Promise<void> {

@@ -69,8 +69,7 @@ import {
   getPushPermissionStatus,
   initPushNotifications,
   openNotificationSettings,
-  requestPushPermissions,
-  type PushPermissionStatus,
+  promptForPushNotifications,
 } from './src/lib/pushNotifications'
 import { getGreetingName } from './src/lib/displayName'
 import { countDryerTabLoads } from './src/lib/hostLoads'
@@ -642,7 +641,6 @@ function AppShell() {
 function PushNotificationPromptGate() {
   const { user, authSessionKey } = useAuth()
   const [visible, setVisible] = useState(false)
-  const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
   const [dismissedForSession, setDismissedForSession] = useState(false)
   const nativePromptStartedRef = useRef(false)
 
@@ -664,7 +662,6 @@ function PushNotificationPromptGate() {
       await new Promise((resolve) => setTimeout(resolve, 450))
 
       const status = await getPushPermissionStatus()
-      setPermission(status)
 
       if (status === 'granted' || status === 'unsupported') {
         if (status === 'granted') {
@@ -674,22 +671,17 @@ function PushNotificationPromptGate() {
         return
       }
 
-      if (status === 'undetermined') {
-        const granted = await requestPushPermissions()
-        const after = await getPushPermissionStatus()
-        setPermission(after)
-        if (granted || after === 'granted') {
+      if (status === 'undetermined' || status === 'denied') {
+        const after = await promptForPushNotifications()
+        if (after === 'granted') {
           await registerPushTokenForUser(user)
           setVisible(false)
           return
         }
-        // User tapped Don't Allow on the native dialog — no extra sheet this session.
-        setVisible(false)
+        if (after === 'denied' && !(await canRequestPushPermissionAgain())) {
+          if (!dismissedForSession) setVisible(true)
+        }
         return
-      }
-
-      if (!dismissedForSession) {
-        setVisible(true)
       }
     })()
   }, [authSessionKey, dismissedForSession, user])
@@ -701,7 +693,6 @@ function PushNotificationPromptGate() {
       if (state !== 'active') return
       void (async () => {
         const status = await getPushPermissionStatus()
-        setPermission(status)
         if (status === 'granted') {
           setVisible(false)
           await registerPushTokenForUser(user)
@@ -717,21 +708,8 @@ function PushNotificationPromptGate() {
   return (
     <NotificationPermissionPrompt
       visible={visible}
-      permission={permission}
-      onEnable={() => {
-        void (async () => {
-          if (await canRequestPushPermissionAgain()) {
-            const granted = await requestPushPermissions()
-            const status = await getPushPermissionStatus()
-            setPermission(status)
-            if (granted || status === 'granted') {
-              setVisible(false)
-              await registerPushTokenForUser(user)
-              return
-            }
-          }
-          await openNotificationSettings()
-        })()
+      onOpenSettings={() => {
+        void openNotificationSettings()
       }}
       onDismiss={() => {
         setDismissedForSession(true)

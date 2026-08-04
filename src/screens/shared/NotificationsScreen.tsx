@@ -8,11 +8,13 @@ import { useTheme } from '../../context/ThemeContext'
 import { useUserNotifications } from '../../context/NotificationContext'
 import { notificationHasDestination } from '../../lib/notificationLinks'
 import {
+  canRequestPushPermissionAgain,
   getPushPermissionStatus,
   openNotificationSettings,
-  requestPushPermissions,
+  promptForPushNotifications,
   type PushPermissionStatus,
 } from '../../lib/pushNotifications'
+import { registerPushTokenForUser } from '../../lib/supabase/notificationService'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
 import {
@@ -172,19 +174,28 @@ export function NotificationsScreen() {
             <Text style={styles.permissionTitle}>{toTitleCase('Phone alerts are off')}</Text>
             <Text style={styles.permissionSub}>
               {toTitleCase(
-                'Tap the bell in the top bar for updates. Enable phone alerts for host responses, ready-for-pickup alerts, and drop-off reminders.',
+                permission === 'denied'
+                  ? 'Open phone settings to get booking updates, verification alerts, and new messages.'
+                  : 'Tap Allow on the next screen for booking updates, verification results, and messages.',
               )}
             </Text>
           </View>
           <OutlineButton
-            title={permission === 'denied' ? 'Open settings' : 'Enable'}
+            title={permission === 'denied' ? 'Open settings' : 'Allow'}
             onPress={async () => {
-              if (permission === 'denied') {
+              if (permission === 'denied' && !(await canRequestPushPermissionAgain())) {
                 await openNotificationSettings()
                 return
               }
-              const granted = await requestPushPermissions()
-              setPermission(granted ? 'granted' : 'denied')
+              const status = await promptForPushNotifications()
+              setPermission(status)
+              if (status === 'granted' && user) {
+                await registerPushTokenForUser(user)
+                return
+              }
+              if (status === 'denied' && !(await canRequestPushPermissionAgain())) {
+                await openNotificationSettings()
+              }
             }}
           />
         </View>

@@ -26,8 +26,13 @@ import { hasOpenHostLoad } from '../lib/hostLoads'
 import { formatMoney, getBookingAmount } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
 import { mergeRemoteMarketplaceCatalog } from '../lib/hostCatalog'
+import {
+  saveLocationPreferencesToSupabase,
+  syncLocationPreferencesForUser,
+} from '../lib/supabase/locationPreferencesService'
 import { resolveGuestFacingHostSettings } from '../lib/defaultHostSettings'
 import { scheduleDropOffReminder } from '../lib/pushNotifications'
+import { promptNotificationsBeforeAction } from '../hooks/useCriticalNotificationPrompt'
 import { formatClothesListSummary, hasDelicates } from '../lib/clothesList'
 import { formatHostDisplayName } from '../lib/displayName'
 import { getIdentityVerification, isIdentityVerified, marketplaceLockMessage } from '../lib/identityVerification'
@@ -448,26 +453,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         setUserLocation(coords)
         setUserLocationLabel('Your location')
-        await saveLocationPreferences({
+        const updated = {
           userLocation: coords,
           userLocationLabel: 'Your location',
           searchRadiusMiles: prefs.searchRadiusMiles,
-        })
+        }
+        await saveLocationPreferences(updated)
+        if (user) {
+          void saveLocationPreferencesToSupabase(user, updated)
+        }
       } catch {
         // Keep saved prefs when GPS is temporarily unavailable.
       }
     })()
   }, [])
 
+  useEffect(() => {
+    if (!user || !isSupabaseConfigured()) return
+
+    let cancelled = false
+    void (async () => {
+      const local = await loadLocationPreferences()
+      const synced = await syncLocationPreferencesForUser(user, local)
+      if (cancelled) return
+
+      setUserLocation(synced.userLocation)
+      setUserLocationLabel(synced.userLocationLabel)
+      setSearchRadiusMilesState(synced.searchRadiusMiles)
+      await saveLocationPreferences(synced)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
   const persistLocationPrefs = useCallback(
     (location: Coordinates, label: string, radiusMiles: RadiusOptionMiles) => {
-      void saveLocationPreferences({
+      const prefs: LocationPreferences = {
         userLocation: location,
         userLocationLabel: label,
         searchRadiusMiles: radiusMiles,
-      })
+      }
+      void saveLocationPreferences(prefs)
+      if (user) {
+        void saveLocationPreferencesToSupabase(user, prefs)
+      }
     },
-    [],
+    [user],
   )
 
   useEffect(() => {
@@ -1038,6 +1071,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const openChat = useCallback(
     (threadId: string, bookingId?: string) => {
+      if (user) {
+        void promptNotificationsBeforeAction(user)
+      }
       chatReturnScreenRef.current = screen
       setChatThreadId(threadId)
       if (bookingId) {
@@ -1051,7 +1087,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       setScreen('chat')
     },
-    [findBookingForChat, role, screen],
+    [findBookingForChat, role, screen, user],
   )
 
   const openSupportChat = useCallback(() => {

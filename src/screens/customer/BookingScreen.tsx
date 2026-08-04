@@ -29,6 +29,7 @@ import {
 import { formatMoney, cashPaymentGuestHint } from '../../lib/bookingPayments'
 import { formatHostDisplayName } from '../../lib/displayName'
 import { formatDropOffHour, formatDropOffHoursWindow, sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
+import { useCriticalNotificationPrompt, promptNotificationsBeforeAction } from '../../hooks/useCriticalNotificationPrompt'
 import { getPushPermissionStatus } from '../../lib/pushNotifications'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
@@ -49,6 +50,7 @@ export function BookingScreen() {
   const styles = useMemo(() => createBookingStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const footerBottomPad = bottomSafePadding(insets.bottom)
+  useCriticalNotificationPrompt('booking')
 
   const hostSettings = selectedHost ? getSettingsForHost(selectedHost.hostUserId) : null
   const paymentMethods = useMemo(
@@ -122,6 +124,7 @@ export function BookingScreen() {
       : null
 
   const submitBooking = async () => {
+    await promptNotificationsBeforeAction(user)
     await confirmBooking({
       dropOffTime,
       loads,
@@ -143,7 +146,7 @@ export function BookingScreen() {
               : navigate('customer-host-profile')
           }
         />
-        <NotificationBellReminder compact onPressBell={() => navigate('notifications')} />
+        <NotificationBellReminder compact />
         <Text style={styles.eyebrow}>{selectedHost.location}</Text>
         <Text style={styles.title}>
           {titleCaseWithName(`Book with ${displayName}`, displayName)}
@@ -321,7 +324,7 @@ export function BookingScreen() {
               <Text style={styles.reviewSheetsNote}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
             </View>
 
-            <SendStepNotificationHint onPressBell={() => navigate('notifications')} />
+            <SendStepNotificationHint />
           </>
         ) : null}
 
@@ -415,7 +418,7 @@ function ReviewMetaRow({ icon, label, value }: { icon: IconName; label: string; 
   )
 }
 
-function SendStepNotificationHint({ onPressBell }: { onPressBell?: () => void }) {
+function SendStepNotificationHint() {
   const { colors } = useTheme()
   const styles = useMemo(
     () =>
@@ -459,7 +462,7 @@ function SendStepNotificationHint({ onPressBell }: { onPressBell?: () => void })
   if (notificationsOn === null) return null
 
   if (!notificationsOn) {
-    return <NotificationBellReminder compact onPressBell={onPressBell} />
+    return <NotificationBellReminder compact />
   }
 
   return (

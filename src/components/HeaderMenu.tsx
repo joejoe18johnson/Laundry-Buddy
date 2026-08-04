@@ -48,9 +48,9 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
       alignItems: 'flex-end',
     },
     panel: {
+      flex: 1,
       width: '88%',
       maxWidth: 360,
-      height: '100%',
       backgroundColor: colors.white,
       borderLeftWidth: 1,
       borderLeftColor: colors.gray100,
@@ -61,6 +61,7 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
     },
     panelInner: { flex: 1 },
     header: {
+      flexShrink: 0,
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: spacing.md,
@@ -82,7 +83,8 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
     onlineStatus: { fontSize: 12, color: colors.gray400, marginTop: 4, fontWeight: '600' },
     onlineLive: { color: colors.gray600 },
     closeBtn: { padding: spacing.sm },
-    menu: { flex: 1, paddingVertical: 8 },
+    menuScroll: { flex: 1 },
+    menuScrollContent: { paddingTop: 8, paddingBottom: spacing.sm },
     section: { paddingBottom: 8 },
     sectionTitle: {
       fontSize: 11,
@@ -124,10 +126,12 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
     },
     alertBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
     footer: {
+      flexShrink: 0,
       borderTopWidth: 1,
       borderTopColor: colors.gray100,
       paddingHorizontal: spacing.md,
       paddingTop: spacing.md,
+      backgroundColor: colors.white,
     },
     logoutBtn: {
       flexDirection: 'row',
@@ -226,6 +230,7 @@ export function HeaderMenu({
   const styles = useMemo(() => createHeaderMenuStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const isCustomer = user.role === 'customer'
+  const footerBottomPad = bottomSafePadding(insets.bottom, spacing.md)
   const locationHint =
     locationLabel && radiusMiles != null
       ? `${locationLabel} · ${formatRadiusMilesLabel(radiusMiles)}`
@@ -240,7 +245,7 @@ export function HeaderMenu({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
-          <SafeAreaView edges={['top', 'right', 'bottom']} style={styles.panelInner}>
+          <SafeAreaView edges={['top', 'right']} style={styles.panelInner}>
             <View style={styles.header}>
               <View style={styles.profileIcon}>
                 <AppIcon name="user" size={20} />
@@ -259,7 +264,12 @@ export function HeaderMenu({
               </Pressable>
             </View>
 
-            <ScrollView style={styles.menu} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.menuScroll}
+              contentContainerStyle={styles.menuScrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {onOpenLocationSettings ? (
                 <MenuSection title="Location Settings" styles={styles}>
                   <MenuItem
@@ -336,7 +346,7 @@ export function HeaderMenu({
               </MenuSection>
             </ScrollView>
 
-            <View style={[styles.footer, { paddingBottom: bottomSafePadding(insets.bottom, spacing.sm) }]}>
+            <View style={[styles.footer, { paddingBottom: footerBottomPad }]}>
               <Pressable
                 style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
                 onPress={() => go(onLogout)}
