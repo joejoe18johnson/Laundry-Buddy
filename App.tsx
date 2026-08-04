@@ -26,6 +26,7 @@ import { LoginScreen } from './src/screens/auth/LoginScreen'
 import { SignupScreen } from './src/screens/auth/SignupScreen'
 import { ForgotPasswordScreen } from './src/screens/auth/ForgotPasswordScreen'
 import { ResetPasswordScreen } from './src/screens/auth/ResetPasswordScreen'
+import { HeaderGreeting } from './src/components/HeaderGreeting'
 import { HeaderMenu } from './src/components/HeaderMenu'
 import { LocationSettingsSheet } from './src/components/LocationSettingsSheet'
 import { IdentityVerificationScreen } from './src/screens/auth/IdentityVerificationScreen'
@@ -393,12 +394,6 @@ function AppShell() {
           borderBottomWidth: 0,
           paddingBottom: 8,
         },
-        greetingLarge: {
-          fontSize: 22,
-          fontWeight: '700',
-          color: colors.black,
-          letterSpacing: -0.4,
-        },
         headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
         bellBtn: {
           width: 36,
@@ -563,7 +558,7 @@ function AppShell() {
       <StatusBar style="dark" />
       {showAppHeader ? (
       <View style={[shellStyles.header, isHome && shellStyles.headerHome]}>
-        <Text style={shellStyles.greetingLarge}>Hi {greetingName}</Text>
+        <HeaderGreeting name={greetingName} />
         <View style={shellStyles.headerRight}>
           <Pressable onPress={() => navigate('notifications')} style={shellStyles.bellBtn} hitSlop={8}>
             <AppIcon name="bell" size={22} color={colors.black} />
