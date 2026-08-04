@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
-import type { ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useCallback, type ReactNode, type RefObject } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -279,6 +278,51 @@ function DetailRow({
   )
 }
 
+function HostProfileScreenScroll({
+  children,
+}: {
+  children: (api: {
+    scrollToReviews: () => void
+    reviewsSectionRef: RefObject<View | null>
+  }) => ReactNode
+}) {
+  const screenScroll = useScreenScroll()
+  const scrollContentRef = useRef<View>(null)
+  const reviewsSectionRef = useRef<View>(null)
+
+  const scrollToReviews = useCallback(() => {
+    if (!screenScroll) return
+
+    const offset = spacing.lg
+    const anchor = reviewsSectionRef.current
+    const content = scrollContentRef.current
+    if (!anchor || !content) return
+
+    const scroll = () => {
+      anchor.measureLayout(
+        content,
+        (_x, y) => {
+          screenScroll.scrollToY(y, offset)
+        },
+        () => {
+          screenScroll.scrollToAnchor(reviewsSectionRef, offset)
+        },
+      )
+    }
+
+    scroll()
+    requestAnimationFrame(scroll)
+    setTimeout(scroll, 100)
+    setTimeout(scroll, 300)
+  }, [screenScroll])
+
+  return (
+    <View ref={scrollContentRef} collapsable={false}>
+      {children({ scrollToReviews, reviewsSectionRef })}
+    </View>
+  )
+}
+
 export function HostProfileScreen() {
   const {
     selectedHost,
@@ -296,8 +340,6 @@ export function HostProfileScreen() {
   const styles = useMemo(() => createHostProfileStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const footerBottomPad = bottomSafePadding(insets.bottom)
-  const reviewsSectionRef = useRef<View>(null)
-  const screenScroll = useScreenScroll()
 
   useEffect(() => {
     if (!selectedHost) return
@@ -383,13 +425,12 @@ export function HostProfileScreen() {
     })
   }
 
-  const scrollToReviews = () => {
-    screenScroll?.scrollToAnchor(reviewsSectionRef)
-  }
-
   return (
     <View style={styles.wrapper}>
       <Screen style={styles.scroll}>
+        <HostProfileScreenScroll>
+          {({ scrollToReviews, reviewsSectionRef }) => (
+            <>
         <BackButton
           onPress={() => navigate('customer-home')}
           label={isHostViewer ? 'Browse Hosts' : 'Explore Dryers'}
@@ -519,6 +560,9 @@ export function HostProfileScreen() {
         </View>
 
         <View style={{ height: 120 }} />
+            </>
+          )}
+        </HostProfileScreenScroll>
       </Screen>
 
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>

@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { ContactSupportSection } from '../../components/ContactSupportSection'
-import { BackButton, Screen } from '../../components/ui'
+import { BackButton, GhostButton, Screen } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -100,11 +100,12 @@ function createAccountStyles(colors: ReturnType<typeof useTheme>['colors']) {
     rowLabel: { fontSize: 12, color: colors.gray500, fontWeight: '500' },
     rowValue: { fontSize: 15, color: colors.black, lineHeight: 21 },
     note: { fontSize: 13, color: colors.gray500, lineHeight: 19, textAlign: 'center' },
+    logoutWrap: { marginTop: spacing.lg, marginBottom: spacing.xl },
   })
 }
 
 export function AccountScreen() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const { navigate } = useApp()
   const { colors } = useTheme()
   const styles = useMemo(() => createAccountStyles(colors), [colors])
@@ -181,6 +182,10 @@ export function AccountScreen() {
           ? toTitleCase('Update your verification details anytime from Verification Center.')
           : toTitleCase('Update your bio, house rules, and prices in Host Profile from the menu.')}
       </Text>
+
+      <View style={styles.logoutWrap}>
+        <GhostButton title="Log out" icon="log-out" full onPress={() => void logout()} />
+      </View>
     </Screen>
   )
 }

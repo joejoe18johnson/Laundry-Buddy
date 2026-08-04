@@ -1,7 +1,7 @@
 import { Children, cloneElement, isValidElement, useMemo, type ReactElement, type ReactNode } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
 import { useTheme } from '../context/ThemeContext'
 import { bottomSafePadding } from '../lib/safeAreaInsets'
@@ -41,29 +41,22 @@ type Props = {
   isHostOnline?: boolean
 }
 
-function createHeaderMenuStyles(
-  colors: ReturnType<typeof useTheme>['colors'],
-  insetTop: number,
-  insetBottom: number,
-) {
-  const panelInsetTop = Math.max(insetTop, spacing.sm)
-  const panelInsetBottom = Math.max(insetBottom, spacing.sm)
-  const footerBottomPad = bottomSafePadding(insetBottom, spacing.lg)
-
+function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return {
     styles: StyleSheet.create({
       overlay: {
         flex: 1,
         backgroundColor: 'rgba(15, 23, 32, 0.42)',
         alignItems: 'flex-end',
-        paddingTop: panelInsetTop,
-        paddingBottom: panelInsetBottom,
-        paddingRight: spacing.sm,
       },
-      panel: {
+      panelSafe: {
         flex: 1,
         width: '88%',
         maxWidth: 340,
+        paddingLeft: spacing.sm,
+      },
+      panel: {
+        flex: 1,
         backgroundColor: colors.white,
         borderTopLeftRadius: radius.sheet,
         borderBottomLeftRadius: radius.sheet,
@@ -74,7 +67,7 @@ function createHeaderMenuStyles(
         shadowOffset: { width: -4, height: 8 },
         elevation: 12,
       },
-      panelInner: { flex: 1 },
+      panelInner: { flex: 1, minHeight: 0 },
       headerGradient: {
         paddingHorizontal: spacing.lg,
         paddingTop: spacing.lg,
@@ -123,12 +116,13 @@ function createHeaderMenuStyles(
         alignItems: 'center',
         justifyContent: 'center',
       },
-      menuScroll: { flex: 1 },
+      menuScroll: { flex: 1, minHeight: 0 },
       menuScrollContent: {
         paddingTop: spacing.md,
         paddingHorizontal: spacing.md,
-        paddingBottom: spacing.lg,
+        paddingBottom: spacing.xl,
         gap: spacing.sm,
+        flexGrow: 1,
       },
       sectionCard: {
         backgroundColor: colors.gray50,
@@ -197,6 +191,7 @@ function createHeaderMenuStyles(
         borderTopColor: colors.gray100,
         paddingHorizontal: spacing.md,
         paddingTop: spacing.md,
+        paddingBottom: spacing.md,
         backgroundColor: colors.white,
       },
       logoutBtn: {
@@ -216,7 +211,6 @@ function createHeaderMenuStyles(
       logoutBtnPressed: { opacity: 0.92 },
       logoutBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
     }),
-    footerBottomPad,
   }
 }
 
@@ -315,10 +309,8 @@ export function HeaderMenu({
 }: Props) {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
-  const { styles, footerBottomPad } = useMemo(
-    () => createHeaderMenuStyles(colors, insets.top, insets.bottom),
-    [colors, insets.bottom, insets.top],
-  )
+  const { styles } = useMemo(() => createHeaderMenuStyles(colors), [colors])
+  const footerBottomPad = bottomSafePadding(insets.bottom, spacing.sm)
   const isCustomer = user.role === 'customer'
   const locationHint =
     locationLabel && radiusMiles != null
@@ -333,9 +325,10 @@ export function HeaderMenu({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.panelInner}>
-            <LinearGradient
+        <SafeAreaView style={styles.panelSafe} edges={['top', 'right']}>
+          <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.panelInner}>
+              <LinearGradient
               colors={[brandColors.navy, '#243240']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -367,8 +360,9 @@ export function HeaderMenu({
             <ScrollView
               style={styles.menuScroll}
               contentContainerStyle={styles.menuScrollContent}
-              showsVerticalScrollIndicator={false}
+              showsVerticalScrollIndicator={true}
               keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
             >
               {onOpenLocationSettings ? (
                 <MenuSection title="Location" styles={styles}>
@@ -470,8 +464,9 @@ export function HeaderMenu({
                 <Text style={styles.logoutBtnText}>{toTitleCase('Log out')}</Text>
               </Pressable>
             </View>
-          </View>
-        </Pressable>
+            </View>
+          </Pressable>
+        </SafeAreaView>
       </Pressable>
     </Modal>
   )

@@ -10,7 +10,7 @@ import {
 import { AppIcon } from '../../components/AppIcon'
 import { ContactSupportSection } from '../../components/ContactSupportSection'
 import { BrandActionSheet, type BrandDialogAction } from '../../components/BrandDialog'
-import { BackButton, BrandSwitch, PrimaryButton, Screen, StickySaveBar, ChoiceChip } from '../../components/ui'
+import { BackButton, BrandSwitch, GhostButton, PrimaryButton, Screen, StickySaveBar, ChoiceChip } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -166,7 +166,7 @@ function ToggleRow({
 }
 
 export function HostHubScreen() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
   const { showToast } = useToast()
   const {
     navigate,
@@ -670,6 +670,7 @@ export function HostHubScreen() {
           <AppIcon name="clock" size={16} />
           <Text style={styles.linkText}>{toTitleCase('Load history')}</Text>
         </Pressable>
+        <GhostButton title="Log out" icon="log-out" full onPress={() => void logout()} />
       </View>
     </Screen>
     <BrandActionSheet
