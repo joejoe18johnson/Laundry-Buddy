@@ -27,7 +27,7 @@ export function LocationActionRow({
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'stretch',
+    alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.md,
   },

@@ -62,12 +62,13 @@ import { HostOnlineScheduleSync } from './src/components/HostOnlineScheduleSync'
 import { BookingStepAlertSync } from './src/components/BookingStepAlertSync'
 import { ReviewReminderSync } from './src/components/ReviewReminderSync'
 import { VerificationStatusSync } from './src/components/VerificationStatusSync'
+import { HostWalkthroughSync } from './src/components/HostWalkthroughSync'
 import { ToastProvider } from './src/context/ToastContext'
 import {
   addNotificationResponseListener,
-  canRequestPushPermissionAgain,
   getPushPermissionStatus,
   initPushNotifications,
+  isPushPermissionBlockedInSettings,
   openNotificationSettings,
   promptForPushNotifications,
 } from './src/lib/pushNotifications'
@@ -641,50 +642,56 @@ function AppShell() {
 function PushNotificationPromptGate() {
   const { user, authSessionKey } = useAuth()
   const [visible, setVisible] = useState(false)
+  const [blockedInSettings, setBlockedInSettings] = useState(false)
   const [dismissedForSession, setDismissedForSession] = useState(false)
-  const nativePromptStartedRef = useRef(false)
+  const promptCheckedRef = useRef(false)
 
   useEffect(() => {
     setDismissedForSession(false)
     setVisible(false)
-    nativePromptStartedRef.current = false
+    promptCheckedRef.current = false
   }, [authSessionKey])
 
   useEffect(() => {
-    if (!user || nativePromptStartedRef.current) return
+    if (!user || promptCheckedRef.current || dismissedForSession) return
 
-    nativePromptStartedRef.current = true
+    promptCheckedRef.current = true
 
     void (async () => {
       await initPushNotifications()
-
-      // Brief pause so the home screen is visible before the OS dialog appears.
       await new Promise((resolve) => setTimeout(resolve, 450))
 
       const status = await getPushPermissionStatus()
-
       if (status === 'granted' || status === 'unsupported') {
         if (status === 'granted') {
           await registerPushTokenForUser(user)
         }
+        return
+      }
+
+      setBlockedInSettings(await isPushPermissionBlockedInSettings())
+      setVisible(true)
+    })()
+  }, [authSessionKey, dismissedForSession, user])
+
+  const handleAllow = () => {
+    void (async () => {
+      const after = await promptForPushNotifications()
+      if (after === 'granted') {
+        await registerPushTokenForUser(user!)
         setVisible(false)
         return
       }
 
-      if (status === 'undetermined' || status === 'denied') {
-        const after = await promptForPushNotifications()
-        if (after === 'granted') {
-          await registerPushTokenForUser(user)
-          setVisible(false)
-          return
-        }
-        if (after === 'denied' && !(await canRequestPushPermissionAgain())) {
-          if (!dismissedForSession) setVisible(true)
-        }
+      const blocked = await isPushPermissionBlockedInSettings()
+      setBlockedInSettings(blocked)
+      if (!blocked) {
+        setVisible(false)
         return
       }
+      // Stay open in settings mode so user can open phone settings if they want.
     })()
-  }, [authSessionKey, dismissedForSession, user])
+  }
 
   useEffect(() => {
     if (!user) return
@@ -696,7 +703,9 @@ function PushNotificationPromptGate() {
         if (status === 'granted') {
           setVisible(false)
           await registerPushTokenForUser(user)
+          return
         }
+        setBlockedInSettings(await isPushPermissionBlockedInSettings())
       })()
     })
 
@@ -708,6 +717,8 @@ function PushNotificationPromptGate() {
   return (
     <NotificationPermissionPrompt
       visible={visible}
+      blockedInSettings={blockedInSettings}
+      onAllow={handleAllow}
       onOpenSettings={() => {
         void openNotificationSettings()
       }}
@@ -803,6 +814,7 @@ function AuthenticatedApp() {
               <>
                 <AppProvider>
                   <VerificationStatusSync />
+                  <HostWalkthroughSync />
                   <HostOnlineScheduleSync />
                   <HostRequestAlertSync />
                   <BookingStepAlertSync />

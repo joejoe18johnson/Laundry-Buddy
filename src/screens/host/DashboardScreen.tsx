@@ -14,10 +14,10 @@ import { formatDryTimeInline } from '../../lib/turnaroundTime'
 import { formatMoney } from '../../lib/bookingPayments'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { countDryerTabLoads, hasOpenHostLoad } from '../../lib/hostLoads'
+import { requestHostBookingWalkthrough } from '../../lib/hostWalkthroughQueue'
 import { toTitleCase } from '../../lib/titleCase'
 import { BrandSwitch, GhostButton, PrimaryButton, Screen } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
-import { useCriticalNotificationPrompt } from '../../hooks/useCriticalNotificationPrompt'
 import { useTheme } from '../../context/ThemeContext'
 import { radius, spacing } from '../../theme'
 import type { HostPricing } from '../../types'
@@ -126,7 +126,6 @@ export function DashboardScreen() {
     openChat,
     refreshHostOrders,
   } = useApp()
-  useCriticalNotificationPrompt('host-dashboard')
 
   const rawHost = user ? getHostByUserId(user.id) : undefined
   const hostProfile = rawHost && hostSettings
@@ -181,10 +180,19 @@ export function DashboardScreen() {
           <AppIcon name="wind" size={20} />
           <Text style={styles.title}>{hostProfile?.name ?? user?.name}'s dryer</Text>
         </View>
-        <Pressable style={styles.hubLink} onPress={() => navigate('account')}>
-          <AppIcon name="settings" size={16} />
-          <Text style={styles.hubLinkText}>{toTitleCase('Host settings')}</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            style={styles.hubLink}
+            onPress={() => requestHostBookingWalkthrough({ replay: true })}
+          >
+            <AppIcon name="book-open" size={16} />
+            <Text style={styles.hubLinkText}>{toTitleCase('Guide')}</Text>
+          </Pressable>
+          <Pressable style={styles.hubLink} onPress={() => navigate('account')}>
+            <AppIcon name="settings" size={16} />
+            <Text style={styles.hubLinkText}>{toTitleCase('Host settings')}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {showVerificationBanner && verification ? (
@@ -401,6 +409,7 @@ function createDashboardStyles(colors: ReturnType<typeof useTheme>['colors']) {
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
   title: { fontSize: 22, fontWeight: '700', flex: 1, lineHeight: 28 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   hubLink: {
     flexDirection: 'row',
     alignItems: 'center',

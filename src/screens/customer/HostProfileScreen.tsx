@@ -127,19 +127,41 @@ function createHostProfileStyles(colors: ReturnType<typeof useTheme>['colors']) 
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
     sectionTitle: { fontSize: 18, fontWeight: '700', color: colors.black },
     bodyText: { fontSize: 15, color: colors.gray600, lineHeight: 24, marginBottom: spacing.sm },
-    detailsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginBottom: spacing.xl },
-    detailChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      backgroundColor: colors.gray50,
+    detailsCard: {
       borderWidth: 1,
       borderColor: colors.gray100,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md,
-      borderRadius: radius.pill,
+      borderRadius: radius.lg,
+      backgroundColor: colors.white,
+      overflow: 'hidden',
     },
-    detailText: { fontSize: 13, fontWeight: '600', color: colors.gray600 },
+    detailRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg,
+    },
+    detailIconBubble: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.gray50,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    detailRowContent: { flex: 1, gap: 2 },
+    detailLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.gray500,
+      letterSpacing: 0.2,
+    },
+    detailValue: { fontSize: 15, fontWeight: '600', color: colors.black, lineHeight: 22 },
+    detailDivider: {
+      height: 1,
+      backgroundColor: colors.gray100,
+      marginLeft: spacing.lg + 36 + spacing.md,
+    },
     listItem: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.md },
     bullet: { fontSize: 16, color: colors.gray400, lineHeight: 20 },
     listText: { flex: 1, fontSize: 15, color: colors.gray600, lineHeight: 22 },
@@ -208,7 +230,7 @@ function InfoSection({
   styles,
 }: {
   title: string
-  icon: 'info' | 'image' | 'list'
+  icon: 'info' | 'image' | 'list' | 'wind'
   children: ReactNode
   styles: ReturnType<typeof createHostProfileStyles>
 }) {
@@ -220,6 +242,40 @@ function InfoSection({
       </View>
       {children}
     </View>
+  )
+}
+
+type DetailRowItem = {
+  icon: 'wind' | 'layers' | 'tag' | 'calendar' | 'zap' | 'credit-card'
+  label: string
+  value: string
+}
+
+function DetailRow({
+  icon,
+  label,
+  value,
+  isLast,
+  styles,
+  colors,
+}: DetailRowItem & {
+  isLast: boolean
+  styles: ReturnType<typeof createHostProfileStyles>
+  colors: ReturnType<typeof useTheme>['colors']
+}) {
+  return (
+    <>
+      <View style={styles.detailRow}>
+        <View style={styles.detailIconBubble}>
+          <AppIcon name={icon} size={16} color={colors.accent} />
+        </View>
+        <View style={styles.detailRowContent}>
+          <Text style={styles.detailLabel}>{toTitleCase(label)}</Text>
+          <Text style={styles.detailValue}>{value}</Text>
+        </View>
+      </View>
+      {!isLast ? <View style={styles.detailDivider} /> : null}
+    </>
   )
 }
 
@@ -280,6 +336,52 @@ export function HostProfileScreen() {
   const activeLoadCount = activeGuestBookings.length
   const foldingPrice = pricing.foldingPrice
   const displayRating = ratingSummary.reviewCount > 0 ? ratingSummary.rating : 0
+
+  const serviceDetailRows: DetailRowItem[] = [
+    {
+      icon: 'wind',
+      label: 'Drying',
+      value: `${formatServicePrice(pricing.dryPrice)} ${toTitleCase('per load')}`,
+    },
+  ]
+  if (foldingPrice > 0) {
+    serviceDetailRows.push({
+      icon: 'layers',
+      label: 'Folding',
+      value: `${formatServicePrice(foldingPrice)} ${toTitleCase('per load')}`,
+    })
+  }
+  serviceDetailRows.push(
+    {
+      icon: 'tag',
+      label: 'Dryer sheets',
+      value: toTitleCase(DRYER_SHEETS_GUEST_HINT),
+    },
+    {
+      icon: 'wind',
+      label: 'Typical dry time',
+      value: formatDryTimeInline(host.turnaroundHours),
+    },
+    {
+      icon: 'calendar',
+      label: 'Drop-off hours',
+      value: formatDropOffAvailability(settings.dropOffAvailability),
+    },
+  )
+  if (host.hasGenerator) {
+    serviceDetailRows.push({
+      icon: 'zap',
+      label: 'Backup power',
+      value: toTitleCase('Generator available'),
+    })
+  }
+  if (paymentMethods.length > 0) {
+    serviceDetailRows.push({
+      icon: 'credit-card',
+      label: 'Payment',
+      value: paymentMethods.join(' · '),
+    })
+  }
 
   const scrollToReviews = () => {
     screenScroll?.scrollToAnchor(reviewsSectionRef)
@@ -375,44 +477,19 @@ export function HostProfileScreen() {
           </Text>
         </InfoSection>
 
-        <View style={styles.detailsGrid}>
-          <View style={styles.detailChip}>
-            <AppIcon name="wind" size={16} />
-            <Text style={styles.detailText}>{toTitleCase('Drying')} — {formatServicePrice(pricing.dryPrice)} {toTitleCase('Per Load')}</Text>
+        <InfoSection title="Service details" icon="wind" styles={styles}>
+          <View style={styles.detailsCard}>
+            {serviceDetailRows.map((row, index) => (
+              <DetailRow
+                key={row.label}
+                {...row}
+                isLast={index === serviceDetailRows.length - 1}
+                styles={styles}
+                colors={colors}
+              />
+            ))}
           </View>
-          {foldingPrice > 0 && (
-            <View style={styles.detailChip}>
-              <AppIcon name="layers" size={16} />
-              <Text style={styles.detailText}>{toTitleCase('Folding')} — {formatServicePrice(foldingPrice)} {toTitleCase('Per Load')}</Text>
-            </View>
-          )}
-          <View style={styles.detailChip}>
-            <AppIcon name="tag" size={16} />
-            <Text style={styles.detailText}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
-          </View>
-          <View style={styles.detailChip}>
-            <AppIcon name="wind" size={16} />
-            <Text style={styles.detailText}>{formatDryTimeInline(host.turnaroundHours)}</Text>
-          </View>
-          <View style={styles.detailChip}>
-            <AppIcon name="calendar" size={16} />
-            <Text style={styles.detailText}>
-              Drop-Off Hours: {formatDropOffAvailability(settings.dropOffAvailability)}
-            </Text>
-          </View>
-          {host.hasGenerator && (
-            <View style={styles.detailChip}>
-              <AppIcon name="zap" size={16} />
-              <Text style={styles.detailText}>{toTitleCase('Generator Backup')}</Text>
-            </View>
-          )}
-          {paymentMethods.length > 0 && (
-            <View style={styles.detailChip}>
-              <AppIcon name="credit-card" size={16} />
-              <Text style={styles.detailText}>{toTitleCase('Accepts')} {paymentMethods.join(' · ')}</Text>
-            </View>
-          )}
-        </View>
+        </InfoSection>
 
         <InfoSection title="House Rules" icon="list" styles={styles}>
           {(host.rules.length > 0 ? host.rules : [toTitleCase('No house rules listed yet.')]).map((rule) => (

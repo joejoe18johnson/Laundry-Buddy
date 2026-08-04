@@ -45,14 +45,20 @@ export async function getPushPermissionStatus(): Promise<PushPermissionStatus> {
   if (settings.granted || settings.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
     return 'granted'
   }
-  if (settings.canAskAgain === false) return 'denied'
-  return 'undetermined'
+  if (settings.status === 'undetermined') return 'undetermined'
+  if (settings.canAskAgain !== false) return 'undetermined'
+  return 'denied'
+}
+
+export async function isPushPermissionBlockedInSettings(): Promise<boolean> {
+  if (Platform.OS === 'web' || !Device.isDevice) return false
+  const settings = await Notifications.getPermissionsAsync()
+  if (isPermissionGranted(settings)) return false
+  return settings.canAskAgain === false
 }
 
 export async function canRequestPushPermissionAgain(): Promise<boolean> {
-  if (Platform.OS === 'web' || !Device.isDevice) return false
-  const settings = await Notifications.getPermissionsAsync()
-  return settings.canAskAgain !== false
+  return !(await isPushPermissionBlockedInSettings())
 }
 
 function isPermissionGranted(
@@ -85,16 +91,15 @@ export async function promptForPushNotifications(): Promise<PushPermissionStatus
     return 'granted'
   }
 
-  if (settings.canAskAgain !== false) {
-    settings = await Notifications.requestPermissionsAsync({
-      ios: {
-        allowAlert: true,
-        allowBadge: true,
-        allowSound: true,
-      },
-    })
-    await markPermissionPrompted()
-  }
+  // Always ask the OS — it shows the native Allow / Don't allow sheet when it can.
+  settings = await Notifications.requestPermissionsAsync({
+    ios: {
+      allowAlert: true,
+      allowBadge: true,
+      allowSound: true,
+    },
+  })
+  await markPermissionPrompted()
 
   if (isPermissionGranted(settings)) return 'granted'
   if (settings.canAskAgain === false) return 'denied'

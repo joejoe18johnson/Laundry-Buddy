@@ -1,12 +1,13 @@
-import { useMemo, type ReactNode } from 'react'
+import { Children, cloneElement, isValidElement, useMemo, type ReactElement, type ReactNode } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from './AppIcon'
 import { useTheme } from '../context/ThemeContext'
 import { bottomSafePadding } from '../lib/safeAreaInsets'
 import { formatRadiusMilesLabel } from '../lib/locationPreferences'
 import { toTitleCase } from '../lib/titleCase'
-import { radius, spacing } from '../theme'
+import { brandColors, radius, spacing } from '../theme'
 import type { User } from '../types'
 
 type MenuAction = {
@@ -40,116 +41,183 @@ type Props = {
   isHostOnline?: boolean
 }
 
-function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
-  return StyleSheet.create({
-    overlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.35)',
-      alignItems: 'flex-end',
-    },
-    panel: {
-      flex: 1,
-      width: '88%',
-      maxWidth: 360,
-      backgroundColor: colors.white,
-      borderLeftWidth: 1,
-      borderLeftColor: colors.gray100,
-      shadowColor: '#000',
-      shadowOpacity: 0.12,
-      shadowRadius: 16,
-      elevation: 8,
-    },
-    panelInner: { flex: 1 },
-    header: {
-      flexShrink: 0,
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: spacing.md,
-      padding: spacing.lg,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.gray100,
-    },
-    profileIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: colors.gray100,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerText: { flex: 1 },
-    name: { fontSize: 18, fontWeight: '700', color: colors.black },
-    role: { fontSize: 13, color: colors.gray500, marginTop: 2 },
-    onlineStatus: { fontSize: 12, color: colors.gray400, marginTop: 4, fontWeight: '600' },
-    onlineLive: { color: colors.gray600 },
-    closeBtn: { padding: spacing.sm },
-    menuScroll: { flex: 1 },
-    menuScrollContent: { paddingTop: 8, paddingBottom: spacing.sm },
-    section: { paddingBottom: 8 },
-    sectionTitle: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.gray400,
-      letterSpacing: 0.6,
-      paddingHorizontal: spacing.lg,
-      paddingTop: spacing.sm,
-      paddingBottom: 6,
-    },
-    menuItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-      paddingVertical: 13,
-      paddingHorizontal: spacing.lg,
-    },
-    menuItemPressed: { backgroundColor: colors.gray50 },
-    menuItemBody: { flex: 1, gap: 2 },
-    menuLabel: { fontSize: 16, fontWeight: '600', color: colors.black },
-    menuHint: { fontSize: 13, color: colors.gray500, fontWeight: '500' },
-    badge: {
-      backgroundColor: colors.greenBg,
-      borderRadius: radius.pill,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderWidth: 1,
-      borderColor: colors.green,
-    },
-    badgeText: { fontSize: 10, fontWeight: '700', color: colors.gray600 },
-    alertBadge: {
-      minWidth: 22,
-      height: 22,
-      borderRadius: 11,
-      paddingHorizontal: 6,
-      backgroundColor: colors.danger,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    alertBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
-    footer: {
-      flexShrink: 0,
-      borderTopWidth: 1,
-      borderTopColor: colors.gray100,
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.md,
-      backgroundColor: colors.white,
-    },
-    logoutBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.sm,
-      backgroundColor: colors.danger,
-      borderRadius: radius.lg,
-      paddingVertical: 16,
-      shadowColor: colors.danger,
-      shadowOpacity: 0.25,
-      shadowRadius: 8,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 4,
-    },
-    logoutBtnPressed: { opacity: 0.92 },
-    logoutBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
-  })
+function createHeaderMenuStyles(
+  colors: ReturnType<typeof useTheme>['colors'],
+  insetTop: number,
+  insetBottom: number,
+) {
+  const panelInsetTop = Math.max(insetTop, spacing.sm)
+  const panelInsetBottom = Math.max(insetBottom, spacing.sm)
+  const footerBottomPad = bottomSafePadding(insetBottom, spacing.lg)
+
+  return {
+    styles: StyleSheet.create({
+      overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(15, 23, 32, 0.42)',
+        alignItems: 'flex-end',
+        paddingTop: panelInsetTop,
+        paddingBottom: panelInsetBottom,
+        paddingRight: spacing.sm,
+      },
+      panel: {
+        flex: 1,
+        width: '88%',
+        maxWidth: 340,
+        backgroundColor: colors.white,
+        borderTopLeftRadius: radius.sheet,
+        borderBottomLeftRadius: radius.sheet,
+        overflow: 'hidden',
+        shadowColor: brandColors.navy,
+        shadowOpacity: 0.18,
+        shadowRadius: 24,
+        shadowOffset: { width: -4, height: 8 },
+        elevation: 12,
+      },
+      panelInner: { flex: 1 },
+      headerGradient: {
+        paddingHorizontal: spacing.lg,
+        paddingTop: spacing.lg,
+        paddingBottom: spacing.md,
+      },
+      headerRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: spacing.md,
+      },
+      profileIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: 'rgba(255,255,255,0.18)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.28)',
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      headerText: { flex: 1, paddingTop: 2 },
+      name: { fontSize: 19, fontWeight: '700', color: brandColors.offWhite, letterSpacing: -0.3 },
+      rolePill: {
+        alignSelf: 'flex-start',
+        marginTop: 6,
+        backgroundColor: 'rgba(155, 225, 93, 0.22)',
+        borderRadius: radius.pill,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(155, 225, 93, 0.45)',
+      },
+      rolePillText: { fontSize: 11, fontWeight: '700', color: brandColors.lime, letterSpacing: 0.4 },
+      onlineStatus: {
+        fontSize: 12,
+        color: 'rgba(253, 253, 253, 0.72)',
+        marginTop: 8,
+        fontWeight: '600',
+      },
+      onlineLive: { color: brandColors.lime },
+      closeBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: 'rgba(255,255,255,0.14)',
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      menuScroll: { flex: 1 },
+      menuScrollContent: {
+        paddingTop: spacing.md,
+        paddingHorizontal: spacing.md,
+        paddingBottom: spacing.lg,
+        gap: spacing.sm,
+      },
+      sectionCard: {
+        backgroundColor: colors.gray50,
+        borderRadius: radius.lg,
+        borderWidth: 1,
+        borderColor: colors.gray100,
+        overflow: 'hidden',
+      },
+      sectionTitle: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: colors.gray500,
+        letterSpacing: 0.6,
+        paddingHorizontal: spacing.md,
+        paddingTop: spacing.sm,
+        paddingBottom: 4,
+        textTransform: 'uppercase',
+      },
+      menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+        paddingVertical: 12,
+        paddingHorizontal: spacing.md,
+      },
+      menuItemBorder: {
+        borderTopWidth: 1,
+        borderTopColor: colors.gray100,
+      },
+      menuItemPressed: { backgroundColor: colors.gray75 },
+      iconBubble: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: colors.white,
+        borderWidth: 1,
+        borderColor: colors.gray100,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      menuItemBody: { flex: 1, gap: 2 },
+      menuLabel: { fontSize: 15, fontWeight: '600', color: colors.black },
+      menuHint: { fontSize: 12, color: colors.gray500, fontWeight: '500', lineHeight: 16 },
+      badge: {
+        backgroundColor: colors.greenBg,
+        borderRadius: radius.pill,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderWidth: 1,
+        borderColor: colors.green,
+      },
+      badgeText: { fontSize: 10, fontWeight: '700', color: colors.gray600 },
+      alertBadge: {
+        minWidth: 22,
+        height: 22,
+        borderRadius: 11,
+        paddingHorizontal: 6,
+        backgroundColor: colors.danger,
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+      alertBadgeText: { fontSize: 11, fontWeight: '700', color: colors.white },
+      footer: {
+        flexShrink: 0,
+        borderTopWidth: 1,
+        borderTopColor: colors.gray100,
+        paddingHorizontal: spacing.md,
+        paddingTop: spacing.md,
+        backgroundColor: colors.white,
+      },
+      logoutBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.sm,
+        backgroundColor: colors.danger,
+        borderRadius: radius.pill,
+        paddingVertical: 15,
+        shadowColor: colors.danger,
+        shadowOpacity: 0.22,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 4,
+      },
+      logoutBtnPressed: { opacity: 0.92 },
+      logoutBtnText: { fontSize: 16, fontWeight: '700', color: colors.white },
+    }),
+    footerBottomPad,
+  }
 }
 
 function MenuItem({
@@ -160,14 +228,24 @@ function MenuItem({
   badgeVariant = 'active',
   hint,
   styles,
-}: MenuAction & { styles: ReturnType<typeof createHeaderMenuStyles> }) {
+  showDivider,
+}: MenuAction & {
+  styles: ReturnType<typeof createHeaderMenuStyles>['styles']
+  showDivider?: boolean
+}) {
   const { colors } = useTheme()
   return (
     <Pressable
-      style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+      style={({ pressed }) => [
+        styles.menuItem,
+        showDivider && styles.menuItemBorder,
+        pressed && styles.menuItemPressed,
+      ]}
       onPress={onPress}
     >
-      <AppIcon name={icon} size={20} />
+      <View style={styles.iconBubble}>
+        <AppIcon name={icon} size={18} color={colors.black} />
+      </View>
       <View style={styles.menuItemBody}>
         <Text style={styles.menuLabel}>{toTitleCase(label)}</Text>
         {hint ? <Text style={styles.menuHint}>{hint}</Text> : null}
@@ -183,7 +261,7 @@ function MenuItem({
           </View>
         )
       ) : null}
-      <AppIcon name="chevron-right" size={18} color={colors.gray400} />
+      <AppIcon name="chevron-right" size={16} color={colors.gray400} />
     </Pressable>
   )
 }
@@ -195,12 +273,21 @@ function MenuSection({
 }: {
   title?: string
   children: ReactNode
-  styles: ReturnType<typeof createHeaderMenuStyles>
+  styles: ReturnType<typeof createHeaderMenuStyles>['styles']
 }) {
+  const items = Children.toArray(children).filter(Boolean)
+  if (items.length === 0) return null
+
   return (
-    <View style={styles.section}>
-      {title ? <Text style={styles.sectionTitle}>{toTitleCase(title)}</Text> : null}
-      {children}
+    <View style={styles.sectionCard}>
+      {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
+      {items.map((child, index) =>
+        isValidElement(child)
+          ? cloneElement(child as ReactElement<{ showDivider?: boolean }>, {
+              showDivider: index > 0,
+            })
+          : child,
+      )}
     </View>
   )
 }
@@ -227,10 +314,12 @@ export function HeaderMenu({
   isHostOnline,
 }: Props) {
   const { colors } = useTheme()
-  const styles = useMemo(() => createHeaderMenuStyles(colors), [colors])
   const insets = useSafeAreaInsets()
+  const { styles, footerBottomPad } = useMemo(
+    () => createHeaderMenuStyles(colors, insets.top, insets.bottom),
+    [colors, insets.bottom, insets.top],
+  )
   const isCustomer = user.role === 'customer'
-  const footerBottomPad = bottomSafePadding(insets.bottom, spacing.md)
   const locationHint =
     locationLabel && radiusMiles != null
       ? `${locationLabel} · ${formatRadiusMilesLabel(radiusMiles)}`
@@ -245,24 +334,35 @@ export function HeaderMenu({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
         <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
-          <SafeAreaView edges={['top', 'right']} style={styles.panelInner}>
-            <View style={styles.header}>
-              <View style={styles.profileIcon}>
-                <AppIcon name="user" size={20} />
-              </View>
-              <View style={styles.headerText}>
-                <Text style={styles.name}>{user.name}</Text>
-                <Text style={styles.role}>{isCustomer ? 'Guest' : 'Host'}</Text>
-                {!isCustomer && (
-                  <Text style={[styles.onlineStatus, isHostOnline ? styles.onlineLive : null]}>
-                    {isHostOnline ? '● Online' : '○ Offline'}
+          <View style={styles.panelInner}>
+            <LinearGradient
+              colors={[brandColors.navy, '#243240']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.headerGradient}
+            >
+              <View style={styles.headerRow}>
+                <View style={styles.profileIcon}>
+                  <AppIcon name="user" size={22} color={brandColors.offWhite} />
+                </View>
+                <View style={styles.headerText}>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {user.name}
                   </Text>
-                )}
+                  <View style={styles.rolePill}>
+                    <Text style={styles.rolePillText}>{isCustomer ? 'Guest' : 'Host'}</Text>
+                  </View>
+                  {!isCustomer && (
+                    <Text style={[styles.onlineStatus, isHostOnline ? styles.onlineLive : null]}>
+                      {isHostOnline ? '● Online now' : '○ Offline'}
+                    </Text>
+                  )}
+                </View>
+                <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
+                  <AppIcon name="x" size={18} color={brandColors.offWhite} />
+                </Pressable>
               </View>
-              <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={8}>
-                <AppIcon name="x" size={20} color={colors.gray500} />
-              </Pressable>
-            </View>
+            </LinearGradient>
 
             <ScrollView
               style={styles.menuScroll}
@@ -271,7 +371,7 @@ export function HeaderMenu({
               keyboardShouldPersistTaps="handled"
             >
               {onOpenLocationSettings ? (
-                <MenuSection title="Location Settings" styles={styles}>
+                <MenuSection title="Location" styles={styles}>
                   <MenuItem
                     icon="map-pin"
                     label={isCustomer ? 'Search area' : 'Browse area'}
@@ -335,13 +435,28 @@ export function HeaderMenu({
                   />
                 ) : null}
                 {onHelp ? (
-                  <MenuItem icon="help-circle" label="Help & support" onPress={() => go(onHelp)} styles={styles} />
+                  <MenuItem
+                    icon="help-circle"
+                    label="Help & support"
+                    onPress={() => go(onHelp)}
+                    styles={styles}
+                  />
                 ) : null}
                 {onTerms ? (
-                  <MenuItem icon="file-text" label="Terms and conditions" onPress={() => go(onTerms)} styles={styles} />
+                  <MenuItem
+                    icon="file-text"
+                    label="Terms and conditions"
+                    onPress={() => go(onTerms)}
+                    styles={styles}
+                  />
                 ) : null}
                 {onPrivacy ? (
-                  <MenuItem icon="shield" label="Privacy policy" onPress={() => go(onPrivacy)} styles={styles} />
+                  <MenuItem
+                    icon="shield"
+                    label="Privacy policy"
+                    onPress={() => go(onPrivacy)}
+                    styles={styles}
+                  />
                 ) : null}
               </MenuSection>
             </ScrollView>
@@ -355,7 +470,7 @@ export function HeaderMenu({
                 <Text style={styles.logoutBtnText}>{toTitleCase('Log out')}</Text>
               </Pressable>
             </View>
-          </SafeAreaView>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>

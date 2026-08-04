@@ -18,6 +18,7 @@ dist-ssr
 .expo/
 web-build/
 .eas/
+supabase/.temp/
 
 # Native
 ios/Pods/

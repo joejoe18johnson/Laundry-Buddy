@@ -7,12 +7,25 @@ import { colors, radius, spacing } from '../theme'
 
 type Props = {
   visible: boolean
-  onOpenSettings: () => void
+  /** OS will no longer show the native Allow dialog — only then offer Settings. */
+  blockedInSettings?: boolean
+  onAllow: () => void
+  onOpenSettings?: () => void
   onDismiss: () => void
 }
 
-/** Shown only when the OS will no longer display the native Allow dialog. */
-export function NotificationPermissionPrompt({ visible, onOpenSettings, onDismiss }: Props) {
+/**
+ * Explains why notifications matter, then the primary button opens the native
+ * Allow / Don't allow dialog (Facebook / YouTube style). Settings is only
+ * offered when the OS will not show that dialog again.
+ */
+export function NotificationPermissionPrompt({
+  visible,
+  blockedInSettings = false,
+  onAllow,
+  onOpenSettings,
+  onDismiss,
+}: Props) {
   return (
     <Modal
       visible={visible}
@@ -27,10 +40,16 @@ export function NotificationPermissionPrompt({ visible, onOpenSettings, onDismis
             <View style={styles.iconWrap}>
               <AppIcon name="bell" size={28} color={colors.white} />
             </View>
-            <Text style={styles.title}>{toTitleCase('Notifications are turned off')}</Text>
+            <Text style={styles.title}>
+              {toTitleCase(
+                blockedInSettings ? 'Turn notifications back on' : 'Allow notifications',
+              )}
+            </Text>
             <Text style={styles.body}>
               {toTitleCase(
-                'Laundry Buddy needs phone alerts for booking updates, verification results, and messages. Open your phone settings and turn notifications on for Laundry Buddy.',
+                blockedInSettings
+                  ? 'Notifications are off for Laundry Buddy. Open your phone settings to turn them on — you will miss booking and message alerts otherwise.'
+                  : 'Tap Allow on the next screen so you never miss booking updates, verification results, or new messages. One tap and you are done.',
               )}
             </Text>
             <View style={styles.list}>
@@ -38,7 +57,16 @@ export function NotificationPermissionPrompt({ visible, onOpenSettings, onDismis
               <Text style={styles.listItem}>• {toTitleCase('Verification approved or needs resubmit')}</Text>
               <Text style={styles.listItem}>• {toTitleCase('New messages from your host or guest')}</Text>
             </View>
-            <PrimaryButton title="Open phone settings" icon="settings" full onPress={onOpenSettings} />
+            {blockedInSettings ? (
+              <PrimaryButton
+                title="Open phone settings"
+                icon="settings"
+                full
+                onPress={onOpenSettings ?? onAllow}
+              />
+            ) : (
+              <PrimaryButton title="Allow notifications" icon="bell" full onPress={onAllow} />
+            )}
             <OutlineButton title="Not now" full onPress={onDismiss} />
           </View>
         </SafeAreaView>

@@ -11,6 +11,7 @@ import {
   VERIFICATION_REJECTED_TITLE,
 } from '../lib/verificationCodes'
 import { hasSeenVerificationTour, markVerificationTourSeen } from '../lib/verificationTourStorage'
+import { requestHostBookingWalkthrough } from '../lib/hostWalkthroughQueue'
 
 /** Keeps verification status in sync and surfaces approval/rejection alerts prominently. */
 export function VerificationStatusSync() {
@@ -106,6 +107,9 @@ export function VerificationStatusSync() {
     setTour(null)
     if (navigateAfter) {
       navigate(role === 'host' ? 'account' : 'customer-home')
+    }
+    if (role === 'host') {
+      requestHostBookingWalkthrough()
     }
   }
 

@@ -1707,10 +1707,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       notifyCustomer(
         user.id,
         'Request sent',
-        `${formatHostDisplayName(selectedHost.name)} will review your load request. We'll notify you when they accept.`,
+        `${formatHostDisplayName(selectedHost.name)} will review your load request. Message them in the app for faster coordination.`,
         bookingTrackingLink(bookingId),
       )
-      showToast('Request sent to host', { icon: 'send' })
+      showToast('Request sent — message your host from My loads', { icon: 'message-circle' })
       setBookingDraft(null)
       if (user) void saveStoredBookingDraft(user.id, null)
     },

@@ -6,6 +6,7 @@ import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { ACTIVE_REGION_LABEL } from '../../data/mockData'
+import { requestHostBookingWalkthrough } from '../../lib/hostWalkthroughQueue'
 import { SUPPORT_EMAIL } from '../../lib/supportContact'
 import { toTitleCase } from '../../lib/titleCase'
 import { radius, spacing } from '../../theme'
@@ -66,6 +67,20 @@ function createHelpStyles(colors: ReturnType<typeof useTheme>['colors']) {
     contactLabel: { fontSize: 15, fontWeight: '600' },
     contactCopy: { flex: 1, gap: 2 },
     contactSub: { fontSize: 13, fontWeight: '500', color: colors.gray500 },
+    guideBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.accent,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+      backgroundColor: colors.gray50,
+    },
+    guideCopy: { flex: 1, gap: 2 },
+    guideTitle: { fontSize: 15, fontWeight: '700' },
+    guideSub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
   })
 }
 
@@ -148,6 +163,24 @@ export function HelpScreen() {
         </View>
       )}
 
+      {!isCustomer ? (
+        <Pressable
+          style={styles.guideBtn}
+          onPress={() => requestHostBookingWalkthrough({ replay: true })}
+          accessibilityRole="button"
+          accessibilityLabel={toTitleCase('Open host booking guide')}
+        >
+          <AppIcon name="book-open" size={20} color={colors.accent} />
+          <View style={styles.guideCopy}>
+            <Text style={styles.guideTitle}>{toTitleCase('Host booking guide')}</Text>
+            <Text style={styles.guideSub}>
+              {toTitleCase('Walk through all five steps — accept, payment, drying, mark dry, and pickup.')}
+            </Text>
+          </View>
+          <AppIcon name="chevron-right" size={18} color={colors.gray500} />
+        </Pressable>
+      ) : null}
+
       <Text style={styles.section}>{toTitleCase('How it works')}</Text>
       {isCustomer ? (
         <>
@@ -158,10 +191,10 @@ export function HelpScreen() {
         </>
       ) : (
         <>
-          <Step n={1} title="Go online" body="Turn on your availability so guests can find you in search." styles={styles} />
-          <Step n={2} title="Accept & update loads" body="Accept requests and mark each stage until the load is ready." styles={styles} />
-          <Step n={3} title="Record every sale" body="Log every completed load on the app — cash or bank transfer. This builds your reputation." styles={styles} />
-          <Step n={4} title="Earn visibility" body="More completed loads and reviews help you appear higher when guests search." styles={styles} />
+          <Step n={1} title="Go online & accept" body="Turn on Online on your Dashboard. When a guest sends a request, review it and tap Accept — the load moves to your Dryer tab." styles={styles} />
+          <Step n={2} title="Confirm payment" body="On the Dryer tab, confirm cash at drop-off or verify a bank transfer before you start drying." styles={styles} />
+          <Step n={3} title="Start drying & mark dry" body="Tap Start drying when laundry is in the dryer, then Mark dry when it is ready — guests get notified each time." styles={styles} />
+          <Step n={4} title="Confirm pickup & build reputation" body="Both of you confirm pickup in the app. Completed loads and reviews help you rank higher in guest search." styles={styles} />
         </>
       )}
 

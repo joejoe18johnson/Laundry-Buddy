@@ -38,7 +38,6 @@ import {
   formatPhoneNumberDisplay,
   isValidPhoneNumber,
 } from '../../lib/whatsappVerification'
-import { useCriticalNotificationPrompt } from '../../hooks/useCriticalNotificationPrompt'
 import { radius, spacing } from '../../theme'
 import { toTitleCase } from '../../lib/titleCase'
 import type { IdDocumentType } from '../../types'
@@ -75,7 +74,6 @@ export function IdentityVerificationScreen({ onBrowse }: { onBrowse?: () => void
   const isHost = user?.role === 'host'
   const { colors } = useTheme()
   const styles = useMemo(() => createIdentityVerificationStyles(colors), [colors])
-  useCriticalNotificationPrompt('verification')
 
   useEffect(() => {
     if (!user?.phone) return

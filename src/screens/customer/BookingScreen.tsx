@@ -29,7 +29,7 @@ import {
 import { formatMoney, cashPaymentGuestHint } from '../../lib/bookingPayments'
 import { formatHostDisplayName } from '../../lib/displayName'
 import { formatDropOffHour, formatDropOffHoursWindow, sortDropOffHours, type DropOffHour } from '../../lib/dropOffAvailability'
-import { useCriticalNotificationPrompt, promptNotificationsBeforeAction } from '../../hooks/useCriticalNotificationPrompt'
+import { promptNotificationsBeforeAction } from '../../hooks/useCriticalNotificationPrompt'
 import { getPushPermissionStatus } from '../../lib/pushNotifications'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
 import { titleCaseWithName, toTitleCase } from '../../lib/titleCase'
@@ -50,7 +50,6 @@ export function BookingScreen() {
   const styles = useMemo(() => createBookingStyles(colors), [colors])
   const insets = useSafeAreaInsets()
   const footerBottomPad = bottomSafePadding(insets.bottom)
-  useCriticalNotificationPrompt('booking')
 
   const hostSettings = selectedHost ? getSettingsForHost(selectedHost.hostUserId) : null
   const paymentMethods = useMemo(
@@ -324,6 +323,7 @@ export function BookingScreen() {
               <Text style={styles.reviewSheetsNote}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
             </View>
 
+            <SendStepMessagingHint hostName={displayName} />
             <SendStepNotificationHint />
           </>
         ) : null}
@@ -413,6 +413,57 @@ function ReviewMetaRow({ icon, label, value }: { icon: IconName; label: string; 
       <View style={styles.copy}>
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.value}>{value}</Text>
+      </View>
+    </View>
+  )
+}
+
+function SendStepMessagingHint({ hostName }: { hostName: string }) {
+  const { colors } = useTheme()
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        card: {
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: spacing.md,
+          borderWidth: 1,
+          borderColor: colors.accent,
+          borderRadius: radius.lg,
+          backgroundColor: colors.gray50,
+          padding: spacing.md,
+          marginTop: spacing.md,
+        },
+        iconWrap: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: colors.white,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 1,
+          borderColor: 'rgba(0,203,169,0.35)',
+        },
+        body: { flex: 1, gap: 4 },
+        title: { fontSize: 15, fontWeight: '700', color: colors.black },
+        sub: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
+      }),
+    [colors],
+  )
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.iconWrap}>
+        <AppIcon name="message-circle" size={18} color={colors.accent} />
+      </View>
+      <View style={styles.body}>
+        <Text style={styles.title}>{toTitleCase('Use in-app chat')}</Text>
+        <Text style={styles.sub}>
+          {titleCaseWithName(
+            `After you send your request, message ${hostName} here for drop-off questions, timing changes, or special instructions — faster and easier than calling or texting off-platform.`,
+            hostName,
+          )}
+        </Text>
       </View>
     </View>
   )

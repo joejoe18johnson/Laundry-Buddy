@@ -129,6 +129,7 @@ export function Screen({
   const insets = useSafeAreaInsets()
   const { uiStyles: styles, colors } = useTheme()
   const scrollRef = useRef<ScrollView>(null)
+  const contentRef = useRef<View>(null)
   const scrollYRef = useRef(0)
   const pendingFieldRef = useRef<RefObject<View | null> | null>(null)
   const [keyboardHeight, setKeyboardHeight] = useState(0)
@@ -209,22 +210,35 @@ export function Screen({
   const scrollToAnchor = useCallback(
     (anchorRef: RefObject<View | null>, offset = spacing.xl) => {
       const anchor = anchorRef.current
+      const content = contentRef.current
       const scrollView = scrollRef.current
-      if (!anchor || !scrollView) return
+      if (!anchor || !content || !scrollView) return
 
       const run = () => {
-        scrollView.measureInWindow((_scrollX, scrollWindowY) => {
-          anchor.measureInWindow((_anchorX, anchorWindowY) => {
-            const relativeY = anchorWindowY - scrollWindowY + scrollYRef.current
+        anchor.measureLayout(
+          content,
+          (_x, y) => {
             scrollView.scrollTo({
-              y: Math.max(0, relativeY - offset),
+              y: Math.max(0, y - offset),
               animated: true,
             })
-          })
-        })
+          },
+          () => {
+            anchor.measureInWindow((_anchorX, anchorWindowY) => {
+              content.measureInWindow((_contentX, contentWindowY) => {
+                const relativeY = anchorWindowY - contentWindowY + scrollYRef.current
+                scrollView.scrollTo({
+                  y: Math.max(0, relativeY - offset),
+                  animated: true,
+                })
+              })
+            })
+          },
+        )
       }
 
       requestAnimationFrame(run)
+      setTimeout(run, 50)
     },
     [],
   )
@@ -262,7 +276,9 @@ export function Screen({
             scrollEventThrottle={16}
             showsVerticalScrollIndicator={false}
           >
-            {children}
+            <View ref={contentRef} collapsable={false}>
+              {children}
+            </View>
           </ScrollView>
         </ScreenScrollContext.Provider>
       </KeyboardAvoidingView>

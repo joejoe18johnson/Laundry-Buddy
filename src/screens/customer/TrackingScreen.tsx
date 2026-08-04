@@ -13,7 +13,6 @@ import { openDirections, openHostDirections } from '../../lib/openDirections'
 import { loadPaymentProofDraft, savePaymentProofDraft } from '../../lib/paymentProofDraftStorage'
 import { LoadProgressTracker } from '../../components/LoadProgressTracker'
 import { NotificationBellReminder } from '../../components/NotificationBellReminder'
-import { useCriticalNotificationPrompt } from '../../hooks/useCriticalNotificationPrompt'
 import { BackButton, OutlineButton, PrimaryButton, Screen, StatusBadge } from '../../components/ui'
 import { getGuestProgressStep, getGuestStepDescription } from '../../lib/loadProgress'
 import { hasReviewForBooking } from '../../lib/reviewEligibility'
@@ -64,8 +63,8 @@ export function TrackingScreen() {
   const { user } = useAuth()
   const { booking, activeGuestBookings, selectGuestBooking, navigate, getSettingsForHost, confirmPickup, clearBooking, cancelPendingRequest, openChat, markPaymentProofSent, refreshGuestBookings, openLeaveReview } = useApp()
   const { sendMessage } = useMessages()
-  useCriticalNotificationPrompt('tracking')
   const [bannerVisible, setBannerVisible] = useState(true)
+  const [messagePromptVisible, setMessagePromptVisible] = useState(true)
   const [transferProofUri, setTransferProofUri] = useState<string | null>(null)
   const [cancelTick, setCancelTick] = useState(0)
   const [reviewSubmitted, setReviewSubmitted] = useState(false)
@@ -79,6 +78,7 @@ export function TrackingScreen() {
 
   useEffect(() => {
     setBannerVisible(true)
+    setMessagePromptVisible(true)
     if (!booking?.id) {
       setTransferProofUri(null)
       return
@@ -443,7 +443,7 @@ export function TrackingScreen() {
             <Text style={styles.successSub}>
               {isPending
                 ? titleCaseWithName(
-                    `Waiting for ${booking.hostName} to accept your load`,
+                    `Waiting for ${booking.hostName} to accept your load. Message them in the app if you have questions.`,
                     booking.hostName,
                   )
                 : isBankTransfer && amount > 0 && !dropOffUnlocked
@@ -458,6 +458,33 @@ export function TrackingScreen() {
           <AppIcon name="x" size={16} color={colors.gray500} />
         </Pressable>
       )}
+
+      {booking.isNew && !isDeclined && isPending && messagePromptVisible ? (
+        <View style={styles.messagePromptCard}>
+          <View style={styles.messagePromptHeader}>
+            <View style={styles.messagePromptIcon}>
+              <AppIcon name="message-circle" size={20} color={colors.accent} />
+            </View>
+            <View style={styles.messagePromptCopy}>
+              <Text style={styles.messagePromptTitle}>{toTitleCase('Message your host in the app')}</Text>
+              <Text style={styles.messagePromptSub}>
+                {titleCaseWithName(
+                  `Drop-off questions, timing changes, or special care notes? Chat with ${booking.hostName} here — it is the fastest way to coordinate and keeps everything in one place.`,
+                  booking.hostName,
+                )}
+              </Text>
+            </View>
+          </View>
+          <PrimaryButton title="Message host" icon="message-circle" full onPress={openLoadChat} />
+          <Pressable
+            onPress={() => setMessagePromptVisible(false)}
+            accessibilityRole="button"
+            accessibilityLabel={toTitleCase('Dismiss messaging tip')}
+          >
+            <Text style={styles.messagePromptDismiss}>{toTitleCase('Maybe later')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       {isDeclined && (
         <View style={styles.declinedCard}>
@@ -531,7 +558,7 @@ export function TrackingScreen() {
           <AppIcon name="message-circle" size={18} color={colors.gray600} />
           <Text style={styles.infoText}>
             {titleCaseWithName(
-              `Step 1: waiting for ${booking.hostName} to accept your request.`,
+              `Step 1: waiting for ${booking.hostName} to accept. Use in-app chat to ask questions or share updates while you wait.`,
               booking.hostName,
             )}
           </Text>
@@ -686,6 +713,40 @@ function createTrackingStyles(colors: ReturnType<typeof useTheme>['colors']) {
   },
   successTitle: { fontWeight: '600', fontSize: 15, lineHeight: 20 },
   successSub: { fontSize: 13, color: colors.gray600, marginTop: spacing.sm, lineHeight: 18 },
+  messagePromptCard: {
+    borderWidth: 1,
+    borderColor: colors.accent,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.gray50,
+  },
+  messagePromptHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  messagePromptIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,203,169,0.35)',
+  },
+  messagePromptCopy: { flex: 1, gap: 4 },
+  messagePromptTitle: { fontSize: 16, fontWeight: '700', color: colors.black, lineHeight: 22 },
+  messagePromptSub: { fontSize: 14, color: colors.gray600, lineHeight: 20 },
+  messagePromptDismiss: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.gray500,
+    textAlign: 'center',
+    paddingVertical: spacing.xs,
+  },
   pendingCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',

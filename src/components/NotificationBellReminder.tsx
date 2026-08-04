@@ -5,8 +5,8 @@ import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { registerPushTokenForUser } from '../lib/supabase/notificationService'
 import {
-  canRequestPushPermissionAgain,
   getPushPermissionStatus,
+  isPushPermissionBlockedInSettings,
   openNotificationSettings,
   promptForPushNotifications,
   type PushPermissionStatus,
@@ -23,9 +23,11 @@ export function NotificationBellReminder({ compact }: Props) {
   const { colors: themeColors } = useTheme()
   const styles = useMemo(() => createStyles(themeColors), [themeColors])
   const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
+  const [blockedInSettings, setBlockedInSettings] = useState(false)
 
   const refreshPermission = useCallback(async () => {
     setPermission(await getPushPermissionStatus())
+    setBlockedInSettings(await isPushPermissionBlockedInSettings())
   }, [])
 
   useEffect(() => {
@@ -43,21 +45,17 @@ export function NotificationBellReminder({ compact }: Props) {
 
   if (permission === 'granted' || permission === 'unsupported') return null
 
-  const blockedInSettings = permission === 'denied'
-
   const handleEnable = async () => {
-    if (blockedInSettings && !(await canRequestPushPermissionAgain())) {
+    if (blockedInSettings) {
       await openNotificationSettings()
       return
     }
 
     const status = await promptForPushNotifications()
     setPermission(status)
+    setBlockedInSettings(await isPushPermissionBlockedInSettings())
     if (status === 'granted' && user) {
       await registerPushTokenForUser(user)
-    }
-    if (status === 'denied' && !(await canRequestPushPermissionAgain())) {
-      await openNotificationSettings()
     }
   }
 
@@ -73,8 +71,8 @@ export function NotificationBellReminder({ compact }: Props) {
         <Text style={[styles.sub, compact && styles.subCompact]}>
           {toTitleCase(
             blockedInSettings
-              ? 'Phone alerts are off. Tap to open settings so you never miss booking updates, verification results, or new messages.'
-              : 'Tap Allow on the next screen for booking updates, verification alerts, and new messages.',
+              ? 'Notifications are blocked in phone settings. Tap to open settings.'
+              : 'Tap Allow — one tap on the next screen for booking, verification, and messages.',
           )}
         </Text>
       </View>

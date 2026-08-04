@@ -19,7 +19,6 @@ import {
 import { getUserById } from '../../lib/authStorage'
 import { countUnreadInThread, loadAllThreadIds, loadThreadMessages } from '../../lib/messageStorage'
 import { toTitleCase } from '../../lib/titleCase'
-import { useCriticalNotificationPrompt } from '../../hooks/useCriticalNotificationPrompt'
 import { radius, spacing } from '../../theme'
 import type { Booking } from '../../types'
 
@@ -123,7 +122,6 @@ export function MessagesScreen() {
   } = useApp()
   const { colors } = useTheme()
   const styles = useMemo(() => createMessagesStyles(colors), [colors])
-  useCriticalNotificationPrompt('messages')
   const { refreshThreads, markAllRead } = useMessages()
   const [threads, setThreads] = useState<ThreadRow[]>([])
 

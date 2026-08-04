@@ -26,25 +26,40 @@ Restart Expo after changing env vars (`npx expo start -c`).
 
 When both variables are set, the app uses **Supabase Auth + profiles** instead of local AsyncStorage users.
 
-## 3. Run the database migration
+## 3. Run database migrations (automatic)
 
-**Option A — SQL Editor (quickest)**
-
-1. Open Supabase → SQL Editor.
-2. Paste and run each migration in order:
-   - `supabase/migrations/20260718000000_initial_schema.sql`
-   - `supabase/migrations/20260719000000_admin_profile_updates.sql`
-   - `supabase/migrations/20260720000000_app_public_bucket.sql` (optional hosted auth page)
-   - `supabase/migrations/20260720100000_phone_login_rpc.sql` (**required for phone login**)
-
-**Option B — Supabase CLI**
+**Recommended — one command**
 
 ```bash
-npm install -g supabase
-supabase login
-supabase link --project-ref YOUR_PROJECT_REF
-supabase db push
+npx supabase login          # once per machine
+npm run db:migrate          # applies any pending supabase/migrations/*.sql
 ```
+
+The script links your project from `EXPO_PUBLIC_SUPABASE_URL` in `.env`, runs only migrations that are not yet recorded in Supabase, and updates migration history. Safe to run after every pull — already-applied SQL is skipped.
+
+**Manual options**
+
+- **SQL Editor:** paste each file under `supabase/migrations/` in filename order.
+- **Supabase CLI:** `supabase link --project-ref YOUR_REF` then `supabase db push`.
+
+Current migrations (in order):
+
+| File | Purpose |
+|------|---------|
+| `20260718000000_initial_schema.sql` | Core tables + RLS |
+| `20260719000000_admin_profile_updates.sql` | Admin role + verification patch RPC |
+| `20260720000000_app_public_bucket.sql` | Hosted auth callback bucket |
+| `20260720100000_phone_login_rpc.sql` | Phone login helpers |
+| `20260721000000_host_marketplace_sync.sql` | Host listing sync |
+| `20260722000000_chat_sync_policies.sql` | Chat RLS + realtime |
+| `20260724000000_signup_profile_trigger.sql` | Safer signup profile trigger |
+| `20260724100000_notification_sync.sql` | Notifications + push tokens |
+| `20260724200000_bookings_realtime.sql` | Booking realtime |
+| `20260731000000_booking_host_sync.sql` | Host booking sync |
+| `20260731100000_notification_push_delivery.sql` | Push delivery RPC |
+| `20260731110000_booking_pickup_confirmation.sql` | Pickup confirmation fields |
+| `20260801000000_host_reviews_unique_booking.sql` | One review per booking |
+| `20260802000000_guest_search_preferences.sql` | Guest search radius + location sync |
 
 ## 4. Auth settings (Supabase dashboard)
 
@@ -140,7 +155,7 @@ Local AsyncStorage remains the fallback when env vars are missing, so Expo Go de
 
 ### Chat sync (required for cross-device APK testing)
 
-Run `supabase/migrations/20260722000000_chat_sync_policies.sql` in the Supabase SQL Editor (or `supabase db push`) so:
+Included in `npm run db:migrate` — or run `20260722000000_chat_sync_policies.sql` manually so:
 
 - Messages sync through `chat_messages` instead of device-only storage
 - Admins can reply in `support:{userId}` threads from another device

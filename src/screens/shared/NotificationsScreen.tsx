@@ -8,8 +8,8 @@ import { useTheme } from '../../context/ThemeContext'
 import { useUserNotifications } from '../../context/NotificationContext'
 import { notificationHasDestination } from '../../lib/notificationLinks'
 import {
-  canRequestPushPermissionAgain,
   getPushPermissionStatus,
+  isPushPermissionBlockedInSettings,
   openNotificationSettings,
   promptForPushNotifications,
   type PushPermissionStatus,
@@ -121,6 +121,7 @@ export function NotificationsScreen() {
   const styles = useMemo(() => createNotificationsStyles(colors), [colors])
   const { notifications, unreadCount, markRead, markAllRead, reload } = useUserNotifications(user?.id)
   const [permission, setPermission] = useState<PushPermissionStatus>('undetermined')
+  const [blockedInSettings, setBlockedInSettings] = useState(false)
 
   const onRefresh = useCallback(async () => {
     await refreshAtHome()
@@ -128,7 +129,10 @@ export function NotificationsScreen() {
   }, [refreshAtHome, reload])
 
   useEffect(() => {
-    getPushPermissionStatus().then(setPermission)
+    void (async () => {
+      setPermission(await getPushPermissionStatus())
+      setBlockedInSettings(await isPushPermissionBlockedInSettings())
+    })()
   }, [])
 
   if (!user) return null
@@ -174,27 +178,24 @@ export function NotificationsScreen() {
             <Text style={styles.permissionTitle}>{toTitleCase('Phone alerts are off')}</Text>
             <Text style={styles.permissionSub}>
               {toTitleCase(
-                permission === 'denied'
-                  ? 'Open phone settings to get booking updates, verification alerts, and new messages.'
+                blockedInSettings
+                  ? 'Notifications are blocked in phone settings. Open settings to turn them on.'
                   : 'Tap Allow on the next screen for booking updates, verification results, and messages.',
               )}
             </Text>
           </View>
           <OutlineButton
-            title={permission === 'denied' ? 'Open settings' : 'Allow'}
+            title={blockedInSettings ? 'Open settings' : 'Allow'}
             onPress={async () => {
-              if (permission === 'denied' && !(await canRequestPushPermissionAgain())) {
+              if (blockedInSettings) {
                 await openNotificationSettings()
                 return
               }
               const status = await promptForPushNotifications()
               setPermission(status)
+              setBlockedInSettings(await isPushPermissionBlockedInSettings())
               if (status === 'granted' && user) {
                 await registerPushTokenForUser(user)
-                return
-              }
-              if (status === 'denied' && !(await canRequestPushPermissionAgain())) {
-                await openNotificationSettings()
               }
             }}
           />
