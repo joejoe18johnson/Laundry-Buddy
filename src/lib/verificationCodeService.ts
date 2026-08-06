@@ -235,7 +235,10 @@ export async function listOpenVerificationCodeRequests(): Promise<VerificationCo
   const merged = new Map<string, VerificationCodeRequest>()
   for (const entry of remoteRequests) merged.set(entry.userId, entry)
   for (const entry of localRequests) {
-    if (!merged.has(entry.userId)) merged.set(entry.userId, entry)
+    if (merged.has(entry.userId)) continue
+    const user = await resolveUserById(entry.userId)
+    if (!user) continue
+    merged.set(entry.userId, entry)
   }
 
   return Array.from(merged.values()).sort(

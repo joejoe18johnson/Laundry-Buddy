@@ -42,48 +42,6 @@ const VERIFIED_GUEST = {
   submittedAt: '2026-06-01T10:00:00.000Z',
 }
 
-const VERIFIED_HOST = {
-  status: 'verified',
-  phoneVerified: true,
-  verifiedPhone: '5016001234',
-  idType: 'passport',
-  idUploaded: true,
-  addressUploaded: true,
-  address: '22 Coconut St., Las Flores, Cayo',
-  submittedAt: '2026-06-15T10:00:00.000Z',
-}
-
-const MARIA_HOST_SETTINGS = {
-  isOnline: true,
-  acceptCash: true,
-  acceptBankTransfer: true,
-  bankDetails: {
-    bankName: 'Belize Bank',
-    accountName: 'Maria Flores',
-    accountNumber: '1234567890',
-  },
-  notifyNewRequests: true,
-  notifyBookingUpdates: true,
-  notifyGuestsWhenOnline: true,
-  pricing: { dryPrice: 3, foldingPrice: 3, sheetsPrice: 1 },
-  listing: {
-    bio: 'UB student sharing my home dryer with neighbors. Usually home afternoons and weekends — happy to help during rainy season.',
-    location: 'Las Flores',
-    district: 'Cayo',
-    address: '22 Coconut St.',
-    gateCode: '4421',
-    whatsapp: '5016001234',
-    latitude: 17.158,
-    longitude: -89.072,
-    turnaroundHours: 2,
-    slotsLeft: 3,
-    hasGenerator: false,
-    setup: ['Clean laundry room', 'Samsung dryer', 'Covered porch drop-off'],
-    rules: ['Drop off in labeled bag', 'No high heat unless noted', 'Pick up within 24 hrs'],
-  },
-  dropOffAvailability: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-}
-
 const SEED_USERS = [
   {
     label: 'Ana (guest)',
@@ -92,39 +50,6 @@ const SEED_USERS = [
     name: 'Ana',
     role: 'customer',
     identity_verification: VERIFIED_GUEST,
-  },
-  {
-    label: 'Maria (host)',
-    email: 'maria@example.com',
-    phone: '5016001234',
-    name: 'Maria Garcia',
-    role: 'host',
-    identity_verification: VERIFIED_HOST,
-    host: {
-      id: 'maria',
-      name: 'Maria Garcia',
-      location: 'Las Flores',
-      district: 'Cayo',
-      rating: 4.9,
-      review_count: 47,
-      price: 3,
-      folding_price: 3,
-      sheets_price: 1,
-      slots_left: 3,
-      turnaround_hours: 2,
-      dryer_type: 'Electric',
-      has_generator: false,
-      address: '22 Coconut St.',
-      gate_code: '4421',
-      whatsapp: '5016001234',
-      latitude: 17.158,
-      longitude: -89.072,
-      photos: ['Clean laundry room', 'Samsung dryer', 'Covered porch drop-off'],
-      rules: ['Drop off in labeled bag', 'No high heat unless noted', 'Pick up within 24 hrs'],
-      bio: MARIA_HOST_SETTINGS.listing.bio,
-      is_online: true,
-    },
-    host_settings: MARIA_HOST_SETTINGS,
   },
 ]
 

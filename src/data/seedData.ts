@@ -1,10 +1,9 @@
-import { ALL_DROP_OFF_HOURS } from '../lib/dropOffAvailability'
 import type { Booking, Host, HostProfileDetails, HostRequest, HostSettings, IdentityVerification, User } from '../types'
 import { GENERATED_SEED_HOSTS } from './generatedHosts'
 import { getRuntimeDynamicHosts } from '../lib/dynamicHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes. */
-export const SEED_DATA_VERSION = '32'
+export const SEED_DATA_VERSION = '33'
 
 /** Bootstrap password for sample accounts (also used for Supabase admin auto-provisioning). */
 export const ADMIN_SEED_PASSWORD = 'demo1234'
@@ -23,6 +22,16 @@ export const SAMPLE_GUEST_PHONE = '5016001111'
 export const SAMPLE_HOST_EMAIL = 'maria@example.com'
 export const SAMPLE_HOST_PHONE = '5016001234'
 
+/** Demo account ids hidden from Supabase-backed admin lists. */
+export const DEMO_ADMIN_HIDDEN_USER_IDS = new Set(['user-maria', 'user-support-admin'] as const)
+
+/** Legacy Maria test account — hidden from admin when using Supabase. */
+export const DEMO_ADMIN_EXCLUDED_CONTACTS = {
+  emails: new Set([SAMPLE_HOST_EMAIL.toLowerCase()]),
+  phones: new Set([SAMPLE_HOST_PHONE]),
+  names: new Set(['Maria Garcia']),
+}
+
 const VERIFIED_GUEST: IdentityVerification = {
   status: 'verified',
   phoneVerified: true,
@@ -36,25 +45,6 @@ const VERIFIED_GUEST: IdentityVerification = {
   submittedAt: '2026-06-01T10:00:00.000Z',
 }
 
-const VERIFIED_HOST: IdentityVerification = {
-  status: 'verified',
-  phoneVerified: true,
-  verifiedPhone: SAMPLE_HOST_PHONE,
-  idType: 'passport',
-  idUploaded: true,
-  addressUploaded: true,
-  address: '22 Coconut St., Las Flores, Cayo',
-  submittedAt: '2026-06-15T10:00:00.000Z',
-}
-
-/** App coverage — community dryer sharing across all of Belize. */
-export const ACTIVE_REGION_LABEL = 'Belize'
-
-export const WEATHER = {
-  headline: 'Rainy week ahead',
-  detail: '3 days of rain forecast · hosts in every district',
-}
-
 export const SEED_USERS: User[] = [
   {
     id: 'user-ana',
@@ -64,15 +54,6 @@ export const SEED_USERS: User[] = [
     password: ADMIN_SEED_PASSWORD,
     role: 'customer',
     identityVerification: VERIFIED_GUEST,
-  },
-  {
-    id: 'user-maria',
-    name: 'Maria Garcia',
-    email: SAMPLE_HOST_EMAIL,
-    phone: SAMPLE_HOST_PHONE,
-    password: ADMIN_SEED_PASSWORD,
-    role: 'host',
-    identityVerification: VERIFIED_HOST,
   },
   {
     id: 'user-support-admin',
@@ -89,67 +70,18 @@ export const SEED_USERS: User[] = [
   },
 ]
 
-export const SEED_HOSTS: Host[] = [
-  {
-    id: 'maria',
-    hostUserId: 'user-maria',
-    name: 'Maria Garcia',
-    location: 'Las Flores',
-    district: 'Cayo',
-    distanceKm: 0.8,
-    rating: 4.9,
-    reviewCount: 47,
-    price: 3,
-    foldingPrice: 3,
-    sheetsPrice: 1,
-    slotsLeft: 3,
-    turnaroundHours: 2,
-    dryerType: 'Electric',
-    hasGenerator: false,
-    address: '22 Coconut St.',
-    gateCode: '4421',
-    whatsapp: '5016001234',
-    latitude: 17.158,
-    longitude: -89.072,
-    photos: ['Clean laundry room', 'Samsung dryer', 'Covered porch drop-off'],
-    rules: ['Drop off in labeled bag', 'No high heat unless noted', 'Pick up within 24 hrs'],
-  },
-]
+export const SEED_HOSTS: Host[] = []
 
-export const SEED_HOST_SETTINGS: Record<string, Partial<HostSettings>> = {
-  'user-maria': {
-    isOnline: true,
-    acceptCash: true,
-    acceptBankTransfer: true,
-    bankDetails: {
-      bankName: 'Belize Bank',
-      accountName: 'Maria Flores',
-      accountNumber: '1234567890',
-    },
-    notifyNewRequests: true,
-    notifyBookingUpdates: true,
-    notifyGuestsWhenOnline: true,
-    pricing: { dryPrice: 3, foldingPrice: 3, sheetsPrice: 1 },
-    dropOffAvailability: [...ALL_DROP_OFF_HOURS],
-  },
-}
+export const SEED_HOST_SETTINGS: Record<string, Partial<HostSettings>> = {}
 
-export const SEED_HOST_PROFILES: Record<string, HostProfileDetails> = {
-  maria: {
-    bio: 'UB student sharing my home dryer with neighbors. Usually home afternoons and weekends — happy to help during rainy season.',
-    memberSince: 'Jun 2025',
-    loadsHosted: 124,
-    responseTime: 'Under 1 hr',
-    reviews: [
-      {
-        id: 'rev-m1',
-        author: 'Ana',
-        rating: 5,
-        comment: 'Super friendly and my clothes came back smelling great. Drop-off was easy.',
-        date: 'Jul 8, 2026',
-      },
-    ],
-  },
+export const SEED_HOST_PROFILES: Record<string, HostProfileDetails> = {}
+
+/** App coverage — community dryer sharing across all of Belize. */
+export const ACTIVE_REGION_LABEL = 'Belize'
+
+export const WEATHER = {
+  headline: 'Rainy week ahead',
+  detail: '3 days of rain forecast · hosts in every district',
 }
 
 export interface HostDashboardSeed {

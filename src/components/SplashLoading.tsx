@@ -1,26 +1,43 @@
 import * as SplashScreen from 'expo-splash-screen'
+import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
-import { AppLogoMark } from './AppLogoMark'
-import { toTitleCase } from '../lib/titleCase'
-import { colors, spacing } from '../theme'
+import { Image, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { brandColors, spacing } from '../theme'
+
+const mascotSource = require('../../assets/lb-mascot.png')
+const mascotAspect =
+  Image.resolveAssetSource(mascotSource).width / Image.resolveAssetSource(mascotSource).height
 
 type Props = {
   message?: string
   showTagline?: boolean
 }
 
-export function SplashLoading({ message, showTagline = true }: Props) {
+export function SplashLoading(_props: Props) {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions()
+
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {})
   }, [])
 
+  const maxWidth = screenWidth - spacing.screen * 2
+  const maxHeight = screenHeight * 0.45
+  const widthFromHeight = maxHeight * mascotAspect
+  const mascotWidth = Math.min(maxWidth, widthFromHeight)
+  const mascotHeight = mascotWidth / mascotAspect
+
   return (
-    <View style={styles.container}>
-      <AppLogoMark size={88} style={styles.logo} />
-      {message ? <Text style={styles.brand}>{message}</Text> : null}
-      {showTagline ? <Text style={styles.tagline}>{toTitleCase('Dry Laundry, Rain or Shine')}</Text> : null}
-    </View>
+    <>
+      <StatusBar style="light" />
+      <View style={styles.container}>
+        <Image
+          source={mascotSource}
+          style={{ width: mascotWidth, height: mascotHeight }}
+          resizeMode="contain"
+          accessibilityLabel="Laundry Buddy"
+        />
+      </View>
+    </>
   )
 }
 
@@ -29,22 +46,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
-    paddingHorizontal: spacing.xl,
-    gap: spacing.lg,
-  },
-  logo: { alignSelf: 'center' },
-  brand: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: colors.black,
-    textAlign: 'center',
-    letterSpacing: -0.6,
-  },
-  tagline: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: colors.gray500,
-    textAlign: 'center',
+    backgroundColor: brandColors.turquoise,
+    paddingHorizontal: spacing.screen,
   },
 })

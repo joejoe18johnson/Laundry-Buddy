@@ -1,5 +1,6 @@
 import type { IdentityVerification, User, VerificationStatus } from '../types'
-import { getAllUsers, getUserById, saveUser } from './authStorage'
+import { DEMO_ADMIN_EXCLUDED_CONTACTS, DEMO_ADMIN_HIDDEN_USER_IDS } from '../data/seedData'
+import { getAllUsers, getUserById, purgeUsersExcept, removeUser, saveUser } from './authStorage'
 import {
   getIdentityVerification,
   getAddressReviewStatus,
@@ -24,6 +25,7 @@ import {
   syncRepairedVerificationIfNeeded,
 } from './supabase/verificationService'
 import { identityVerificationToJson, parseIdentityVerification, profileRowToUser } from './supabase/mappers'
+import { purgeVerificationRequestsExcept, purgeVerificationRequestsForUser } from './verificationRequestStorage'
 
 export type AdminUserActionResult = {
   user: User | null
@@ -101,6 +103,19 @@ async function resolveSupabaseUser(user: User): Promise<{ user: User; supabaseUs
   }
 }
 
+async function purgeDeletedSupabaseUser(userId: string): Promise<void> {
+  await removeUser(userId)
+  await purgeVerificationRequestsForUser(userId)
+}
+
+function isDemoAccountHiddenFromAdmin(user: User): boolean {
+  if (DEMO_ADMIN_HIDDEN_USER_IDS.has(user.id)) return true
+  if (DEMO_ADMIN_EXCLUDED_CONTACTS.names.has(user.name)) return true
+  if (user.email && DEMO_ADMIN_EXCLUDED_CONTACTS.emails.has(user.email.toLowerCase())) return true
+  if (user.phone && DEMO_ADMIN_EXCLUDED_CONTACTS.phones.has(user.phone)) return true
+  return false
+}
+
 /** Resolve a user from local cache and Supabase, preferring the latest verification state. */
 export async function resolveUserById(userId: string): Promise<User | null> {
   const local = await getUserById(userId)
@@ -129,6 +144,16 @@ export async function resolveUserById(userId: string): Promise<User | null> {
 
   if (remote) {
     return cacheResolvedUser(remote, local)
+  }
+
+  if (remoteId && isSupabaseProfileId(remoteId)) {
+    await purgeDeletedSupabaseUser(remoteId)
+    return null
+  }
+
+  if (local && isSupabaseProfileId(local.id)) {
+    await purgeDeletedSupabaseUser(local.id)
+    return null
   }
 
   return local
@@ -163,23 +188,40 @@ export async function listAllUsers(): Promise<User[]> {
     const repaired = await repairStuckVerificationIfNeeded(baseUser, rawVerification)
     merged.set(repaired.id, repaired)
   }
+
   for (const entry of localUsers) {
     if (isSupabaseProfileId(entry.id)) {
       const remote = merged.get(entry.id)
-      merged.set(entry.id, remote ? mergeUserProfiles(remote, entry) : entry)
+      if (remote) {
+        merged.set(entry.id, mergeUserProfiles(remote, entry))
+      }
       continue
     }
 
     const resolvedId = await resolveSupabaseProfileId(entry)
-    if (resolvedId && merged.has(resolvedId)) {
-      merged.set(resolvedId, mergeUserProfiles(merged.get(resolvedId)!, entry))
+    if (resolvedId) {
+      const remote = merged.get(resolvedId)
+      if (remote) {
+        merged.set(resolvedId, mergeUserProfiles(remote, entry))
+      }
       continue
     }
 
-    if (!merged.has(entry.id)) {
+    if (!merged.has(entry.id) && !isDemoAccountHiddenFromAdmin(entry)) {
       merged.set(entry.id, entry)
     }
   }
+
+  for (const user of merged.values()) {
+    if (isDemoAccountHiddenFromAdmin(user)) {
+      merged.delete(user.id)
+    }
+  }
+
+  const keepIds = new Set(Array.from(merged.keys()))
+  await purgeUsersExcept(keepIds)
+  await purgeVerificationRequestsExcept(keepIds)
+  await removeUser('user-maria')
 
   return sortUsersNewestFirst(Array.from(merged.values()))
 }

@@ -25,18 +25,35 @@ function usersPendingIdReview(users) {
 function mergeUsers(localUsers, remoteUsers) {
   const merged = new Map()
   for (const entry of remoteUsers) merged.set(entry.id, entry)
-  for (const entry of localUsers) merged.set(entry.id, entry)
+  for (const entry of localUsers) {
+    if (entry.id.startsWith('uuid-')) {
+      if (merged.has(entry.id)) {
+        merged.set(entry.id, { ...merged.get(entry.id), ...entry })
+      }
+      continue
+    }
+    const remoteMatch = remoteUsers.find(
+      (remote) => remote.phone && entry.phone && remote.phone === entry.phone,
+    )
+    if (remoteMatch) {
+      merged.set(remoteMatch.id, { ...remoteMatch, ...entry })
+      continue
+    }
+    if (!merged.has(entry.id)) merged.set(entry.id, entry)
+  }
   return Array.from(merged.values())
 }
 
 const localTraining = [
-  { id: 'user-sandra', role: 'customer', identityVerification: { status: 'pending', idUploaded: true, phoneVerified: true } },
-  { id: 'user-carlos', role: 'host', identityVerification: { status: 'pending', idUploaded: true, phoneVerified: true, addressProofUri: 'file://bill.pdf' } },
+  { id: 'user-sandra', role: 'customer', phone: '5016001111', identityVerification: { status: 'pending', idUploaded: true, phoneVerified: true } },
+  { id: 'user-carlos', role: 'host', phone: '5016002222', identityVerification: { status: 'pending', idUploaded: true, phoneVerified: true, addressProofUri: 'file://bill.pdf' } },
+  { id: 'uuid-deleted', role: 'customer', identityVerification: { status: 'pending', codeRequestStatus: 'pending' } },
 ]
 
-const remoteOnly = [{ id: 'uuid-1', role: 'customer', identityVerification: { status: 'none', idUploaded: false } }]
+const remoteOnly = [{ id: 'uuid-1', role: 'customer', phone: '5016003333', identityVerification: { status: 'none', idUploaded: false } }]
 
 assert.equal(mergeUsers(localTraining, remoteOnly).length, 3)
+assert.equal(mergeUsers(localTraining, remoteOnly).some((entry) => entry.id === 'uuid-deleted'), false)
 assert.equal(usersPendingIdReview(localTraining).length, 2)
 assert.equal(
   usersPendingIdReview([

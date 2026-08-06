@@ -75,9 +75,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: 'laundrybuddy',
   userInterfaceStyle: 'light',
   splash: {
-    image: './assets/logo-icon.png',
+    image: './assets/lb-mascot.png',
     resizeMode: 'contain',
-    backgroundColor: '#ffffff',
+    backgroundColor: '#00CBA9',
   },
   ios: {
     supportsTablet: false,
@@ -121,16 +121,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#ffffff',
-        image: './assets/logo-icon.png',
+        backgroundColor: '#00CBA9',
+        image: './assets/lb-mascot.png',
         imageWidth: 280,
         resizeMode: 'contain',
         android: {
-          image: './assets/logo-icon.png',
-          // Android masks the splash icon to a 192dp circle on a 288dp canvas.
-          // Keep the wide wordmark under that diameter so the bunny + text aren't clipped.
-          imageWidth: 168,
-          backgroundColor: '#ffffff',
+          image: './assets/lb-mascot.png',
+          imageWidth: 240,
+          backgroundColor: '#00CBA9',
           resizeMode: 'contain',
         },
       },

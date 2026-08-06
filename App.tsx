@@ -52,7 +52,6 @@ import { ChatScreen, ChatThreadPanel, useActiveChatRoute } from './src/screens/s
 import { colors, spacing } from './src/theme'
 import { ThemeProvider, useTheme } from './src/context/ThemeContext'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
-import { isFullFlowTesting, TESTING_SPLASH_MS } from './src/lib/testingFlow'
 import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
 import { AdminVerificationRequestSync } from './src/components/AdminVerificationRequestSync'
@@ -743,42 +742,22 @@ function PushNotificationPromptGate() {
 function AuthenticatedApp() {
   const { user, authScreen, ready } = useAuth()
   const [introSeen, setIntroSeen] = useState<boolean | null>(null)
-  const [splashDone, setSplashDone] = useState(!isFullFlowTesting())
 
   useEffect(() => {
     if (!ready) return
 
     if (user) {
       setIntroSeen(true)
-      setSplashDone(true)
       return
     }
 
     let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | undefined
+    void hasSeenIntro().then((seen) => {
+      if (!cancelled) setIntroSeen(seen)
+    })
 
-    const boot = async () => {
-      const seen = await hasSeenIntro()
-      if (cancelled) return
-
-      if (isFullFlowTesting()) {
-        timer = setTimeout(() => {
-          if (!cancelled) {
-            setIntroSeen(seen)
-            setSplashDone(true)
-          }
-        }, TESTING_SPLASH_MS)
-        return
-      }
-
-      setIntroSeen(seen)
-      setSplashDone(true)
-    }
-
-    void boot()
     return () => {
       cancelled = true
-      if (timer) clearTimeout(timer)
     }
   }, [ready, user])
 
@@ -788,7 +767,7 @@ function AuthenticatedApp() {
   }
 
   if (!user) {
-    if (!ready || introSeen === null || !splashDone) {
+    if (!ready || introSeen === null) {
       return <SplashLoading />
     }
 

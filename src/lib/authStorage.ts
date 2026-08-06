@@ -69,6 +69,18 @@ export async function saveUser(user: User) {
   await writeUsers(users)
 }
 
+export async function removeUser(userId: string): Promise<void> {
+  const users = await readUsers()
+  const next = users.filter((u) => u.id !== userId)
+  if (next.length !== users.length) await writeUsers(next)
+}
+
+export async function purgeUsersExcept(keepIds: Set<string>): Promise<void> {
+  const users = await readUsers()
+  const next = users.filter((u) => keepIds.has(u.id))
+  if (next.length !== users.length) await writeUsers(next)
+}
+
 export async function findUserByPhone(phone: string): Promise<User | undefined> {
   const normalized = normalizePhone(phone)
   const users = await readUsers()

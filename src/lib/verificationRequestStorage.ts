@@ -103,3 +103,15 @@ export async function completeVerificationCodeRequest(userId: string): Promise<v
   entry.completedAt = new Date().toISOString()
   await writeRequests(requests)
 }
+
+export async function purgeVerificationRequestsForUser(userId: string): Promise<void> {
+  const requests = await readRequests()
+  const next = requests.filter((entry) => entry.userId !== userId)
+  if (next.length !== requests.length) await writeRequests(next)
+}
+
+export async function purgeVerificationRequestsExcept(keepUserIds: Set<string>): Promise<void> {
+  const requests = await readRequests()
+  const next = requests.filter((entry) => keepUserIds.has(entry.userId))
+  if (next.length !== requests.length) await writeRequests(next)
+}
