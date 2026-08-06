@@ -3,7 +3,7 @@ import { GENERATED_SEED_HOSTS } from './generatedHosts'
 import { getRuntimeDynamicHosts } from '../lib/dynamicHosts'
 
 /** Bump when seed data changes so AsyncStorage refreshes. */
-export const SEED_DATA_VERSION = '33'
+export const SEED_DATA_VERSION = '34'
 
 /** Bootstrap password for sample accounts (also used for Supabase admin auto-provisioning). */
 export const ADMIN_SEED_PASSWORD = 'demo1234'

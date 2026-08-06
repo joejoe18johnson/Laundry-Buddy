@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native'
 import { OutlineButton, Screen } from '../../components/ui'
 import { useTheme } from '../../context/ThemeContext'
 import { useAdminDashboardData } from '../../hooks/useAdminDashboardData'
+import { VERIFICATION_CODE_POOL_SIZE } from '../../lib/verificationCodes'
 import { toTitleCase } from '../../lib/titleCase'
 import { createAdminStyles } from './adminStyles'
 
@@ -19,14 +20,14 @@ export function AdminVerificationCodesScreen({ refreshKey }: Props) {
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>
-          {toTitleCase('Pre-loaded 6-digit codes for phone verification.')}
+          {toTitleCase(`${VERIFICATION_CODE_POOL_SIZE} pre-loaded 6-digit codes for WhatsApp phone verification.`)}
         </Text>
 
         <View style={styles.card}>
           {loading ? (
             <Text style={styles.cardMeta}>{toTitleCase('Loading…')}</Text>
           ) : (
-            codes.slice(0, 20).map((entry) => (
+            codes.map((entry) => (
               <View key={entry.code} style={styles.codeRow}>
                 <Text style={styles.codeValue}>{entry.code}</Text>
                 <Text style={styles.codeMeta} numberOfLines={2}>

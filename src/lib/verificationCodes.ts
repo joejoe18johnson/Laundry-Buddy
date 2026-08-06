@@ -1,5 +1,8 @@
-/** Pre-loaded 6-digit codes for training and support testing. */
-export const SEED_VERIFICATION_CODES = [
+/** Number of 6-digit codes pre-loaded for WhatsApp phone verification. */
+export const VERIFICATION_CODE_POOL_SIZE = 100
+
+/** Original training codes — always kept in the pool for backward compatibility. */
+const LEGACY_SEED_VERIFICATION_CODES = [
   '482913',
   '719046',
   '305827',
@@ -21,6 +24,21 @@ export const SEED_VERIFICATION_CODES = [
   '164927',
   '592038',
 ] as const
+
+function buildSeedVerificationCodes(count: number): readonly string[] {
+  const codes = new Set<string>(LEGACY_SEED_VERIFICATION_CODES)
+  let seed = 847_291_603
+
+  while (codes.size < count) {
+    seed = (seed * 1_664_525 + 1_013_904_223) >>> 0
+    codes.add(String((seed % 900_000) + 100_000))
+  }
+
+  return Object.freeze([...codes])
+}
+
+/** Pre-loaded 6-digit codes for training and support testing. */
+export const SEED_VERIFICATION_CODES = buildSeedVerificationCodes(VERIFICATION_CODE_POOL_SIZE)
 
 export type VerificationCodeStatus = 'available' | 'assigned' | 'used'
 

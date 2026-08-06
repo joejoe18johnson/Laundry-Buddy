@@ -113,6 +113,7 @@ function AdminAppShellInner({
   >('overview')
   const [highlightUserId, setHighlightUserId] = useState<string | undefined>()
   const [reviewUserId, setReviewUserId] = useState<string | null>(null)
+  const [usersFilter, setUsersFilter] = useState<'all' | 'pending' | 'verified'>('all')
   const [supportThreadId, setSupportThreadId] = useState<string | null>(null)
   const [supportThreadTitle, setSupportThreadTitle] = useState('')
   const { queueCount } = useAdminDashboardData(dashboardRefreshKey)
@@ -208,7 +209,11 @@ function AdminAppShellInner({
       : screen === 'queue'
         ? 'Verification queue'
         : screen === 'users'
-          ? 'All users'
+          ? usersFilter === 'pending'
+            ? 'Pending verification'
+            : usersFilter === 'verified'
+              ? 'Verified users'
+              : 'All users'
           : screen === 'codes'
             ? 'Verification codes'
             : screen === 'support'
@@ -265,6 +270,11 @@ function AdminAppShellInner({
     [colors],
   )
 
+  const navigateAdminTab = (next: AdminTabId) => {
+    if (next === 'users') setUsersFilter('all')
+    navigateAdmin(next)
+  }
+
   return (
     <SafeAreaView style={shellStyles.app} edges={['top']}>
       <StatusBar style="dark" />
@@ -295,10 +305,13 @@ function AdminAppShellInner({
         {screen === 'overview' ? (
           <AdminOverviewScreen
             refreshKey={dashboardRefreshKey}
-            onNavigate={(section) => {
+            onNavigate={(section, options) => {
               if (section === 'support') {
                 navigateAdmin('support')
                 return
+              }
+              if (section === 'users') {
+                setUsersFilter(options?.usersFilter ?? 'all')
               }
               navigateAdmin(section)
             }}
@@ -313,6 +326,7 @@ function AdminAppShellInner({
           <AdminUsersScreen
             highlightUserId={highlightUserId}
             refreshKey={dashboardRefreshKey}
+            filter={usersFilter}
             onReviewUser={openUserReview}
           />
         ) : screen === 'codes' ? (
@@ -352,7 +366,7 @@ function AdminAppShellInner({
       </View>
       {showAdminNav ? (
         <SafeAreaView edges={['bottom']} style={shellStyles.bottomNavWrap}>
-          <AdminBottomNav tabs={adminTabs} currentTab={adminTab} onNavigate={navigateAdmin} />
+          <AdminBottomNav tabs={adminTabs} currentTab={adminTab} onNavigate={navigateAdminTab} />
         </SafeAreaView>
       ) : null}
     </SafeAreaView>

@@ -10,11 +10,13 @@ import { UnreadCountBadge } from '../../components/UnreadCountBadge'
 import type { AdminTabId } from '../../components/AdminBottomNav'
 import { createAdminStyles } from './adminStyles'
 
+export type AdminUsersFilter = 'all' | 'pending' | 'verified'
+
 export type AdminSectionId = AdminTabId | 'support'
 
 type Props = {
   refreshKey?: number
-  onNavigate: (section: AdminSectionId) => void
+  onNavigate: (section: AdminSectionId, options?: { usersFilter?: AdminUsersFilter }) => void
 }
 
 export function AdminOverviewScreen({ refreshKey, onNavigate }: Props) {
@@ -62,30 +64,82 @@ export function AdminOverviewScreen({ refreshKey, onNavigate }: Props) {
     },
   ]
 
+  const statItems = [
+    {
+      key: 'queue',
+      value: loading ? '…' : String(queueCount),
+      label: 'Open requests',
+      hint: 'Codes and ID review',
+      icon: 'inbox' as const,
+      section: 'queue' as const,
+      highlight: queueCount > 0,
+    },
+    {
+      key: 'pending',
+      value: loading ? '…' : String(pendingUsers.length),
+      label: 'Pending verify',
+      hint: 'Awaiting approval',
+      icon: 'clock' as const,
+      section: 'users' as const,
+      usersFilter: 'pending' as const,
+      highlight: pendingUsers.length > 0,
+    },
+    {
+      key: 'verified',
+      value: loading ? '…' : String(verifiedCount),
+      label: 'Verified',
+      hint: 'Approved accounts',
+      icon: 'check-circle' as const,
+      section: 'users' as const,
+      usersFilter: 'verified' as const,
+      highlight: false,
+    },
+    {
+      key: 'all',
+      value: loading ? '…' : String(users.length),
+      label: 'All users',
+      hint: 'Browse every account',
+      icon: 'users' as const,
+      section: 'users' as const,
+      usersFilter: 'all' as const,
+      highlight: false,
+    },
+  ]
+
   return (
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={styles.subtitle}>
-          {toTitleCase('Support overview — jump into the section you need.')}
+          {toTitleCase('Tap a summary card to jump straight to that section.')}
         </Text>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{loading ? '…' : queueCount}</Text>
-            <Text style={styles.statLabel}>Open requests</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{loading ? '…' : pendingUsers.length}</Text>
-            <Text style={styles.statLabel}>Pending verify</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{loading ? '…' : verifiedCount}</Text>
-            <Text style={styles.statLabel}>Verified</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{loading ? '…' : users.length}</Text>
-            <Text style={styles.statLabel}>All users</Text>
-          </View>
+        <View style={styles.statsGrid}>
+          {statItems.map((item) => (
+            <Pressable
+              key={item.key}
+              style={({ pressed }) => [
+                styles.statCard,
+                item.highlight && styles.statCardHighlight,
+                pressed && styles.statCardPressed,
+              ]}
+              onPress={() =>
+                onNavigate(
+                  item.section,
+                  item.usersFilter ? { usersFilter: item.usersFilter } : undefined,
+                )
+              }
+            >
+              <View style={styles.statCardHeader}>
+                <View style={[styles.statIconWrap, item.highlight && styles.statIconWrapHighlight]}>
+                  <AppIcon name={item.icon} size={20} color={item.highlight ? colors.accent : colors.black} />
+                </View>
+                <AppIcon name="chevron-right" size={18} color={colors.gray400} />
+              </View>
+              <Text style={styles.statValue}>{item.value}</Text>
+              <Text style={styles.statLabel}>{toTitleCase(item.label)}</Text>
+              <Text style={styles.statHint}>{toTitleCase(item.hint)}</Text>
+            </Pressable>
+          ))}
         </View>
 
         <Text style={styles.sectionTitle}>{toTitleCase('Admin sections')}</Text>
