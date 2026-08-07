@@ -46,8 +46,12 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
     styles: StyleSheet.create({
       overlay: {
         flex: 1,
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
         backgroundColor: 'rgba(15, 23, 32, 0.42)',
-        alignItems: 'flex-end',
+      },
+      overlayBackdrop: {
+        ...StyleSheet.absoluteFillObject,
       },
       panelSafe: {
         flex: 1,
@@ -120,9 +124,8 @@ function createHeaderMenuStyles(colors: ReturnType<typeof useTheme>['colors']) {
       menuScrollContent: {
         paddingTop: spacing.md,
         paddingHorizontal: spacing.md,
-        paddingBottom: spacing.xl,
+        paddingBottom: spacing.md,
         gap: spacing.sm,
-        flexGrow: 1,
       },
       sectionCard: {
         backgroundColor: colors.gray50,
@@ -324,9 +327,10 @@ export function HeaderMenu({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <SafeAreaView style={styles.panelSafe} edges={['top', 'right']}>
-          <Pressable style={styles.panel} onPress={(e) => e.stopPropagation()}>
+      <View style={styles.overlay}>
+        <Pressable style={styles.overlayBackdrop} onPress={onClose} accessibilityLabel="Close menu" />
+        <SafeAreaView style={styles.panelSafe} edges={['top', 'right', 'bottom']}>
+          <View style={styles.panel}>
             <View style={styles.panelInner}>
               <LinearGradient
               colors={[brandColors.navy, '#243240']}
@@ -360,9 +364,10 @@ export function HeaderMenu({
             <ScrollView
               style={styles.menuScroll}
               contentContainerStyle={styles.menuScrollContent}
-              showsVerticalScrollIndicator={true}
+              showsVerticalScrollIndicator
               keyboardShouldPersistTaps="handled"
               nestedScrollEnabled
+              bounces
             >
               {onOpenLocationSettings ? (
                 <MenuSection title="Location" styles={styles}>
@@ -465,9 +470,9 @@ export function HeaderMenu({
               </Pressable>
             </View>
             </View>
-          </Pressable>
+          </View>
         </SafeAreaView>
-      </Pressable>
+      </View>
     </Modal>
   )
 }

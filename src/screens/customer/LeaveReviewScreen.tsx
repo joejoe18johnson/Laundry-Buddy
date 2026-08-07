@@ -92,11 +92,15 @@ export function LeaveReviewScreen() {
   const displayName = host ? formatHostDisplayName(host.name) : ''
 
   useEffect(() => {
-    let cancelled = false
     setRating(0)
     setComment('')
     setAlreadyReviewed(false)
     setReviewUnavailable(false)
+    setChecking(true)
+  }, [reviewHostId, reviewBookingId])
+
+  useEffect(() => {
+    let cancelled = false
 
     if (!user || !reviewHostId) {
       setChecking(false)
@@ -141,7 +145,7 @@ export function LeaveReviewScreen() {
     return () => {
       cancelled = true
     }
-  }, [reviewHostId, reviewBookingId, user, getReviewsForHost, guestBookings])
+  }, [reviewHostId, reviewBookingId, user?.id, getReviewsForHost])
 
   if (!reviewHostId || !host) {
     return (
