@@ -39,9 +39,9 @@ export async function insertReviewToSupabase(input: {
   rating: number
   comment: string
   bookingId?: string | null
-}): Promise<{ review: HostReview | null; duplicate: boolean }> {
+}): Promise<HostReview | null> {
   const supabase = getSupabaseClient()
-  if (!supabase) return { review: null, duplicate: false }
+  if (!supabase) return null
 
   const { data, error } = await supabase
     .from('host_reviews')
@@ -56,15 +56,8 @@ export async function insertReviewToSupabase(input: {
     .select('*')
     .single()
 
-  if (error) {
-    if (error.code === '23505') {
-      return { review: null, duplicate: true }
-    }
-    return { review: null, duplicate: false }
-  }
-
-  if (!data) return { review: null, duplicate: false }
-  return { review: rowToReview(data), duplicate: false }
+  if (error || !data) return null
+  return rowToReview(data)
 }
 
 export async function hasReviewForBookingInSupabase(
