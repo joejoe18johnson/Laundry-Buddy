@@ -1,52 +1,45 @@
-import * as SplashScreen from 'expo-splash-screen'
-import { StatusBar } from 'expo-status-bar'
-import { useEffect } from 'react'
-import { Image, StyleSheet, View, useWindowDimensions } from 'react-native'
-import { brandColors, spacing } from '../theme'
+import { Image } from 'expo-image'
+import { useMemo } from 'react'
+import { StyleSheet, View } from 'react-native'
+import { resolveAssetSource } from '../lib/resolveAssetSource'
 
-const mascotSource = require('../../assets/lb-mascot.png')
-const mascotAspect =
-  Image.resolveAssetSource(mascotSource).width / Image.resolveAssetSource(mascotSource).height
+const mascotSource = require('../../assets/mascot-animated.gif')
+const mascotAsset = resolveAssetSource(mascotSource)
+const mascotAspectRatio =
+  mascotAsset?.width && mascotAsset?.height
+    ? mascotAsset.width / mascotAsset.height
+    : 1
 
-type Props = {
-  message?: string
-  showTagline?: boolean
-}
-
-export function SplashLoading(_props: Props) {
-  const { width: screenWidth, height: screenHeight } = useWindowDimensions()
-
-  useEffect(() => {
-    SplashScreen.hideAsync().catch(() => {})
-  }, [])
-
-  const maxWidth = screenWidth - spacing.screen * 2
-  const maxHeight = screenHeight * 0.45
-  const widthFromHeight = maxHeight * mascotAspect
-  const mascotWidth = Math.min(maxWidth, widthFromHeight)
-  const mascotHeight = mascotWidth / mascotAspect
+/** Turquoise splash while auth/session loads — animated mascot on brand background. */
+export function SplashLoading() {
+  const mascotStyle = useMemo(
+    () => [styles.mascot, { aspectRatio: mascotAspectRatio }],
+    []
+  )
 
   return (
-    <>
-      <StatusBar style="light" />
-      <View style={styles.container}>
-        <Image
-          source={mascotSource}
-          style={{ width: mascotWidth, height: mascotHeight }}
-          resizeMode="contain"
-          accessibilityLabel="Laundry Buddy"
-        />
-      </View>
-    </>
+    <View style={styles.container}>
+      <Image
+        source={mascotSource}
+        style={mascotStyle}
+        contentFit="contain"
+        accessibilityLabel="Laundry Buddy mascot"
+      />
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#00CBA9',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: brandColors.turquoise,
-    paddingHorizontal: spacing.screen,
+    paddingHorizontal: 48,
+  },
+  mascot: {
+    width: '72%',
+    maxWidth: 320,
+    maxHeight: '55%',
   },
 })
