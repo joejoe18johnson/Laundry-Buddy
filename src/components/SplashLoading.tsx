@@ -1,27 +1,17 @@
 import { Image } from 'expo-image'
-import { useMemo } from 'react'
-import { StyleSheet, View } from 'react-native'
-import { resolveAssetSource } from '../lib/resolveAssetSource'
+import { Image as RNImage, StyleSheet, View } from 'react-native'
 
 const mascotSource = require('../../assets/mascot-animated.gif')
-const mascotAsset = resolveAssetSource(mascotSource)
-const mascotAspectRatio =
-  mascotAsset?.width && mascotAsset?.height
-    ? mascotAsset.width / mascotAsset.height
-    : 1
+const resolved = RNImage.resolveAssetSource(mascotSource)
+const mascotAspectRatio = resolved.width / resolved.height
 
 /** Turquoise splash while auth/session loads — animated mascot on brand background. */
 export function SplashLoading() {
-  const mascotStyle = useMemo(
-    () => [styles.mascot, { aspectRatio: mascotAspectRatio }],
-    []
-  )
-
   return (
     <View style={styles.container}>
       <Image
         source={mascotSource}
-        style={mascotStyle}
+        style={[styles.mascot, { aspectRatio: mascotAspectRatio }]}
         contentFit="contain"
         accessibilityLabel="Laundry Buddy mascot"
       />
