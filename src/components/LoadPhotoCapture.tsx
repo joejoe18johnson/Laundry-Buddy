@@ -5,7 +5,6 @@ import { BrandActionSheet, BrandAlert, type BrandDialogAction } from './BrandDia
 import { useApp } from '../context/AppContext'
 import { useTheme } from '../context/ThemeContext'
 import { pickImage } from '../lib/imagePicker'
-import { LOAD_PHOTO_GUEST_HINT } from '../lib/hostPricing'
 import { toTitleCase } from '../lib/titleCase'
 import { radius, spacing } from '../theme'
 
@@ -104,7 +103,7 @@ export function LoadPhotoCapture({ photoUri, onPhotoChange }: LoadPhotoCapturePr
       <BrandActionSheet
         visible={sheetOpen}
         title="Load photo"
-        message={LOAD_PHOTO_GUEST_HINT}
+        message="To assist your host with preparation, please submit a photograph of your laundry load."
         icon="camera"
         actions={sheetActions}
         onClose={() => setSheetOpen(false)}

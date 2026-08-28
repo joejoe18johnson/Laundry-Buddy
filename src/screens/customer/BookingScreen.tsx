@@ -334,7 +334,6 @@ export function BookingScreen() {
               </View>
 
               <Text style={styles.reviewSheetsNote}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
-              <Text style={styles.reviewSheetsNote}>{toTitleCase(LOAD_PHOTO_GUEST_HINT)}</Text>
             </View>
 
             <SendStepMessagingHint hostName={displayName} />

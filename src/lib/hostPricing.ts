@@ -7,7 +7,7 @@ export const DRYER_SHEETS_GUEST_HINT =
 
 /** Shown on booking — a load is a standard load; hosts rely on the guest photo. */
 export const LOAD_PHOTO_GUEST_HINT =
-  'To assist your host with preparation, please submit a photograph of your laundry load. We estimate capacity based on a Standard Load rather than exact measurements.'
+  'To assist your host with preparation, you will be asked to submit a photograph of your laundry load in the next step. We estimate capacity based on a Standard Load rather than exact measurements.'
 
 export const DEFAULT_HOST_PRICING: HostPricing = {
   dryPrice: 3,
