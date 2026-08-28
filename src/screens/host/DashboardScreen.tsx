@@ -178,7 +178,9 @@ export function DashboardScreen() {
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <AppIcon name="wind" size={20} />
-          <Text style={styles.title}>{hostProfile?.name ?? user?.name}'s dryer</Text>
+          <Text style={styles.title} numberOfLines={2}>
+            {hostProfile?.name ?? user?.name}'s dryer
+          </Text>
         </View>
         <View style={styles.headerActions}>
           <Pressable
@@ -406,10 +408,10 @@ export function DashboardScreen() {
 
 function createDashboardStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  header: { marginBottom: spacing.md, gap: spacing.sm },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   title: { fontSize: 22, fontWeight: '700', flex: 1, lineHeight: 28 },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerActions: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   hubLink: {
     flexDirection: 'row',
     alignItems: 'center',
