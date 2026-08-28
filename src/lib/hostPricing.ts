@@ -5,9 +5,9 @@ import { getAvailableHosts } from '../data/mockData'
 export const DRYER_SHEETS_GUEST_HINT =
   'Bring your own dryer sheets if you want them — hosts do not supply sheets.'
 
-/** Shown on booking — a load is a standard basket; hosts rely on the guest photo. */
+/** Shown on booking — a load is a standard load; hosts rely on the guest photo. */
 export const LOAD_PHOTO_GUEST_HINT =
-  "You'll have to take a picture of your load so the host can see it — each load is a standard basket, not an exact size."
+  'To assist your host with preparation, please submit a photograph of your laundry load. We estimate capacity based on a Standard Load rather than exact measurements.'
 
 export const DEFAULT_HOST_PRICING: HostPricing = {
   dryPrice: 3,

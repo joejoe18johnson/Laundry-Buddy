@@ -221,7 +221,7 @@ export function HelpScreen() {
             />
             <FaqItem
               question="Can I book multiple loads?"
-              answer="Yes — increase the load count when booking a standard basket size."
+              answer="Yes — increase the load count when booking a standard load size."
               styles={styles}
             />
           </>

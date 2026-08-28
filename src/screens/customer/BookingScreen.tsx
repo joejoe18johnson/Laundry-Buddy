@@ -188,7 +188,7 @@ export function BookingScreen() {
               </Pressable>
               <View style={styles.stepValue}>
                 <Text style={styles.stepCount}>{loads}</Text>
-                <Text style={styles.stepLabel}>{toTitleCase(`standard basket${loads > 1 ? 's' : ''}`)}</Text>
+                <Text style={styles.stepLabel}>{toTitleCase(`standard load${loads > 1 ? 's' : ''}`)}</Text>
               </View>
               <Pressable onPress={() => patchBookingDraft({ loads: loads + 1 })} style={styles.stepBtn}>
                 <Text style={styles.stepBtnText}>+</Text>
