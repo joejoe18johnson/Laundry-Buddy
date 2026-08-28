@@ -90,7 +90,7 @@ export function LoadPhotoCapture({ photoUri, onPhotoChange }: LoadPhotoCapturePr
           <>
             <AppIcon name="camera" size={28} color={colors.gray500} />
             <Text style={styles.uploadText}>{toTitleCase('Snap a photo of your load')}</Text>
-            <Text style={styles.uploadHint}>{toTitleCase('Optional — helps the host prepare')}</Text>
+            <Text style={styles.uploadHint}>{toTitleCase('Required — so the host can see your load')}</Text>
           </>
         )}
       </Pressable>
@@ -103,7 +103,7 @@ export function LoadPhotoCapture({ photoUri, onPhotoChange }: LoadPhotoCapturePr
       <BrandActionSheet
         visible={sheetOpen}
         title="Load photo"
-        message="Help your host see what you are dropping off."
+        message="You'll have to take a picture of your load so the host can see it."
         icon="camera"
         actions={sheetActions}
         onClose={() => setSheetOpen(false)}

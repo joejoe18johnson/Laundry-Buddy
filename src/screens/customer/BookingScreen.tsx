@@ -18,6 +18,7 @@ import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSett
 import {
   calculateBookingTotal,
   DRYER_SHEETS_GUEST_HINT,
+  LOAD_PHOTO_GUEST_HINT,
   formatFooterAddonAmount,
   formatServicePrice,
   getHostPricing,
@@ -116,11 +117,14 @@ export function BookingScreen() {
 
   const canConfirm = paymentMethods.length > 0 && availableTimes.length > 0
   const essentialsReady = canConfirm && loads >= 1
+  const photoReady = Boolean(loadPhotoUri)
   const validationHint = !availableTimes.length
     ? 'Host Has No Drop Off Hours Set'
     : !paymentMethods.length
       ? 'Host Has No Payment Methods'
-      : null
+      : wizardStep === 1 && !photoReady
+        ? 'Add a photo of your load'
+        : null
 
   const submitBooking = async () => {
     await promptNotificationsBeforeAction(user)
@@ -190,6 +194,10 @@ export function BookingScreen() {
                 <Text style={styles.stepBtnText}>+</Text>
               </Pressable>
             </View>
+            <View style={styles.loadHint}>
+              <AppIcon name="camera" size={16} color={colors.gray600} />
+              <Text style={styles.loadHintText}>{toTitleCase(LOAD_PHOTO_GUEST_HINT)}</Text>
+            </View>
 
             <Text style={styles.section}>{toTitleCase('Payment')}</Text>
             {paymentMethods.length === 0 ? (
@@ -236,7 +244,7 @@ export function BookingScreen() {
         {wizardStep === 1 ? (
           <>
             <Text style={styles.sectionHint}>
-              {toTitleCase('Optional — you can add more details later in chat.')}
+              {toTitleCase('Add a photo of your load for the host — other details are optional.')}
             </Text>
 
             <View style={styles.sheetsHint}>
@@ -297,6 +305,11 @@ export function BookingScreen() {
                     value={foldingService ? toTitleCase('Added') : toTitleCase('Not added')}
                   />
                 ) : null}
+                <ReviewMetaRow
+                  icon="camera"
+                  label={toTitleCase('Load photo')}
+                  value={toTitleCase(photoReady ? 'Attached for the host' : 'Required')}
+                />
                 {notes.trim() ? (
                   <ReviewMetaRow icon="file-text" label={toTitleCase('Notes')} value={notes.trim()} />
                 ) : null}
@@ -321,6 +334,7 @@ export function BookingScreen() {
               </View>
 
               <Text style={styles.reviewSheetsNote}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
+              <Text style={styles.reviewSheetsNote}>{toTitleCase(LOAD_PHOTO_GUEST_HINT)}</Text>
             </View>
 
             <SendStepMessagingHint hostName={displayName} />
@@ -360,9 +374,19 @@ export function BookingScreen() {
                 onPress={() => patchBookingDraft({ wizardStep: 1 })}
               />
             ) : wizardStep === 1 ? (
-              <PrimaryButton title="Review" icon="eye" onPress={() => patchBookingDraft({ wizardStep: 2 })} />
+              <PrimaryButton
+                title="Review"
+                icon="eye"
+                disabled={!photoReady}
+                onPress={() => patchBookingDraft({ wizardStep: 2 })}
+              />
             ) : (
-              <PrimaryButton title="Send request" icon="send" disabled={!canConfirm} onPress={submitBooking} />
+              <PrimaryButton
+                title="Send request"
+                icon="send"
+                disabled={!canConfirm || !photoReady}
+                onPress={submitBooking}
+              />
             )
           }
         />
@@ -559,6 +583,18 @@ function createBookingStyles(colors: ReturnType<typeof useTheme>['colors']) {
     marginBottom: spacing.md,
   },
   sheetsHintText: { flex: 1, fontSize: 13, color: colors.gray600, lineHeight: 18 },
+  loadHint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.gray200,
+    borderRadius: radius.lg,
+    backgroundColor: colors.gray50,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  loadHintText: { flex: 1, fontSize: 13, color: colors.gray600, lineHeight: 18 },
   reviewCard: {
     borderWidth: 1,
     borderColor: colors.gray200,
