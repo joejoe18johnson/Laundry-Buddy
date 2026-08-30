@@ -1,4 +1,3 @@
-import { StatusBar } from 'expo-status-bar'
 import * as SplashScreen from 'expo-splash-screen'
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import { AppState, BackHandler, Pressable, StyleSheet, Text, View } from 'react-native'
@@ -49,8 +48,8 @@ import { AdminSupportMessagesScreen } from './src/screens/admin/AdminSupportMess
 import { useAdminDashboardData } from './src/hooks/useAdminDashboardData'
 import { useAdminSupportMessages, AdminSupportMessagesProvider } from './src/hooks/useAdminSupportMessages'
 import { ChatScreen, ChatThreadPanel, useActiveChatRoute } from './src/screens/shared/ChatScreen'
-import { colors, spacing } from './src/theme'
-import { ThemeProvider, useTheme } from './src/context/ThemeContext'
+import { spacing } from './src/theme'
+import { ThemeProvider, ThemedStatusBar, useTheme } from './src/context/ThemeContext'
 import { hasSeenIntro, markIntroSeen } from './src/lib/introStorage'
 import { SplashLoading } from './src/components/SplashLoading'
 import { NotificationPermissionPrompt } from './src/components/NotificationPermissionPrompt'
@@ -277,7 +276,7 @@ function AdminAppShellInner({
 
   return (
     <SafeAreaView style={shellStyles.app} edges={['top']}>
-      <StatusBar style="dark" />
+      <ThemedStatusBar />
       <AdminVerificationRequestSync onNewRequest={onDashboardRefresh} />
       {screen !== 'user-review' && screen !== 'support-chat' ? (
         <View style={shellStyles.header}>
@@ -568,7 +567,7 @@ function AppShell() {
 
   return (
     <SafeAreaView style={shellStyles.app} edges={['top']}>
-      <StatusBar style="dark" />
+      <ThemedStatusBar />
       {showAppHeader ? (
       <View style={[shellStyles.header, isHome && shellStyles.headerHome]}>
         <HeaderGreeting name={greetingName} />
@@ -755,7 +754,15 @@ function PushNotificationPromptGate() {
 
 function AuthenticatedApp() {
   const { user, authScreen, ready } = useAuth()
+  const { colors } = useTheme()
   const [introSeen, setIntroSeen] = useState<boolean | null>(null)
+  const authStyles = useMemo(
+    () =>
+      StyleSheet.create({
+        app: { flex: 1, backgroundColor: colors.white },
+      }),
+    [colors],
+  )
 
   useEffect(() => {
     if (!ready) return
@@ -788,7 +795,7 @@ function AuthenticatedApp() {
     if (!introSeen) {
       return (
         <SafeAreaView style={authStyles.app} edges={['top', 'bottom']}>
-          <StatusBar style="dark" />
+          <ThemedStatusBar />
           <IntroOnboardingScreen onComplete={completeIntro} />
         </SafeAreaView>
       )
@@ -796,7 +803,7 @@ function AuthenticatedApp() {
 
     return (
       <SafeAreaView style={authStyles.app} edges={['top', 'bottom']}>
-        <StatusBar style="dark" />
+        <ThemedStatusBar />
         {authScreen === 'welcome' && <WelcomeScreen />}
         {authScreen === 'login' && <LoginScreen />}
         {authScreen === 'signup' && <SignupScreen />}
@@ -848,6 +855,3 @@ export default function App() {
   )
 }
 
-const authStyles = StyleSheet.create({
-  app: { flex: 1, backgroundColor: colors.white },
-})

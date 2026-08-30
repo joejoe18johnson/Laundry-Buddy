@@ -1,5 +1,8 @@
 export type ColorScheme = 'light' | 'dark'
 
+/** User-facing theme setting — `system` follows the device appearance. */
+export type ThemePreference = ColorScheme | 'system'
+
 export type ThemeColors = {
   black: string
   white: string

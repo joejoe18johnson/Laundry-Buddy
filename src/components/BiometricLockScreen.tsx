@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { AppIcon } from './AppIcon'
 import { PrimaryButton } from './ui'
+import { useTheme } from '../context/ThemeContext'
 import { authenticateBiometric, type BiometricSupport } from '../lib/biometricAuth'
 import { titleCaseWithName, toTitleCase } from '../lib/titleCase'
-import { colors, spacing } from '../theme'
+import { spacing } from '../theme'
 
 type Props = {
   visible: boolean
@@ -14,7 +15,60 @@ type Props = {
   onUsePassword: () => void
 }
 
+function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
+  return StyleSheet.create({
+    overlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: colors.white,
+      zIndex: 100,
+    },
+    safe: { flex: 1 },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.screen,
+      gap: spacing.md,
+    },
+    iconCircle: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: colors.gray50,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'center',
+      marginBottom: spacing.sm,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: '700',
+      textAlign: 'center',
+      color: colors.black,
+      lineHeight: 30,
+    },
+    subtitle: {
+      fontSize: 15,
+      color: colors.gray500,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: spacing.lg,
+    },
+    passwordLink: {
+      alignSelf: 'center',
+      paddingVertical: spacing.sm,
+    },
+    passwordText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.gray600,
+      textDecorationLine: 'underline',
+    },
+  })
+}
+
 export function BiometricLockScreen({ visible, support, onUnlock, onUsePassword }: Props) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => createStyles(colors), [colors])
   const [checking, setChecking] = useState(false)
 
   const tryUnlock = async () => {
@@ -57,52 +111,3 @@ export function BiometricLockScreen({ visible, support, onUnlock, onUsePassword 
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.white,
-    zIndex: 100,
-  },
-  safe: { flex: 1 },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.screen,
-    gap: spacing.md,
-  },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.gray50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: spacing.sm,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    textAlign: 'center',
-    color: colors.black,
-    lineHeight: 30,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.gray500,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.lg,
-  },
-  passwordLink: {
-    alignSelf: 'center',
-    paddingVertical: spacing.sm,
-  },
-  passwordText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.gray600,
-    textDecorationLine: 'underline',
-  },
-})

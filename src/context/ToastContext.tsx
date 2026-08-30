@@ -11,8 +11,9 @@ import {
 import { Animated, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AppIcon, type IconName } from '../components/AppIcon'
+import { useTheme } from '../context/ThemeContext'
 import { toTitleCase } from '../lib/titleCase'
-import { colors, radius, spacing } from '../theme'
+import { radius, spacing, type ThemeColors } from '../theme'
 
 interface ToastOptions {
   icon?: IconName
@@ -30,8 +31,38 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null)
 
+function createToastStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    wrap: {
+      position: 'absolute',
+      left: spacing.screen,
+      right: spacing.screen,
+      alignItems: 'center',
+      zIndex: 999,
+    },
+    toast: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: colors.black,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 14,
+      borderRadius: radius.pill,
+      maxWidth: '100%',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 6,
+    },
+    text: { color: colors.white, fontSize: 14, fontWeight: '600', flexShrink: 1 },
+  })
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets()
+  const { colors } = useTheme()
+  const styles = useMemo(() => createToastStyles(colors), [colors])
   const [toast, setToast] = useState<ToastState | null>(null)
   const opacity = useRef(new Animated.Value(0)).current
   const translateY = useRef(new Animated.Value(16)).current
@@ -91,29 +122,3 @@ export function useToast() {
   if (!ctx) throw new Error('useToast must be used within ToastProvider')
   return ctx
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    position: 'absolute',
-    left: spacing.screen,
-    right: spacing.screen,
-    alignItems: 'center',
-    zIndex: 999,
-  },
-  toast: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.black,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    borderRadius: radius.pill,
-    maxWidth: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  text: { color: colors.white, fontSize: 14, fontWeight: '600', flexShrink: 1 },
-})

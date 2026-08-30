@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { AppIcon } from '../../components/AppIcon'
 import { ContactSupportSection } from '../../components/ContactSupportSection'
-import { BackButton, GhostButton, Screen } from '../../components/ui'
+import { BackButton, GhostButton, OptionRow, Screen } from '../../components/ui'
 import { VerificationPromptBanner } from '../../components/VerificationPromptBanner'
 import { useApp } from '../../context/AppContext'
 import { useAuth } from '../../context/AuthContext'
@@ -17,7 +17,7 @@ import {
 import { formatPhoneNumberDisplay } from '../../lib/whatsappVerification'
 import { formatDryTimeStat } from '../../lib/turnaroundTime'
 import { toTitleCase } from '../../lib/titleCase'
-import { radius, spacing } from '../../theme'
+import { radius, spacing, type ThemePreference } from '../../theme'
 
 function DetailRow({
   icon,
@@ -43,6 +43,12 @@ function DetailRow({
     </View>
   )
 }
+
+const THEME_OPTIONS: { value: ThemePreference; label: string; sub?: string }[] = [
+  { value: 'system', label: 'System', sub: 'Match device setting' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+]
 
 function createAccountStyles(colors: ReturnType<typeof useTheme>['colors']) {
   return StyleSheet.create({
@@ -107,7 +113,7 @@ function createAccountStyles(colors: ReturnType<typeof useTheme>['colors']) {
 export function AccountScreen() {
   const { user, logout } = useAuth()
   const { navigate } = useApp()
-  const { colors } = useTheme()
+  const { colors, themePreference, setThemePreference } = useTheme()
   const styles = useMemo(() => createAccountStyles(colors), [colors])
 
   if (!user) return null
@@ -173,6 +179,19 @@ export function AccountScreen() {
             styles={styles}
           />
         ) : null}
+      </View>
+
+      <Text style={styles.sectionLabel}>{toTitleCase('Appearance')}</Text>
+      <View style={styles.card}>
+        {THEME_OPTIONS.map((option) => (
+          <OptionRow
+            key={option.value}
+            label={option.label}
+            sub={option.sub}
+            selected={themePreference === option.value}
+            onPress={() => setThemePreference(option.value)}
+          />
+        ))}
       </View>
 
       <ContactSupportSection />

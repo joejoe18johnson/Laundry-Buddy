@@ -73,7 +73,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   icon: './assets/AppIcons/appstore.png',
   scheme: 'laundrybuddy',
-  userInterfaceStyle: 'light',
+  userInterfaceStyle: 'automatic',
   splash: {
     image: './assets/lb-mascot.png',
     resizeMode: 'contain',
