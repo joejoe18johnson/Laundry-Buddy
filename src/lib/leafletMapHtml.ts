@@ -1,6 +1,7 @@
 import type { Coordinates } from './geo'
+import { circleRing } from './geo'
 import type { Host } from '../types'
-import { POSITRON_TILE_ATTRIBUTION, POSITRON_TILE_URL } from './mapRegion'
+import { OPENFREEMAP_STYLE_URL } from './mapRegion'
 
 const CORE = 42
 const HALO = 56
@@ -26,27 +27,18 @@ export function buildLeafletMapHtml(
   const fitPayload = JSON.stringify(
     (fitToHosts ?? hosts).map((h) => ({ lat: h.latitude, lng: h.longitude })),
   )
+  const circleCoords = JSON.stringify(circleRing(userLocation, radiusKm))
 
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" crossorigin="" />
+  <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js" crossorigin=""></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #map { width: 100%; height: 100%; background: #f2f2f2; }
-
-    /* Reset Leaflet divIcon defaults that stretch markers into pills */
-    .leaflet-div-icon {
-      background: transparent !important;
-      border: none !important;
-    }
-    .host-marker-icon {
-      background: transparent !important;
-      border: none !important;
-    }
+    html, body, #map { width: 100%; height: 100%; background: #f2f3f0; }
 
     .marker-wrap {
       width: ${HALO}px;
@@ -140,33 +132,15 @@ export function buildLeafletMapHtml(
     }
 
     @keyframes marker-pulse {
-      0% {
-        transform: scale(0.82);
-        opacity: 0.42;
-      }
-      65% {
-        transform: scale(1.48);
-        opacity: 0;
-      }
-      100% {
-        transform: scale(1.48);
-        opacity: 0;
-      }
+      0% { transform: scale(0.82); opacity: 0.42; }
+      65% { transform: scale(1.48); opacity: 0; }
+      100% { transform: scale(1.48); opacity: 0; }
     }
 
     @keyframes marker-pulse-white {
-      0% {
-        transform: scale(0.88);
-        opacity: 0.55;
-      }
-      65% {
-        transform: scale(1.62);
-        opacity: 0;
-      }
-      100% {
-        transform: scale(1.62);
-        opacity: 0;
-      }
+      0% { transform: scale(0.88); opacity: 0.55; }
+      65% { transform: scale(1.62); opacity: 0; }
+      100% { transform: scale(1.62); opacity: 0; }
     }
 
     .you-wrap {
@@ -204,7 +178,7 @@ export function buildLeafletMapHtml(
       100% { transform: scale(2.2); opacity: 0; }
     }
 
-    .leaflet-control-attribution { font-size: 9px !important; }
+    .maplibregl-ctrl-attrib { font-size: 9px !important; }
   </style>
 </head>
 <body>
@@ -212,8 +186,9 @@ export function buildLeafletMapHtml(
   <script>
     const hosts = ${payload};
     const fitHosts = ${fitPayload};
-    const you = { lat: ${userLocation.latitude}, lng: ${userLocation.longitude} };
-    const radiusM = ${radiusKm * 1000};
+    let you = { lat: ${userLocation.latitude}, lng: ${userLocation.longitude} };
+    let radiusM = ${radiusKm * 1000};
+    const circleRing = ${circleCoords};
     const HALO = ${HALO};
     const HALO_DISTANT = 44;
     const fitToResults = ${fitToResults ? 'true' : 'false'};
@@ -231,81 +206,125 @@ export function buildLeafletMapHtml(
       '</div>';
     }
 
-    function zoomForRadiusM(radiusM) {
-      if (radiusM >= 25000) return 10;
-      if (radiusM >= 15000) return 11;
-      if (radiusM >= 8000) return 12;
-      if (radiusM >= 3000) return 13;
+    function zoomForRadiusM(radiusMeters) {
+      if (radiusMeters >= 25000) return 10;
+      if (radiusMeters >= 15000) return 11;
+      if (radiusMeters >= 8000) return 12;
+      if (radiusMeters >= 3000) return 13;
       return 14;
     }
 
-    const map = L.map('map', { zoomControl: true, attributionControl: true })
-      .setView([you.lat, you.lng], zoomForRadiusM(radiusM));
+    let hostMarkers = [];
+    let youMarker = null;
 
-    L.tileLayer('${POSITRON_TILE_URL}', {
-      subdomains: 'abcd',
-      maxZoom: 20,
-      attribution: '${POSITRON_TILE_ATTRIBUTION}'
-    }).addTo(map);
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: '${OPENFREEMAP_STYLE_URL}',
+      center: [you.lng, you.lat],
+      zoom: zoomForRadiusM(radiusM),
+      pitch: 0,
+      bearing: 0,
+      attributionControl: true
+    });
 
-    const searchCircle = L.circle([you.lat, you.lng], {
-      radius: radiusM,
-      color: '#000000',
-      weight: 1.5,
-      opacity: 0.55,
-      fillColor: '#000000',
-      fillOpacity: 0.06,
-      dashArray: '7 6'
-    }).addTo(map);
-
-    function fitSearchArea() {
-      try {
-        map.fitBounds(searchCircle.getBounds(), { padding: [48, 48], maxZoom: 15 });
-      } catch (e) {}
+    function addRadiusLayers() {
+      if (map.getSource('radius-circle')) {
+        map.getSource('radius-circle').setData({
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: [circleRing] },
+          properties: {}
+        });
+        return;
+      }
+      map.addSource('radius-circle', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: [circleRing] },
+          properties: {}
+        }
+      });
+      map.addLayer({
+        id: 'radius-fill',
+        type: 'fill',
+        source: 'radius-circle',
+        paint: { 'fill-color': '#000000', 'fill-opacity': 0.06 }
+      });
+      map.addLayer({
+        id: 'radius-line',
+        type: 'line',
+        source: 'radius-circle',
+        paint: {
+          'line-color': '#000000',
+          'line-width': 1.5,
+          'line-opacity': 0.55,
+          'line-dasharray': [2, 2]
+        }
+      });
     }
 
-    const youIcon = L.divIcon({
-      html: '<div class="you-wrap"><div class="you-pulse"></div><div class="you-core"></div></div>',
-      className: 'host-marker-icon',
-      iconSize: [40, 40],
-      iconAnchor: [20, 20]
-    });
-    const youMarker = L.marker([you.lat, you.lng], { icon: youIcon, zIndexOffset: 1000 }).addTo(map);
-    const hostLayer = L.layerGroup().addTo(map);
+    function clearHostMarkers() {
+      hostMarkers.forEach(function(marker) { marker.remove(); });
+      hostMarkers = [];
+    }
 
     function addHostMarkers(hostList) {
-      hostLayer.clearLayers();
+      clearHostMarkers();
       hostList.forEach(function(h) {
         const isFree = h.price <= 0;
         const label = isFree ? 'Free' : ('$' + h.price);
-        const halo = h.inRadius ? HALO : HALO_DISTANT;
-        const icon = L.divIcon({
-          html: hostMarkerHtml(label, isFree, h.inRadius),
-          className: 'host-marker-icon',
-          iconSize: [halo, halo],
-          iconAnchor: [halo / 2, halo / 2]
-        });
-        const marker = L.marker([h.lat, h.lng], {
-          icon: icon,
-          zIndexOffset: h.inRadius ? 500 : 100
-        });
-        marker.on('click', function() {
+        const el = document.createElement('div');
+        el.innerHTML = hostMarkerHtml(label, isFree, h.inRadius);
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', function() {
           if (window.ReactNativeWebView) {
             window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'host', hostId: h.id }));
           }
         });
-        hostLayer.addLayer(marker);
+        const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([h.lng, h.lat])
+          .addTo(map);
+        hostMarkers.push(marker);
       });
     }
 
-    addHostMarkers(hosts);
+    function addYouMarker() {
+      if (youMarker) youMarker.remove();
+      const el = document.createElement('div');
+      el.innerHTML = '<div class="you-wrap"><div class="you-pulse"></div><div class="you-core"></div></div>';
+      youMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat([you.lng, you.lat])
+        .addTo(map);
+    }
+
+    function fitSearchArea() {
+      const bounds = new maplibregl.LngLatBounds();
+      circleRing.forEach(function(coord) { bounds.extend(coord); });
+      map.fitBounds(bounds, { padding: 48, maxZoom: 15, duration: 400 });
+    }
+
+    function fitHostResults(hostCoords) {
+      const bounds = new maplibregl.LngLatBounds();
+      bounds.extend([you.lng, you.lat]);
+      hostCoords.forEach(function(h) { bounds.extend([h.lng, h.lat]); });
+      map.fitBounds(bounds, { padding: 52, maxZoom: 14, duration: 400 });
+    }
+
+    map.on('load', function() {
+      addRadiusLayers();
+      addYouMarker();
+      addHostMarkers(hosts);
+      if (fitToResults && fitHosts.length > 0) {
+        fitHostResults(fitHosts);
+      } else {
+        fitSearchArea();
+      }
+    });
 
     window.__lbUpdateHosts = function(nextHosts, nextFitHosts, shouldFitResults) {
       addHostMarkers(nextHosts);
       if (shouldFitResults && nextFitHosts.length > 0) {
-        const bounds = L.latLngBounds([[you.lat, you.lng]]);
-        nextFitHosts.forEach(function(h) { bounds.extend([h.lat, h.lng]); });
-        map.fitBounds(bounds, { padding: [52, 52], maxZoom: 14 });
+        fitHostResults(nextFitHosts);
       }
     };
 
@@ -313,24 +332,12 @@ export function buildLeafletMapHtml(
       you.lat = lat;
       you.lng = lng;
       radiusM = nextRadiusM;
-      searchCircle.setLatLng([lat, lng]);
-      searchCircle.setRadius(nextRadiusM);
-      youMarker.setLatLng([lat, lng]);
+      map.setCenter([lng, lat]);
+      addYouMarker();
       fitSearchArea();
     };
 
-    if (fitToResults && fitHosts.length > 0) {
-      const bounds = L.latLngBounds([[you.lat, you.lng]]);
-      fitHosts.forEach(function(h) { bounds.extend([h.lat, h.lng]); });
-      map.fitBounds(bounds, { padding: [52, 52], maxZoom: 14 });
-    } else {
-      fitSearchArea();
-    }
-
-    setTimeout(function() {
-      map.invalidateSize();
-    }, 300);
-    window.addEventListener('resize', function() { map.invalidateSize(); });
+    window.addEventListener('resize', function() { map.resize(); });
   </script>
 </body>
 </html>`

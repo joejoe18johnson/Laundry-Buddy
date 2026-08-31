@@ -57,10 +57,10 @@ export function projectCoordinate(
  * Brand map style: Carto Positron (light gray B&W) everywhere.
  * Do not use colorful OSM Mapnik or other saturated tile layers in the app UI.
  */
-/** OpenFreeMap Positron — light gray vector style (MapLibre). */
+/** OpenFreeMap Positron — light gray vector style (MapLibre). No API key required. */
 export const OPENFREEMAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron'
 
-/** Carto Positron raster tiles — same look for Leaflet / WebView fallback. */
+/** @deprecated Carto raster tiles now require a paid/free API key — use OpenFreeMap instead. */
 export const POSITRON_TILE_URL = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
 export const POSITRON_TILE_ATTRIBUTION = '&copy; OpenStreetMap &copy; CARTO'
 

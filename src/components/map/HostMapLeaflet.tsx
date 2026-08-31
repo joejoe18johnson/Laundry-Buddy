@@ -7,8 +7,8 @@ import { colors } from '../../theme'
 import type { HostMapProps } from '../HostMap'
 
 /**
- * Interactive Positron map via Leaflet in a WebView.
- * Works in Expo Go, web, and simulators — matches MapLibre Positron styling.
+ * Interactive Positron map via MapLibre GL JS in a WebView.
+ * Works in Expo Go, web, and as fallback — same OpenFreeMap style as native MapLibre.
  */
 export function HostMapLeaflet({
   hosts,

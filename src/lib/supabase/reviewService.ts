@@ -4,6 +4,11 @@ import type { Database } from './database.types'
 
 type ReviewRow = Database['public']['Tables']['host_reviews']['Row']
 
+export type InsertReviewResult = {
+  review: HostReview | null
+  duplicate: boolean
+}
+
 function rowToReview(row: ReviewRow): HostReview {
   return {
     id: row.id,
@@ -39,9 +44,9 @@ export async function insertReviewToSupabase(input: {
   rating: number
   comment: string
   bookingId?: string | null
-}): Promise<HostReview | null> {
+}): Promise<InsertReviewResult> {
   const supabase = getSupabaseClient()
-  if (!supabase) return null
+  if (!supabase) return { review: null, duplicate: false }
 
   const { data, error } = await supabase
     .from('host_reviews')
@@ -56,8 +61,18 @@ export async function insertReviewToSupabase(input: {
     .select('*')
     .single()
 
-  if (error || !data) return null
-  return rowToReview(data)
+  if (!error && data) {
+    return { review: rowToReview(data), duplicate: false }
+  }
+
+  if (input.bookingId) {
+    const duplicate = await hasReviewForBookingInSupabase(input.authorId, input.bookingId)
+    if (duplicate) {
+      return { review: null, duplicate: true }
+    }
+  }
+
+  return { review: null, duplicate: false }
 }
 
 export async function hasReviewForBookingInSupabase(
