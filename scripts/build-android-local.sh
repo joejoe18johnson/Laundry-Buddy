@@ -43,7 +43,7 @@ chmod +x gradlew
 # Force Metro to rebundle JS/assets so logo and UI changes are always in the APK.
 rm -rf app/build/generated/assets/createBundleReleaseJsAndAssets
 
-GRADLE_ARGS=(-PreactNativeArchitectures=arm64-v8a,armeabi-v7a)
+GRADLE_ARGS=(-PreactNativeArchitectures=arm64-v8a)
 # Skip lint on local preview builds — saves memory and time for host testing APKs.
 LINT_SKIP=(-x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease)
 
