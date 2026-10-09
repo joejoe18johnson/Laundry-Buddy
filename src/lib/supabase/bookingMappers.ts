@@ -1,4 +1,12 @@
-import type { Booking, BookingStage, ClothesListItem, HostRequest, SheetsOption } from '../../types'
+import type {
+  Booking,
+  BookingStage,
+  ClothesListItem,
+  DetergentOption,
+  HostRequest,
+  LaundryServiceMode,
+  SheetsOption,
+} from '../../types'
 import type { Database } from './database.types'
 
 type BookingRow = Database['public']['Tables']['bookings']['Row']
@@ -43,6 +51,13 @@ export function bookingRowToBooking(row: BookingRow): Booking {
     paymentMethod: row.payment_method ?? undefined,
     pricePerLoad: row.price_per_load ?? undefined,
     dryPrice: row.dry_price ?? undefined,
+    washPrice: row.wash_price ?? undefined,
+    washService: row.wash_service,
+    laundryServiceMode: (row.laundry_service_mode as LaundryServiceMode | null) ?? undefined,
+    detergentOption: (row.detergent_option as DetergentOption | null) ?? undefined,
+    detergentPrice: row.detergent_price ?? undefined,
+    dryerSheetsPacks: row.dryer_sheets_packs,
+    dryerSheetsPrice: row.dryer_sheets_price ?? undefined,
     foldingPrice: row.folding_price ?? undefined,
     sheetsPrice: row.sheets_price ?? undefined,
     foldingService: row.folding_service,
@@ -83,6 +98,13 @@ export function bookingToInsert(booking: Booking): BookingInsert {
     payment_method: booking.paymentMethod ?? null,
     price_per_load: booking.pricePerLoad ?? null,
     dry_price: booking.dryPrice ?? null,
+    wash_price: booking.washPrice ?? null,
+    wash_service: booking.washService ?? false,
+    laundry_service_mode: booking.laundryServiceMode ?? null,
+    detergent_option: booking.detergentOption ?? null,
+    detergent_price: booking.detergentPrice ?? null,
+    dryer_sheets_packs: booking.dryerSheetsPacks ?? 0,
+    dryer_sheets_price: booking.dryerSheetsPrice ?? null,
     folding_price: booking.foldingPrice ?? null,
     sheets_price: booking.sheetsPrice ?? null,
     folding_service: booking.foldingService ?? false,
@@ -114,6 +136,9 @@ export function bookingToHostRequest(booking: Booking): HostRequest {
     notes: booking.notes,
     paymentMethod: booking.paymentMethod,
     foldingService: booking.foldingService,
+    washService: booking.washService,
+    detergentOption: booking.detergentOption,
+    dryerSheetsPacks: booking.dryerSheetsPacks,
     totalAmount: booking.totalAmount,
     status: booking.requestStatus === 'declined' ? 'declined' : 'pending',
     createdAt: booking.createdAt,

@@ -29,6 +29,7 @@ export function normalizeHostSettings(
 ): HostSettings {
   const pricing = settings?.pricing ?? {
     dryPrice: host?.price ?? DEFAULT_HOST_PRICING.dryPrice,
+    washPrice: host?.washPrice ?? DEFAULT_HOST_PRICING.washPrice,
     foldingPrice: host?.foldingPrice ?? DEFAULT_HOST_PRICING.foldingPrice,
     sheetsPrice: host?.sheetsPrice ?? DEFAULT_HOST_PRICING.sheetsPrice,
   }
@@ -45,7 +46,9 @@ export function normalizeHostSettings(
       bankName: normalizeBelizeBankName(settings?.bankDetails?.bankName),
     },
     pricing: {
+      ...DEFAULT_HOST_PRICING,
       ...pricing,
+      washPrice: pricing.washPrice ?? DEFAULT_HOST_PRICING.washPrice,
       sheetsPrice: 0,
     },
     listing,

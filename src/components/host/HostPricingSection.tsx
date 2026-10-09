@@ -7,7 +7,7 @@ import { formatHostPrice } from '../../lib/hostFilters'
 import {
   buildHostPricingHints,
   computeMarketPricingSnapshot,
-  DRYER_SHEETS_GUEST_HINT,
+  DRYER_SHEETS_OFFER_HINT,
   parsePriceInput,
 } from '../../lib/hostPricing'
 import { toTitleCase } from '../../lib/titleCase'
@@ -88,6 +88,18 @@ export function HostPricingSection({
         />
       </View>
       <View style={styles.priceField}>
+        <Text style={styles.priceLabel}>{toTitleCase('Wash + dry (per load, optional)')}</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="number-pad"
+          value={String(pricing.washPrice)}
+          onChangeText={(v) => onPricingChange({ washPrice: parsePriceInput(v) })}
+        />
+        <Text style={styles.fieldHint}>
+          {toTitleCase('Set to $0 to offer dry-only. Wash is only available with dry — guests cannot book wash alone.')}
+        </Text>
+      </View>
+      <View style={styles.priceField}>
         <Text style={styles.priceLabel}>{toTitleCase('Folding service (per load)')}</Text>
         <TextInput
           style={styles.input}
@@ -98,9 +110,10 @@ export function HostPricingSection({
       </View>
       <Text style={styles.guestSummary}>
         {toTitleCase('Guests see')}: Dry {formatHostPrice(pricing.dryPrice)}
+        {pricing.washPrice > 0 ? ` · Wash + dry ${formatHostPrice(pricing.washPrice)}` : ''}
         {pricing.foldingPrice > 0 ? ` · Folding ${formatHostPrice(pricing.foldingPrice)}` : ''}
       </Text>
-      <Text style={styles.sheetsNote}>{toTitleCase(DRYER_SHEETS_GUEST_HINT)}</Text>
+      <Text style={styles.sheetsNote}>{toTitleCase(DRYER_SHEETS_OFFER_HINT)}</Text>
       {showSaveButton && onSave ? (
         <PrimaryButton
           title={saved ? toTitleCase('Prices saved') : toTitleCase('Save prices')}
@@ -162,6 +175,7 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
     marketHint: { fontSize: 12, color: colors.gray500, lineHeight: 17 },
     priceField: { gap: spacing.sm },
     priceLabel: { fontSize: 14, fontWeight: '600', color: colors.gray600 },
+    fieldHint: { fontSize: 12, color: colors.gray500, lineHeight: 17 },
     input: {
       borderWidth: 1,
       borderColor: colors.gray200,

@@ -363,6 +363,13 @@ export function DashboardScreen() {
               styles={styles}
             />
             <View style={styles.tags}>
+              {request.washService && <Text style={styles.tag}>{toTitleCase('Wash + dry')}</Text>}
+              {request.detergentOption === 'buy' && (
+                <Text style={styles.tag}>{toTitleCase('Detergent from host')}</Text>
+              )}
+              {(request.dryerSheetsPacks ?? 0) > 0 && (
+                <Text style={styles.tag}>{toTitleCase('Dryer sheets')}</Text>
+              )}
               {request.foldingService && <Text style={styles.tag}>{toTitleCase('Folding requested')}</Text>}
             </View>
             <View style={styles.actions}>

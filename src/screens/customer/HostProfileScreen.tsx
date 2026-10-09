@@ -18,7 +18,7 @@ import { formatHostPrice, hostPriceLabel } from '../../lib/hostFilters'
 import { isTopRatedHost } from '../../lib/hostReputation'
 import { formatDryTimeStat, formatDryTimeInline } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
-import { formatServicePrice, getHostPricing, DRYER_SHEETS_GUEST_HINT } from '../../lib/hostPricing'
+import { formatServicePrice, getHostPricing, DRYER_SHEETS_OFFER_HINT } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import { canBookOrHost } from '../../lib/identityVerification'
@@ -386,6 +386,13 @@ export function HostProfileScreen() {
       value: `${formatServicePrice(pricing.dryPrice)} ${toTitleCase('per load')}`,
     },
   ]
+  if (pricing.washPrice > 0) {
+    serviceDetailRows.push({
+      icon: 'layers',
+      label: 'Wash + dry',
+      value: `${formatServicePrice(pricing.washPrice)} ${toTitleCase('per load')} · ${toTitleCase('dry-only also available')}`,
+    })
+  }
   if (foldingPrice > 0) {
     serviceDetailRows.push({
       icon: 'layers',
@@ -397,7 +404,7 @@ export function HostProfileScreen() {
     {
       icon: 'tag',
       label: 'Dryer sheets',
-      value: toTitleCase(DRYER_SHEETS_GUEST_HINT),
+      value: toTitleCase(DRYER_SHEETS_OFFER_HINT),
     },
     {
       icon: 'wind',

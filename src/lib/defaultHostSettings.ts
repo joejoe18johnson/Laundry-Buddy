@@ -32,6 +32,7 @@ export function defaultGuestFacingHostSettings(host: Host): HostSettings {
       notifyGuestsWhenOnline: true,
       pricing: {
         dryPrice: host.price,
+        washPrice: host.washPrice ?? 0,
         foldingPrice: host.foldingPrice ?? 0,
         sheetsPrice: 0,
       },

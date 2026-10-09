@@ -21,7 +21,12 @@ import {
 } from '../data/mockData'
 import { getAllUsers } from '../lib/authStorage'
 import { resolveUserById } from '../lib/adminUsers'
-import { calculateBookingTotal, applyHostPricing, getHostPricing } from '../lib/hostPricing'
+import {
+  applyHostPricing,
+  bookingChargeSnapshot,
+  buildBookingPriceInput,
+  getHostPricing,
+} from '../lib/hostPricing'
 import { hasOpenHostLoad } from '../lib/hostLoads'
 import { formatMoney, getBookingAmount } from '../lib/bookingPayments'
 import { applyHostSettings } from '../lib/hostListing'
@@ -172,6 +177,8 @@ import {
   type NotificationLink,
   type HostReview,
   type BookingDraft,
+  type DetergentOption,
+  type LaundryServiceMode,
 } from '../types'
 
 interface AppState {
@@ -237,6 +244,9 @@ interface AppState {
     clothesList: ClothesListItem[]
     paymentMethod: PaymentMethod
     foldingService: boolean
+    laundryServiceMode: LaundryServiceMode
+    detergentOption: DetergentOption
+    dryerSheetsPacks: number
     loadPhotoUri?: string
   }) => Promise<void>
   acceptRequest: (requestId: string) => void
@@ -306,6 +316,9 @@ function createDefaultBookingDraft(hostId: string): BookingDraft {
     dropOffTime: 14,
     loads: 1,
     sheetsOption: 'own',
+    laundryServiceMode: 'dry_only',
+    detergentOption: 'own',
+    dryerSheetsPacks: 0,
     foldingService: false,
     notes: '',
     clothesList: [],
@@ -1631,6 +1644,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clothesList: ClothesListItem[]
       paymentMethod: PaymentMethod
       foldingService: boolean
+      laundryServiceMode: LaundryServiceMode
+      detergentOption: DetergentOption
+      dryerSheetsPacks: number
       loadPhotoUri?: string
     }) => {
       if (!selectedHost || !user) return
@@ -1642,12 +1658,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const settings = getSettingsForHost(selectedHost.hostUserId)
       const pricing = getHostPricing(selectedHost, settings)
-      const totalAmount = calculateBookingTotal({
+      const priceInput = buildBookingPriceInput({
         loads: details.loads,
-        dryPrice: pricing.dryPrice,
-        foldingPrice: pricing.foldingPrice,
+        pricing,
+        laundryServiceMode: details.laundryServiceMode,
+        detergentOption: details.detergentOption,
+        dryerSheetsPacks: details.dryerSheetsPacks,
         foldingService: details.foldingService,
       })
+      const charges = bookingChargeSnapshot(priceInput)
       const bookingId = createBookingId()
       let customerId = user.id
       if (isSupabaseConfigured()) {
@@ -1665,13 +1684,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sheetsOption: 'own',
         notes: details.notes,
         paymentMethod: details.paymentMethod,
-        pricePerLoad: pricing.dryPrice,
-        dryPrice: pricing.dryPrice,
-        foldingPrice: pricing.foldingPrice,
+        pricePerLoad: charges.dryPrice,
+        dryPrice: charges.dryPrice,
+        washPrice: charges.washPrice,
+        washService: charges.washService,
+        laundryServiceMode: charges.laundryServiceMode,
+        detergentOption: charges.detergentOption,
+        detergentPrice: charges.detergentPrice,
+        dryerSheetsPacks: charges.dryerSheetsPacks,
+        dryerSheetsPrice: charges.dryerSheetsPrice,
+        foldingPrice: charges.foldingPrice,
         sheetsPrice: 0,
-        foldingService: details.foldingService,
-        totalAmount,
-        paymentStatus: totalAmount <= 0 ? 'paid' : 'pending',
+        foldingService: charges.foldingService,
+        totalAmount: charges.totalAmount,
+        paymentStatus: charges.totalAmount <= 0 ? 'paid' : 'pending',
         requestStatus: 'pending',
         loadPhotoUri: details.loadPhotoUri,
         clothesList: details.clothesList.length > 0 ? details.clothesList : undefined,
@@ -1706,7 +1732,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           notes: details.notes,
           paymentMethod: details.paymentMethod,
           foldingService: details.foldingService,
-          totalAmount,
+          washService: charges.washService,
+          detergentOption: charges.detergentOption,
+          dryerSheetsPacks: charges.dryerSheetsPacks,
+          totalAmount: charges.totalAmount,
           loadPhotoUri: details.loadPhotoUri,
           clothesList: details.clothesList.length > 0 ? details.clothesList : undefined,
           status: 'pending',
@@ -1747,12 +1776,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const request = hostRequests.find((r) => r.id === requestId)
       if (!request || !user) return
 
+      void (async () => {
       const settings = getSettingsForHost(user.id)
       const hostRaw = getHostByUserId(user.id)
       const hostProfile = hostRaw ? applyHostSettings(hostRaw, settings) : undefined
       const pricing = hostProfile
         ? getHostPricing(hostProfile, settings)
-        : { dryPrice: 0, foldingPrice: 0, sheetsPrice: 0 }
+        : { dryPrice: 0, washPrice: 0, foldingPrice: 0, sheetsPrice: 0 }
 
       const needsTransfer =
         request.paymentMethod === 'bank_transfer' && (request.totalAmount ?? 0) > 0
@@ -1760,35 +1790,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const acceptedAt = new Date().toISOString()
       const paymentTimestamp = acceptedAt
 
-      let load: Booking = {
-        id: request.id,
-        hostId: hostProfile?.id ?? 'unknown',
-        hostName: formatHostDisplayName(hostProfile?.name ?? user.name),
-        customerId: request.customerId,
-        customerName: request.customerName,
-        location: request.location,
-        loads: request.loads,
-        dropOffTime: request.dropOffTime,
-        sheetsOption: 'own',
-        notes: request.notes ?? '',
-        paymentMethod: request.paymentMethod,
-        foldingService: request.foldingService,
-        totalAmount: request.totalAmount,
-        loadPhotoUri: request.loadPhotoUri,
-        clothesList: request.clothesList,
-        pricePerLoad: pricing.dryPrice,
-        dryPrice: pricing.dryPrice,
-        foldingPrice: pricing.foldingPrice,
-        sheetsPrice: 0,
-        paymentStatus: (request.totalAmount ?? 0) <= 0 ? 'paid' : 'pending',
-        paymentRequestedAt: needsTransfer ? paymentTimestamp : undefined,
-        requestStatus: 'accepted',
-        stage: 'got-bag',
-        address: hostProfile?.address ?? '',
-        gateCode: hostProfile?.gateCode ?? '',
-        acceptedAt,
-        createdAt: request.createdAt ?? acceptedAt,
-        stageTimes: {},
+      const existing = isSupabaseConfigured()
+        ? await fetchBookingByIdFromSupabase(requestId)
+        : await loadBookingSnapshot(requestId)
+
+      let load: Booking
+      if (existing) {
+        load = {
+          ...existing,
+          hostId: hostProfile?.id ?? existing.hostId,
+          hostName: formatHostDisplayName(hostProfile?.name ?? existing.hostName),
+          address: hostProfile?.address ?? existing.address,
+          gateCode: hostProfile?.gateCode ?? existing.gateCode,
+          paymentRequestedAt: needsTransfer ? paymentTimestamp : existing.paymentRequestedAt,
+          requestStatus: 'accepted',
+          acceptedAt,
+          isNew: false,
+        }
+      } else {
+        const priceInput = buildBookingPriceInput({
+          loads: request.loads,
+          pricing,
+          laundryServiceMode: request.washService ? 'wash_and_dry' : 'dry_only',
+          detergentOption: request.detergentOption ?? 'own',
+          dryerSheetsPacks: request.dryerSheetsPacks ?? 0,
+          foldingService: request.foldingService ?? false,
+        })
+        const charges = bookingChargeSnapshot(priceInput)
+        const totalAmount = request.totalAmount ?? charges.totalAmount
+        load = {
+          id: request.id,
+          hostId: hostProfile?.id ?? 'unknown',
+          hostName: formatHostDisplayName(hostProfile?.name ?? user.name),
+          customerId: request.customerId,
+          customerName: request.customerName,
+          location: request.location,
+          loads: request.loads,
+          dropOffTime: request.dropOffTime,
+          sheetsOption: 'own',
+          notes: request.notes ?? '',
+          paymentMethod: request.paymentMethod,
+          foldingService: charges.foldingService,
+          washService: charges.washService,
+          laundryServiceMode: charges.laundryServiceMode,
+          detergentOption: charges.detergentOption,
+          detergentPrice: charges.detergentPrice,
+          dryerSheetsPacks: charges.dryerSheetsPacks,
+          dryerSheetsPrice: charges.dryerSheetsPrice,
+          totalAmount,
+          loadPhotoUri: request.loadPhotoUri,
+          clothesList: request.clothesList,
+          pricePerLoad: charges.dryPrice,
+          dryPrice: charges.dryPrice,
+          washPrice: charges.washPrice,
+          foldingPrice: charges.foldingPrice,
+          sheetsPrice: 0,
+          paymentStatus: totalAmount <= 0 ? 'paid' : 'pending',
+          paymentRequestedAt: needsTransfer ? paymentTimestamp : undefined,
+          requestStatus: 'accepted',
+          stage: 'got-bag',
+          address: hostProfile?.address ?? '',
+          gateCode: hostProfile?.gateCode ?? '',
+          acceptedAt,
+          createdAt: request.createdAt ?? acceptedAt,
+          stageTimes: {},
+        }
       }
 
       const nextRequests = hostRequests.filter((r) => r.id !== requestId)
@@ -1849,6 +1915,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })
 
       setScreen('host-dryer')
+      })()
     },
     [hostRequests, activeLoads, user, notifyCustomer, getSettingsForHost, showToast, requireMarketplaceAccess],
   )

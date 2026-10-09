@@ -77,6 +77,7 @@ export interface Database {
           dryer_type: string
           has_generator: boolean
           folding_price: number | null
+          wash_price: number | null
           sheets_price: number | null
           address: string
           gate_code: string
@@ -107,6 +108,7 @@ export interface Database {
           dryer_type?: string
           has_generator?: boolean
           folding_price?: number | null
+          wash_price?: number | null
           sheets_price?: number | null
           address: string
           gate_code?: string
@@ -165,6 +167,13 @@ export interface Database {
           payment_method: PaymentMethod | null
           price_per_load: number | null
           dry_price: number | null
+          wash_price: number | null
+          wash_service: boolean
+          laundry_service_mode: string | null
+          detergent_option: string | null
+          detergent_price: number | null
+          dryer_sheets_packs: number
+          dryer_sheets_price: number | null
           folding_price: number | null
           sheets_price: number | null
           folding_service: boolean
@@ -203,6 +212,13 @@ export interface Database {
           payment_method?: PaymentMethod | null
           price_per_load?: number | null
           dry_price?: number | null
+          wash_price?: number | null
+          wash_service?: boolean
+          laundry_service_mode?: string | null
+          detergent_option?: string | null
+          detergent_price?: number | null
+          dryer_sheets_packs?: number
+          dryer_sheets_price?: number | null
           folding_price?: number | null
           sheets_price?: number | null
           folding_service?: boolean

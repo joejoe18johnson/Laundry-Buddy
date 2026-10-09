@@ -62,6 +62,19 @@ export function HostNewRequestPopup({
             <DetailChip icon="map-pin" label={request.location} styles={styles} />
             <DetailChip icon="credit-card" label={paymentLabel} styles={styles} />
             <DetailChip icon="dollar-sign" label={totalLabel} styles={styles} />
+            {request.washService ? (
+              <DetailChip icon="layers" label={toTitleCase('Wash + dry')} styles={styles} />
+            ) : null}
+            {request.detergentOption === 'buy' ? (
+              <DetailChip icon="tag" label={toTitleCase('Detergent from host')} styles={styles} />
+            ) : null}
+            {(request.dryerSheetsPacks ?? 0) > 0 ? (
+              <DetailChip
+                icon="tag"
+                label={toTitleCase(`${request.dryerSheetsPacks} dryer sheet pack${request.dryerSheetsPacks === 1 ? '' : 's'}`)}
+                styles={styles}
+              />
+            ) : null}
             {request.foldingService ? (
               <DetailChip icon="layers" label={toTitleCase('Folding requested')} styles={styles} />
             ) : null}

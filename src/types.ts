@@ -2,6 +2,11 @@ import type { DropOffHour } from './lib/dropOffAvailability'
 
 export type { DropOffHour }
 export type SheetsOption = 'own' | 'buy' | 'none'
+
+/** Guest brings wet laundry — dry only, or wash + dry (wash alone is not offered). */
+export type LaundryServiceMode = 'dry_only' | 'wash_and_dry'
+
+export type DetergentOption = 'own' | 'buy'
 export type BookingStage = 'got-bag' | 'waiting' | 'drying' | 'ready' | 'picked-up'
 export type AppRole = 'customer' | 'host' | 'admin'
 export type LoginMethod = 'phone' | 'email'
@@ -71,6 +76,8 @@ export interface HostBankDetails {
 
 export interface HostPricing {
   dryPrice: number
+  /** Per load — set to 0 to hide wash + dry (dry-only bookings only). */
+  washPrice: number
   foldingPrice: number
   sheetsPrice: number
 }
@@ -169,6 +176,7 @@ export interface Host {
   dryerType: string
   hasGenerator: boolean
   foldingPrice?: number
+  washPrice?: number
   sheetsPrice?: number
   address: string
   gateCode: string
@@ -221,6 +229,13 @@ export interface Booking {
   paymentMethod?: PaymentMethod
   pricePerLoad?: number
   dryPrice?: number
+  washPrice?: number
+  washService?: boolean
+  laundryServiceMode?: LaundryServiceMode
+  detergentOption?: DetergentOption | null
+  detergentPrice?: number
+  dryerSheetsPacks?: number
+  dryerSheetsPrice?: number
   foldingPrice?: number
   sheetsPrice?: number
   foldingService?: boolean
@@ -248,6 +263,9 @@ export interface BookingDraft {
   dropOffTime: DropOffHour
   loads: number
   sheetsOption: SheetsOption
+  laundryServiceMode: LaundryServiceMode
+  detergentOption: DetergentOption
+  dryerSheetsPacks: number
   foldingService: boolean
   notes: string
   clothesList: ClothesListItem[]
@@ -266,6 +284,9 @@ export interface HostRequest {
   notes?: string
   paymentMethod?: PaymentMethod
   foldingService?: boolean
+  washService?: boolean
+  detergentOption?: DetergentOption | null
+  dryerSheetsPacks?: number
   totalAmount?: number
   status: 'pending' | 'accepted' | 'declined'
   createdAt?: string

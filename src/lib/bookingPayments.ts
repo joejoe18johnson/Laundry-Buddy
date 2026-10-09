@@ -1,5 +1,10 @@
 import type { Booking } from '../types'
-import { calculateBookingTotal, type BookingPriceInput } from './hostPricing'
+import {
+  buildBookingPriceInputFromBooking,
+  calculateBookingTotal,
+  laundryServiceLabel,
+  resolveLaundryServiceMode,
+} from './hostPricing'
 
 export function formatMoney(amount: number): string {
   return amount <= 0 ? 'Free' : `$${amount}`
@@ -11,13 +16,8 @@ export function formatCurrency(amount: number): string {
   return Number.isInteger(amount) ? `$${amount}` : `$${amount.toFixed(2)}`
 }
 
-export function getBookingPriceInput(booking: Booking): BookingPriceInput {
-  return {
-    loads: booking.loads,
-    dryPrice: booking.dryPrice ?? booking.pricePerLoad ?? 0,
-    foldingPrice: booking.foldingPrice ?? 0,
-    foldingService: booking.foldingService ?? false,
-  }
+export function getBookingPriceInput(booking: Booking) {
+  return buildBookingPriceInputFromBooking(booking)
 }
 
 export function getBookingAmount(booking: Booking): number {
@@ -45,8 +45,14 @@ export function sumBookingAmounts(bookings: Booking[]): number {
 }
 
 export function bookingExtrasSummary(booking: Booking): string | null {
-  if (booking.foldingService) return 'Folding'
-  return null
+  const parts: string[] = []
+  if (resolveLaundryServiceMode(booking) === 'wash_and_dry') {
+    parts.push(laundryServiceLabel('wash_and_dry'))
+  }
+  if (booking.detergentOption === 'buy') parts.push('Detergent')
+  if ((booking.dryerSheetsPacks ?? 0) > 0) parts.push('Dryer sheets')
+  if (booking.foldingService) parts.push('Folding')
+  return parts.length > 0 ? parts.join(' · ') : null
 }
 
 // Re-export for convenience

@@ -52,6 +52,7 @@ export function buildHostFromUserSettings(
     reviewCount: existing?.reviewCount ?? 0,
     price: settings.pricing.dryPrice ?? DEFAULT_HOST_PRICING.dryPrice,
     foldingPrice: settings.pricing.foldingPrice ?? DEFAULT_HOST_PRICING.foldingPrice,
+    washPrice: settings.pricing.washPrice ?? DEFAULT_HOST_PRICING.washPrice,
     sheetsPrice: settings.pricing.sheetsPrice ?? DEFAULT_HOST_PRICING.sheetsPrice,
     slotsLeft: listing.slotsLeft ?? existing?.slotsLeft ?? 1,
     turnaroundHours: listing.turnaroundHours ?? existing?.turnaroundHours ?? 24,
