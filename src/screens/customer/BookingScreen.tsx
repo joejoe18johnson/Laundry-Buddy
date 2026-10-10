@@ -27,9 +27,13 @@ import {
   formatFooterAddonAmount,
   formatServicePrice,
   getHostPricing,
+  includesDrying,
+  includesWashing,
   laundryServiceLabel,
+  normalizeLaundryServiceMode,
+  offersDryService,
   offersFoldingService,
-  offersWashAndDryService,
+  offersLaundryService,
   bookingFooterAddonLines,
   bookingReceiptLines,
   formatReceiptAmount,
@@ -92,11 +96,16 @@ export function BookingScreen() {
 
   useEffect(() => {
     if (!selectedHost || !bookingDraft || !hostPricingPreview) return
-    if (
-      bookingDraft.laundryServiceMode === 'wash_and_dry' &&
-      !offersWashAndDryService(hostPricingPreview)
-    ) {
-      patchBookingDraft({ laundryServiceMode: 'dry_only', detergentOption: 'own' })
+    const normalized = normalizeLaundryServiceMode(
+      bookingDraft.laundryServiceMode ?? 'wash_only',
+      hostPricingPreview,
+    )
+    if (normalized !== bookingDraft.laundryServiceMode) {
+      patchBookingDraft({
+        laundryServiceMode: normalized,
+        detergentOption: includesWashing(normalized) ? bookingDraft.detergentOption ?? 'own' : 'own',
+        dryerSheetsPacks: includesDrying(normalized) ? bookingDraft.dryerSheetsPacks ?? 0 : 0,
+      })
     }
   }, [bookingDraft, hostPricingPreview, patchBookingDraft, selectedHost])
 
@@ -109,7 +118,7 @@ export function BookingScreen() {
     dropOffTime,
     loads,
     foldingService,
-    laundryServiceMode = 'dry_only',
+    laundryServiceMode = 'wash_only',
     detergentOption = 'own',
     dryerSheetsPacks = 0,
     notes,
@@ -124,23 +133,27 @@ export function BookingScreen() {
   const washPrice = pricing.washPrice
   const foldingPrice = pricing.foldingPrice
   const showFolding = offersFoldingService(pricing)
-  const showWashAndDry = offersWashAndDryService(pricing)
-  const effectiveWashMode = showWashAndDry && laundryServiceMode === 'wash_and_dry' ? 'wash_and_dry' : 'dry_only'
+  const showDry = offersDryService(pricing)
+  const showLaundry = offersLaundryService(pricing)
 
   const priceInput = buildBookingPriceInput({
     loads,
     pricing,
-    laundryServiceMode: effectiveWashMode,
+    laundryServiceMode,
     detergentOption,
     dryerSheetsPacks,
     foldingService: showFolding && foldingService,
   })
+  const serviceMode = priceInput.laundryServiceMode
 
   const totalPrice = calculateBookingTotal(priceInput)
 
   const receiptLines = bookingReceiptLines(priceInput)
   const footerAddonLines = bookingFooterAddonLines(priceInput)
-  const drySubtotal = dryPrice * loads
+  const baseSubtotal = includesWashing(serviceMode) ? washPrice * loads : dryPrice * loads
+  const baseRateLabel = includesWashing(serviceMode)
+    ? `${formatServicePrice(washPrice)} laundry`
+    : `${formatServicePrice(dryPrice)} dry`
 
   const canConfirm = paymentMethods.length > 0 && availableTimes.length > 0
   const essentialsReady = canConfirm && loads >= 1
@@ -162,7 +175,7 @@ export function BookingScreen() {
       clothesList,
       paymentMethod,
       foldingService: showFolding && foldingService,
-      laundryServiceMode: effectiveWashMode,
+      laundryServiceMode: serviceMode,
       detergentOption,
       dryerSheetsPacks,
       loadPhotoUri: loadPhotoUri ?? undefined,
@@ -191,11 +204,9 @@ export function BookingScreen() {
           <>
             <View style={styles.rateCard}>
               <Text style={styles.rateTitle}>{toTitleCase('Host Rates (Per Load)')}</Text>
-              <Text style={styles.rateLine}>{toTitleCase('Drying')} — {formatServicePrice(dryPrice)}</Text>
-              {showWashAndDry && (
-                <Text style={styles.rateLine}>
-                  {toTitleCase('Wash + dry')} — {formatServicePrice(washPrice)}
-                </Text>
+              <Text style={styles.rateLine}>{toTitleCase('Laundry (wash)')} — {formatServicePrice(washPrice)}</Text>
+              {showDry && (
+                <Text style={styles.rateLine}>{toTitleCase('Drying')} — {formatServicePrice(dryPrice)}</Text>
               )}
               {showFolding && (
                 <Text style={styles.rateLine}>{toTitleCase('Folding')} — {formatServicePrice(foldingPrice)}</Text>
@@ -204,17 +215,29 @@ export function BookingScreen() {
             </View>
 
             <Text style={styles.section}>{toTitleCase('Service')}</Text>
-            <OptionRow
-              label={toTitleCase('Dry only')}
-              sub={toTitleCase('You bring laundry ready to dry')}
-              selected={effectiveWashMode === 'dry_only'}
-              onPress={() => patchBookingDraft({ laundryServiceMode: 'dry_only', detergentOption: 'own' })}
-            />
-            {showWashAndDry ? (
+            {showLaundry ? (
               <OptionRow
-                label={toTitleCase(`Wash + dry — ${formatServicePrice(washPrice)} per load`)}
-                sub={toTitleCase('Host washes and dries — wash alone is not available')}
-                selected={effectiveWashMode === 'wash_and_dry'}
+                label={toTitleCase(`Laundry (wash) — ${formatServicePrice(washPrice)} per load`)}
+                sub={toTitleCase('Default — host washes your clothes')}
+                selected={serviceMode === 'wash_only'}
+                onPress={() => patchBookingDraft({ laundryServiceMode: 'wash_only' })}
+              />
+            ) : null}
+            {showDry ? (
+              <OptionRow
+                label={toTitleCase(`Dry only — ${formatServicePrice(dryPrice)} per load`)}
+                sub={toTitleCase('You bring laundry ready to dry')}
+                selected={serviceMode === 'dry_only'}
+                onPress={() => patchBookingDraft({ laundryServiceMode: 'dry_only', detergentOption: 'own' })}
+              />
+            ) : null}
+            {showLaundry && showDry ? (
+              <OptionRow
+                label={toTitleCase('Wash + dry')}
+                sub={toTitleCase(
+                  `Laundry plus drying — ${formatServicePrice(washPrice)} + ${formatServicePrice(dryPrice)} per load`,
+                )}
+                selected={serviceMode === 'wash_and_dry'}
                 onPress={() => patchBookingDraft({ laundryServiceMode: 'wash_and_dry' })}
               />
             ) : null}
@@ -298,7 +321,7 @@ export function BookingScreen() {
               {toTitleCase('Add a photo of your load for the host — other details are optional.')}
             </Text>
 
-            {effectiveWashMode === 'wash_and_dry' ? (
+            {includesWashing(serviceMode) ? (
               <>
                 <Text style={styles.section}>{toTitleCase('Detergent')}</Text>
                 <Text style={styles.sectionHint}>{toTitleCase(DETERGENT_GUEST_HINT)}</Text>
@@ -317,32 +340,36 @@ export function BookingScreen() {
               </>
             ) : null}
 
-            <Text style={styles.section}>{toTitleCase('Dryer sheets')}</Text>
-            <Text style={styles.sectionHint}>{toTitleCase(DRYER_SHEETS_OFFER_HINT)}</Text>
-            <View style={styles.stepper}>
-              <Pressable
-                onPress={() => patchBookingDraft({ dryerSheetsPacks: Math.max(0, dryerSheetsPacks - 1) })}
-                style={styles.stepBtn}
-              >
-                <Text style={styles.stepBtnText}>−</Text>
-              </Pressable>
-              <View style={styles.stepValue}>
-                <Text style={styles.stepCount}>{dryerSheetsPacks}</Text>
-                <Text style={styles.stepLabel}>
-                  {toTitleCase(
-                    dryerSheetsPacks === 0
-                      ? 'None — bring your own or skip'
-                      : `pack${dryerSheetsPacks === 1 ? '' : 's'} · $${DRYER_SHEETS_PACK_PRICE} each (${DRYER_SHEETS_PER_PACK} sheets)`,
-                  )}
-                </Text>
-              </View>
-              <Pressable
-                onPress={() => patchBookingDraft({ dryerSheetsPacks: dryerSheetsPacks + 1 })}
-                style={styles.stepBtn}
-              >
-                <Text style={styles.stepBtnText}>+</Text>
-              </Pressable>
-            </View>
+            {includesDrying(serviceMode) ? (
+              <>
+                <Text style={styles.section}>{toTitleCase('Dryer sheets')}</Text>
+                <Text style={styles.sectionHint}>{toTitleCase(DRYER_SHEETS_OFFER_HINT)}</Text>
+                <View style={styles.stepper}>
+                  <Pressable
+                    onPress={() => patchBookingDraft({ dryerSheetsPacks: Math.max(0, dryerSheetsPacks - 1) })}
+                    style={styles.stepBtn}
+                  >
+                    <Text style={styles.stepBtnText}>−</Text>
+                  </Pressable>
+                  <View style={styles.stepValue}>
+                    <Text style={styles.stepCount}>{dryerSheetsPacks}</Text>
+                    <Text style={styles.stepLabel}>
+                      {toTitleCase(
+                        dryerSheetsPacks === 0
+                          ? 'None — bring your own or skip'
+                          : `pack${dryerSheetsPacks === 1 ? '' : 's'} · $${DRYER_SHEETS_PACK_PRICE} each (${DRYER_SHEETS_PER_PACK} sheets)`,
+                      )}
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => patchBookingDraft({ dryerSheetsPacks: dryerSheetsPacks + 1 })}
+                    style={styles.stepBtn}
+                  >
+                    <Text style={styles.stepBtnText}>+</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : null}
 
             {showFolding && (
               <>
@@ -393,9 +420,9 @@ export function BookingScreen() {
                 <ReviewMetaRow
                   icon="wind"
                   label={toTitleCase('Service')}
-                  value={toTitleCase(laundryServiceLabel(effectiveWashMode))}
+                  value={toTitleCase(laundryServiceLabel(serviceMode))}
                 />
-                {effectiveWashMode === 'wash_and_dry' ? (
+                {includesWashing(serviceMode) ? (
                   <ReviewMetaRow
                     icon="tag"
                     label={toTitleCase('Detergent')}
@@ -450,8 +477,8 @@ export function BookingScreen() {
                 </View>
               </View>
 
-              {effectiveWashMode === 'wash_and_dry' && detergentOption === 'own' ? (
-                <Text style={styles.reviewSheetsNote}>{toTitleCase('Remember to bring detergent for wash + dry.')}</Text>
+              {includesWashing(serviceMode) && detergentOption === 'own' ? (
+                <Text style={styles.reviewSheetsNote}>{toTitleCase('Remember to bring detergent for your laundry.')}</Text>
               ) : null}
             </View>
 
@@ -470,8 +497,8 @@ export function BookingScreen() {
           baseLine={
             wizardStep === 2
               ? toTitleCase('Ready to send')
-              : `${loads} load${loads === 1 ? '' : 's'} · ${toTitleCase(laundryServiceLabel(effectiveWashMode))} · ${formatServicePrice(dryPrice)} dry${
-                  loads > 1 ? ` (${formatMoney(drySubtotal)})` : ''
+              : `${loads} load${loads === 1 ? '' : 's'} · ${toTitleCase(laundryServiceLabel(serviceMode))} · ${baseRateLabel}${
+                  loads > 1 ? ` (${formatMoney(baseSubtotal)})` : ''
                 }`
           }
           addonLines={

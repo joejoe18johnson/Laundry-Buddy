@@ -8,7 +8,7 @@ import type {
 } from '../types'
 import { getAvailableHosts } from '../data/mockData'
 
-/** Host sells detergent for wash + dry loads — fixed platform price per load. */
+/** Host sells detergent for wash loads — fixed platform price per load. */
 export const HOST_DETERGENT_PRICE = 1
 
 /** Optional add-on — $1 per pack of 2 dryer sheets from the host. */
@@ -18,7 +18,7 @@ export const DRYER_SHEETS_PER_PACK = 2
 export const DRYER_SHEETS_OFFER_HINT = `Add dryer sheets from your host — $${DRYER_SHEETS_PACK_PRICE} for ${DRYER_SHEETS_PER_PACK} sheets per pack. Bring your own if you prefer.`
 
 export const DETERGENT_GUEST_HINT =
-  'For wash + dry, bring your own detergent or buy from your host for $1 per load.'
+  'Bring your own detergent or buy from your host for $1 per load when laundry (wash) is included.'
 
 /** Shown on booking — a load is a standard load; hosts rely on the guest photo. */
 export const LOAD_PHOTO_GUEST_HINT =
@@ -28,22 +28,22 @@ export const LOAD_PHOTO_GUEST_HINT =
 export const DRYER_SHEETS_GUEST_HINT = DRYER_SHEETS_OFFER_HINT
 
 export const DEFAULT_HOST_PRICING: HostPricing = {
+  washPrice: 3,
   dryPrice: 3,
-  washPrice: 0,
   foldingPrice: 0,
   sheetsPrice: 0,
 }
 
 export function getHostPricing(host: Host, settings?: HostSettings): HostPricing {
   const base = settings?.pricing ?? {
-    dryPrice: host.price,
-    washPrice: host.washPrice ?? 0,
+    washPrice: host.washPrice ?? host.price ?? DEFAULT_HOST_PRICING.washPrice,
+    dryPrice: host.dryPrice ?? DEFAULT_HOST_PRICING.dryPrice,
     foldingPrice: host.foldingPrice ?? 0,
     sheetsPrice: host.sheetsPrice ?? 0,
   }
   return {
-    dryPrice: base.dryPrice,
-    washPrice: base.washPrice ?? 0,
+    washPrice: base.washPrice ?? DEFAULT_HOST_PRICING.washPrice,
+    dryPrice: base.dryPrice ?? 0,
     foldingPrice: base.foldingPrice,
     sheetsPrice: 0,
   }
@@ -53,8 +53,9 @@ export function applyHostPricing(host: Host, settings?: HostSettings): Host {
   const pricing = getHostPricing(host, settings)
   return {
     ...host,
-    price: pricing.dryPrice,
+    price: pricing.washPrice,
     washPrice: pricing.washPrice,
+    dryPrice: pricing.dryPrice,
     foldingPrice: pricing.foldingPrice,
     sheetsPrice: 0,
   }
@@ -64,8 +65,25 @@ export function offersFoldingService(pricing: HostPricing): boolean {
   return pricing.foldingPrice > 0
 }
 
-export function offersWashAndDryService(pricing: HostPricing): boolean {
+export function offersLaundryService(pricing: HostPricing): boolean {
   return pricing.washPrice > 0
+}
+
+export function offersDryService(pricing: HostPricing): boolean {
+  return pricing.dryPrice > 0
+}
+
+/** @deprecated Use offersDryService */
+export function offersWashAndDryService(pricing: HostPricing): boolean {
+  return offersDryService(pricing)
+}
+
+export function includesWashing(mode: LaundryServiceMode): boolean {
+  return mode === 'wash_only' || mode === 'wash_and_dry'
+}
+
+export function includesDrying(mode: LaundryServiceMode): boolean {
+  return mode === 'dry_only' || mode === 'wash_and_dry'
 }
 
 export function formatServicePrice(amount: number): string {
@@ -73,9 +91,9 @@ export function formatServicePrice(amount: number): string {
 }
 
 export function describeHostPricing(pricing: HostPricing): string {
-  const parts = [`Dry ${formatServicePrice(pricing.dryPrice)}`]
-  if (pricing.washPrice > 0) {
-    parts.push(`Wash + dry ${formatServicePrice(pricing.washPrice)}`)
+  const parts = [`Laundry ${formatServicePrice(pricing.washPrice)}`]
+  if (pricing.dryPrice > 0) {
+    parts.push(`Dry ${formatServicePrice(pricing.dryPrice)}`)
   }
   if (pricing.foldingPrice > 0) {
     parts.push(`Folding ${formatServicePrice(pricing.foldingPrice)}`)
@@ -84,9 +102,28 @@ export function describeHostPricing(pricing: HostPricing): string {
 }
 
 export function resolveLaundryServiceMode(booking: Booking): LaundryServiceMode {
-  if (booking.laundryServiceMode) return booking.laundryServiceMode
+  const mode = booking.laundryServiceMode
+  if (mode === 'wash_only' || mode === 'dry_only' || mode === 'wash_and_dry') {
+    return mode
+  }
   if (booking.washService) return 'wash_and_dry'
   return 'dry_only'
+}
+
+export function normalizeLaundryServiceMode(
+  requested: LaundryServiceMode,
+  pricing: HostPricing,
+): LaundryServiceMode {
+  const canWash = offersLaundryService(pricing)
+  const canDry = offersDryService(pricing)
+
+  if (requested === 'dry_only' && canDry) return 'dry_only'
+  if (requested === 'wash_and_dry' && canWash && canDry) return 'wash_and_dry'
+  if (requested === 'wash_only' && canWash) return 'wash_only'
+
+  if (canWash) return 'wash_only'
+  if (canDry) return 'dry_only'
+  return 'wash_only'
 }
 
 export interface BookingPriceInput {
@@ -108,19 +145,15 @@ export function buildBookingPriceInput(params: {
   dryerSheetsPacks: number
   foldingService: boolean
 }): BookingPriceInput {
-  const { pricing, loads, laundryServiceMode, detergentOption, dryerSheetsPacks, foldingService } =
-    params
-  const mode: LaundryServiceMode =
-    laundryServiceMode === 'wash_and_dry' && offersWashAndDryService(pricing)
-      ? 'wash_and_dry'
-      : 'dry_only'
+  const { pricing, loads, detergentOption, dryerSheetsPacks, foldingService } = params
+  const mode = normalizeLaundryServiceMode(params.laundryServiceMode, pricing)
   return {
     loads,
     dryPrice: pricing.dryPrice,
     washPrice: pricing.washPrice,
     laundryServiceMode: mode,
-    detergentOption: mode === 'wash_and_dry' ? detergentOption : 'own',
-    dryerSheetsPacks: Math.max(0, dryerSheetsPacks),
+    detergentOption: includesWashing(mode) ? detergentOption : 'own',
+    dryerSheetsPacks: includesDrying(mode) ? Math.max(0, dryerSheetsPacks) : 0,
     foldingPrice: pricing.foldingPrice,
     foldingService: offersFoldingService(pricing) && foldingService,
   }
@@ -130,8 +163,8 @@ export function buildBookingPriceInputFromBooking(booking: Booking): BookingPric
   const mode = resolveLaundryServiceMode(booking)
   return {
     loads: booking.loads,
-    dryPrice: booking.dryPrice ?? booking.pricePerLoad ?? 0,
-    washPrice: booking.washPrice ?? 0,
+    dryPrice: booking.dryPrice ?? 0,
+    washPrice: booking.washPrice ?? booking.pricePerLoad ?? 0,
     laundryServiceMode: mode,
     detergentOption: booking.detergentOption ?? 'own',
     dryerSheetsPacks: booking.dryerSheetsPacks ?? 0,
@@ -141,20 +174,24 @@ export function buildBookingPriceInputFromBooking(booking: Booking): BookingPric
 }
 
 function detergentTotal(input: BookingPriceInput): number {
-  if (input.laundryServiceMode !== 'wash_and_dry') return 0
+  if (!includesWashing(input.laundryServiceMode)) return 0
   if (input.detergentOption !== 'buy') return 0
   return HOST_DETERGENT_PRICE * input.loads
 }
 
 function dryerSheetsTotal(input: BookingPriceInput): number {
+  if (!includesDrying(input.laundryServiceMode)) return 0
   return Math.max(0, input.dryerSheetsPacks) * DRYER_SHEETS_PACK_PRICE
 }
 
 export function calculateBookingTotal(input: BookingPriceInput): number {
   const { loads, dryPrice, washPrice, laundryServiceMode, foldingPrice, foldingService } = input
-  let total = dryPrice * loads
-  if (laundryServiceMode === 'wash_and_dry' && washPrice > 0) {
+  let total = 0
+  if (includesWashing(laundryServiceMode) && washPrice > 0) {
     total += washPrice * loads
+  }
+  if (includesDrying(laundryServiceMode) && dryPrice > 0) {
+    total += dryPrice * loads
   }
   total += detergentTotal(input)
   total += dryerSheetsTotal(input)
@@ -164,9 +201,11 @@ export function calculateBookingTotal(input: BookingPriceInput): number {
 
 export function bookingTotalLabel(input: BookingPriceInput): string {
   const parts: string[] = []
-  parts.push(`${formatServicePrice(input.dryPrice)} dry × ${input.loads}`)
-  if (input.laundryServiceMode === 'wash_and_dry' && input.washPrice > 0) {
-    parts.push(`${formatServicePrice(input.washPrice)} wash × ${input.loads}`)
+  if (includesWashing(input.laundryServiceMode) && input.washPrice > 0) {
+    parts.push(`${formatServicePrice(input.washPrice)} laundry × ${input.loads}`)
+  }
+  if (includesDrying(input.laundryServiceMode) && input.dryPrice > 0) {
+    parts.push(`${formatServicePrice(input.dryPrice)} dry × ${input.loads}`)
   }
   if (input.foldingService && input.foldingPrice > 0) {
     parts.push(`${formatServicePrice(input.foldingPrice)} folding × ${input.loads}`)
@@ -179,13 +218,13 @@ export type BookingFooterLine = {
   amount: number
 }
 
-/** Optional add-ons for the booking footer — base dry total lives in the price badge. */
+/** Optional add-ons for the booking footer — base laundry total lives in the price badge. */
 export function bookingFooterAddonLines(input: BookingPriceInput): BookingFooterLine[] {
   const lines: BookingFooterLine[] = []
-  if (input.laundryServiceMode === 'wash_and_dry' && input.washPrice > 0) {
+  if (includesDrying(input.laundryServiceMode) && input.dryPrice > 0) {
     lines.push({
-      label: 'Washing',
-      amount: input.washPrice * input.loads,
+      label: 'Drying',
+      amount: input.dryPrice * input.loads,
     })
   }
   const detergent = detergentTotal(input)
@@ -218,19 +257,21 @@ export type BookingReceiptLine = {
 /** Line items for review cards and receipts — one row per charge. */
 export function bookingReceiptLines(input: BookingPriceInput): BookingReceiptLine[] {
   const loadLabel = `${input.loads} load${input.loads === 1 ? '' : 's'}`
-  const lines: BookingReceiptLine[] = [
-    {
-      label: input.laundryServiceMode === 'wash_and_dry' ? 'Drying (wash + dry)' : 'Drying',
+  const lines: BookingReceiptLine[] = []
+
+  if (includesWashing(input.laundryServiceMode) && input.washPrice > 0) {
+    lines.push({
+      label: 'Laundry (wash)',
+      detail: `${loadLabel} × ${formatServicePrice(input.washPrice)}`,
+      amount: input.washPrice * input.loads,
+    })
+  }
+
+  if (includesDrying(input.laundryServiceMode) && input.dryPrice > 0) {
+    lines.push({
+      label: 'Drying',
       detail: `${loadLabel} × ${formatServicePrice(input.dryPrice)}`,
       amount: input.dryPrice * input.loads,
-    },
-  ]
-
-  if (input.laundryServiceMode === 'wash_and_dry' && input.washPrice > 0) {
-    lines.push({
-      label: 'Washing',
-      detail: loadLabel,
-      amount: input.washPrice * input.loads,
     })
   }
 
@@ -269,7 +310,9 @@ export function formatReceiptAmount(amount: number): string {
 }
 
 export function laundryServiceLabel(mode: LaundryServiceMode): string {
-  return mode === 'wash_and_dry' ? 'Wash + dry' : 'Dry only'
+  if (mode === 'wash_only') return 'Laundry (wash)'
+  if (mode === 'dry_only') return 'Dry only'
+  return 'Wash + dry'
 }
 
 /** Price fields stored on the booking at request time. */
@@ -285,21 +328,24 @@ export function bookingChargeSnapshot(input: BookingPriceInput): {
   foldingPrice: number
   foldingService: boolean
   dryPrice: number
+  pricePerLoad: number
 } {
   const detergentPrice = detergentTotal(input)
   const dryerSheetsPrice = dryerSheetsTotal(input)
+  const mode = input.laundryServiceMode
   return {
     dryPrice: input.dryPrice,
     foldingPrice: input.foldingPrice,
     foldingService: input.foldingService,
     totalAmount: calculateBookingTotal(input),
-    washPrice: input.laundryServiceMode === 'wash_and_dry' ? input.washPrice : 0,
-    washService: input.laundryServiceMode === 'wash_and_dry',
-    laundryServiceMode: input.laundryServiceMode,
-    detergentOption: input.laundryServiceMode === 'wash_and_dry' ? input.detergentOption : null,
+    washPrice: input.washPrice,
+    washService: includesWashing(mode),
+    laundryServiceMode: mode,
+    detergentOption: includesWashing(mode) ? input.detergentOption : null,
     detergentPrice: detergentPrice > 0 ? detergentPrice : undefined,
     dryerSheetsPacks: input.dryerSheetsPacks,
     dryerSheetsPrice: dryerSheetsPrice > 0 ? dryerSheetsPrice : undefined,
+    pricePerLoad: includesWashing(mode) ? input.washPrice : input.dryPrice,
   }
 }
 
@@ -331,7 +377,7 @@ export function computeMarketPricingSnapshot(excludeHostId?: string): MarketPric
     .filter((price) => price > 0)
 
   return {
-    avgDryPrice: averageRounded(hosts.map((host) => host.price)),
+    avgDryPrice: averageRounded(hosts.map((host) => host.washPrice ?? host.price)),
     avgFoldingPrice: foldingPrices.length > 0 ? averageRounded(foldingPrices) : null,
     hostCount: hosts.length,
   }
@@ -343,23 +389,23 @@ export function buildHostPricingHints(
   reputation?: { rating: number; reviewCount: number },
 ): string[] {
   const hints: string[] = []
-  const dryDelta = pricing.dryPrice - market.avgDryPrice
+  const washDelta = pricing.washPrice - market.avgDryPrice
 
   hints.push(
-    `Hosts in your area average ${formatServicePrice(market.avgDryPrice)} per load (${market.hostCount} hosts online).`,
+    `Hosts in your area average ${formatServicePrice(market.avgDryPrice)} per load for laundry (${market.hostCount} hosts online).`,
   )
 
-  if (dryDelta <= -1) {
+  if (washDelta <= -1) {
     hints.push(
-      'Your dry price is below average — great for attracting first-time guests. Keep service quality high so reviews stay strong.',
+      'Your laundry price is below average — great for attracting first-time guests. Keep service quality high so reviews stay strong.',
     )
-  } else if (dryDelta >= 1) {
+  } else if (washDelta >= 1) {
     hints.push(
-      'Your dry price is above average. Guests often choose lower prices, but strong reviews and ratings help you stand out.',
+      'Your laundry price is above average. Guests often choose lower prices, but strong reviews and ratings help you stand out.',
     )
   } else {
     hints.push(
-      'Your dry price is near the local average. Competitive rates help fill slots; great reviews help guests pick you over similar prices.',
+      'Your laundry price is near the local average. Competitive rates help fill slots; great reviews help guests pick you over similar prices.',
     )
   }
 
@@ -381,13 +427,13 @@ export function buildHostPricingHints(
 
   if (market.avgFoldingPrice != null && pricing.foldingPrice === 0) {
     hints.push(
-      `Many hosts charge around ${formatServicePrice(market.avgFoldingPrice)} for folding — optional add-ons can boost earnings without raising your base dry rate.`,
+      `Many hosts charge around ${formatServicePrice(market.avgFoldingPrice)} for folding — optional add-ons can boost earnings without raising your base laundry rate.`,
     )
   }
 
-  if (pricing.washPrice === 0) {
+  if (pricing.dryPrice === 0) {
     hints.push(
-      'Offer wash + dry with a separate wash price if you want guests to drop off dirty laundry — dry-only stays available either way.',
+      'Set a drying price if you offer dryer use — guests can add drying to laundry or book dry-only.',
     )
   }
 

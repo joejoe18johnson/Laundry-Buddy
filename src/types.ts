@@ -3,8 +3,8 @@ import type { DropOffHour } from './lib/dropOffAvailability'
 export type { DropOffHour }
 export type SheetsOption = 'own' | 'buy' | 'none'
 
-/** Guest brings wet laundry — dry only, or wash + dry (wash alone is not offered). */
-export type LaundryServiceMode = 'dry_only' | 'wash_and_dry'
+/** Laundry (wash) is primary; drying is optional alone or with wash. */
+export type LaundryServiceMode = 'wash_only' | 'dry_only' | 'wash_and_dry'
 
 export type DetergentOption = 'own' | 'buy'
 export type BookingStage = 'got-bag' | 'waiting' | 'drying' | 'ready' | 'picked-up'
@@ -75,9 +75,10 @@ export interface HostBankDetails {
 }
 
 export interface HostPricing {
-  dryPrice: number
-  /** Per load — set to 0 to hide wash + dry (dry-only bookings only). */
+  /** Primary service — laundry / washing per load. */
   washPrice: number
+  /** Drying per load — add-on with wash or standalone dry-only. Set to 0 to hide drying. */
+  dryPrice: number
   foldingPrice: number
   sheetsPrice: number
 }
@@ -177,6 +178,7 @@ export interface Host {
   hasGenerator: boolean
   foldingPrice?: number
   washPrice?: number
+  dryPrice?: number
   sheetsPrice?: number
   address: string
   gateCode: string
@@ -284,6 +286,7 @@ export interface HostRequest {
   notes?: string
   paymentMethod?: PaymentMethod
   foldingService?: boolean
+  laundryServiceMode?: LaundryServiceMode
   washService?: boolean
   detergentOption?: DetergentOption | null
   dryerSheetsPacks?: number

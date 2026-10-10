@@ -381,16 +381,16 @@ export function HostProfileScreen() {
 
   const serviceDetailRows: DetailRowItem[] = [
     {
-      icon: 'wind',
-      label: 'Drying',
-      value: `${formatServicePrice(pricing.dryPrice)} ${toTitleCase('per load')}`,
+      icon: 'layers',
+      label: 'Laundry (wash)',
+      value: `${formatServicePrice(pricing.washPrice)} ${toTitleCase('per load')}`,
     },
   ]
-  if (pricing.washPrice > 0) {
+  if (pricing.dryPrice > 0) {
     serviceDetailRows.push({
-      icon: 'layers',
-      label: 'Wash + dry',
-      value: `${formatServicePrice(pricing.washPrice)} ${toTitleCase('per load')} · ${toTitleCase('dry-only also available')}`,
+      icon: 'wind',
+      label: 'Drying',
+      value: `${formatServicePrice(pricing.dryPrice)} ${toTitleCase('per load')} · ${toTitleCase('optional add-on or dry-only')}`,
     })
   }
   if (foldingPrice > 0) {
@@ -575,9 +575,9 @@ export function HostProfileScreen() {
       <View style={[styles.footerShell, { paddingBottom: footerBottomPad }]}>
         {!browseOnly ? (
           <SimpleBookFooterBar
-            price={formatHostPrice(pricing.dryPrice)}
-            isFree={pricing.dryPrice <= 0}
-            unit={toTitleCase(hostPriceLabel(pricing.dryPrice))}
+            price={formatHostPrice(pricing.washPrice)}
+            isFree={pricing.washPrice <= 0}
+            unit={toTitleCase(hostPriceLabel(pricing.washPrice))}
             action={
               <PrimaryButton
                 title={
@@ -597,9 +597,9 @@ export function HostProfileScreen() {
           />
         ) : (
           <SimpleBookFooterBar
-            price={formatHostPrice(pricing.dryPrice)}
-            isFree={pricing.dryPrice <= 0}
-            unit={toTitleCase(hostPriceLabel(pricing.dryPrice))}
+            price={formatHostPrice(pricing.washPrice)}
+            isFree={pricing.washPrice <= 0}
+            unit={toTitleCase(hostPriceLabel(pricing.washPrice))}
             action={<PrimaryButton title="Browse only" compact disabled onPress={() => {}} />}
           />
         )}

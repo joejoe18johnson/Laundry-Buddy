@@ -1,9 +1,11 @@
 -- Wash + dry service, detergent, and purchasable dryer sheet packs on bookings.
 
 ALTER TABLE public.hosts
-  ADD COLUMN IF NOT EXISTS wash_price numeric(10, 2);
+  ADD COLUMN IF NOT EXISTS wash_price numeric(10, 2),
+  ADD COLUMN IF NOT EXISTS dry_price numeric(10, 2);
 
 UPDATE public.hosts SET wash_price = 0 WHERE wash_price IS NULL;
+UPDATE public.hosts SET dry_price = price WHERE dry_price IS NULL;
 
 ALTER TABLE public.bookings
   ADD COLUMN IF NOT EXISTS wash_price numeric(10, 2),

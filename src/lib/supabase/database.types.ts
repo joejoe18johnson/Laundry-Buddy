@@ -78,6 +78,7 @@ export interface Database {
           has_generator: boolean
           folding_price: number | null
           wash_price: number | null
+          dry_price: number | null
           sheets_price: number | null
           address: string
           gate_code: string
@@ -109,6 +110,7 @@ export interface Database {
           has_generator?: boolean
           folding_price?: number | null
           wash_price?: number | null
+          dry_price?: number | null
           sheets_price?: number | null
           address: string
           gate_code?: string

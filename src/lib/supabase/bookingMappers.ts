@@ -136,6 +136,7 @@ export function bookingToHostRequest(booking: Booking): HostRequest {
     notes: booking.notes,
     paymentMethod: booking.paymentMethod,
     foldingService: booking.foldingService,
+    laundryServiceMode: booking.laundryServiceMode,
     washService: booking.washService,
     detergentOption: booking.detergentOption,
     dryerSheetsPacks: booking.dryerSheetsPacks,

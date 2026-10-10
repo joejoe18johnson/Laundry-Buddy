@@ -56,7 +56,7 @@ export function HostPricingSection({
     <>
       <Text style={styles.sectionHint}>
         {toTitleCase(
-          'You control what you charge. Guests see these rates on the map, your profile, and when booking. Set folding to $0 to hide that service.',
+          'Laundry (wash) is your main service. Set a drying price if guests can add drying or book dry-only. Set folding to $0 to hide it.',
         )}
       </Text>
       {market ? (
@@ -66,7 +66,7 @@ export function HostPricingSection({
             <Text style={styles.marketTitle}>{toTitleCase('Local market')}</Text>
           </View>
           <Text style={styles.marketAverage}>
-            {toTitleCase('Average dry price')}: {formatHostPrice(market.avgDryPrice)}
+            {toTitleCase('Average laundry price')}: {formatHostPrice(market.avgDryPrice)}
             {market.avgFoldingPrice != null
               ? ` · ${toTitleCase('Folding')} ${formatHostPrice(market.avgFoldingPrice)}`
               : ''}
@@ -79,6 +79,15 @@ export function HostPricingSection({
         </View>
       ) : null}
       <View style={styles.priceField}>
+        <Text style={styles.priceLabel}>{toTitleCase('Laundry / washing (per load)')}</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="number-pad"
+          value={String(pricing.washPrice)}
+          onChangeText={(v) => onPricingChange({ washPrice: parsePriceInput(v) })}
+        />
+      </View>
+      <View style={styles.priceField}>
         <Text style={styles.priceLabel}>{toTitleCase('Drying (per load)')}</Text>
         <TextInput
           style={styles.input}
@@ -86,17 +95,8 @@ export function HostPricingSection({
           value={String(pricing.dryPrice)}
           onChangeText={(v) => onPricingChange({ dryPrice: parsePriceInput(v) })}
         />
-      </View>
-      <View style={styles.priceField}>
-        <Text style={styles.priceLabel}>{toTitleCase('Wash + dry (per load, optional)')}</Text>
-        <TextInput
-          style={styles.input}
-          keyboardType="number-pad"
-          value={String(pricing.washPrice)}
-          onChangeText={(v) => onPricingChange({ washPrice: parsePriceInput(v) })}
-        />
         <Text style={styles.fieldHint}>
-          {toTitleCase('Set to $0 to offer dry-only. Wash is only available with dry — guests cannot book wash alone.')}
+          {toTitleCase('Set to $0 if you do not offer drying. Guests can add drying to laundry or book dry-only.')}
         </Text>
       </View>
       <View style={styles.priceField}>
@@ -109,8 +109,8 @@ export function HostPricingSection({
         />
       </View>
       <Text style={styles.guestSummary}>
-        {toTitleCase('Guests see')}: Dry {formatHostPrice(pricing.dryPrice)}
-        {pricing.washPrice > 0 ? ` · Wash + dry ${formatHostPrice(pricing.washPrice)}` : ''}
+        {toTitleCase('Guests see')}: Laundry {formatHostPrice(pricing.washPrice)}
+        {pricing.dryPrice > 0 ? ` · Dry ${formatHostPrice(pricing.dryPrice)}` : ''}
         {pricing.foldingPrice > 0 ? ` · Folding ${formatHostPrice(pricing.foldingPrice)}` : ''}
       </Text>
       <Text style={styles.sheetsNote}>{toTitleCase(DRYER_SHEETS_OFFER_HINT)}</Text>

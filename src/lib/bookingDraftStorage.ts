@@ -7,7 +7,7 @@ export function normalizeBookingDraft(draft: BookingDraft): BookingDraft {
   return {
     ...draft,
     sheetsOption: draft.sheetsOption ?? 'own',
-    laundryServiceMode: draft.laundryServiceMode ?? 'dry_only',
+    laundryServiceMode: draft.laundryServiceMode ?? 'wash_only',
     detergentOption: draft.detergentOption ?? 'own',
     dryerSheetsPacks: draft.dryerSheetsPacks ?? 0,
   }

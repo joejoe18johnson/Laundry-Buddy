@@ -363,7 +363,21 @@ export function DashboardScreen() {
               styles={styles}
             />
             <View style={styles.tags}>
-              {request.washService && <Text style={styles.tag}>{toTitleCase('Wash + dry')}</Text>}
+              <Text style={styles.tag}>
+                {toTitleCase(
+                  request.laundryServiceMode
+                    ? request.laundryServiceMode === 'wash_only'
+                      ? 'Laundry (wash)'
+                      : request.laundryServiceMode === 'dry_only'
+                        ? 'Dry only'
+                        : 'Wash + dry'
+                    : request.washService === false
+                      ? 'Dry only'
+                      : request.washService
+                        ? 'Wash + dry'
+                        : 'Laundry (wash)',
+                )}
+              </Text>
               {request.detergentOption === 'buy' && (
                 <Text style={styles.tag}>{toTitleCase('Detergent from host')}</Text>
               )}

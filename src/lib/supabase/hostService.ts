@@ -32,8 +32,14 @@ export function hostRowToHost(row: HostRow): Host {
     rating: Number(row.rating) || 5,
     reviewCount: row.review_count ?? 0,
     price: Number(row.price) || 0,
+    washPrice: Number(row.price) || 0,
+    dryPrice:
+      row.dry_price != null
+        ? Number(row.dry_price)
+        : row.wash_price != null
+          ? Number(row.wash_price)
+          : undefined,
     foldingPrice: row.folding_price != null ? Number(row.folding_price) : undefined,
-    washPrice: row.wash_price != null ? Number(row.wash_price) : undefined,
     sheetsPrice: row.sheets_price != null ? Number(row.sheets_price) : undefined,
     slotsLeft: row.slots_left ?? 1,
     turnaroundHours: row.turnaround_hours ?? 24,
@@ -79,13 +85,14 @@ export async function upsertHostListingToSupabase(
     district: host.district ?? null,
     rating: host.rating,
     review_count: host.reviewCount ?? 0,
-    price: pricing.dryPrice,
+    price: pricing.washPrice,
     slots_left: host.slotsLeft,
     turnaround_hours: host.turnaroundHours,
     dryer_type: host.dryerType,
     has_generator: host.hasGenerator,
     folding_price: pricing.foldingPrice,
-    wash_price: pricing.washPrice > 0 ? pricing.washPrice : null,
+    dry_price: pricing.dryPrice > 0 ? pricing.dryPrice : null,
+    wash_price: null,
     sheets_price: pricing.sheetsPrice,
     address: host.address,
     gate_code: host.gateCode,

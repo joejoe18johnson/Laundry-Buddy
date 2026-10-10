@@ -28,8 +28,8 @@ export function normalizeHostSettings(
   host?: Host | null,
 ): HostSettings {
   const pricing = settings?.pricing ?? {
-    dryPrice: host?.price ?? DEFAULT_HOST_PRICING.dryPrice,
-    washPrice: host?.washPrice ?? DEFAULT_HOST_PRICING.washPrice,
+    washPrice: host?.washPrice ?? host?.price ?? DEFAULT_HOST_PRICING.washPrice,
+    dryPrice: host?.dryPrice ?? DEFAULT_HOST_PRICING.dryPrice,
     foldingPrice: host?.foldingPrice ?? DEFAULT_HOST_PRICING.foldingPrice,
     sheetsPrice: host?.sheetsPrice ?? DEFAULT_HOST_PRICING.sheetsPrice,
   }
@@ -49,6 +49,7 @@ export function normalizeHostSettings(
       ...DEFAULT_HOST_PRICING,
       ...pricing,
       washPrice: pricing.washPrice ?? DEFAULT_HOST_PRICING.washPrice,
+      dryPrice: pricing.dryPrice ?? DEFAULT_HOST_PRICING.dryPrice,
       sheetsPrice: 0,
     },
     listing,

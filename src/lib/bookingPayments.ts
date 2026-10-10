@@ -45,10 +45,8 @@ export function sumBookingAmounts(bookings: Booking[]): number {
 }
 
 export function bookingExtrasSummary(booking: Booking): string | null {
-  const parts: string[] = []
-  if (resolveLaundryServiceMode(booking) === 'wash_and_dry') {
-    parts.push(laundryServiceLabel('wash_and_dry'))
-  }
+  const mode = resolveLaundryServiceMode(booking)
+  const parts: string[] = [laundryServiceLabel(mode)]
   if (booking.detergentOption === 'buy') parts.push('Detergent')
   if ((booking.dryerSheetsPacks ?? 0) > 0) parts.push('Dryer sheets')
   if (booking.foldingService) parts.push('Folding')

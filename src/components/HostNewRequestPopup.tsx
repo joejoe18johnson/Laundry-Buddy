@@ -8,7 +8,8 @@ import { formatMoney, CASH_PAY_AT_DROP_OFF } from '../lib/bookingPayments'
 import { toTitleCase } from '../lib/titleCase'
 import { useTheme } from '../context/ThemeContext'
 import { radius, spacing } from '../theme'
-import type { HostRequest } from '../types'
+import { laundryServiceLabel } from '../lib/hostPricing'
+import type { HostRequest, LaundryServiceMode } from '../types'
 
 type Props = {
   visible: boolean
@@ -34,6 +35,9 @@ export function HostNewRequestPopup({
   if (!request) return null
 
   const paymentLabel = request.paymentMethod === 'cash' ? CASH_PAY_AT_DROP_OFF : 'Bank transfer'
+  const serviceMode: LaundryServiceMode =
+    request.laundryServiceMode ??
+    (request.washService === false ? 'dry_only' : request.washService ? 'wash_and_dry' : 'wash_only')
   const totalLabel =
     request.totalAmount != null && request.totalAmount > 0
       ? formatMoney(request.totalAmount)
@@ -62,9 +66,7 @@ export function HostNewRequestPopup({
             <DetailChip icon="map-pin" label={request.location} styles={styles} />
             <DetailChip icon="credit-card" label={paymentLabel} styles={styles} />
             <DetailChip icon="dollar-sign" label={totalLabel} styles={styles} />
-            {request.washService ? (
-              <DetailChip icon="layers" label={toTitleCase('Wash + dry')} styles={styles} />
-            ) : null}
+            <DetailChip icon="layers" label={toTitleCase(laundryServiceLabel(serviceMode))} styles={styles} />
             {request.detergentOption === 'buy' ? (
               <DetailChip icon="tag" label={toTitleCase('Detergent from host')} styles={styles} />
             ) : null}
