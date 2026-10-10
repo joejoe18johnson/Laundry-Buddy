@@ -18,7 +18,7 @@ import { formatHostPrice, hostPriceLabel } from '../../lib/hostFilters'
 import { isTopRatedHost } from '../../lib/hostReputation'
 import { formatDryTimeStat, formatDryTimeInline } from '../../lib/turnaroundTime'
 import { bottomSafePadding } from '../../lib/safeAreaInsets'
-import { formatServicePrice, getHostPricing, DRYER_SHEETS_OFFER_HINT } from '../../lib/hostPricing'
+import { formatServicePrice, getHostPricing, hostServiceDetailItems } from '../../lib/hostPricing'
 import { formatDropOffAvailability } from '../../lib/dropOffAvailability'
 import { PAYMENT_METHOD_LABELS } from '../../lib/hostSettingsStorage'
 import { canBookOrHost } from '../../lib/identityVerification'
@@ -376,36 +376,23 @@ export function HostProfileScreen() {
   const gradient = coverColors[host.id] ?? [colors.black, colors.accent]
   const verified = user ? canBookOrHost(user) : false
   const activeLoadCount = activeGuestBookings.length
-  const foldingPrice = pricing.foldingPrice
   const displayRating = ratingSummary.reviewCount > 0 ? ratingSummary.rating : 0
 
-  const serviceDetailRows: DetailRowItem[] = [
-    {
-      icon: 'layers',
-      label: 'Laundry (wash)',
-      value: `${formatServicePrice(pricing.washPrice)} ${toTitleCase('per load')}`,
-    },
-  ]
-  if (pricing.dryPrice > 0) {
-    serviceDetailRows.push({
-      icon: 'wind',
-      label: 'Drying',
-      value: `${formatServicePrice(pricing.dryPrice)} ${toTitleCase('per load')} · ${toTitleCase('optional add-on or dry-only')}`,
-    })
-  }
-  if (foldingPrice > 0) {
-    serviceDetailRows.push({
-      icon: 'layers',
-      label: 'Folding',
-      value: `${formatServicePrice(foldingPrice)} ${toTitleCase('per load')}`,
-    })
-  }
+  const serviceDetailRows: DetailRowItem[] = hostServiceDetailItems(pricing).map((item) => ({
+    icon:
+      item.label === 'Laundry (wash)'
+        ? 'layers'
+        : item.label === 'Add detergent'
+          ? 'tag'
+          : item.label === 'Drying'
+            ? 'wind'
+            : item.label === 'Folding'
+              ? 'layers'
+              : 'tag',
+    label: item.label,
+    value: toTitleCase(item.value),
+  }))
   serviceDetailRows.push(
-    {
-      icon: 'tag',
-      label: 'Dryer sheets',
-      value: toTitleCase(DRYER_SHEETS_OFFER_HINT),
-    },
     {
       icon: 'wind',
       label: 'Typical dry time',

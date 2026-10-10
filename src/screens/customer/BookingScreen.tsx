@@ -18,8 +18,10 @@ import { getHostPaymentMethods, PAYMENT_METHOD_LABELS } from '../../lib/hostSett
 import {
   buildBookingPriceInput,
   calculateBookingTotal,
+  DETERGENT_ADD_ON_LABEL,
   DETERGENT_GUEST_HINT,
-  DRYER_SHEETS_OFFER_HINT,
+  DRYER_SHEETS_DETAIL,
+  hostServiceDetailItems,
   DRYER_SHEETS_PACK_PRICE,
   DRYER_SHEETS_PER_PACK,
   HOST_DETERGENT_PRICE,
@@ -203,15 +205,12 @@ export function BookingScreen() {
         {wizardStep === 0 ? (
           <>
             <View style={styles.rateCard}>
-              <Text style={styles.rateTitle}>{toTitleCase('Host Rates (Per Load)')}</Text>
-              <Text style={styles.rateLine}>{toTitleCase('Laundry (wash)')} — {formatServicePrice(washPrice)}</Text>
-              {showDry && (
-                <Text style={styles.rateLine}>{toTitleCase('Drying')} — {formatServicePrice(dryPrice)}</Text>
-              )}
-              {showFolding && (
-                <Text style={styles.rateLine}>{toTitleCase('Folding')} — {formatServicePrice(foldingPrice)}</Text>
-              )}
-              <Text style={styles.rateHint}>{toTitleCase(DRYER_SHEETS_OFFER_HINT)}</Text>
+              <Text style={styles.rateTitle}>{toTitleCase('Service details')}</Text>
+              {hostServiceDetailItems(pricing).map((item) => (
+                <Text key={item.label} style={styles.rateLine}>
+                  {toTitleCase(item.label)} — {toTitleCase(item.value)}
+                </Text>
+              ))}
             </View>
 
             <Text style={styles.section}>{toTitleCase('Service')}</Text>
@@ -318,12 +317,21 @@ export function BookingScreen() {
         {wizardStep === 1 ? (
           <>
             <Text style={styles.sectionHint}>
-              {toTitleCase('Add a photo of your load for the host — other details are optional.')}
+              {toTitleCase('Add a photo of your load for the host — customize services below in order.')}
             </Text>
 
             {includesWashing(serviceMode) ? (
               <>
-                <Text style={styles.section}>{toTitleCase('Detergent')}</Text>
+                <Text style={styles.section}>{toTitleCase('Laundry (wash)')}</Text>
+                <Text style={styles.sectionHint}>
+                  {toTitleCase(`Included — ${formatServicePrice(washPrice)} per load`)}
+                </Text>
+              </>
+            ) : null}
+
+            {includesWashing(serviceMode) ? (
+              <>
+                <Text style={styles.section}>{toTitleCase('Add detergent')}</Text>
                 <Text style={styles.sectionHint}>{toTitleCase(DETERGENT_GUEST_HINT)}</Text>
                 <OptionRow
                   label={toTitleCase('Bring my own')}
@@ -332,10 +340,55 @@ export function BookingScreen() {
                   onPress={() => patchBookingDraft({ detergentOption: 'own' })}
                 />
                 <OptionRow
-                  label={toTitleCase(`Buy from host — $${HOST_DETERGENT_PRICE} per load`)}
-                  sub={toTitleCase('Host provides detergent for your wash')}
+                  label={toTitleCase(DETERGENT_ADD_ON_LABEL)}
+                  sub={toTitleCase('Host provides detergent for your laundry')}
                   selected={detergentOption === 'buy'}
                   onPress={() => patchBookingDraft({ detergentOption: 'buy' })}
+                />
+              </>
+            ) : null}
+
+            {showDry && includesWashing(serviceMode) && serviceMode === 'wash_only' ? (
+              <>
+                <Text style={styles.section}>{toTitleCase('Drying')}</Text>
+                <OptionRow
+                  label={toTitleCase(`Add drying — ${formatServicePrice(dryPrice)} per load`)}
+                  sub={toTitleCase('Optional add-on to your laundry')}
+                  selected={false}
+                  onPress={() => patchBookingDraft({ laundryServiceMode: 'wash_and_dry' })}
+                />
+              </>
+            ) : null}
+
+            {showDry && serviceMode === 'dry_only' ? (
+              <>
+                <Text style={styles.section}>{toTitleCase('Drying')}</Text>
+                <Text style={styles.sectionHint}>
+                  {toTitleCase(`Included — ${formatServicePrice(dryPrice)} per load · laundry not included`)}
+                </Text>
+              </>
+            ) : null}
+
+            {showDry && serviceMode === 'wash_and_dry' ? (
+              <>
+                <Text style={styles.section}>{toTitleCase('Drying')}</Text>
+                <OptionRow
+                  label={toTitleCase(`Drying — ${formatServicePrice(dryPrice)} per load`)}
+                  sub={toTitleCase('Included with laundry · tap to remove drying')}
+                  selected
+                  onPress={() => patchBookingDraft({ laundryServiceMode: 'wash_only', dryerSheetsPacks: 0 })}
+                />
+              </>
+            ) : null}
+
+            {showFolding ? (
+              <>
+                <Text style={styles.section}>{toTitleCase('Folding')}</Text>
+                <OptionRow
+                  label={toTitleCase(`Add folding — ${formatServicePrice(foldingPrice)} per load`)}
+                  sub={toTitleCase('Host folds clothes after drying')}
+                  selected={foldingService}
+                  onPress={() => patchBookingDraft({ foldingService: !foldingService })}
                 />
               </>
             ) : null}
@@ -343,7 +396,7 @@ export function BookingScreen() {
             {includesDrying(serviceMode) ? (
               <>
                 <Text style={styles.section}>{toTitleCase('Dryer sheets')}</Text>
-                <Text style={styles.sectionHint}>{toTitleCase(DRYER_SHEETS_OFFER_HINT)}</Text>
+                <Text style={styles.sectionHint}>{toTitleCase(DRYER_SHEETS_DETAIL)}</Text>
                 <View style={styles.stepper}>
                   <Pressable
                     onPress={() => patchBookingDraft({ dryerSheetsPacks: Math.max(0, dryerSheetsPacks - 1) })}
@@ -356,8 +409,8 @@ export function BookingScreen() {
                     <Text style={styles.stepLabel}>
                       {toTitleCase(
                         dryerSheetsPacks === 0
-                          ? 'None — bring your own or skip'
-                          : `pack${dryerSheetsPacks === 1 ? '' : 's'} · $${DRYER_SHEETS_PACK_PRICE} each (${DRYER_SHEETS_PER_PACK} sheets)`,
+                          ? 'Bring your own or skip'
+                          : `${dryerSheetsPacks} pack${dryerSheetsPacks === 1 ? '' : 's'} · $${DRYER_SHEETS_PACK_PRICE} (${DRYER_SHEETS_PER_PACK} sheets each)`,
                       )}
                     </Text>
                   </View>
@@ -370,18 +423,6 @@ export function BookingScreen() {
                 </View>
               </>
             ) : null}
-
-            {showFolding && (
-              <>
-                <Text style={styles.section}>{toTitleCase('Folding Service')}</Text>
-                <OptionRow
-                  label={`Add Folding — ${formatServicePrice(foldingPrice)} Per Load`}
-                  sub="Host Folds Clothes After Drying"
-                  selected={foldingService}
-                  onPress={() => patchBookingDraft({ foldingService: !foldingService })}
-                />
-              </>
-            )}
 
             <Text style={styles.section}>{toTitleCase("What's In Your Load?")}</Text>
             <ClothesListEditor items={clothesList} onChange={(items) => patchBookingDraft({ clothesList: items })} />
@@ -417,36 +458,60 @@ export function BookingScreen() {
                   label={toTitleCase('Loads')}
                   value={`${loads} · ${PAYMENT_METHOD_LABELS[paymentMethod]}`}
                 />
-                <ReviewMetaRow
-                  icon="wind"
-                  label={toTitleCase('Service')}
-                  value={toTitleCase(laundryServiceLabel(serviceMode))}
-                />
+                {includesWashing(serviceMode) ? (
+                  <ReviewMetaRow
+                    icon="layers"
+                    label={toTitleCase('Laundry (wash)')}
+                    value={toTitleCase(`${formatServicePrice(washPrice)} per load`)}
+                  />
+                ) : null}
                 {includesWashing(serviceMode) ? (
                   <ReviewMetaRow
                     icon="tag"
-                    label={toTitleCase('Detergent')}
+                    label={toTitleCase('Add detergent')}
                     value={
                       detergentOption === 'buy'
-                        ? toTitleCase(`From host · $${HOST_DETERGENT_PRICE}/load`)
-                        : toTitleCase('Bringing my own')
+                        ? toTitleCase(`Added · $${HOST_DETERGENT_PRICE}/load`)
+                        : toTitleCase('Bring my own')
                     }
                   />
                 ) : null}
-                {dryerSheetsPacks > 0 ? (
+                {includesDrying(serviceMode) ? (
                   <ReviewMetaRow
-                    icon="tag"
-                    label={toTitleCase('Dryer sheets')}
-                    value={toTitleCase(
-                      `${dryerSheetsPacks} pack${dryerSheetsPacks === 1 ? '' : 's'} · $${DRYER_SHEETS_PACK_PRICE} each`,
-                    )}
+                    icon="wind"
+                    label={toTitleCase('Drying')}
+                    value={toTitleCase(`${formatServicePrice(dryPrice)} per load`)}
                   />
                 ) : null}
                 {showFolding ? (
                   <ReviewMetaRow
                     icon="layers"
                     label={toTitleCase('Folding')}
-                    value={foldingService ? toTitleCase('Added') : toTitleCase('Not added')}
+                    value={
+                      foldingService
+                        ? toTitleCase(`Added · ${formatServicePrice(foldingPrice)}/load`)
+                        : toTitleCase('Not added')
+                    }
+                  />
+                ) : null}
+                {includesDrying(serviceMode) ? (
+                  <ReviewMetaRow
+                    icon="tag"
+                    label={toTitleCase('Dryer sheets')}
+                    value={
+                      dryerSheetsPacks > 0
+                        ? toTitleCase(
+                            `${dryerSheetsPacks} pack${dryerSheetsPacks === 1 ? '' : 's'} · $${DRYER_SHEETS_PACK_PRICE} (${DRYER_SHEETS_PER_PACK} each)`,
+                          )
+                        : toTitleCase(DRYER_SHEETS_DETAIL)
+                    }
+                  />
+                ) : null}
+                {!includesWashing(serviceMode) ? (
+                  <ReviewMetaRow
+                    icon="wind"
+                    label={toTitleCase('Service')}
+                    value={toTitleCase(laundryServiceLabel(serviceMode))}
                   />
                 ) : null}
                 <ReviewMetaRow

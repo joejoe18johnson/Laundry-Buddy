@@ -15,10 +15,14 @@ export const HOST_DETERGENT_PRICE = 1
 export const DRYER_SHEETS_PACK_PRICE = 1
 export const DRYER_SHEETS_PER_PACK = 2
 
-export const DRYER_SHEETS_OFFER_HINT = `Add dryer sheets from your host — $${DRYER_SHEETS_PACK_PRICE} for ${DRYER_SHEETS_PER_PACK} sheets per pack. Bring your own if you prefer.`
+export const DRYER_SHEETS_DETAIL = `${DRYER_SHEETS_PER_PACK} for $${DRYER_SHEETS_PACK_PRICE} or bring your own`
+
+export const DRYER_SHEETS_OFFER_HINT = `Dryer sheets — ${DRYER_SHEETS_DETAIL}.`
+
+export const DETERGENT_ADD_ON_LABEL = `Add detergent — $${HOST_DETERGENT_PRICE} per load`
 
 export const DETERGENT_GUEST_HINT =
-  'Bring your own detergent or buy from your host for $1 per load when laundry (wash) is included.'
+  'Bring your own detergent, or add detergent from your host for $1 per load.'
 
 /** Shown on booking — a load is a standard load; hosts rely on the guest photo. */
 export const LOAD_PHOTO_GUEST_HINT =
@@ -88,6 +92,42 @@ export function includesDrying(mode: LaundryServiceMode): boolean {
 
 export function formatServicePrice(amount: number): string {
   return amount <= 0 ? 'Free' : `$${amount}`
+}
+
+export type HostServiceDetailItem = {
+  label: string
+  value: string
+}
+
+/** Guest-facing service list — fixed order on profile and booking. */
+export function hostServiceDetailItems(pricing: HostPricing): HostServiceDetailItem[] {
+  const items: HostServiceDetailItem[] = [
+    {
+      label: 'Laundry (wash)',
+      value: `${formatServicePrice(pricing.washPrice)} per load`,
+    },
+    {
+      label: 'Add detergent',
+      value: `$${HOST_DETERGENT_PRICE} per load or bring your own`,
+    },
+  ]
+  if (pricing.dryPrice > 0) {
+    items.push({
+      label: 'Drying',
+      value: `${formatServicePrice(pricing.dryPrice)} per load`,
+    })
+  }
+  if (pricing.foldingPrice > 0) {
+    items.push({
+      label: 'Folding',
+      value: `${formatServicePrice(pricing.foldingPrice)} per load`,
+    })
+  }
+  items.push({
+    label: 'Dryer sheets',
+    value: DRYER_SHEETS_DETAIL,
+  })
+  return items
 }
 
 export function describeHostPricing(pricing: HostPricing): string {
@@ -221,25 +261,25 @@ export type BookingFooterLine = {
 /** Optional add-ons for the booking footer — base laundry total lives in the price badge. */
 export function bookingFooterAddonLines(input: BookingPriceInput): BookingFooterLine[] {
   const lines: BookingFooterLine[] = []
+  const detergent = detergentTotal(input)
+  if (detergent > 0) {
+    lines.push({ label: 'Add detergent', amount: detergent })
+  }
   if (includesDrying(input.laundryServiceMode) && input.dryPrice > 0) {
     lines.push({
       label: 'Drying',
       amount: input.dryPrice * input.loads,
     })
   }
-  const detergent = detergentTotal(input)
-  if (detergent > 0) {
-    lines.push({ label: 'Detergent', amount: detergent })
-  }
-  const sheets = dryerSheetsTotal(input)
-  if (sheets > 0) {
-    lines.push({ label: 'Dryer sheets', amount: sheets })
-  }
   if (input.foldingService && input.foldingPrice > 0) {
     lines.push({
       label: 'Folding',
       amount: input.foldingPrice * input.loads,
     })
+  }
+  const sheets = dryerSheetsTotal(input)
+  if (sheets > 0) {
+    lines.push({ label: 'Dryer sheets', amount: sheets })
   }
   return lines
 }
@@ -267,6 +307,15 @@ export function bookingReceiptLines(input: BookingPriceInput): BookingReceiptLin
     })
   }
 
+  const detergent = detergentTotal(input)
+  if (detergent > 0) {
+    lines.push({
+      label: 'Add detergent',
+      detail: `${loadLabel} · from host`,
+      amount: detergent,
+    })
+  }
+
   if (includesDrying(input.laundryServiceMode) && input.dryPrice > 0) {
     lines.push({
       label: 'Drying',
@@ -275,12 +324,11 @@ export function bookingReceiptLines(input: BookingPriceInput): BookingReceiptLin
     })
   }
 
-  const detergent = detergentTotal(input)
-  if (detergent > 0) {
+  if (input.foldingService && input.foldingPrice > 0) {
     lines.push({
-      label: 'Detergent',
-      detail: `${loadLabel} · from host`,
-      amount: detergent,
+      label: 'Folding',
+      detail: loadLabel,
+      amount: input.foldingPrice * input.loads,
     })
   }
 
@@ -290,14 +338,6 @@ export function bookingReceiptLines(input: BookingPriceInput): BookingReceiptLin
       label: 'Dryer sheets',
       detail: `${input.dryerSheetsPacks} pack${input.dryerSheetsPacks === 1 ? '' : 's'} (${DRYER_SHEETS_PER_PACK} each)`,
       amount: sheets,
-    })
-  }
-
-  if (input.foldingService && input.foldingPrice > 0) {
-    lines.push({
-      label: 'Folding',
-      detail: loadLabel,
-      amount: input.foldingPrice * input.loads,
     })
   }
 

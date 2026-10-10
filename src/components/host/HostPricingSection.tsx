@@ -7,7 +7,8 @@ import { formatHostPrice } from '../../lib/hostFilters'
 import {
   buildHostPricingHints,
   computeMarketPricingSnapshot,
-  DRYER_SHEETS_OFFER_HINT,
+  DRYER_SHEETS_DETAIL,
+  hostServiceDetailItems,
   parsePriceInput,
 } from '../../lib/hostPricing'
 import { toTitleCase } from '../../lib/titleCase'
@@ -108,12 +109,15 @@ export function HostPricingSection({
           onChangeText={(v) => onPricingChange({ foldingPrice: parsePriceInput(v) })}
         />
       </View>
-      <Text style={styles.guestSummary}>
-        {toTitleCase('Guests see')}: Laundry {formatHostPrice(pricing.washPrice)}
-        {pricing.dryPrice > 0 ? ` · Dry ${formatHostPrice(pricing.dryPrice)}` : ''}
-        {pricing.foldingPrice > 0 ? ` · Folding ${formatHostPrice(pricing.foldingPrice)}` : ''}
-      </Text>
-      <Text style={styles.sheetsNote}>{toTitleCase(DRYER_SHEETS_OFFER_HINT)}</Text>
+      <View style={styles.guestDetailList}>
+        <Text style={styles.guestSummary}>{toTitleCase('Guests see (in this order)')}</Text>
+        {hostServiceDetailItems(pricing).map((item) => (
+          <Text key={item.label} style={styles.guestDetailLine}>
+            {toTitleCase(item.label)} — {item.value}
+          </Text>
+        ))}
+      </View>
+      <Text style={styles.sheetsNote}>{toTitleCase(`Dryer sheets: ${DRYER_SHEETS_DETAIL}`)}</Text>
       {showSaveButton && onSave ? (
         <PrimaryButton
           title={saved ? toTitleCase('Prices saved') : toTitleCase('Save prices')}
@@ -186,7 +190,9 @@ function createStyles(colors: ReturnType<typeof useTheme>['colors']) {
       color: colors.black,
       backgroundColor: colors.white,
     },
-    guestSummary: { fontSize: 13, color: colors.gray600, fontWeight: '600', lineHeight: 18 },
+    guestDetailList: { gap: 4 },
+    guestSummary: { fontSize: 13, color: colors.gray600, fontWeight: '700', lineHeight: 18 },
+    guestDetailLine: { fontSize: 13, color: colors.gray600, lineHeight: 18 },
     sheetsNote: { fontSize: 12, color: colors.gray500, lineHeight: 17 },
     editLink: {
       flexDirection: 'row',
