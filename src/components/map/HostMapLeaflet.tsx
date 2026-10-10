@@ -1,10 +1,29 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 import { WebView } from 'react-native-webview'
-import { buildLeafletMapHtml } from '../../lib/leafletMapHtml'
+import { buildLeafletMapHtml, type MapHostPin } from '../../lib/leafletMapHtml'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
 import { colors } from '../../theme'
 import type { HostMapProps } from '../HostMap'
+
+function hostsToMapPins(
+  hosts: HostMapProps['hosts'],
+  nearbyHostIds: ReadonlySet<string>,
+  listPriceFor: (host: HostMapProps['hosts'][number]) => number | null,
+): MapHostPin[] {
+  return hosts.map((h) => {
+    const listPrice = listPriceFor(h)
+    return {
+      id: h.id,
+      lat: h.latitude,
+      lng: h.longitude,
+      price: listPrice ?? 0,
+      name: h.name,
+      inRadius: nearbyHostIds.has(h.id),
+      unavailable: listPrice == null,
+    }
+  })
+}
 
 /**
  * Interactive Positron map via MapLibre GL JS in a WebView.
@@ -18,8 +37,10 @@ export function HostMapLeaflet({
   radiusKm = SEARCH_RADIUS_KM,
   fitToResults = false,
   fitToHosts,
+  resolveListPrice,
 }: HostMapProps) {
   const webRef = useRef<WebView>(null)
+  const listPriceFor = resolveListPrice ?? ((host: { price: number }) => host.price)
 
   const mapKey = useMemo(
     () =>
@@ -27,34 +48,24 @@ export function HostMapLeaflet({
     [radiusKm, userLocation.latitude, userLocation.longitude],
   )
 
-  // Rebuild the WebView only when search center/radius changes — host pin updates go via injectJavaScript.
-  const html = useMemo(
-    () => buildLeafletMapHtml(hosts, nearbyHostIds, userLocation, radiusKm, fitToResults, fitToHosts),
-    [mapKey, fitToResults],
+  const hostPins = useMemo(
+    () => hostsToMapPins(hosts, nearbyHostIds, listPriceFor),
+    [hosts, listPriceFor, nearbyHostIds],
   )
 
-  const hostsPayload = useMemo(
-    () =>
-      JSON.stringify(
-        hosts.map((h) => ({
-          id: h.id,
-          lat: h.latitude,
-          lng: h.longitude,
-          price: h.price,
-          name: h.name,
-          inRadius: nearbyHostIds.has(h.id),
-        })),
-      ),
-    [hosts, nearbyHostIds],
-  )
-
-  const fitPayload = useMemo(
-    () =>
-      JSON.stringify(
-        (fitToHosts ?? hosts).map((h) => ({ lat: h.latitude, lng: h.longitude })),
-      ),
+  const fitCoords = useMemo(
+    () => (fitToHosts ?? hosts).map((h) => ({ lat: h.latitude, lng: h.longitude })),
     [fitToHosts, hosts],
   )
+
+  const html = useMemo(
+    () => buildLeafletMapHtml(hostPins, userLocation, radiusKm, fitToResults, fitCoords),
+    [fitCoords, fitToResults, hostPins, radiusKm, userLocation],
+  )
+
+  const hostsPayload = useMemo(() => JSON.stringify(hostPins), [hostPins])
+
+  const fitPayload = useMemo(() => JSON.stringify(fitCoords), [fitCoords])
 
   useEffect(() => {
     webRef.current?.injectJavaScript(`

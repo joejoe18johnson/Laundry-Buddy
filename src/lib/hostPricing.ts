@@ -100,6 +100,33 @@ export type HostServiceDetailItem = {
 }
 
 /** Guest-facing service list — fixed order on profile and booking. */
+/** Per-load price shown on the map and host list for the selected service filter. */
+export function hostListPriceForService(
+  host: Host,
+  mode: LaundryServiceMode,
+  settings?: HostSettings,
+): number | null {
+  const pricing = getHostPricing(host, settings)
+  if (mode === 'wash_only') {
+    return pricing.washPrice > 0 ? pricing.washPrice : null
+  }
+  if (mode === 'dry_only') {
+    return pricing.dryPrice > 0 ? pricing.dryPrice : null
+  }
+  if (pricing.washPrice > 0 && pricing.dryPrice > 0) {
+    return pricing.washPrice + pricing.dryPrice
+  }
+  if (pricing.washPrice > 0) return pricing.washPrice
+  if (pricing.dryPrice > 0) return pricing.dryPrice
+  return null
+}
+
+export function mapServiceFilterShortLabel(mode: LaundryServiceMode): string {
+  if (mode === 'wash_only') return 'Laundry'
+  if (mode === 'dry_only') return 'Dry'
+  return 'Wash + dry'
+}
+
 export function hostServiceDetailItems(pricing: HostPricing): HostServiceDetailItem[] {
   const items: HostServiceDetailItem[] = [
     {

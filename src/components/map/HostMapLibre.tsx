@@ -7,6 +7,7 @@ import { circleRing } from '../../lib/geo'
 import { zoomLevelForRadiusKm, OPENFREEMAP_STYLE_URL } from '../../lib/mapRegion'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
 import type { HostMapProps } from '../HostMap'
+import type { LaundryServiceMode } from '../../types'
 
 /** MapLibre + OpenFreeMap Positron — light gray map (native builds). */
 export function HostMapLibre({
@@ -15,7 +16,11 @@ export function HostMapLibre({
   onHostPress,
   userLocation,
   radiusKm = SEARCH_RADIUS_KM,
+  resolveListPrice,
+  serviceFilter = 'wash_only',
 }: HostMapProps) {
+  const listPriceFor = resolveListPrice ?? ((host: { price: number }) => host.price)
+  const filterMode = serviceFilter as LaundryServiceMode
   const cameraRef = useRef<ComponentRef<typeof Camera>>(null)
   const zoomLevel = useMemo(
     () => zoomLevelForRadiusKm(radiusKm, userLocation),
@@ -116,20 +121,25 @@ export function HostMapLibre({
             }}
           />
         </ShapeSource>
-        {sortedHosts.map((host) => (
+        {sortedHosts.map((host) => {
+          const listPrice = listPriceFor(host)
+          const markerKey = hostMarkerRenderKey(host, filterMode, listPrice)
+          return (
           <MarkerView
-            key={hostMarkerRenderKey(host)}
+            key={markerKey}
             coordinate={[host.longitude, host.latitude]}
             anchor={{ x: 0.5, y: 0.5 }}
           >
             <HostPricePin
-              key={hostMarkerRenderKey(host)}
-              price={host.price}
+              key={markerKey}
+              price={listPrice ?? 0}
+              unavailable={listPrice == null}
               inRadius={nearbyHostIds.has(host.id)}
               onPress={() => onHostPress(host)}
             />
           </MarkerView>
-        ))}
+          )
+        })}
       </MapView>
     </View>
   )

@@ -43,9 +43,20 @@ import { milesToKm } from '../../lib/geo'
 import { formatRadiusMilesLabel } from '../../lib/locationPreferences'
 import { canBookOrHost, getIdentityVerification } from '../../lib/identityVerification'
 import { toTitleCase } from '../../lib/titleCase'
-import type { Host } from '../../types'
+import { hostListPriceForService, mapServiceFilterShortLabel } from '../../lib/hostPricing'
+import type { Host, LaundryServiceMode } from '../../types'
 import { useTheme } from '../../context/ThemeContext'
 import { radius, spacing } from '../../theme'
+
+const SERVICE_FILTER_OPTIONS: {
+  value: LaundryServiceMode
+  label: string
+  icon: 'layers' | 'wind' | 'check-circle'
+}[] = [
+  { value: 'wash_only', label: 'Laundry', icon: 'layers' },
+  { value: 'dry_only', label: 'Dry', icon: 'wind' },
+  { value: 'wash_and_dry', label: 'Wash + dry', icon: 'check-circle' },
+]
 
 const SORT_OPTIONS: { value: HostSort; label: string; icon: 'map-pin' | 'dollar-sign' | 'star' | 'clock' }[] = [
   { value: 'nearest', label: 'Nearest', icon: 'map-pin' },
@@ -97,7 +108,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
   const styles = useMemo(() => createHomeStyles(colors), [colors])
   const { showToast } = useToast()
   const { user } = useAuth()
-  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, refreshAtHome, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusMiles, setSearchRadiusMiles, focusSearchOnArea, navigate } = useApp()
+  const { viewHostProfile, onlineHosts, allOnlineHosts, refreshHostData, refreshAtHome, userLocation, requestUserLocation, locationLoading, userLocationLabel, searchRadiusMiles, setSearchRadiusMiles, focusSearchOnArea, navigate, getSettingsForHost } = useApp()
   const totalHosts = getAvailableHosts().length
   const isHostViewer = user?.role === 'host'
   const visibleOnlineHosts = useMemo(
@@ -108,6 +119,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
     () => excludeViewerHostListing(allOnlineHosts, user?.role, user?.id),
     [allOnlineHosts, user?.id, user?.role],
   )
+  const [serviceFilter, setServiceFilter] = useState<LaundryServiceMode>('wash_only')
   const [filters, setFilters] = useState<HostFilters>(DEFAULT_HOST_FILTERS)
   const [sort, setSort] = useState<HostSort>('nearest')
   const [searchQuery, setSearchQuery] = useState('')
@@ -136,9 +148,23 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
 
   const nearbyHostIds = useMemo(() => new Set(visibleOnlineHosts.map((h) => h.id)), [visibleOnlineHosts])
 
+  const resolveListPrice = useCallback(
+    (host: Host) => hostListPriceForService(host, serviceFilter, getSettingsForHost(host.hostUserId)),
+    [getSettingsForHost, serviceFilter],
+  )
+
   const hosts = useMemo(
-    () => filterAndSortHosts(hostSource, filters, sort, searchQuery),
-    [hostSource, filters, sort, searchQuery],
+    () => filterAndSortHosts(hostSource, filters, sort, searchQuery, resolveListPrice),
+    [hostSource, filters, resolveListPrice, sort, searchQuery],
+  )
+
+  const hostsForList = useMemo(
+    () =>
+      hosts.map((host) => ({
+        ...host,
+        price: resolveListPrice(host) ?? host.price,
+      })),
+    [hosts, resolveListPrice],
   )
   const locations = useMemo(() => getFilterAreas(), [])
   const activeFilterCount = countActiveFilters(filters)
@@ -170,8 +196,8 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
     if (trimmedSearch) {
       return `${hosts.length} host${hosts.length === 1 ? '' : 's'} for “${trimmedSearch}”`
     }
-    return `${hosts.length} within ${formatRadiusMilesLabel(searchRadiusMiles)} · ${userLocationLabel}`
-  }, [filters.topRated, hosts.length, isHostViewer, searchRadiusMiles, trimmedSearch, userLocationLabel])
+    return `${hosts.length} within ${formatRadiusMilesLabel(searchRadiusMiles)} · ${mapServiceFilterShortLabel(serviceFilter)} prices · ${userLocationLabel}`
+  }, [filters.topRated, hosts.length, isHostViewer, searchRadiusMiles, serviceFilter, trimmedSearch, userLocationLabel])
 
   const animateToSnap = useCallback(
     (point: SnapPoint) => {
@@ -315,6 +341,29 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
     [],
   )
 
+  const serviceFilterBar = (
+    <View style={styles.section}>
+      <Text style={styles.sectionLabel}>{toTitleCase('Show prices for')}</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.chipRow}
+        keyboardShouldPersistTaps="handled"
+      >
+        {SERVICE_FILTER_OPTIONS.map((opt) => (
+          <ChoiceChip
+            key={opt.value}
+            label={opt.label}
+            icon={opt.icon}
+            size="compact"
+            selected={serviceFilter === opt.value}
+            onPress={() => setServiceFilter(opt.value)}
+          />
+        ))}
+      </ScrollView>
+    </View>
+  )
+
   const showFullControls = snap !== 'map'
   const verification = user ? getIdentityVerification(user) : null
   const showVerificationBanner = !!user && !canBookOrHost(user)
@@ -329,6 +378,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
         />
       ) : null}
       <Text style={styles.sheetSub}>{resultLabel}</Text>
+      {serviceFilterBar}
 
       {areaChips.length > 0 && (
         <View style={styles.section}>
@@ -451,6 +501,8 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
           radiusKm={milesToKm(searchRadiusMiles)}
           fitToResults={!!trimmedSearch && !isBelizeFilterArea(trimmedSearch)}
           fitToHosts={trimmedSearch && !isBelizeFilterArea(trimmedSearch) ? hosts : undefined}
+          resolveListPrice={resolveListPrice}
+          serviceFilter={serviceFilter}
         />
         {snap !== 'full' && hosts.length > 0 && (
           <View style={styles.mapBadgeWrap} pointerEvents="box-none">
@@ -504,9 +556,10 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
           radiusMiles={searchRadiusMiles}
           onOpenRadius={() => setRadiusSheetOpen(true)}
         />
+        {snap === 'map' ? serviceFilterBar : null}
 
         <FlatList
-          data={hosts}
+          data={hostsForList}
           keyExtractor={(item) => item.id}
           renderItem={renderHost}
           ListHeaderComponent={listHeader}
@@ -544,6 +597,7 @@ export function HomeScreen({ refreshKey = 0 }: { refreshKey?: number }) {
         visible={searchOpen}
         initialQuery={searchQuery}
         sort={sort}
+        serviceFilter={serviceFilter}
         onClose={() => setSearchOpen(false)}
         onQueryChange={handleSearchQueryChange}
       />

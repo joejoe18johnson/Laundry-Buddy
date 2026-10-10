@@ -2,7 +2,7 @@ import { Component, type ReactNode } from 'react'
 import Constants from 'expo-constants'
 import { NativeModules } from 'react-native'
 import { HostMapLeaflet } from './map/HostMapLeaflet'
-import type { Host } from '../types'
+import type { Host, LaundryServiceMode } from '../types'
 
 export interface HostMapProps {
   hosts: Host[]
@@ -14,6 +14,9 @@ export interface HostMapProps {
   fitToResults?: boolean
   /** When set with fitToResults, map bounds fit these hosts (e.g. search matches). */
   fitToHosts?: Host[]
+  /** Per-load price for the current service filter (wash / dry / wash+dry). */
+  resolveListPrice?: (host: Host) => number | null
+  serviceFilter?: LaundryServiceMode
 }
 
 /** Catches native map crashes and falls back to Leaflet. */

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   FlatList,
   Keyboard,
@@ -32,7 +32,8 @@ import {
   type HostSort,
   type SearchSuggestion,
 } from '../lib/hostFilters'
-import type { Host, HostReview } from '../types'
+import { hostListPriceForService } from '../lib/hostPricing'
+import type { Host, HostReview, LaundryServiceMode } from '../types'
 import { toTitleCase } from '../lib/titleCase'
 import { colors, radius, spacing } from '../theme'
 
@@ -40,6 +41,7 @@ type Props = {
   visible: boolean
   initialQuery?: string
   sort: HostSort
+  serviceFilter?: LaundryServiceMode
   onClose: () => void
   onQueryChange?: (query: string) => void
 }
@@ -125,8 +127,15 @@ function SuggestionRow({
   )
 }
 
-export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, onQueryChange }: Props) {
-  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, focusSearchOnArea, searchRadiusMiles, setSearchRadiusMiles, getReviewsForHost } =
+export function HostSearchOverlay({
+  visible,
+  initialQuery = '',
+  sort,
+  serviceFilter = 'wash_only',
+  onClose,
+  onQueryChange,
+}: Props) {
+  const { allOnlineHosts, onlineHosts, viewHostProfile, requestUserLocation, locationLoading, focusSearchOnArea, searchRadiusMiles, setSearchRadiusMiles, getReviewsForHost, getSettingsForHost } =
     useApp()
   const { user } = useAuth()
   const [query, setQuery] = useState(initialQuery)
@@ -149,15 +158,26 @@ export function HostSearchOverlay({ visible, initialQuery = '', sort, onClose, o
   const areaSearchActive = trimmed.length > 0 && isBelizeFilterArea(trimmed)
   const nearbyIds = useMemo(() => new Set(visibleOnlineHosts.map((h) => h.id)), [visibleOnlineHosts])
 
+  const resolveListPrice = useCallback(
+    (host: Host) => hostListPriceForService(host, serviceFilter, getSettingsForHost(host.hostUserId)),
+    [getSettingsForHost, serviceFilter],
+  )
+
   const results = useMemo(
-    () =>
-      filterAndSortHosts(
+    () => {
+      const filtered = filterAndSortHosts(
         areaSearchActive ? visibleOnlineHosts : visibleAllOnlineHosts,
         DEFAULT_HOST_FILTERS,
         sort,
         query,
-      ),
-    [areaSearchActive, query, sort, visibleAllOnlineHosts, visibleOnlineHosts],
+        resolveListPrice,
+      )
+      return filtered.map((host) => ({
+        ...host,
+        price: resolveListPrice(host) ?? host.price,
+      }))
+    },
+    [areaSearchActive, query, resolveListPrice, sort, visibleAllOnlineHosts, visibleOnlineHosts],
   )
 
   const suggestions = useMemo(

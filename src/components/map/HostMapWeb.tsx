@@ -1,6 +1,6 @@
 import { createElement, useEffect, useMemo, useRef } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { buildLeafletMapHtml } from '../../lib/leafletMapHtml'
+import { buildLeafletMapHtml, type MapHostPin } from '../../lib/leafletMapHtml'
 import { SEARCH_RADIUS_KM } from '../../lib/geo'
 import { useTheme } from '../../context/ThemeContext'
 import type { HostMapProps } from '../HostMap'
@@ -14,9 +14,11 @@ export function HostMapWeb({
   radiusKm = SEARCH_RADIUS_KM,
   fitToResults = false,
   fitToHosts,
+  resolveListPrice,
 }: HostMapProps) {
   const { colors } = useTheme()
   const iframeRef = useRef<HTMLIFrameElement>(null)
+  const listPriceFor = resolveListPrice ?? ((host: { price: number }) => host.price)
 
   const mapKey = useMemo(
     () =>
@@ -24,25 +26,34 @@ export function HostMapWeb({
     [radiusKm, userLocation.latitude, userLocation.longitude],
   )
 
-  const html = useMemo(
-    () => buildLeafletMapHtml(hosts, nearbyHostIds, userLocation, radiusKm, fitToResults, fitToHosts),
-    [mapKey, fitToResults, fitToHosts, hosts, nearbyHostIds, radiusKm, userLocation],
-  )
-
-  const hostsPayload = useMemo(
+  const hostPins = useMemo<MapHostPin[]>(
     () =>
-      JSON.stringify(
-        hosts.map((h) => ({
+      hosts.map((h) => {
+        const listPrice = listPriceFor(h)
+        return {
           id: h.id,
           lat: h.latitude,
           lng: h.longitude,
-          price: h.price,
+          price: listPrice ?? 0,
           name: h.name,
           inRadius: nearbyHostIds.has(h.id),
-        })),
-      ),
-    [hosts, nearbyHostIds],
+          unavailable: listPrice == null,
+        }
+      }),
+    [hosts, listPriceFor, nearbyHostIds],
   )
+
+  const fitCoords = useMemo(
+    () => (fitToHosts ?? hosts).map((h) => ({ lat: h.latitude, lng: h.longitude })),
+    [fitToHosts, hosts],
+  )
+
+  const html = useMemo(
+    () => buildLeafletMapHtml(hostPins, userLocation, radiusKm, fitToResults, fitCoords),
+    [fitCoords, fitToResults, hostPins, radiusKm, userLocation],
+  )
+
+  const hostsPayload = useMemo(() => JSON.stringify(hostPins), [hostPins])
 
   const fitPayload = useMemo(
     () =>

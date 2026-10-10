@@ -35,16 +35,19 @@ export function YouMarker() {
 export function HostPricePin({
   price,
   inRadius = true,
+  unavailable = false,
   onPress,
 }: {
   price: number
   inRadius?: boolean
+  /** Host does not offer the selected service at this location. */
+  unavailable?: boolean
   onPress?: () => void
 }) {
   const pulse = useRef(new Animated.Value(0)).current
   const whitePulse = useRef(new Animated.Value(0)).current
-  const label = price <= 0 ? 'Free' : `$${price}`
-  const isFree = price <= 0
+  const label = unavailable ? '—' : price <= 0 ? 'Free' : `$${price}`
+  const isFree = !unavailable && price <= 0
   const coreSize = inRadius ? CORE : CORE_DISTANT
   const haloSize = inRadius ? HALO : HALO_DISTANT
 

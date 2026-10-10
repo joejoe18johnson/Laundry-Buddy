@@ -1,31 +1,30 @@
 import type { Coordinates } from './geo'
 import { circleRing } from './geo'
-import type { Host } from '../types'
 import { OPENFREEMAP_STYLE_URL } from './mapRegion'
 
 const CORE = 42
 const HALO = 56
 
+export type MapHostPin = {
+  id: string
+  lat: number
+  lng: number
+  price: number
+  name: string
+  inRadius: boolean
+  unavailable?: boolean
+}
+
 export function buildLeafletMapHtml(
-  hosts: Host[],
-  nearbyHostIds: ReadonlySet<string>,
+  hostPins: MapHostPin[],
   userLocation: Coordinates,
   radiusKm: number,
   fitToResults = false,
-  fitToHosts?: Host[],
+  fitCoords?: { lat: number; lng: number }[],
 ): string {
-  const payload = JSON.stringify(
-    hosts.map((h) => ({
-      id: h.id,
-      lat: h.latitude,
-      lng: h.longitude,
-      price: h.price,
-      name: h.name,
-      inRadius: nearbyHostIds.has(h.id),
-    })),
-  )
+  const payload = JSON.stringify(hostPins)
   const fitPayload = JSON.stringify(
-    (fitToHosts ?? hosts).map((h) => ({ lat: h.latitude, lng: h.longitude })),
+    fitCoords ?? hostPins.map((h) => ({ lat: h.lat, lng: h.lng })),
   )
   const circleCoords = JSON.stringify(circleRing(userLocation, radiusKm))
 
@@ -271,8 +270,8 @@ export function buildLeafletMapHtml(
     function addHostMarkers(hostList) {
       clearHostMarkers();
       hostList.forEach(function(h) {
-        const isFree = h.price <= 0;
-        const label = isFree ? 'Free' : ('$' + h.price);
+        const isFree = !h.unavailable && h.price <= 0;
+        const label = h.unavailable ? '—' : (isFree ? 'Free' : ('$' + h.price));
         const el = document.createElement('div');
         el.innerHTML = hostMarkerHtml(label, isFree, h.inRadius);
         el.style.cursor = 'pointer';

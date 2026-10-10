@@ -148,13 +148,20 @@ export function filterAndSortHosts(
   filters: HostFilters,
   sort: HostSort,
   searchQuery = '',
+  getListPrice?: (host: Host) => number | null,
 ): Host[] {
   const query = searchQuery.trim()
+  const priceFor = (host: Host) => {
+    const custom = getListPrice?.(host)
+    if (custom != null) return custom
+    return host.price
+  }
 
   let result = hosts.filter((host) => {
     if (!matchesHostSearch(host, query)) return false
     if (filters.location && !hostMatchesFilterArea(host, filters.location)) return false
-    if (filters.maxPrice != null && host.price > filters.maxPrice) return false
+    if (getListPrice && getListPrice(host) == null) return false
+    if (filters.maxPrice != null && priceFor(host) > filters.maxPrice) return false
     if (filters.minRating != null) {
       if (host.rating <= 0) return false
       if (host.rating < filters.minRating) return false
@@ -172,7 +179,10 @@ export function filterAndSortHosts(
   }
 
   result = [...result].sort((a, b) => {
-    const bySort = compareHosts(a, b, sort)
+    const bySort =
+      sort === 'cheapest'
+        ? priceFor(a) - priceFor(b)
+        : compareHosts(a, b, sort)
     if (bySort !== 0) return bySort
     if (query) {
       return getSearchRelevance(b, query) - getSearchRelevance(a, query)
